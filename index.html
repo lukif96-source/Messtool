@@ -82,6 +82,11 @@ body{
 .btn.success{background:var(--success);color:#fff;border-color:var(--success)}
 .btn.warn{background:var(--warn);color:#fff;border-color:var(--warn)}
 .btn.danger{background:var(--danger-bg);color:var(--danger);border-color:rgba(200,48,58,0.2)}
+.btn.sm{padding:5px 10px;font-size:10px}
+
+/* Batch Action Bar (Schnell-Aktionen) */
+.batch-bar{display:flex;align-items:center;gap:8px;padding:12px;background:rgba(184,216,75,0.15);border:1.5px dashed var(--lime-dk);border-radius:var(--radius);margin-bottom:16px;flex-wrap:wrap}
+.batch-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink);margin-right:4px}
 
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .form-field label{display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
@@ -95,40 +100,51 @@ body{
 .wr-title{font-family:var(--font-display);font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}
 .wr-badge{background:var(--ink);color:var(--lime);font-size:10px;font-family:var(--font-mono);padding:2px 8px;border-radius:6px;font-weight:800}
 
-/* Matrix Spalten */
-.string-table-head{display:grid;grid-template-columns:70px 70px 65px 145px 85px 85px 85px 115px;gap:6px;padding:8px 14px;font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;border-bottom:1px solid var(--cream-deep)}
-.string-row{display:grid;grid-template-columns:70px 70px 65px 145px 85px 85px 85px 115px;gap:6px;padding:10px 14px;align-items:center;border-bottom:1px solid rgba(0,0,0,0.04);transition:background .15s, opacity .15s}
-.string-row:hover{background:rgba(184,216,75,0.05)}
+/* String Card / Row */
+.string-row{display:grid;grid-template-columns:80px 140px 80px 150px 100px 140px 80px 150px;gap:8px;padding:12px 16px;align-items:center;border-bottom:1px solid rgba(0,0,0,0.05);transition:background .15s, opacity .15s}
+.string-table-head{display:grid;grid-template-columns:80px 140px 80px 150px 100px 140px 80px 150px;gap:8px;padding:8px 16px;font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;border-bottom:1px solid var(--cream-deep)}
 
-/* Gesperrt / Bestätigt Zustand */
-.string-row.is-confirmed{background:rgba(26,122,74,0.06);border-left:3.5px solid var(--success)}
+/* Bestätigt Zustand */
+.string-row.is-confirmed{background:rgba(26,122,74,0.07);border-left:4px solid var(--success)}
 .string-row.is-confirmed input{background:var(--cream-deep)!important;color:var(--ink-mid)!important;cursor:not-allowed}
 .string-row.inactive{opacity:.4;background:rgba(237,233,223,0.5)}
 .string-row.inactive input{background:var(--cream-deep)!important;cursor:not-allowed}
 
-.str-id-badge{font-family:var(--font-mono);font-size:12px;font-weight:800;background:rgba(18,17,15,0.06);padding:6px 4px;border-radius:6px;text-align:center}
-.str-pwr{font-family:var(--font-mono);font-size:12px;font-weight:800;color:var(--ink-mid);text-align:center}
-.str-input{width:100%;padding:9px 4px;border:1.5px solid var(--cream-deep);border-radius:6px;text-align:center;font-family:var(--font-mono);font-size:13px;font-weight:700;background:#fff;outline:none}
-.str-input:focus{border-color:var(--lime-dk);background:rgba(184,216,75,0.05)}
+/* Stepper für Module */
+.stepper-wrap{display:flex;align-items:center;border:1.5px solid var(--cream-deep);border-radius:var(--radius-sm);overflow:hidden;background:#fff}
+.stepper-btn{width:32px;height:38px;border:none;background:rgba(0,0,0,0.03);font-size:16px;font-weight:800;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s}
+.stepper-btn:hover{background:var(--lime)}
+.stepper-input{flex:1;width:38px;border:none;text-align:center;font-family:var(--font-mono);font-size:14px;font-weight:800;outline:none}
+
+.str-id-badge{font-family:var(--font-mono);font-size:13px;font-weight:800;background:var(--ink);color:var(--lime);padding:8px 6px;border-radius:6px;text-align:center}
+.str-pwr{font-family:var(--font-mono);font-size:13px;font-weight:800;color:var(--ink-mid);text-align:center}
+.str-input{width:100%;padding:9px 6px;border:1.5px solid var(--cream-deep);border-radius:6px;text-align:center;font-family:var(--font-mono);font-size:14px;font-weight:700;background:#fff;outline:none}
+.str-input:focus{border-color:var(--lime-dk);background:rgba(184,216,75,0.05);box-shadow:0 0 0 2px var(--lime-glow)}
 
 /* Plausibilitäts-Badges */
-.volt-check-wrap{display:flex;flex-direction:column;gap:2px}
-.volt-badge{font-size:8px;font-weight:800;font-family:var(--font-mono);padding:2px 4px;border-radius:4px;text-align:center;text-transform:uppercase}
-.volt-badge.ok{background:rgba(26,122,74,0.15);color:var(--success)}
-.volt-badge.warn{background:rgba(184,106,16,0.15);color:var(--warn)}
+.volt-check-wrap{display:flex;flex-direction:column;gap:3px}
+.volt-badge{font-size:9px;font-weight:800;font-family:var(--font-mono);padding:2px 6px;border-radius:4px;text-align:center;text-transform:uppercase}
+.volt-badge.ok{background:rgba(26,122,74,0.18);color:var(--success)}
+.volt-badge.warn{background:rgba(184,106,16,0.18);color:var(--warn)}
 .volt-badge.bad{background:var(--danger-bg);color:var(--danger)}
 
+/* Riso Quick Pills */
+.riso-pills{display:flex;gap:3px}
+.riso-pill{flex:1;padding:6px 2px;border:1px solid var(--cream-deep);background:#fff;border-radius:4px;font-size:9px;font-weight:800;text-align:center;cursor:pointer;white-space:nowrap}
+.riso-pill.active{background:var(--ink);color:var(--lime);border-color:var(--ink)}
+
 .tog-grp{display:flex;border-radius:6px;overflow:hidden;border:1px solid var(--cream-deep)}
-.tog-btn{flex:1;padding:7px 2px;font-size:10px;font-weight:800;border:none;background:#fff;cursor:pointer}
+.tog-btn{flex:1;padding:8px 2px;font-size:10px;font-weight:800;border:none;background:#fff;cursor:pointer}
 .tog-btn.on-yes{background:var(--lime);color:var(--ink)}
 .tog-btn.on-no{background:var(--ink-muted);color:#fff}
 
-@media (max-width:860px){
+/* Mobile Responsive */
+@media (max-width:960px){
   .string-table-head{display:none}
-  .string-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px;background:#fff;margin:8px;border-radius:10px;border:1px solid var(--cream-deep)}
-  .string-row > div{display:flex;flex-direction:column;gap:3px}
-  .string-row > div::before{content:attr(data-label);font-size:9px;font-weight:800;color:var(--ink-muted);text-transform:uppercase}
-  .str-id-badge{grid-column:1/-1;text-align:left;background:var(--ink);color:var(--lime);padding:6px 12px}
+  .string-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px;background:#fff;margin:10px;border-radius:12px;border:1.5px solid var(--cream-deep);box-shadow:0 4px 12px rgba(0,0,0,0.03)}
+  .string-row > div{display:flex;flex-direction:column;gap:4px}
+  .string-row > div::before{content:attr(data-label);font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase}
+  .str-id-badge{grid-column:1/-1;text-align:left;background:var(--ink);color:var(--lime);padding:8px 12px;font-size:14px}
   .str-confirm-cell{grid-column:1/-1}
 }
 
@@ -309,6 +325,15 @@ body{
       </div>
     </div>
 
+    <!-- NEU: BATCH-SCHNELL-AKTIONEN FÜR SVEN -->
+    <div class="batch-bar">
+      <span class="batch-title">⚡ Schnell-Aktionen:</span>
+      <button class="btn sm" onclick="applyBulkModules()">🔢 Module für alle setzen</button>
+      <button class="btn sm" onclick="applyBulkRiso('> 20')">⚡ Riso > 20 MΩ für alle</button>
+      <button class="btn sm" onclick="applyBulkRiso('> 100')">⚡ Riso > 100 MΩ für alle</button>
+      <button class="btn sm" onclick="unlockAllStrings()">🔓 Alle Strings entsperren</button>
+    </div>
+
     <!-- String Matrix -->
     <div id="matrixContainer"></div>
 
@@ -353,7 +378,7 @@ const showToast = msg => {
   setTimeout(() => t.remove(), 3500);
 };
 
-// Standard Module
+// Standard Module Presets
 const DEFAULT_MODULES = [
   { name: 'Trina Vertex S+ 445W', wp: 445, uoc: 52.6 },
   { name: 'Jinko Tiger Neo 440W', wp: 440, uoc: 39.4 },
@@ -614,6 +639,33 @@ function openProtocol(id) {
   switchView('viewEditor');
 }
 
+// ─── BATCH AKTIONEN (FÜR SCHNELLES AUSFÜLLEN) ───
+function applyBulkModules() {
+  const count = prompt('Wie viele Module haben die Strings standardmäßig?', '14');
+  if (count === null) return;
+  const num = parseInt(count) || 0;
+  state.currentStrings.forEach(s => {
+    if (!s.is_confirmed && s.is_active) s.modules = num;
+  });
+  renderMatrix();
+  recalculateTotals();
+  showToast(`${num} Module auf offene Strings angewendet`);
+}
+
+function applyBulkRiso(val) {
+  state.currentStrings.forEach(s => {
+    if (!s.is_confirmed && s.is_active) s.riso = val;
+  });
+  renderMatrix();
+  showToast(`Riso "${val} MΩ" für alle gesetzt`);
+}
+
+function unlockAllStrings() {
+  state.currentStrings.forEach(s => s.is_confirmed = false);
+  renderMatrix();
+  showToast('Alle Strings entsperrt');
+}
+
 // ─── STRING MATRIX & SPANNUNGS-PLAUSIBILITÄT ───
 function rebuildMatrix() {
   const mpptRaw = $('inpMpptConfig').value || '2';
@@ -627,7 +679,7 @@ function rebuildMatrix() {
         strings.push({
           id: sId++, wr: wrIdx + 1, mppt: mppt, str: str,
           label: `${wrIdx + 1}.${mppt}.${str}`,
-          modules: 0, uoc: '', isc: '', riso: '> 20', is_active: true, is_confirmed: false
+          modules: 14, uoc: '', isc: '', riso: '> 20', is_active: true, is_confirmed: false
         });
       }
     }
@@ -657,7 +709,7 @@ function renderMatrix() {
       </div>
       <div class="string-table-head">
         <div>String</div>
-        <div style="text-align:center">Module</div>
+        <div style="text-align:center">Module (±)</div>
         <div style="text-align:center">kWp</div>
         <div style="text-align:center">Uoc (V)</div>
         <div style="text-align:center">Isc (A)</div>
@@ -679,9 +731,9 @@ function renderMatrix() {
         const diffPercent = Math.abs(measured - expectedUoc) / expectedUoc;
         
         if (diffPercent <= 0.12) {
-          voltBadge = `<span class="volt-badge ok">🟢 Soll ~${Math.round(expectedUoc)}V</span>`;
+          voltBadge = `<span class="volt-badge ok">🟢 Soll ~${Math.round(expectedUoc)}V (Passt!)</span>`;
         } else if (diffPercent <= 0.25) {
-          voltBadge = `<span class="volt-badge warn">🟡 Soll ~${Math.round(expectedUoc)}V</span>`;
+          voltBadge = `<span class="volt-badge warn">🟡 Soll ~${Math.round(expectedUoc)}V (Prüfen)</span>`;
         } else {
           voltBadge = `<span class="volt-badge bad">🔴 Achtung! Soll ~${Math.round(expectedUoc)}V</span>`;
         }
@@ -692,22 +744,30 @@ function renderMatrix() {
           <div class="str-id-badge" data-label="String">${s.label}</div>
           
           <div data-label="Module">
-            <input type="number" inputmode="numeric" class="str-input" value="${s.modules || 0}" min="0" ${isDisabled} onchange="updateStr(${s.id},'modules',this.value)">
+            <div class="stepper-wrap">
+              <button class="stepper-btn" ${isDisabled} onclick="stepModule(${s.id}, -1)">−</button>
+              <input type="number" inputmode="numeric" class="stepper-input" value="${s.modules || 0}" min="0" ${isDisabled} onchange="updateStr(${s.id},'modules',this.value)">
+              <button class="stepper-btn" ${isDisabled} onclick="stepModule(${s.id}, 1)">+</button>
+            </div>
           </div>
           
           <div class="str-pwr" id="pwr_${s.id}" data-label="kWp">${pwr}</div>
           
           <div data-label="Uoc (V)" class="volt-check-wrap">
-            <input type="number" inputmode="decimal" step="0.1" class="str-input" placeholder="0.0" value="${s.uoc || ''}" ${isDisabled} onchange="updateStr(${s.id},'uoc',this.value)">
+            <input type="number" id="inp_uoc_${s.id}" inputmode="decimal" step="0.1" class="str-input" placeholder="0.0" value="${s.uoc || ''}" ${isDisabled} onchange="updateStr(${s.id},'uoc',this.value)" onkeydown="handleEnterNext(event, ${s.id}, 'uoc')">
             ${voltBadge}
           </div>
           
           <div data-label="Isc (A)">
-            <input type="number" inputmode="decimal" step="0.1" class="str-input" placeholder="0.0" value="${s.isc || ''}" ${isDisabled} onchange="updateStr(${s.id},'isc',this.value)">
+            <input type="number" id="inp_isc_${s.id}" inputmode="decimal" step="0.1" class="str-input" placeholder="0.0" value="${s.isc || ''}" ${isDisabled} onchange="updateStr(${s.id},'isc',this.value)" onkeydown="handleEnterNext(event, ${s.id}, 'isc')">
           </div>
 
           <div data-label="Riso (MΩ)">
-            <input type="text" class="str-input" placeholder="> 20" value="${s.riso || ''}" ${isDisabled} onchange="updateStr(${s.id},'riso',this.value)">
+            <div class="riso-pills">
+              <div class="riso-pill ${s.riso === '> 20' ? 'active' : ''}" onclick="${!isDisabled ? `setRiso(${s.id}, '> 20')` : ''}">> 20</div>
+              <div class="riso-pill ${s.riso === '> 100' ? 'active' : ''}" onclick="${!isDisabled ? `setRiso(${s.id}, '> 100')` : ''}">> 100</div>
+              <div class="riso-pill ${s.riso === '> 500' ? 'active' : ''}" onclick="${!isDisabled ? `setRiso(${s.id}, '> 500')` : ''}">> 500</div>
+            </div>
           </div>
           
           <div data-label="Aktiv">
@@ -719,8 +779,8 @@ function renderMatrix() {
 
           <div data-label="Status" class="str-confirm-cell" style="text-align:center">
             ${s.is_confirmed 
-              ? `<button class="btn success" style="padding:6px 8px;font-size:10px;width:100%" onclick="toggleConfirm(${s.id})">✓ Bestätigt</button>` 
-              : `<button class="btn" style="padding:6px 8px;font-size:10px;width:100%" ${!s.is_active ? 'disabled' : ''} onclick="toggleConfirm(${s.id})">🔒 Sperren</button>`
+              ? `<button class="btn success" style="padding:8px 8px;font-size:10px;width:100%" onclick="toggleConfirm(${s.id})">✓ Bestätigt (Freigeben)</button>` 
+              : `<button class="btn primary" style="padding:8px 8px;font-size:10px;width:100%" ${!s.is_active ? 'disabled' : ''} onclick="confirmAndNext(${s.id})">🔒 Bestätigen & Weiter</button>`
             }
           </div>
         </div>
@@ -733,12 +793,27 @@ function renderMatrix() {
   recalculateTotals();
 }
 
+function stepModule(id, delta) {
+  const s = state.currentStrings.find(x => x.id === id);
+  if (!s || s.is_confirmed || !s.is_active) return;
+  s.modules = Math.max(0, (s.modules || 0) + delta);
+  renderMatrix();
+  recalculateTotals();
+}
+
+function setRiso(id, val) {
+  const s = state.currentStrings.find(x => x.id === id);
+  if (!s || s.is_confirmed || !s.is_active) return;
+  s.riso = val;
+  renderMatrix();
+}
+
 function updateStr(id, field, val) {
   const s = state.currentStrings.find(x => x.id === id);
   if (!s) return;
   s[field] = field === 'modules' ? parseInt(val) || 0 : val;
   recalculateTotals();
-  renderMatrix(); // Neu zeichnen für Plausibilitäts-Badges
+  renderMatrix();
 }
 
 function toggleStr(id, active) {
@@ -753,8 +828,40 @@ function toggleConfirm(id) {
   if (!s) return;
   s.is_confirmed = !s.is_confirmed;
   renderMatrix();
-  if (s.is_confirmed) {
-    showToast(`String ${s.label} bestätigt & gesperrt`);
+}
+
+// ─── WORKFLOW: BESTÄTIGEN & DIREKT ZUM NÄCHSTEN SPRINGEN ───
+function confirmAndNext(currentId) {
+  const s = state.currentStrings.find(x => x.id === currentId);
+  if (s) s.is_confirmed = true;
+  
+  renderMatrix();
+  showToast(`String ${s.label} bestätigt!`);
+
+  // Finde nächsten aktiven und unbestätigten String
+  const nextString = state.currentStrings.find(x => x.id > currentId && x.is_active && !x.is_confirmed);
+  if (nextString) {
+    setTimeout(() => {
+      const nextInput = document.getElementById(`inp_uoc_${nextString.id}`);
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  } else {
+    showToast('🎉 Alle aktiven Strings vollständig gemessen!');
+  }
+}
+
+function handleEnterNext(e, currentId, field) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (field === 'uoc') {
+      const iscInput = document.getElementById(`inp_isc_${currentId}`);
+      if (iscInput) iscInput.focus();
+    } else if (field === 'isc') {
+      confirmAndNext(currentId);
+    }
   }
 }
 

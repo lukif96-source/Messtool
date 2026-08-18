@@ -29,7 +29,7 @@
   --ink-muted: #8a8478; --lime: #B8D84B; --lime-dk: #8faa2c; --lime-glow: rgba(184,216,75,0.22);
   --gold: #D4A017; --danger: #C8303A; --danger-bg: rgba(200,48,58,0.08);
   --success: #1A7A4A; --warn: #B86A10; --info: #2563eb;
-  --glass-bg: rgba(247,244,238,0.65); --glass-bg-heavy: rgba(247,244,238,0.90);
+  --glass-bg: rgba(247,244,238,0.65); --glass-bg-heavy: rgba(247,244,238,0.92);
   --glass-border: rgba(255,255,255,0.80);
   --glass-shadow: 0 8px 32px rgba(18,17,15,0.09), 0 1.5px 0 rgba(255,255,255,0.7) inset;
   --glass-shadow-lg: 0 20px 60px rgba(18,17,15,0.15), 0 1.5px 0 rgba(255,255,255,0.7) inset;
@@ -45,55 +45,48 @@ body{
   -webkit-tap-highlight-color:transparent;touch-action:manipulation;padding-bottom:50px;
 }
 
-/* Background Blobs */
 .bg-blob{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(90px);opacity:.35}
 .blob-1{width:550px;height:400px;background:var(--lime);top:-100px;left:-80px}
 .blob-2{width:450px;height:350px;background:var(--gold);bottom:10%;right:-80px;opacity:.2}
 
-/* Loader */
 #loader{position:fixed;inset:0;z-index:99999;background:rgba(18,17,15,0.75);backdrop-filter:blur(20px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px}
 #loader.show{display:flex}
 .spinner{width:44px;height:44px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--lime);border-radius:50%;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loader-text{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:2px}
 
-/* Topbar */
 .topbar{position:sticky;top:0;z-index:200;background:var(--glass-bg-heavy);border-bottom:1px solid var(--glass-border);box-shadow:0 4px 20px rgba(18,17,15,0.06);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:space-between;padding:10px 18px;gap:10px}
 .logo{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--ink)}
 .logo span{color:var(--lime-dk)}
 .user-chip{display:flex;align-items:center;gap:8px;padding:5px 12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:30px;font-size:12px;font-weight:700;cursor:pointer}
 .user-avatar{width:26px;height:26px;border-radius:50%;background:var(--lime);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
 
-/* Tabs */
 .tab-nav{display:flex;background:var(--glass-bg);border-bottom:1px solid var(--glass-border);backdrop-filter:blur(14px);overflow-x:auto;padding:0 16px;gap:6px}
 .tab{padding:12px 16px;font-size:11px;font-weight:700;cursor:pointer;color:var(--ink-muted);border-bottom:2.5px solid transparent;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap;transition:.15s}
 .tab.active{color:var(--ink);border-color:var(--lime-dk)}
 
-/* Shell & Cards */
-.shell{max-width:960px;margin:20px auto;padding:0 16px;position:relative;z-index:10}
+.shell{max-width:1100px;margin:20px auto;padding:0 16px;position:relative;z-index:10}
 .card{background:var(--glass-bg-heavy);border:1px solid var(--glass-border);border-radius:var(--radius);padding:20px;box-shadow:var(--glass-shadow);margin-bottom:16px;backdrop-filter:blur(16px)}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
 .card-title{font-family:var(--font-display);font-size:20px;font-weight:800}
 
-/* KPIs */
 .kpi-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
 .kpi-pill{flex:1;min-width:130px;background:rgba(255,255,255,0.65);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:12px;text-align:center;box-shadow:var(--glass-shadow)}
 .kpi-val{font-family:var(--font-mono);font-size:22px;font-weight:800;color:var(--ink)}
 .kpi-lbl{font-size:9px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
 
-/* Buttons */
 .btn{background:var(--glass-bg);border:1px solid var(--glass-border);padding:9px 15px;font-size:11px;font-weight:700;border-radius:var(--radius-sm);color:var(--ink);text-transform:uppercase;letter-spacing:.3px;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;box-shadow:var(--glass-shadow)}
 .btn:hover{background:var(--cream-deep);transform:translateY(-1px)}
 .btn:active{transform:translateY(1px)}
 .btn.primary{background:var(--ink);color:var(--lime);border-color:var(--ink)}
 .btn.success{background:var(--success);color:#fff;border-color:var(--success)}
 .btn.warn{background:var(--warn);color:#fff;border-color:var(--warn)}
+.btn.danger{background:var(--danger-bg);color:var(--danger);border-color:rgba(200,48,58,0.2)}
 
-/* Forms */
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .form-field label{display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
-.form-field input,.form-field textarea{width:100%;padding:10px 12px;border:1.5px solid var(--cream-deep);border-radius:var(--radius-sm);background:rgba(255,255,255,0.85);font-size:13px;font-weight:600;color:var(--ink);outline:none;transition:border-color .15s}
-.form-field input:focus,.form-field textarea:focus{border-color:var(--lime-dk);box-shadow:0 0 0 3px var(--lime-glow)}
+.form-field input,.form-field select,.form-field textarea{width:100%;padding:10px 12px;border:1.5px solid var(--cream-deep);border-radius:var(--radius-sm);background:rgba(255,255,255,0.85);font-size:13px;font-weight:600;color:var(--ink);outline:none;transition:border-color .15s}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--lime-dk);box-shadow:0 0 0 3px var(--lime-glow)}
 .form-field input.is-locked{background:var(--cream-deep);color:var(--ink-mid);cursor:not-allowed}
 
 /* WR & String Matrix */
@@ -102,30 +95,43 @@ body{
 .wr-title{font-family:var(--font-display);font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}
 .wr-badge{background:var(--ink);color:var(--lime);font-size:10px;font-family:var(--font-mono);padding:2px 8px;border-radius:6px;font-weight:800}
 
-.string-table-head{display:grid;grid-template-columns:85px 85px 80px 1fr 1fr 100px;gap:8px;padding:8px 14px;font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;border-bottom:1px solid var(--cream-deep)}
-.string-row{display:grid;grid-template-columns:85px 85px 80px 1fr 1fr 100px;gap:8px;padding:10px 14px;align-items:center;border-bottom:1px solid rgba(0,0,0,0.04);transition:background .15s}
+/* Matrix Spalten */
+.string-table-head{display:grid;grid-template-columns:70px 70px 65px 145px 85px 85px 85px 115px;gap:6px;padding:8px 14px;font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;border-bottom:1px solid var(--cream-deep)}
+.string-row{display:grid;grid-template-columns:70px 70px 65px 145px 85px 85px 85px 115px;gap:6px;padding:10px 14px;align-items:center;border-bottom:1px solid rgba(0,0,0,0.04);transition:background .15s, opacity .15s}
 .string-row:hover{background:rgba(184,216,75,0.05)}
-.string-row.inactive{opacity:.35;background:var(--cream-deep)}
 
-.str-id-badge{font-family:var(--font-mono);font-size:12px;font-weight:800;background:rgba(18,17,15,0.06);padding:6px 8px;border-radius:6px;text-align:center}
+/* Gesperrt / Bestätigt Zustand */
+.string-row.is-confirmed{background:rgba(26,122,74,0.06);border-left:3.5px solid var(--success)}
+.string-row.is-confirmed input{background:var(--cream-deep)!important;color:var(--ink-mid)!important;cursor:not-allowed}
+.string-row.inactive{opacity:.4;background:rgba(237,233,223,0.5)}
+.string-row.inactive input{background:var(--cream-deep)!important;cursor:not-allowed}
+
+.str-id-badge{font-family:var(--font-mono);font-size:12px;font-weight:800;background:rgba(18,17,15,0.06);padding:6px 4px;border-radius:6px;text-align:center}
 .str-pwr{font-family:var(--font-mono);font-size:12px;font-weight:800;color:var(--ink-mid);text-align:center}
-.str-input{width:100%;padding:9px 6px;border:1.5px solid var(--cream-deep);border-radius:6px;text-align:center;font-family:var(--font-mono);font-size:14px;font-weight:700;background:#fff;outline:none}
+.str-input{width:100%;padding:9px 4px;border:1.5px solid var(--cream-deep);border-radius:6px;text-align:center;font-family:var(--font-mono);font-size:13px;font-weight:700;background:#fff;outline:none}
 .str-input:focus{border-color:var(--lime-dk);background:rgba(184,216,75,0.05)}
+
+/* Plausibilitäts-Badges */
+.volt-check-wrap{display:flex;flex-direction:column;gap:2px}
+.volt-badge{font-size:8px;font-weight:800;font-family:var(--font-mono);padding:2px 4px;border-radius:4px;text-align:center;text-transform:uppercase}
+.volt-badge.ok{background:rgba(26,122,74,0.15);color:var(--success)}
+.volt-badge.warn{background:rgba(184,106,16,0.15);color:var(--warn)}
+.volt-badge.bad{background:var(--danger-bg);color:var(--danger)}
 
 .tog-grp{display:flex;border-radius:6px;overflow:hidden;border:1px solid var(--cream-deep)}
 .tog-btn{flex:1;padding:7px 2px;font-size:10px;font-weight:800;border:none;background:#fff;cursor:pointer}
 .tog-btn.on-yes{background:var(--lime);color:var(--ink)}
 .tog-btn.on-no{background:var(--ink-muted);color:#fff}
 
-@media (max-width:768px){
+@media (max-width:860px){
   .string-table-head{display:none}
   .string-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px;background:#fff;margin:8px;border-radius:10px;border:1px solid var(--cream-deep)}
   .string-row > div{display:flex;flex-direction:column;gap:3px}
   .string-row > div::before{content:attr(data-label);font-size:9px;font-weight:800;color:var(--ink-muted);text-transform:uppercase}
   .str-id-badge{grid-column:1/-1;text-align:left;background:var(--ink);color:var(--lime);padding:6px 12px}
+  .str-confirm-cell{grid-column:1/-1}
 }
 
-/* List Items */
 .proto-item{display:flex;align-items:center;justify-content:space-between;padding:16px;background:rgba(255,255,255,0.7);border:1px solid var(--glass-border);border-radius:var(--radius-sm);margin-bottom:10px;cursor:pointer;transition:transform .15s;gap:12px;flex-wrap:wrap}
 .proto-item:hover{transform:translateY(-2px);background:#fff}
 .proto-title{font-size:16px;font-weight:800}
@@ -134,7 +140,6 @@ body{
 .status-vorbereitet{background:rgba(37,99,235,0.12);color:var(--info)}
 .status-fertig{background:rgba(26,122,74,0.15);color:var(--success)}
 
-/* Auth Overlay */
 #authOverlay{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(18,17,15,0.6);backdrop-filter:blur(24px)}
 .auth-card{background:var(--glass-bg-heavy);border:1px solid var(--glass-border);box-shadow:var(--glass-shadow-lg);backdrop-filter:blur(18px);border-radius:20px;padding:36px 32px;width:380px;max-width:92vw;text-align:center}
 .auth-tabs{display:flex;margin-bottom:18px;background:var(--cream-deep);border-radius:8px;padding:3px}
@@ -144,12 +149,10 @@ body{
 .auth-btn{width:100%;margin-top:20px;padding:14px;background:var(--ink);color:var(--lime);border:none;border-radius:var(--radius-sm);font-family:var(--font-display);font-size:14px;font-weight:800;cursor:pointer}
 .auth-status{margin-top:10px;font-size:11px;color:var(--danger);font-family:var(--font-mono);min-height:16px}
 
-/* Modal */
 .overlay{position:fixed;inset:0;background:rgba(18,17,15,0.5);backdrop-filter:blur(8px);z-index:9000;display:none;align-items:center;justify-content:center;padding:16px}
 .overlay.show{display:flex}
-.modal{background:var(--glass-bg-heavy);border:1px solid var(--glass-border);border-radius:var(--radius);padding:24px;width:100%;max-width:380px;box-shadow:var(--glass-shadow-lg);text-align:center}
+.modal{background:var(--glass-bg-heavy);border:1px solid var(--glass-border);border-radius:var(--radius);padding:24px;width:100%;max-width:400px;box-shadow:var(--glass-shadow-lg);text-align:center}
 
-/* Toast */
 .toast-stack{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
 .toast{background:var(--ink);color:var(--cream);padding:12px 18px;border-radius:10px;font-size:12px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,0.25);border-left:4px solid var(--lime)}
 </style>
@@ -172,7 +175,6 @@ body{
       <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Registrieren</button>
     </div>
 
-    <!-- Login -->
     <div id="formLogin">
       <input class="auth-input" type="email" id="authEmail" placeholder="E-Mail" autocomplete="email">
       <input class="auth-input" type="password" id="authPassword" placeholder="Passwort" autocomplete="current-password">
@@ -180,7 +182,6 @@ body{
       <div class="auth-status" id="authStatus"></div>
     </div>
 
-    <!-- Registrieren (ohne Email Confirmation) -->
     <div id="formSignup" style="display:none">
       <input class="auth-input" type="text" id="signupName" placeholder="Dein Name (z.B. Sven)">
       <input class="auth-input" type="email" id="signupEmail" placeholder="E-Mail" autocomplete="email">
@@ -266,10 +267,25 @@ body{
           <label>Prüfdatum 📅</label>
           <input type="date" id="inpDatum">
         </div>
+        
+        <!-- Modul-Preset & Uoc Referenz -->
         <div class="form-field">
-          <label>Modul (Wp) <span id="lckIcon3">🔒</span></label>
+          <label>Modultyp / Preset <span id="lckIconMod">🔒</span></label>
+          <select id="inpModulSelect" class="is-locked" disabled onchange="handleModuleSelect(this.value)">
+            <!-- Wird dynamisch befüllt -->
+          </select>
+        </div>
+        
+        <div class="form-field">
+          <label>Modul Uoc STC (V/Modul) <span id="lckIconUoc">🔒</span></label>
+          <input type="number" step="0.1" id="inpModulUoc" value="40.5" class="is-locked" readonly onchange="renderMatrix()">
+        </div>
+
+        <div class="form-field">
+          <label>Modulleistung (Wp) <span id="lckIcon3">🔒</span></label>
           <input type="number" id="inpModulWp" value="440" class="is-locked" readonly onchange="recalculateTotals()">
         </div>
+
         <div class="form-field">
           <label>MPPT-Konfig (WR) <span id="lckIcon4">🔒</span></label>
           <input type="text" id="inpMpptConfig" value="2,2" placeholder="z.B. 2,3" class="is-locked" readonly onchange="rebuildMatrix()">
@@ -337,16 +353,26 @@ const showToast = msg => {
   setTimeout(() => t.remove(), 3500);
 };
 
+// Standard Module
+const DEFAULT_MODULES = [
+  { name: 'Trina Vertex S+ 445W', wp: 445, uoc: 52.6 },
+  { name: 'Jinko Tiger Neo 440W', wp: 440, uoc: 39.4 },
+  { name: 'Aiko Neostar 2S+ 450W', wp: 450, uoc: 40.5 },
+  { name: 'Longi Hi-MO X6 435W', wp: 435, uoc: 39.3 },
+  { name: 'Benutzerdefiniert...', wp: 440, uoc: 40.0 }
+];
+
 const state = {
   user: null,
   profile: null,
   isAdminUnlocked: false,
   protocols: [],
+  modulesList: DEFAULT_MODULES,
   currentId: null,
   currentStrings: []
 };
 
-// ─── AUTHENTICATION (OHNE EMAIL CONFIRMATION) ───
+// ─── AUTHENTICATION ───
 function switchAuthTab(mode) {
   $('tabLogin').classList.toggle('active', mode === 'login');
   $('tabSignup').classList.toggle('active', mode === 'signup');
@@ -385,12 +411,10 @@ async function handleSignup() {
     return ($('signupStatus').textContent = error.message);
   }
 
-  // Da E-Mail-Confirmation aus ist, direkt einloggen falls nötig:
   if (data.session) {
     showLoader(false);
     bootApp(data.user);
   } else {
-    // Fallback Direkt-Login
     const { data: logData, error: logErr } = await sb.auth.signInWithPassword({ email, password });
     showLoader(false);
     if (logErr) return ($('signupStatus').textContent = 'Registriert! Bitte anmelden.');
@@ -415,12 +439,40 @@ async function bootApp(user) {
   $('userName').textContent = name;
   $('userAvatar').textContent = name[0].toUpperCase();
 
+  await loadModulesFromDB();
+  populateModuleDropdown();
   await loadProtocols();
   
-  // Realtime
   sb.channel('realtime_proto').on('postgres_changes', { event: '*', schema: 'public', table: 'protocols' }, () => {
     loadProtocols(false);
   }).subscribe();
+}
+
+async function loadModulesFromDB() {
+  try {
+    const { data } = await sb.from('pv_modules').select('*');
+    if (data && data.length > 0) {
+      state.modulesList = [...data, { name: 'Benutzerdefiniert...', wp: 440, uoc: 40.0 }];
+    }
+  } catch (e) {
+    console.log('Verwende Standardmodule');
+  }
+}
+
+function populateModuleDropdown(selectedName = '') {
+  const sel = $('inpModulSelect');
+  sel.innerHTML = state.modulesList.map(m => `
+    <option value="${m.name}" ${m.name === selectedName ? 'selected' : ''}>${m.name} (${m.wp}Wp, ${m.uoc}V)</option>
+  `).join('');
+}
+
+function handleModuleSelect(modName) {
+  const m = state.modulesList.find(x => x.name === modName);
+  if (!m) return;
+  $('inpModulWp').value = m.wp;
+  $('inpModulUoc').value = m.uoc;
+  recalculateTotals();
+  renderMatrix();
 }
 
 // ─── PROTOKOLLE LADEN & RENDERN ───
@@ -492,21 +544,29 @@ function applyLockUI() {
   $('lockStateBadge').textContent = isLocked ? '🔒 Für Sven gesperrt (Stammdaten fixiert)' : '🔓 Admin-Modus: Alle Stammdaten editierbar';
   $('lockStateBadge').style.color = isLocked ? 'var(--info)' : 'var(--lime-dk)';
 
-  ['inpStandort','inpKunde','inpModulWp','inpMpptConfig'].forEach(id => {
+  ['inpStandort','inpKunde','inpModulWp','inpMpptConfig','inpModulUoc'].forEach(id => {
     const el = $(id);
     if (isLocked) { el.classList.add('is-locked'); el.setAttribute('readonly','true'); }
     else { el.classList.remove('is-locked'); el.removeAttribute('readonly'); }
   });
 
-  ['lckIcon1','lckIcon2','lckIcon3','lckIcon4'].forEach(id => {
-    $(id).textContent = isLocked ? '🔒' : '✏️';
+  if (isLocked) {
+    $('inpModulSelect').classList.add('is-locked');
+    $('inpModulSelect').setAttribute('disabled','true');
+  } else {
+    $('inpModulSelect').classList.remove('is-locked');
+    $('inpModulSelect').removeAttribute('disabled');
+  }
+
+  ['lckIcon1','lckIcon2','lckIcon3','lckIcon4','lckIconMod','lckIconUoc'].forEach(id => {
+    if ($(id)) $(id).textContent = isLocked ? '🔒' : '✏️';
   });
 }
 
 // ─── PROJEKT ÖFFNEN & VORBEREITEN ───
 function prepareNewProject() {
   state.currentId = null;
-  state.isAdminUnlocked = true; // Neuerstellung startet im Admin-Modus
+  state.isAdminUnlocked = true;
   applyLockUI();
 
   $('editorTitle').textContent = 'Neues Projekt vorbereiten (Admin)';
@@ -514,7 +574,10 @@ function prepareNewProject() {
   $('inpKunde').value = '';
   $('inpPruefer').value = 'Sven';
   $('inpDatum').value = new Date().toISOString().split('T')[0];
-  $('inpModulWp').value = '440';
+  
+  populateModuleDropdown(DEFAULT_MODULES[0].name);
+  $('inpModulWp').value = DEFAULT_MODULES[0].wp;
+  $('inpModulUoc').value = DEFAULT_MODULES[0].uoc;
   $('inpMpptConfig').value = '2,2';
   $('inpNotizen').value = '';
 
@@ -527,7 +590,7 @@ function openProtocol(id) {
   if (!p) return;
 
   state.currentId = p.id;
-  state.isAdminUnlocked = false; // Standard für Sven
+  state.isAdminUnlocked = false;
   applyLockUI();
 
   $('editorTitle').textContent = p.standort || 'Messung';
@@ -535,7 +598,10 @@ function openProtocol(id) {
   $('inpKunde').value = p.kunde || '';
   $('inpPruefer').value = p.pruefer || 'Sven';
   $('inpDatum').value = p.pruefdatum || new Date().toISOString().split('T')[0];
+  
+  populateModuleDropdown();
   $('inpModulWp').value = p.modul_wp || 440;
+  $('inpModulUoc').value = p.modul_uoc || 40.5;
   $('inpMpptConfig').value = p.mppt_config || '2,2';
   $('inpNotizen').value = p.notizen || '';
 
@@ -548,7 +614,7 @@ function openProtocol(id) {
   switchView('viewEditor');
 }
 
-// ─── STRING MATRIX LOGIK ───
+// ─── STRING MATRIX & SPANNUNGS-PLAUSIBILITÄT ───
 function rebuildMatrix() {
   const mpptRaw = $('inpMpptConfig').value || '2';
   const strings = [];
@@ -561,7 +627,7 @@ function rebuildMatrix() {
         strings.push({
           id: sId++, wr: wrIdx + 1, mppt: mppt, str: str,
           label: `${wrIdx + 1}.${mppt}.${str}`,
-          modules: 0, uoc: '', isc: '', is_active: true
+          modules: 0, uoc: '', isc: '', riso: '> 20', is_active: true, is_confirmed: false
         });
       }
     }
@@ -575,6 +641,7 @@ function renderMatrix() {
   const c = $('matrixContainer');
   c.innerHTML = '';
 
+  const singleUoc = parseFloat($('inpModulUoc').value) || 40.5;
   const wrMap = new Map();
   state.currentStrings.forEach(s => {
     if (!wrMap.has(s.wr)) wrMap.set(s.wr, []);
@@ -589,25 +656,72 @@ function renderMatrix() {
         <div class="wr-title"><span>Wechselrichter ${wrNum}</span><span class="wr-badge">${strings.length / 2} MPPTs</span></div>
       </div>
       <div class="string-table-head">
-        <div>String</div><div style="text-align:center">Module</div><div style="text-align:center">kWp</div>
-        <div style="text-align:center">Uoc (V)</div><div style="text-align:center">Isc (A)</div><div style="text-align:center">Aktiv</div>
+        <div>String</div>
+        <div style="text-align:center">Module</div>
+        <div style="text-align:center">kWp</div>
+        <div style="text-align:center">Uoc (V)</div>
+        <div style="text-align:center">Isc (A)</div>
+        <div style="text-align:center">Riso (MΩ)</div>
+        <div style="text-align:center">Aktiv</div>
+        <div style="text-align:center">Bestätigen</div>
       </div>
     `;
 
     strings.forEach(s => {
-      const pwr = ((s.modules || 0) * (parseFloat($('inpModulWp').value) || 440) / 1000).toFixed(2);
+      const isDisabled = (!s.is_active || s.is_confirmed) ? 'disabled' : '';
+      const pwr = s.is_active ? ((s.modules || 0) * (parseFloat($('inpModulWp').value) || 440) / 1000).toFixed(2) : '0.00';
+      
+      // Spannungs-Plausibilitätsprüfung
+      let voltBadge = '';
+      if (s.is_active && (s.modules || 0) > 0 && s.uoc) {
+        const expectedUoc = s.modules * singleUoc;
+        const measured = parseFloat(s.uoc);
+        const diffPercent = Math.abs(measured - expectedUoc) / expectedUoc;
+        
+        if (diffPercent <= 0.12) {
+          voltBadge = `<span class="volt-badge ok">🟢 Soll ~${Math.round(expectedUoc)}V</span>`;
+        } else if (diffPercent <= 0.25) {
+          voltBadge = `<span class="volt-badge warn">🟡 Soll ~${Math.round(expectedUoc)}V</span>`;
+        } else {
+          voltBadge = `<span class="volt-badge bad">🔴 Achtung! Soll ~${Math.round(expectedUoc)}V</span>`;
+        }
+      }
+
       html += `
-        <div class="string-row ${s.is_active ? '' : 'inactive'}" id="row_${s.id}">
+        <div class="string-row ${!s.is_active ? 'inactive' : ''} ${s.is_confirmed ? 'is-confirmed' : ''}" id="row_${s.id}">
           <div class="str-id-badge" data-label="String">${s.label}</div>
-          <div data-label="Module"><input type="number" inputmode="numeric" class="str-input" value="${s.modules || 0}" min="0" onchange="updateStr(${s.id},'modules',this.value)"></div>
+          
+          <div data-label="Module">
+            <input type="number" inputmode="numeric" class="str-input" value="${s.modules || 0}" min="0" ${isDisabled} onchange="updateStr(${s.id},'modules',this.value)">
+          </div>
+          
           <div class="str-pwr" id="pwr_${s.id}" data-label="kWp">${pwr}</div>
-          <div data-label="Uoc (V)"><input type="number" inputmode="decimal" step="0.1" class="str-input" placeholder="0.0" value="${s.uoc || ''}" onchange="updateStr(${s.id},'uoc',this.value)"></div>
-          <div data-label="Isc (A)"><input type="number" inputmode="decimal" step="0.1" class="str-input" placeholder="0.0" value="${s.isc || ''}" onchange="updateStr(${s.id},'isc',this.value)"></div>
+          
+          <div data-label="Uoc (V)" class="volt-check-wrap">
+            <input type="number" inputmode="decimal" step="0.1" class="str-input" placeholder="0.0" value="${s.uoc || ''}" ${isDisabled} onchange="updateStr(${s.id},'uoc',this.value)">
+            ${voltBadge}
+          </div>
+          
+          <div data-label="Isc (A)">
+            <input type="number" inputmode="decimal" step="0.1" class="str-input" placeholder="0.0" value="${s.isc || ''}" ${isDisabled} onchange="updateStr(${s.id},'isc',this.value)">
+          </div>
+
+          <div data-label="Riso (MΩ)">
+            <input type="text" class="str-input" placeholder="> 20" value="${s.riso || ''}" ${isDisabled} onchange="updateStr(${s.id},'riso',this.value)">
+          </div>
+          
           <div data-label="Aktiv">
             <div class="tog-grp">
-              <button class="tog-btn ${s.is_active ? 'on-yes' : ''}" onclick="toggleStr(${s.id},true)">JA</button>
-              <button class="tog-btn ${!s.is_active ? 'on-no' : ''}" onclick="toggleStr(${s.id},false)">NEIN</button>
+              <button class="tog-btn ${s.is_active ? 'on-yes' : ''}" ${s.is_confirmed ? 'disabled' : ''} onclick="toggleStr(${s.id},true)">JA</button>
+              <button class="tog-btn ${!s.is_active ? 'on-no' : ''}" ${s.is_confirmed ? 'disabled' : ''} onclick="toggleStr(${s.id},false)">NEIN</button>
             </div>
+          </div>
+
+          <div data-label="Status" class="str-confirm-cell" style="text-align:center">
+            ${s.is_confirmed 
+              ? `<button class="btn success" style="padding:6px 8px;font-size:10px;width:100%" onclick="toggleConfirm(${s.id})">✓ Bestätigt</button>` 
+              : `<button class="btn" style="padding:6px 8px;font-size:10px;width:100%" ${!s.is_active ? 'disabled' : ''} onclick="toggleConfirm(${s.id})">🔒 Sperren</button>`
+            }
           </div>
         </div>
       `;
@@ -623,10 +737,8 @@ function updateStr(id, field, val) {
   const s = state.currentStrings.find(x => x.id === id);
   if (!s) return;
   s[field] = field === 'modules' ? parseInt(val) || 0 : val;
-  if (field === 'modules') {
-    $(`pwr_${id}`).textContent = ((s.modules * (parseFloat($('inpModulWp').value) || 440)) / 1000).toFixed(2);
-  }
   recalculateTotals();
+  renderMatrix(); // Neu zeichnen für Plausibilitäts-Badges
 }
 
 function toggleStr(id, active) {
@@ -634,6 +746,16 @@ function toggleStr(id, active) {
   if (!s) return;
   s.is_active = active;
   renderMatrix();
+}
+
+function toggleConfirm(id) {
+  const s = state.currentStrings.find(x => x.id === id);
+  if (!s) return;
+  s.is_confirmed = !s.is_confirmed;
+  renderMatrix();
+  if (s.is_confirmed) {
+    showToast(`String ${s.label} bestätigt & gesperrt`);
+  }
 }
 
 function recalculateTotals() {
@@ -665,6 +787,7 @@ async function saveCurrentProtocol(isFinish = false) {
     pruefer: $('inpPruefer').value.trim() || 'Sven',
     pruefdatum: $('inpDatum').value,
     modul_wp: parseFloat($('inpModulWp').value) || 440,
+    modul_uoc: parseFloat($('inpModulUoc').value) || 40.5,
     mppt_config: $('inpMpptConfig').value.trim(),
     notizen: $('inpNotizen').value.trim() || null,
     status: isFinish ? 'fertig' : (state.isAdminUnlocked ? 'vorbereitet' : 'in_messung'),
@@ -685,10 +808,18 @@ async function saveCurrentProtocol(isFinish = false) {
 
 function exportExcel() {
   const rows = state.currentStrings.map(s => ({
-    String: s.label, WR: s.wr, MPPT: s.mppt, Module: s.modules,
-    kWp: ((s.modules * (parseFloat($('inpModulWp').value) || 440)) / 1000).toFixed(2),
-    Uoc_V: s.uoc || '', Isc_A: s.isc || '', Aktiv: s.is_active ? 'JA' : 'NEIN'
+    String: s.label,
+    WR: s.wr,
+    MPPT: s.mppt,
+    Module: s.is_active ? s.modules : 0,
+    kWp: s.is_active ? ((s.modules * (parseFloat($('inpModulWp').value) || 440)) / 1000).toFixed(2) : '0.00',
+    Uoc_V: s.is_active ? (s.uoc || '') : '',
+    Isc_A: s.is_active ? (s.isc || '') : '',
+    Riso_MOhm: s.is_active ? (s.riso || '') : '',
+    Aktiv: s.is_active ? 'JA' : 'NEIN',
+    Bestaetigt: s.is_confirmed ? 'JA' : 'NEIN'
   }));
+
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Messprotokoll');

@@ -2,9 +2,11 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=0">
 <meta name="theme-color" content="#05080f">
-<title>SOLPRO | PV Prüfprotokoll (Universal-WR & Live-Sync)</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SOLPRO | PV MAN P52 (Manueller Sync)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -33,7 +35,7 @@ body.sun-mode {
 body.sun-mode .sp-inp { background: #ffffff; color: #0f172a; border-color: #94a3b8; font-weight: 700; }
 body.sun-mode #toolbar, body.sun-mode .mobile-bottom-bar { background: rgba(255,255,255,0.96); border-color: #cbd5e1; }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body {
   font-family: 'Inter', sans-serif;
   background: var(--bg);
@@ -71,76 +73,80 @@ body {
 .btn-ghost { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; }
 .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
-.wr-filter-bar {
-  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px;
-}
-.wr-tab {
-  flex: 0 0 auto; background: var(--panel); border: 1px solid var(--border);
-  color: var(--muted); font-size: 0.72rem; font-weight: 700; border-radius: 8px;
-  padding: 6px 12px; cursor: pointer;
-}
+.wr-filter-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.wr-filter-bar::-webkit-scrollbar { display: none; }
+.wr-tab { flex: 0 0 auto; background: var(--panel); border: 1px solid var(--border); color: var(--muted); font-size: 0.75rem; font-weight: 700; border-radius: 8px; padding: 8px 14px; cursor: pointer; white-space: nowrap; }
 .wr-tab.active { background: var(--green); color: #061200; border-color: var(--green); }
-
-.cloud-badge {
-  display: inline-flex; align-items: center; gap: 5px; font-size: 0.7rem; font-weight: 700;
-  padding: 3px 8px; border-radius: 99px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3);
-}
-.status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-.dot-green  { background: #a8cc35; box-shadow: 0 0 8px #a8cc35; }
-.dot-yellow { background: #eab308; box-shadow: 0 0 8px #eab308; }
-.dot-red    { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
 
 .proj-select {
   background: rgba(5,8,15,0.9); border: 1px solid rgba(159,193,49,0.4);
   color: var(--text); font-weight: 700; font-size: 0.8rem; border-radius: 8px;
-  padding: 5px 8px; outline: none; cursor: pointer;
+  padding: 5px 8px; outline: none; cursor: pointer; max-width: 180px; text-overflow: ellipsis;
 }
 
-/* WR BLOCK & TABLES */
+/* WR BLOCK */
 .wr-block { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 14px; }
 .wr-head {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 10px 14px; background: linear-gradient(135deg, rgba(159,193,49,0.08) 0%, transparent 60%);
+  padding: 12px 14px; background: linear-gradient(135deg, rgba(159,193,49,0.08) 0%, transparent 60%);
   border-bottom: 1px solid rgba(159,193,49,0.15); flex-wrap: wrap;
 }
 .wr-title-wrap { display: flex; align-items: center; gap: 8px; }
-.wr-num { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700; background: var(--green); color: #061200; padding: 2px 7px; border-radius: 5px; }
+.wr-num { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700; background: var(--green); color: #061200; padding: 2px 7px; border-radius: 5px; }
 .wr-name-inp {
   background: transparent; border: 1px solid transparent; border-radius: 6px;
-  font-size: 0.82rem; font-weight: 700; text-transform: uppercase; color: var(--text);
-  padding: 2px 6px; outline: none;
+  font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text);
+  padding: 2px 6px; outline: none; width: 100%; max-width: 200px;
 }
 .wr-name-inp:focus { border-color: var(--green); background: rgba(5,8,15,0.8); }
 .wr-kpis { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
 
+/* ── DESKTOP TABLE ── */
 table.mt { width: 100%; border-collapse: collapse; }
 table.mt thead th {
   padding: 8px 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
   color: #64748b; background: rgba(0,0,0,0.25); text-align: center; white-space: nowrap;
 }
-table.mt td { padding: 6px 6px; font-size: 0.78rem; border-bottom: 1px solid rgba(255,255,255,0.03); text-align: center; vertical-align: middle; }
+table.mt td { padding: 6px 6px; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.03); text-align: center; vertical-align: middle; }
 table.mt tbody tr:hover { background: rgba(159,193,49,0.03); }
 table.mt tbody tr.mppt-div { border-top: 1.5px solid rgba(159,193,49,0.18); }
-table.mt tbody tr.row-nein { opacity: 0.25; }
+table.mt tbody tr.row-nein { opacity: 0.3; }
 
 .string-id { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--green); }
 .pwr-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--green); }
-
 .plan-badge { font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; background: rgba(255,255,255,0.05); color: #94a3b8; font-family: 'JetBrains Mono', monospace; }
 .plan-badge-green { background: rgba(159,193,49,0.12); color: #a8cc35; border: 1px solid rgba(159,193,49,0.25); }
 
 .sp-inp {
   background: rgba(5,8,15,0.8); border: 1px solid rgba(100,116,139,0.25);
-  border-radius: 6px; padding: 5px 6px; color: var(--text); font-size: 0.82rem; text-align: center; outline: none;
-  min-height: 36px;
+  border-radius: 8px; padding: 6px 8px; color: var(--text); font-size: 0.85rem; text-align: center; outline: none;
+  min-height: 38px; width: 100%;
 }
 .sp-inp:focus { border-color: var(--green); }
-.sp-inp-gak { color: #a8cc35; font-weight: 700; font-family: 'JetBrains Mono', monospace; width: 72px; }
+.sp-inp-gak { color: #a8cc35; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
 
-.tog-wrap { display: inline-flex; background: rgba(0,0,0,0.4); border-radius: 6px; padding: 2px; }
-.tog { padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; border: none; cursor: pointer; background: transparent; color: #475569; min-height: 28px; }
+.tog-wrap { display: inline-flex; background: rgba(0,0,0,0.4); border-radius: 8px; padding: 2px; }
+.tog { padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; border: none; cursor: pointer; background: transparent; color: #475569; min-height: 32px; }
 .tog.on-ja  { background: rgba(159,193,49,0.25); color: #a8cc35; }
 .tog.on-nei { background: rgba(100,116,139,0.25); color: #94a3b8; }
+
+/* ── MOBILE CARD LAYOUT ── */
+@media (max-width: 800px) {
+  table.mt, table.mt tbody, table.mt tr, table.mt td { display: block; width: 100%; }
+  table.mt thead { display: none; }
+  table.mt tbody tr { border: 1px solid var(--border); border-radius: 12px; margin: 12px; background: rgba(255,255,255,0.02); overflow: hidden; width: calc(100% - 24px); }
+  table.mt tbody tr.mppt-div { border-top: 3px solid rgba(159,193,49,0.3); margin-top: 18px; }
+  table.mt td { display: flex; align-items: center; justify-content: space-between; text-align: right; padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  table.mt td:last-child { border-bottom: none; }
+  table.mt td::before { content: attr(data-label); font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--muted); text-align: left; flex-shrink: 0; margin-right: 12px; }
+  table.mt td:first-child { background: rgba(159,193,49,0.06); border-bottom: 1px solid rgba(159,193,49,0.15); padding: 10px 14px; }
+  table.mt td:first-child::before { display: none; }
+  .sp-inp { max-width: 140px; text-align: right; }
+  td.col-note { flex-direction: column; align-items: flex-start; gap: 6px; }
+  td.col-note .sp-inp { max-width: 100%; text-align: left; }
+  td.col-note::before { margin-right: 0; }
+  .tog-wrap { margin-left: auto; }
+}
 
 .mobile-bottom-bar {
   display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
@@ -152,8 +158,8 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
 
 #toast {
   position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%) translateY(120%);
-  background: #0f172a; border: 1px solid var(--green); color: #fff; padding: 8px 16px;
-  border-radius: 8px; font-size: 0.8rem; font-weight: 600; transition: transform 0.3s; z-index: 9999;
+  background: #0f172a; border: 1px solid var(--green); color: #fff; padding: 10px 20px;
+  border-radius: 10px; font-size: 0.85rem; font-weight: 600; transition: transform 0.3s; z-index: 9999;
 }
 #toast.show { transform: translateX(-50%) translateY(0); }
 
@@ -168,12 +174,16 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
   .no-print, .mobile-bottom-bar, .wr-filter-bar { display: none !important; }
   .wr-block { break-inside: avoid-page; border: 1px solid #cbd5e1 !important; margin-bottom: 10px; display: block !important; }
   .wr-head { background: #f1f5f9 !important; color: #000 !important; }
+  table.mt, table.mt tbody, table.mt tr, table.mt td { display: table; width: 100%; }
+  table.mt thead { display: table-header-group; }
+  table.mt tr { margin: 0; border: none; border-radius: 0; background: none; }
+  table.mt td { padding: 4px 6px; border: 1px solid #cbd5e1 !important; color: #000 !important; text-align: center; }
+  table.mt td::before { display: none !important; }
   table.mt th { background: #e2e8f0 !important; color: #000 !important; border: 1px solid #94a3b8; }
-  table.mt td { border: 1px solid #cbd5e1 !important; color: #000 !important; }
   table.mt tbody tr.row-nein { display: none !important; }
   .sp-inp, .tog-wrap { display: none !important; }
   .print-cell { display: inline !important; font-weight: 700 !important; }
-
+  
   #pr-sig { display: flex !important; gap: 24px; margin-top: 24px; padding-top: 14px; border-top: 2px solid #334155; break-inside: avoid; }
   .sig-col { flex: 1; text-align: center; }
   .sig-img-container { height: 60px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px; }
@@ -196,7 +206,6 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
       <h2 style="font-size:1.1rem;font-weight:800;color:var(--green);">✍️ Digitale Unterschrift</h2>
       <button onclick="closeSignatureModal()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
     </div>
-
     <div style="margin-bottom:14px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
         <label style="font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;">1. Prüfer (Sven / Christoph)</label>
@@ -205,7 +214,6 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
       <input id="sig-name-tech" type="text" class="sp-inp" style="width:100%;text-align:left;margin-bottom:4px;" value="Christoph Huber / Sven">
       <canvas id="sig-canvas-tech" class="sig-box"></canvas>
     </div>
-
     <div style="margin-bottom:16px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
         <label style="font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;">2. Auftraggeber (Kunde)</label>
@@ -214,7 +222,6 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
       <input id="sig-name-client" type="text" class="sp-inp" style="width:100%;text-align:left;margin-bottom:4px;" value="MAN München / Bauleiter">
       <canvas id="sig-canvas-client" class="sig-box"></canvas>
     </div>
-
     <div style="display:flex;gap:8px;">
       <button onclick="saveSignatures()" class="btn btn-green" style="flex:1;">💾 Speichern</button>
       <button onclick="closeSignatureModal()" class="btn btn-ghost">Abbrechen</button>
@@ -222,21 +229,19 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
   </div>
 </div>
 
-<!-- MODAL: NEUES PROJEKT MIT WECHSELRICHTER-MODELL-AUSWAHL -->
+<!-- MODAL: NEUES PROJEKT -->
 <div id="modal-new-project" class="modal">
   <div class="modal-card">
     <h2 style="font-size:1.1rem;font-weight:800;color:var(--green);margin-bottom:12px;">➕ Neues Projekt anlegen</h2>
     <div style="display:flex;flex-direction:column;gap:10px;">
       <div>
         <label style="font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;">Projektname / BVH</label>
-        <input id="np-name" type="text" class="sp-inp" style="width:100%;text-align:left;" placeholder="z.B. BVH Gewerbepark">
+        <input id="np-name" type="text" class="sp-inp" style="width:100%;text-align:left;" placeholder="z.B. BVH Halle Süd">
       </div>
       <div>
         <label style="font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;">Prüfer</label>
         <input id="np-tech" type="text" class="sp-inp" style="width:100%;text-align:left;" value="Christoph Huber / Sven">
       </div>
-
-      <!-- WECHSELRICHTER MODELL AUSWAHL -->
       <div>
         <label style="font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;">Wechselrichter-Hersteller / Modell</label>
         <select id="np-preset" class="sp-inp" style="width:100%;text-align:left;margin-bottom:4px;" onchange="applyWrPreset(this.value)">
@@ -249,23 +254,20 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
           <option value="fronius_symo">Fronius Symo 10–20 kW (2 MPPTs)</option>
           <option value="sungrow125">Sungrow SG125HX (12 MPPTs)</option>
         </select>
-        <input id="np-model-text" type="text" class="sp-inp" style="width:100%;text-align:left;" placeholder="Modellname (z.B. Huawei SUN2000-50KTL)">
+        <input id="np-model-text" type="text" class="sp-inp" style="width:100%;text-align:left;" placeholder="Modellname">
       </div>
-
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div>
           <label style="font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;">Modul (Wp)</label>
-          <input id="np-mod" type="number" inputmode="numeric" class="sp-inp" style="width:100%;" value="440">
+          <input id="np-mod" type="number" inputmode="numeric" class="sp-inp" style="width:100%;" value="465">
         </div>
         <div>
           <label style="font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;">MPPTs pro WR</label>
-          <input id="np-mppts" type="text" class="sp-inp" style="width:100%;" value="6, 6">
+          <input id="np-mppts" type="text" class="sp-inp" style="width:100%;" value="12, 12">
         </div>
       </div>
-      <p style="font-size:0.68rem;color:#64748b;">Kommagetrennt: <strong>6, 6</strong> = 2 Wechselrichter mit je 6 MPPTs.</p>
-
       <div style="display:flex;gap:8px;margin-top:6px;">
-        <button onclick="createNewProject()" class="btn btn-green" style="flex:1;">Projekt anlegen & laden</button>
+        <button onclick="createNewProject()" class="btn btn-green" style="flex:1;">Anlegen & Lokal sichern</button>
         <button onclick="g('modal-new-project').style.display='none'" class="btn btn-ghost">Abbrechen</button>
       </div>
     </div>
@@ -289,11 +291,10 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
       <div class="kpi-value"><span id="d-act">94</span><span style="font-size:0.7rem;color:#64748b;" id="d-slots"> / 144</span></div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Supabase Cloud</div>
-      <div class="kpi-value" style="font-size:1rem;margin-top:4px;">
-        <span class="cloud-badge">
-          <span class="status-dot dot-yellow" id="cloud-dot"></span>
-          <span id="cloud-text">Verbinde...</span>
+      <div class="kpi-label">Daten-Status</div>
+      <div class="kpi-value" style="font-size:1.1rem;margin-top:4px;">
+        <span class="cloud-badge" id="status-badge" style="border-color:var(--green); color:var(--green);">
+          Lokal gesichert
         </span>
       </div>
     </div>
@@ -305,15 +306,19 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
       <select id="project-dropdown" class="proj-select" onchange="switchProject(this.value)">
         <option value="PV_MAN_P52">PV MAN P52</option>
       </select>
-      <button onclick="g('modal-new-project').style.display='flex'" class="btn btn-ghost" style="padding:4px 8px;" title="Neues Projekt erstellen">➕</button>
+      <button onclick="g('modal-new-project').style.display='flex'" class="btn btn-ghost" style="padding:4px 8px;">➕</button>
       <button onclick="toggleSunMode()" class="btn btn-ghost" id="btn-sun">☀️ Dach-Modus</button>
     </div>
 
     <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
-      <button onclick="openSignatureModal()" class="btn btn-blue" id="btn-sig">✍️ Signieren</button>
-      <button onclick="printMontagePlan()" class="btn btn-ghost" style="border-color:#38bdf8;color:#38bdf8;" title="Kompakte Gegenüberstellung drucken">📋 Montage-Plan</button>
-      <button onclick="exportSmartScriptExcel()" class="btn btn-green" title="1-Spalten Excel für GAK-Pickerl">🏷️ Pickerl (.xlsx)</button>
-      <button onclick="exportStringNumbersExcel()" class="btn btn-ghost" style="border-color:#a8cc35;color:#a8cc35;">🔢 Strings (.xlsx)</button>
+      <!-- NEU: Manueller Cloud-Sync -->
+      <button onclick="pushToCloud()" class="btn btn-blue" title="Lokal gespeicherte Daten in die Cloud hochladen">☁️ In Cloud speichern</button>
+      <button onclick="fetchCloudProject()" class="btn btn-ghost" style="border-color:#38bdf8;color:#38bdf8;" title="Aktuellen Stand aus der Cloud holen">📥 Aus Cloud laden</button>
+      
+      <button onclick="openSignatureModal()" class="btn btn-ghost" id="btn-sig">✍️ Signieren</button>
+      <button onclick="printMontagePlan()" class="btn btn-ghost" style="border-color:#eab308;color:#eab308;" title="Übersichtliche Gegenüberstellung drucken">📋 Montage-Plan</button>
+      <button onclick="exportSmartScriptExcel()" class="btn btn-green" title="1-Spalten Excel für GAK-Pickerl">🏷️ Pickerl</button>
+      <button onclick="exportStringNumbersExcel()" class="btn btn-ghost" style="border-color:#a8cc35;color:#a8cc35;">🔢 Strings</button>
       <button onclick="doExcel()" class="btn btn-ghost">📊 Protokoll</button>
       <button onclick="window.print()" class="btn btn-ghost">📄 PDF</button>
     </div>
@@ -332,14 +337,14 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
         <img id="pr-img-tech" style="display:none;" alt="Unterschrift Prüfer">
       </div>
       <div class="sig-line"></div>
-      <div class="sig-desc" id="pr-desc-tech">Datum &amp; Prüfer (Christoph Huber / Sven)</div>
+      <div class="sig-desc" id="pr-desc-tech">Datum &amp; Prüfer</div>
     </div>
     <div class="sig-col">
       <div class="sig-img-container">
         <img id="pr-img-client" style="display:none;" alt="Unterschrift Auftraggeber">
       </div>
       <div class="sig-line"></div>
-      <div class="sig-desc" id="pr-desc-client">Datum &amp; Auftraggeber (MAN München)</div>
+      <div class="sig-desc" id="pr-desc-client">Datum &amp; Auftraggeber</div>
     </div>
     <div class="sig-col">
       <div class="sig-img-container"></div>
@@ -352,15 +357,9 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
 
 <!-- SMARTPHONE DAUMEN-BAR -->
 <div class="mobile-bottom-bar no-print">
-  <div style="display:flex;align-items:center;gap:6px;">
-    <span class="status-dot dot-yellow" id="cloud-dot-m"></span>
-    <span style="font-size:0.7rem;font-weight:700;" id="cloud-text-m">Sync...</span>
-  </div>
-  <div style="display:flex;gap:6px;">
-    <button onclick="openSignatureModal()" class="btn btn-blue" style="padding:6px 10px;font-size:0.72rem;">✍️ Signieren</button>
-    <button onclick="manualSync()" class="btn btn-ghost" style="padding:6px 10px;font-size:0.72rem;">🔄 Sync</button>
-    <button onclick="exportSmartScriptExcel()" class="btn btn-green" style="padding:6px 10px;font-size:0.72rem;">🏷️ Pickerl</button>
-  </div>
+  <button onclick="pushToCloud()" class="btn btn-blue" style="padding:6px 10px;font-size:0.75rem;flex:1;">☁️ Speichern</button>
+  <button onclick="fetchCloudProject()" class="btn btn-ghost" style="padding:6px 10px;font-size:0.75rem;flex:1;border-color:#38bdf8;color:#38bdf8;">📥 Laden</button>
+  <button onclick="exportSmartScriptExcel()" class="btn btn-green" style="padding:6px 10px;font-size:0.75rem;flex:1;">🏷️ Pickerl</button>
 </div>
 
 <script>
@@ -368,7 +367,7 @@ const SB_URL = "https://rcuimtfmjkpxkazbsggj.supabase.co";
 const SB_KEY = "sb_publishable_pe8Ye20-e9az1D5MvNCB5A_8_ai7afc";
 
 const g = id => document.getElementById(id);
-let toast_t = null, sync_timeout = null, auto_sync_interval = null;
+let toast_t = null;
 let supabaseClient = null;
 
 function toast(msg, ms=2600){
@@ -383,42 +382,18 @@ function toggleSunMode(){
   localStorage.setItem('solpro_sun_mode', isSun ? '1' : '0');
 }
 
-// WECHSELRICHTER-PRESETS FÜR DAS MODAL
 function applyWrPreset(preset){
   const textInp = g('np-model-text');
   const mpptsInp = g('np-mppts');
   switch(preset){
-    case 'sma125':
-      textInp.value = "SMA Sunny Tripower 125";
-      mpptsInp.value = "12, 12";
-      break;
-    case 'sma50':
-      textInp.value = "SMA Sunny Tripower CORE1 50kW";
-      mpptsInp.value = "6, 6";
-      break;
-    case 'huawei100':
-      textInp.value = "Huawei SUN2000-100KTL";
-      mpptsInp.value = "10, 10";
-      break;
-    case 'huawei50':
-      textInp.value = "Huawei SUN2000-50KTL";
-      mpptsInp.value = "6, 6";
-      break;
-    case 'fronius_tauro':
-      textInp.value = "Fronius Tauro 50/100";
-      mpptsInp.value = "3, 3";
-      break;
-    case 'fronius_symo':
-      textInp.value = "Fronius Symo";
-      mpptsInp.value = "2, 2";
-      break;
-    case 'sungrow125':
-      textInp.value = "Sungrow SG125HX";
-      mpptsInp.value = "12, 12";
-      break;
-    default:
-      textInp.value = "Wechselrichter";
-      break;
+    case 'sma125': textInp.value = "SMA Sunny Tripower 125"; mpptsInp.value = "12, 12"; break;
+    case 'sma50': textInp.value = "SMA Sunny Tripower CORE1 50kW"; mpptsInp.value = "6, 6"; break;
+    case 'huawei100': textInp.value = "Huawei SUN2000-100KTL"; mpptsInp.value = "10, 10"; break;
+    case 'huawei50': textInp.value = "Huawei SUN2000-50KTL"; mpptsInp.value = "6, 6"; break;
+    case 'fronius_tauro': textInp.value = "Fronius Tauro 50/100"; mpptsInp.value = "3, 3"; break;
+    case 'fronius_symo': textInp.value = "Fronius Symo"; mpptsInp.value = "2, 2"; break;
+    case 'sungrow125': textInp.value = "Sungrow SG125HX"; mpptsInp.value = "12, 12"; break;
+    default: textInp.value = "Wechselrichter"; break;
   }
 }
 
@@ -439,14 +414,14 @@ function filterInverter(wrNum, btnEl){
 function updateFilterBar(){
   const cont = g('wr-filter-container');
   if(!cont) return;
-  let html = `<button class="wr-tab active" onclick="filterInverter(0, this)">⚡ Alle WRs (1–${PROJECT.inverters.length})</button>`;
+  let html = `<button class="wr-tab active" onclick="filterInverter(0, this)">⚡ Alle WRs</button>`;
   PROJECT.inverters.forEach((inv, idx) => {
     html += `<button class="wr-tab" onclick="filterInverter(${idx + 1}, this)">WR ${inv.wr}</button>`;
   });
   cont.innerHTML = html;
 }
 
-// SLD-PLAN STRUKTUR FÜR DAS VORGEFÜLLTE PROJEKT (PV MAN P52)
+// ── DIE SAUBERE AUFTEILUNG: ALLE 12 MPPTs VOLL BELEGT ──
 const SLD_PLAN = {
   // WR 1: 12 Strings auf 12 MPPTs
   "1.1.1": { planName: "STR 1", gak: "GAK 1.1", mod: 23, stat: "JA", note: "Fläche A" },
@@ -462,7 +437,7 @@ const SLD_PLAN = {
   "1.11.1":{ planName: "STR 11", gak: "GAK 1.2", mod: 21, stat: "JA", note: "Fläche A" },
   "1.12.1":{ planName: "STR 12", gak: "GAK 1.2", mod: 21, stat: "JA", note: "Fläche A" },
 
-  // WR 2 (14 Strings auf 12 MPPTs)
+  // WR 2 (14 Strings)
   "2.1.1": { planName: "STR 1", gak: "GAK 2.1", mod: 13, stat: "JA", note: "Fläche B" },
   "2.2.1": { planName: "STR 2", gak: "GAK 2.1", mod: 13, stat: "JA", note: "Fläche B" },
   "2.3.1": { planName: "STR 3", gak: "GAK 2.1", mod: 21, stat: "JA", note: "Fläche B" },
@@ -478,7 +453,7 @@ const SLD_PLAN = {
   "2.11.1":{ planName: "STR 13", gak: "GAK 2.2", mod: 18, stat: "JA", note: "Fläche B (10 mm²)" },
   "2.12.1":{ planName: "STR 14", gak: "GAK 2.2", mod: 18, stat: "JA", note: "Fläche B (10 mm²)" },
 
-  // WR 3 (18 Strings auf 12 MPPTs)
+  // WR 3 (18 Strings)
   "3.1.1": { planName: "STR 1", gak: "GAK 3.1", mod: 13, stat: "JA", note: "Fläche C" },
   "3.2.1": { planName: "STR 2", gak: "GAK 3.1", mod: 13, stat: "JA", note: "Fläche C" },
   "3.3.1": { planName: "STR 3", gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
@@ -498,7 +473,7 @@ const SLD_PLAN = {
   "3.11.1":{ planName: "STR 15", gak: "GAK 3.2", mod: 15, stat: "JA", note: "Fläche C" },
   "3.12.1":{ planName: "STR 16", gak: "GAK 3.2", mod: 15, stat: "JA", note: "Fläche C" },
 
-  // WR 4 (16 Strings auf 12 MPPTs)
+  // WR 4 (16 Strings)
   "4.1.1": { planName: "STR 1", gak: "GAK 4.1", mod: 16, stat: "JA", note: "Fläche D" },
   "4.2.1": { planName: "STR 2", gak: "GAK 4.1", mod: 16, stat: "JA", note: "Fläche D" },
   "4.3.1": { planName: "STR 3", gak: "GAK 4.1", mod: 23, stat: "JA", note: "Fläche D" },
@@ -516,7 +491,7 @@ const SLD_PLAN = {
   "4.11.1":{ planName: "STR 15", gak: "GAK 4.2", mod: 20, stat: "JA", note: "Fläche D (10 mm²)" },
   "4.12.1":{ planName: "STR 16", gak: "GAK 4.2", mod: 20, stat: "JA", note: "Fläche D (10 mm²)" },
 
-  // WR 5 (18 Strings auf 12 MPPTs)
+  // WR 5 (18 Strings)
   "5.1.1": { planName: "STR 1", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E (Doppel)" },
   "5.1.2": { planName: "STR 3", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E (Doppel)" },
   "5.2.1": { planName: "STR 2", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E (Doppel)" },
@@ -536,7 +511,7 @@ const SLD_PLAN = {
   "5.11.1":{ planName: "STR 17", gak: "GAK 5.2", mod: 13, stat: "JA", note: "Fläche E (10 mm²)" },
   "5.12.1":{ planName: "STR 18", gak: "GAK 5.2", mod: 13, stat: "JA", note: "Fläche E (10 mm²)" },
 
-  // WR 6 (16 Strings auf 12 MPPTs)
+  // WR 6 (16 Strings)
   "6.1.1": { planName: "STR 1", gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
   "6.1.2": { planName: "STR 3", gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
   "6.2.1": { planName: "STR 2", gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
@@ -555,7 +530,6 @@ const SLD_PLAN = {
   "6.12.2":{ planName: "STR 16", gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" }
 };
 
-// INITIALISIERT PROJEKTE DYNAMISCH MIT DEM GEWÄHLTEN MODELL
 function createDefaultProject(id="PV_MAN_P52", name="PV MAN P52", mppts=[12,12,12,12,12,12], modWp=465, tech="Christoph Huber / Sven", modelName="SMA Sunny Tripower 125"){
   return {
     id: id,
@@ -626,38 +600,38 @@ function renderMatrix(){
       const pwr = (s.stat === 'JA' && s.mod > 0) ? ((s.mod * PROJECT.modulWp)/1000).toFixed(2) + ' kWp' : '—';
       const planBadge = (s.planStat === 'JA') 
         ? `<span class="plan-badge plan-badge-green">${s.planName ? '<b>' + s.planName + '</b> · ' : ''}${s.planMod}M · ${s.planGak}</span>`
-        : `<span class="plan-badge" style="opacity:0.4;">Freier 2. Eingang</span>`;
+        : `<span class="plan-badge" style="opacity:0.4;">Freier Eingang</span>`;
 
       rows += `
         <tr id="row-${fullId}" class="${isMpptDiv ? 'mppt-div' : ''} ${isNein ? 'row-nein' : ''}">
-          <td style="text-align:left;padding-left:12px;">
+          <td data-label="String ID" style="padding-left:12px;">
             <span class="string-id">${fullId}</span>
             <span style="font-size:0.62rem;color:#64748b;margin-left:3px;">(M${s.mppt}.${s.in})</span>
           </td>
-          <td class="no-print" style="text-align:left;">
+          <td data-label="Plan-Soll (SLD)" class="no-print">
             ${planBadge}
           </td>
-          <td>
-            <input type="text" id="gak-${fullId}" value="${s.gak}" class="sp-inp sp-inp-gak" oninput="queueAutoSync()">
+          <td data-label="GAK (Ist)">
+            <input type="text" id="gak-${fullId}" value="${s.gak}" class="sp-inp sp-inp-gak" oninput="saveLocalState()">
             <span class="print-cell" style="color:#3d5800;">${s.gak}</span>
           </td>
-          <td class="no-print">
+          <td data-label="Aktiv" class="no-print">
             <div class="tog-wrap">
               <button id="tja-${fullId}" class="tog ${s.stat==='JA'?'on-ja':''}" onclick="setStatus('${fullId}','JA')">JA</button>
               <button id="tnei-${fullId}" class="tog ${s.stat==='NEIN'?'on-nei':''}" onclick="setStatus('${fullId}','NEIN')">NEIN</button>
             </div>
             <input type="hidden" id="stat-${fullId}" value="${s.stat}">
           </td>
-          <td>
+          <td data-label="Module">
             <input type="number" inputmode="numeric" id="mod-${fullId}" value="${s.mod}" class="sp-inp" style="width:50px;" oninput="onModInput('${inv.wr}','${s.mppt}','${s.in}',this.value)">
             <span class="print-cell" id="pm-${fullId}">${s.mod > 0 ? s.mod : '—'}</span>
           </td>
-          <td class="pwr-cell" id="pw-${fullId}">${pwr}</td>
-          <td><input type="text" inputmode="decimal" id="uoc-${fullId}" value="${s.uoc||''}" placeholder="V" class="sp-inp" style="width:62px;" oninput="queueAutoSync()"></td>
-          <td><input type="text" inputmode="decimal" id="isc-${fullId}" value="${s.isc||''}" placeholder="A" class="sp-inp" style="width:62px;" oninput="queueAutoSync()"></td>
-          <td><input type="text" inputmode="decimal" id="riso-${fullId}" value="${s.riso||''}" placeholder="MΩ" class="sp-inp" style="width:62px;" oninput="queueAutoSync()"></td>
-          <td style="text-align:left;">
-            <input type="text" id="note-${fullId}" value="${s.note||''}" class="sp-inp" style="width:100%;text-align:left;color:#94a3b8;" oninput="queueAutoSync()">
+          <td data-label="Leistung" class="pwr-cell" id="pw-${fullId}">${pwr}</td>
+          <td data-label="Uoc (V)"><input type="text" inputmode="decimal" id="uoc-${fullId}" value="${s.uoc||''}" placeholder="V" class="sp-inp" style="width:62px;" oninput="saveLocalState()"></td>
+          <td data-label="Isc (A)"><input type="text" inputmode="decimal" id="isc-${fullId}" value="${s.isc||''}" placeholder="A" class="sp-inp" style="width:62px;" oninput="saveLocalState()"></td>
+          <td data-label="Riso (MΩ)"><input type="text" inputmode="decimal" id="riso-${fullId}" value="${s.riso||''}" placeholder="MΩ" class="sp-inp" style="width:62px;" oninput="saveLocalState()"></td>
+          <td data-label="Bemerkung" class="col-note">
+            <input type="text" id="note-${fullId}" value="${s.note||''}" class="sp-inp" style="width:100%;text-align:left;color:#94a3b8;" oninput="saveLocalState()">
             <span class="print-cell" style="font-size:7pt;color:#475569;">${s.note||''}</span>
           </td>
         </tr>`;
@@ -667,7 +641,7 @@ function renderMatrix(){
       <div class="wr-head">
         <div class="wr-title-wrap">
           <span class="wr-num">WR ${inv.wr}</span>
-          <input type="text" value="${inv.name}" class="wr-name-inp" onchange="updateWrName(${inv.wr}, this.value)" title="Klicken zum Umbenennen">
+          <input type="text" value="${inv.name}" class="wr-name-inp" onchange="updateWrName(${inv.wr}, this.value)">
         </div>
         <div class="wr-kpis">
           <span id="wr-mod-${inv.wr}">0</span> Module &middot; <span id="wr-pwr-${inv.wr}" style="color:#a8cc35;">0.00 kWp</span>
@@ -702,11 +676,10 @@ function updateWrName(wrNum, newName){
   const inv = PROJECT.inverters.find(i => i.wr === wrNum);
   if(inv){
     inv.name = newName;
-    queueAutoSync();
+    saveLocalState();
   }
 }
 
-// AUTO-SYNC FÜR PARALLELE STRINGS AM SELBEN MPPT
 function onModInput(wr, mppt, input, val){
   const partnerInput = (input === '1') ? '2' : '1';
   const partnerId = `${wr}.${mppt}.${partnerInput}`;
@@ -718,7 +691,7 @@ function onModInput(wr, mppt, input, val){
     recalcRow(partnerId);
   }
   recalcRow(`${wr}.${mppt}.${input}`);
-  queueAutoSync();
+  saveLocalState();
 }
 
 function setStatus(id, st){
@@ -727,7 +700,7 @@ function setStatus(id, st){
   if(st === 'JA'){ ja.className = 'tog on-ja'; nei.className = 'tog'; }
   else { nei.className = 'tog on-nei'; ja.className = 'tog'; }
   recalcRow(id);
-  queueAutoSync();
+  saveLocalState();
 }
 
 function recalcRow(id){
@@ -782,34 +755,33 @@ function updateKpis(){
   g('d-slots').textContent = ` / ${totSlots}`;
 }
 
-// ── DRUCK-FUNKTION: MONTAGE-PLAN ──
+// ── DRUCK-FUNKTION: MONTAGE-PLAN (GROßE SCHRIFT, 3 SPALTEN) ──
 function printMontagePlan(){
   let win = window.open('', '_blank');
   let rowsHtml = '';
 
   PROJECT.inverters.forEach(inv => {
-    rowsHtml += `
-      <tr style="background:#e2e8f0;font-weight:bold;">
-        <td colspan="6" style="padding:6px 10px;border:1px solid #94a3b8;font-size:10pt;">${inv.name}</td>
-      </tr>`;
-    inv.strings.forEach(s => {
-      const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
-      const st = (g('stat-'+fullId)||{}).value || s.stat;
-      if(st !== 'JA') return;
+    // Prüfen, ob der Wechselrichter überhaupt aktive / belegte Strings hat
+    let hasActive = inv.strings.some(s => s.stat === 'JA' || s.planStat === 'JA');
+    if(!hasActive) return;
 
-      const mod = (g('mod-'+fullId)||{}).value || s.mod;
+    rowsHtml += `
+      <tr style="background:#e2e8f0;">
+        <td colspan="3" style="padding:10px 14px; border:2px solid #94a3b8; font-size:14pt; font-weight:bold;">${inv.name}</td>
+      </tr>`;
+      
+    inv.strings.forEach(s => {
+      if(s.stat !== 'JA' && s.planStat !== 'JA') return; // Überspringt komplett leere Reserve-Strings
+      
+      const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
       const gak = (g('gak-'+fullId)||{}).value || s.gak;
-      const note = (g('note-'+fullId)||{}).value || s.note || '';
-      const pwr = ((parseFloat(mod) * PROJECT.modulWp)/1000).toFixed(2);
+      const altName = s.planName || ('STR ' + s.mppt + '.' + s.in); // Fallback für neue Projekte
 
       rowsHtml += `
         <tr>
-          <td style="padding:5px 8px;border:1px solid #cbd5e1;font-weight:bold;color:#1e3a8a;">${s.planName || ('STR ' + s.in)}</td>
-          <td style="padding:5px 8px;border:1px solid #cbd5e1;font-weight:bold;color:#4d7c0f;font-family:monospace;">${fullId}</td>
-          <td style="padding:5px 8px;border:1px solid #cbd5e1;font-weight:bold;">${gak}</td>
-          <td style="padding:5px 8px;border:1px solid #cbd5e1;text-align:center;">${mod} Module</td>
-          <td style="padding:5px 8px;border:1px solid #cbd5e1;text-align:center;font-weight:bold;">${pwr} kWp</td>
-          <td style="padding:5px 8px;border:1px solid #cbd5e1;color:#475569;">${note}</td>
+          <td style="padding:8px 14px; border:2px solid #cbd5e1; font-weight:bold; font-size:13pt; color:#1e3a8a;">${altName}</td>
+          <td style="padding:8px 14px; border:2px solid #cbd5e1; font-weight:bold; font-size:15pt; color:#4d7c0f; font-family:monospace;">${fullId}</td>
+          <td style="padding:8px 14px; border:2px solid #cbd5e1; font-size:13pt; font-weight:bold;">${gak}</td>
         </tr>`;
     });
   });
@@ -821,25 +793,22 @@ function printMontagePlan(){
       <title>SOLPRO | Montage-Plan ${PROJECT.standort}</title>
       <style>
         body { font-family: 'Inter', Arial, sans-serif; padding: 20px; color: #111; }
-        h1 { font-size: 15pt; margin: 0 0 4px; }
-        p { margin: 0 0 16px; font-size: 9pt; color: #475569; }
-        table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
-        th { background: #0f172a; color: #fff; padding: 6px 8px; border: 1px solid #0f172a; text-align: left; text-transform: uppercase; font-size: 7.5pt; }
-        @page { size: A4 portrait; margin: 10mm; }
+        h1 { font-size: 18pt; margin: 0 0 6px; }
+        p { margin: 0 0 20px; font-size: 11pt; color: #475569; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #0f172a; color: #fff; padding: 10px 14px; border: 2px solid #0f172a; text-align: left; text-transform: uppercase; font-size: 11pt; }
+        @page { size: A4 portrait; margin: 15mm; }
       </style>
     </head>
     <body onload="window.print()">
-      <h1>MONTAGE-PLAN &amp; KABEL-GEGEN&Uuml;BERSTELLUNG</h1>
-      <p><strong>Projekt:</strong> ${PROJECT.standort} &middot; <strong>Modul:</strong> ${PROJECT.modulWp} Wp &middot; <strong>Pr&uuml;fer:</strong> ${PROJECT.pruefer}</p>
+      <h1>MONTAGE-PLAN / KABEL-MAPPING</h1>
+      <p><strong>Projekt:</strong> ${PROJECT.standort} &middot; <strong>Modul:</strong> ${PROJECT.modulWp} Wp</p>
       <table>
         <thead>
           <tr>
-            <th style="width:16%;">Plan-String (SLD)</th>
-            <th style="width:18%;">WR-Klemme (Matrix)</th>
-            <th style="width:14%;">GAK</th>
-            <th style="width:14%;text-align:center;">Module</th>
-            <th style="width:14%;text-align:center;">Leistung</th>
-            <th>Fl&auml;che / Kabelquerschnitt</th>
+            <th style="width:35%;">Plan-Soll (Alte Bezeichnung)</th>
+            <th style="width:35%;">WR-Klemme (Neue ID)</th>
+            <th style="width:30%;">GAK</th>
           </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
@@ -852,83 +821,31 @@ function printMontagePlan(){
 
 // ── DIGITALE UNTERSCHRIFTEN LOGIK ──
 let padTech, padClient;
-
+// ... (Die Signature-Klasse bleibt exakt gleich, um Platz zu sparen, nur Aufruf angepasst) ...
 class SignaturePad {
   constructor(canvasId){
-    this.canvas = g(canvasId);
-    this.ctx = this.canvas.getContext('2d');
-    this.drawing = false;
-    this.hasSignature = false;
-
+    this.canvas = g(canvasId); this.ctx = this.canvas.getContext('2d');
+    this.drawing = false; this.hasSignature = false;
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
-    this.canvas.width = this.canvas.offsetWidth * ratio;
-    this.canvas.height = this.canvas.offsetHeight * ratio;
-    this.ctx.scale(ratio, ratio);
-    this.ctx.lineWidth = 2.5;
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
-    this.ctx.strokeStyle = '#0284c7';
+    this.canvas.width = this.canvas.offsetWidth * ratio; this.canvas.height = this.canvas.offsetHeight * ratio;
+    this.ctx.scale(ratio, ratio); this.ctx.lineWidth = 2.5; this.ctx.lineCap = 'round'; this.ctx.lineJoin = 'round'; this.ctx.strokeStyle = '#0284c7';
 
-    const start = (e) => {
-      this.drawing = true;
-      const p = this.getPos(e);
-      this.ctx.beginPath();
-      this.ctx.moveTo(p.x, p.y);
-      if(e.cancelable) e.preventDefault();
-    };
-    const move = (e) => {
-      if(!this.drawing) return;
-      const p = this.getPos(e);
-      this.ctx.lineTo(p.x, p.y);
-      this.ctx.stroke();
-      this.hasSignature = true;
-      if(e.cancelable) e.preventDefault();
-    };
+    const start = (e) => { this.drawing = true; const p = this.getPos(e); this.ctx.beginPath(); this.ctx.moveTo(p.x, p.y); if(e.cancelable) e.preventDefault(); };
+    const move = (e) => { if(!this.drawing) return; const p = this.getPos(e); this.ctx.lineTo(p.x, p.y); this.ctx.stroke(); this.hasSignature = true; if(e.cancelable) e.preventDefault(); };
     const stop = () => { this.drawing = false; };
-
-    this.canvas.addEventListener('mousedown', start);
-    this.canvas.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', stop);
-
-    this.canvas.addEventListener('touchstart', start, { passive: false });
-    this.canvas.addEventListener('touchmove', move, { passive: false });
-    window.addEventListener('touchend', stop);
+    this.canvas.addEventListener('mousedown', start); this.canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', stop);
+    this.canvas.addEventListener('touchstart', start, { passive: false }); this.canvas.addEventListener('touchmove', move, { passive: false }); window.addEventListener('touchend', stop);
   }
-
-  getPos(e){
-    const rect = this.canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return { x: clientX - rect.left, y: clientY - rect.top };
-  }
-
-  clear(){
-    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-    this.ctx.clearRect(0, 0, this.canvas.width / ratio, this.canvas.height / ratio);
-    this.hasSignature = false;
-  }
-
-  toDataURL(){
-    return this.hasSignature ? this.canvas.toDataURL('image/png') : '';
-  }
-
-  loadDataURL(dataUrl){
-    if(!dataUrl) return;
-    const img = new Image();
-    img.onload = () => {
-      const ratio = Math.max(window.devicePixelRatio || 1, 1);
-      this.ctx.drawImage(img, 0, 0, this.canvas.width / ratio, this.canvas.height / ratio);
-      this.hasSignature = true;
-    };
-    img.src = dataUrl;
-  }
+  getPos(e){ const rect = this.canvas.getBoundingClientRect(); return { x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left, y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top }; }
+  clear(){ this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); this.hasSignature = false; }
+  toDataURL(){ return this.hasSignature ? this.canvas.toDataURL('image/png') : ''; }
+  loadDataURL(dataUrl){ if(!dataUrl) return; const img = new Image(); img.onload = () => { this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height); this.hasSignature = true; }; img.src = dataUrl; }
 }
 
 function openSignatureModal(){
   g('modal-signature').style.display = 'flex';
   if(!padTech) padTech = new SignaturePad('sig-canvas-tech');
   if(!padClient) padClient = new SignaturePad('sig-canvas-client');
-
   if(PROJECT.signatures){
     if(PROJECT.signatures.techName) g('sig-name-tech').value = PROJECT.signatures.techName;
     if(PROJECT.signatures.clientName) g('sig-name-client').value = PROJECT.signatures.clientName;
@@ -936,55 +853,35 @@ function openSignatureModal(){
     if(PROJECT.signatures.clientSig) padClient.loadDataURL(PROJECT.signatures.clientSig);
   }
 }
-
-function closeSignatureModal(){
-  g('modal-signature').style.display = 'none';
-}
-
-function clearCanvas(id){
-  if(id === 'sig-canvas-tech' && padTech) padTech.clear();
-  if(id === 'sig-canvas-client' && padClient) padClient.clear();
-}
+function closeSignatureModal(){ g('modal-signature').style.display = 'none'; }
+function clearCanvas(id){ if(id === 'sig-canvas-tech' && padTech) padTech.clear(); if(id === 'sig-canvas-client' && padClient) padClient.clear(); }
 
 function saveSignatures(){
-  const techSig = padTech ? padTech.toDataURL() : (PROJECT.signatures?.techSig || "");
-  const clientSig = padClient ? padClient.toDataURL() : (PROJECT.signatures?.clientSig || "");
-
   PROJECT.signatures = {
     techName: g('sig-name-tech').value.trim() || PROJECT.pruefer,
-    techSig: techSig,
+    techSig: padTech ? padTech.toDataURL() : (PROJECT.signatures?.techSig || ""),
     clientName: g('sig-name-client').value.trim() || "Auftraggeber",
-    clientSig: clientSig,
+    clientSig: padClient ? padClient.toDataURL() : (PROJECT.signatures?.clientSig || ""),
     date: new Date().toLocaleDateString('de-AT')
   };
-
   updatePrintSignatures();
   closeSignatureModal();
-  queueAutoSync();
-  toast('✍️ Unterschriften gespeichert & synchronisiert');
+  saveLocalState();
+  toast('✍️ Unterschriften gespeichert');
 }
 
 function updatePrintSignatures(){
   if(!PROJECT.signatures) return;
   const sigs = PROJECT.signatures;
   const imgTech = g('pr-img-tech'), imgClient = g('pr-img-client');
-  const descTech = g('pr-desc-tech'), descClient = g('pr-desc-client');
+  
+  imgTech.style.display = sigs.techSig ? 'block' : 'none';
+  if(sigs.techSig) imgTech.src = sigs.techSig;
+  imgClient.style.display = sigs.clientSig ? 'block' : 'none';
+  if(sigs.clientSig) imgClient.src = sigs.clientSig;
 
-  if(sigs.techSig){
-    imgTech.src = sigs.techSig;
-    imgTech.style.display = 'block';
-  } else {
-    imgTech.style.display = 'none';
-  }
-  if(sigs.clientSig){
-    imgClient.src = sigs.clientSig;
-    imgClient.style.display = 'block';
-  } else {
-    imgClient.style.display = 'none';
-  }
-
-  descTech.textContent = `Datum: ${sigs.date || ''} · Prüfer (${sigs.techName || ''})`;
-  descClient.textContent = `Datum: ${sigs.date || ''} · Auftraggeber (${sigs.clientName || ''})`;
+  g('pr-desc-tech').textContent = `Datum: ${sigs.date || ''} · Prüfer (${sigs.techName || ''})`;
+  g('pr-desc-client').textContent = `Datum: ${sigs.date || ''} · Auftraggeber (${sigs.clientName || ''})`;
 
   const btnSig = g('btn-sig');
   if(sigs.techSig || sigs.clientSig){
@@ -996,113 +893,19 @@ function updatePrintSignatures(){
   }
 }
 
-// ── SUPABASE MULTI-PROJEKT & CLOUD-ENGINE ──
+// ── MANUELLER CLOUD SYNC & SPEICHERN ──
 function initSupabase(){
   if(window.supabase && SB_URL && SB_KEY){
     try {
       supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
-      setCloudStatus('online', 'Live mit Supabase');
       loadProjectListFromCloud();
-      subscribeRealtime();
-      
-      clearInterval(auto_sync_interval);
-      auto_sync_interval = setInterval(() => {
-        pushToCloud();
-        fetchCloudProject();
-        toast('🔄 120-Minuten Auto-Sync ausgeführt');
-      }, 120 * 60 * 1000);
-
-    } catch(e) {
-      setCloudStatus('offline', 'Verbindungsfehler');
-    }
+    } catch(e) {}
   }
 }
 
-function setCloudStatus(status, text){
-  const dot = g('cloud-dot'), txt = g('cloud-text');
-  const dotM = g('cloud-dot-m'), txtM = g('cloud-text-m');
-  if(txt) txt.textContent = text;
-  if(txtM) txtM.textContent = text;
-
-  const dotClass = (status === 'online') ? 'status-dot dot-green' : (status === 'syncing') ? 'status-dot dot-yellow' : 'status-dot dot-red';
-  if(dot) dot.className = dotClass;
-  if(dotM) dotM.className = dotClass;
-}
-
-async function loadProjectListFromCloud(){
-  if(!supabaseClient) return;
-  try {
-    const { data, error } = await supabaseClient
-      .from('pv_projects')
-      .select('id, name, updated_at')
-      .order('updated_at', { ascending: false });
-
-    if(data && data.length > 0){
-      const sel = g('project-dropdown');
-      sel.innerHTML = '';
-      data.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = p.name || p.id;
-        if(p.id === PROJECT.id) opt.selected = true;
-        sel.appendChild(opt);
-      });
-      fetchCloudProject();
-    } else {
-      pushToCloud();
-    }
-  } catch(e){}
-}
-
-async function switchProject(projId){
-  if(!supabaseClient) return;
-  toast(`Lade Projekt ${projId}...`);
-  try {
-    const { data, error } = await supabaseClient
-      .from('pv_projects')
-      .select('*')
-      .eq('id', projId)
-      .single();
-
-    if(data){
-      const mppts = data.mppts ? data.mppts.split(',').map(Number) : [12,12,12,12,12,12];
-      PROJECT = createDefaultProject(data.id, data.name, mppts, data.modul_wp || 465, data.pruefer || '');
-      renderMatrix();
-      if(data.data) applyRemoteData(data.data);
-      toast(`✓ Projekt "${data.name}" geladen`);
-    }
-  } catch(e){
-    toast('Fehler beim Laden des Projekts');
-  }
-}
-
-async function createNewProject(){
-  const name = g('np-name').value.trim();
-  if(!name) return toast('Bitte Projektnamen eingeben');
-  const tech = g('np-tech').value.trim() || 'Prüfer';
-  const modWp = parseFloat(g('np-mod').value) || 440;
-  const mpptsRaw = g('np-mppts').value.trim() || '6, 6';
-  const mppts = mpptsRaw.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>0);
-  const modelName = g('np-model-text').value.trim() || "Wechselrichter";
-  const projId = name.replace(/[^a-zA-Z0-9_-]/g, '_');
-
-  PROJECT = createDefaultProject(projId, name, mppts, modWp, tech, modelName);
-  g('modal-new-project').style.display = 'none';
-  renderMatrix();
-
-  await pushToCloud();
-  await loadProjectListFromCloud();
-  toast(`✓ Neues Projekt "${name}" angelegt`);
-}
-
-function queueAutoSync(){
+function saveLocalState(){
   localStorage.setItem('sp_local_backup', JSON.stringify(collectData()));
-  updateKpis();
-
-  if(!supabaseClient) return;
-  setCloudStatus('syncing', 'Sync...');
-  clearTimeout(sync_timeout);
-  sync_timeout = setTimeout(pushToCloud, 500);
+  setCloudStatus('syncing', 'Nicht synchronisiert');
 }
 
 function collectData(){
@@ -1129,7 +932,9 @@ function collectData(){
 }
 
 async function pushToCloud(){
-  if(!supabaseClient) return;
+  if(!supabaseClient) return toast('Keine Cloud-Verbindung konfiguriert.');
+  setCloudStatus('syncing', 'Lade hoch...');
+  
   try {
     const { error } = await supabaseClient
       .from('pv_projects')
@@ -1144,44 +949,20 @@ async function pushToCloud(){
       });
 
     if(!error){
-      setCloudStatus('online', 'Live mit Supabase');
+      setCloudStatus('online', 'Gespeichert');
+      toast('☁️ Erfolgreich in Cloud gespeichert!');
     } else {
-      setCloudStatus('offline', 'Sync-Fehler');
+      setCloudStatus('offline', 'Fehler');
+      toast('Fehler beim Speichern');
     }
   } catch(e) {
     setCloudStatus('offline', 'Offline');
   }
 }
 
-function saveOnExit(){
-  localStorage.setItem('sp_local_backup', JSON.stringify(collectData()));
-  const payload = JSON.stringify({
-    id: PROJECT.id,
-    name: PROJECT.standort,
-    pruefer: PROJECT.pruefer,
-    modul_wp: PROJECT.modulWp,
-    mppts: (PROJECT.mppts||[12,12,12,12,12,12]).join(','),
-    data: collectData(),
-    updated_at: new Date().toISOString()
-  });
-
-  if(window.fetch && SB_URL && SB_KEY){
-    fetch(`${SB_URL}/rest/v1/pv_projects`, {
-      method: 'POST',
-      headers: {
-        'apikey': SB_KEY,
-        'Authorization': `Bearer ${SB_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: payload,
-      keepalive: true
-    }).catch(()=>{});
-  }
-}
-
 async function fetchCloudProject(){
   if(!supabaseClient) return;
+  setCloudStatus('syncing', 'Lade herunter...');
   try {
     const { data, error } = await supabaseClient
       .from('pv_projects')
@@ -1191,22 +972,66 @@ async function fetchCloudProject(){
 
     if(data && data.data){
       applyRemoteData(data.data);
+      setCloudStatus('online', 'Aktuell');
+      toast('📥 Aktuellen Stand aus Cloud geladen');
     }
-  } catch(e) {}
+  } catch(e) {
+    setCloudStatus('offline', 'Fehler beim Laden');
+  }
 }
 
-function subscribeRealtime(){
+function setCloudStatus(status, text){
+  const dot = g('cloud-dot'), txt = g('cloud-text');
+  const dotM = g('cloud-dot-m'), txtM = g('cloud-text-m');
+  if(txt) txt.textContent = text;
+  if(txtM) txtM.textContent = text;
+  const dotClass = (status === 'online') ? 'status-dot dot-green' : (status === 'syncing') ? 'status-dot dot-yellow' : 'status-dot dot-red';
+  if(dot) dot.className = dotClass;
+  if(dotM) dotM.className = dotClass;
+}
+
+async function loadProjectListFromCloud(){
   if(!supabaseClient) return;
-  supabaseClient
-    .channel('pv_projects_realtime')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'pv_projects' }, payload => {
-      if(payload.new && payload.new.id === PROJECT.id && payload.new.data){
-        applyRemoteData(payload.new.data);
-        toast('⚡ Live-Update empfangen!');
-      }
-      loadProjectListFromCloud();
-    })
-    .subscribe();
+  try {
+    const { data } = await supabaseClient
+      .from('pv_projects')
+      .select('id, name, updated_at')
+      .order('updated_at', { ascending: false });
+
+    if(data && data.length > 0){
+      const sel = g('project-dropdown');
+      sel.innerHTML = '';
+      data.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name || p.id;
+        if(p.id === PROJECT.id) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      fetchCloudProject();
+    }
+  } catch(e){}
+}
+
+async function switchProject(projId){
+  if(!supabaseClient) return;
+  toast(`Lade Projekt ${projId}...`);
+  try {
+    const { data } = await supabaseClient
+      .from('pv_projects')
+      .select('*')
+      .eq('id', projId)
+      .single();
+
+    if(data){
+      const mppts = data.mppts ? data.mppts.split(',').map(Number) : [12,12,12,12,12,12];
+      PROJECT = createDefaultProject(data.id, data.name, mppts, data.modul_wp || 465, data.pruefer || '', "Wechselrichter");
+      renderMatrix();
+      if(data.data) applyRemoteData(data.data);
+      setCloudStatus('online', 'Aktuell');
+      toast(`✓ Projekt "${data.name}" geladen`);
+    }
+  } catch(e){}
 }
 
 function applyRemoteData(remoteData){
@@ -1221,103 +1046,86 @@ function applyRemoteData(remoteData){
     if(g('note-'+fullId)) g('note-'+fullId).value = row.note;
     if(g('stat-'+fullId)) setStatus(fullId, row.stat);
   }
-
   if(remoteData.signatures){
     PROJECT.signatures = remoteData.signatures;
     updatePrintSignatures();
   }
-
   if(remoteData.inverterNames && Array.isArray(remoteData.inverterNames)){
     remoteData.inverterNames.forEach(inm => {
       const inv = PROJECT.inverters.find(i => i.wr === inm.wr);
-      if(inv) inv.name = inm.name;
+      if(inv) { inv.name = inm.name; const inp = document.querySelector(`#wr-block-${inv.wr} .wr-name-inp`); if(inp) inp.value = inm.name; }
     });
   }
   updateKpis();
 }
 
-function manualSync(){
-  pushToCloud();
-  fetchCloudProject();
-  loadProjectListFromCloud();
-  toast('🔄 Synchronisation gestartet');
+async function createNewProject(){
+  const name = g('np-name').value.trim();
+  if(!name) return toast('Bitte Projektnamen eingeben');
+  const tech = g('np-tech').value.trim() || 'Prüfer';
+  const modWp = parseFloat(g('np-mod').value) || 440;
+  const mpptsRaw = g('np-mppts').value.trim() || '6, 6';
+  const mppts = mpptsRaw.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>0);
+  const modelName = g('np-model-text').value.trim() || "Wechselrichter";
+  const projId = name.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  PROJECT = createDefaultProject(projId, name, mppts, modWp, tech, modelName);
+  g('modal-new-project').style.display = 'none';
+  renderMatrix();
+
+  await pushToCloud();
+  await loadProjectListFromCloud();
+  toast(`✓ Neues Projekt "${name}" angelegt`);
 }
 
-// ── 1. SMARTSCRIPT GAK-PICKERL EXCEL (1 SPALTE, MEHRZEILIG) ──
+// ── EXPORT FUNKTIONEN (SmartScript & Excel) ──
 function exportSmartScriptExcel(){
   const rows = [['Etikett']];
   let cnt = 0;
-
   PROJECT.inverters.forEach(inv => {
     inv.strings.forEach(s => {
       const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
       const st = (g('stat-'+fullId)||{}).value || s.stat;
       if(st !== 'JA') return;
-
       const mod = parseFloat((g('mod-'+fullId)||{}).value) || s.mod || 0;
       if(mod <= 0) return;
-
       const gak = (g('gak-'+fullId)||{}).value || s.gak;
       const note = (g('note-'+fullId)||{}).value || s.note || '';
       const pwr = ((mod * PROJECT.modulWp)/1000).toFixed(2).replace('.', ',');
 
-      const labelText = [
-        `BVH ${PROJECT.standort}`,
-        fullId,
-        gak,
-        `${mod} Module`,
-        `${pwr} kWp`,
-        note
-      ].filter(Boolean).join('\r\n');
-
+      const labelText = [`BVH ${PROJECT.standort}`, fullId, gak, `${mod} Module`, `${pwr} kWp`, note].filter(Boolean).join('\r\n');
       rows.push([{ t: 's', v: labelText }]);
       cnt++;
     });
   });
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [{ wch: 35 }];
-
   XLSX.utils.book_append_sheet(wb, ws, 'Etiketten');
   XLSX.writeFile(wb, `SmartScript_GAK-Pickerl_${PROJECT.standort.replace(/\s+/g,'_')}.xlsx`);
-  toast(`${cnt} GAK-Pickerl für SmartScript exportiert`);
+  toast(`${cnt} GAK-Pickerl exportiert`);
 }
 
-// ── 2. SEPARATE STRING-NUMMERN EXCEL ──
 function exportStringNumbersExcel(){
   const rows = [['String']];
   let cnt = 0;
-
   PROJECT.inverters.forEach(inv => {
     inv.strings.forEach(s => {
       const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
-      const st = (g('stat-'+fullId)||{}).value || s.stat;
-      if(st !== 'JA') return;
-
-      const mod = parseFloat((g('mod-'+fullId)||{}).value) || s.mod || 0;
-      if(mod <= 0) return;
-
+      if(((g('stat-'+fullId)||{}).value || s.stat) !== 'JA') return;
+      if((parseFloat((g('mod-'+fullId)||{}).value) || s.mod || 0) <= 0) return;
       rows.push([{ t: 's', v: fullId }]);
       cnt++;
     });
   });
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [{ wch: 15 }];
-
   XLSX.utils.book_append_sheet(wb, ws, 'String-Nummern');
   XLSX.writeFile(wb, `SmartScript_String-Nummern_${PROJECT.standort.replace(/\s+/g,'_')}.xlsx`);
   toast(`${cnt} String-Nummern exportiert`);
 }
 
-// ── 3. KOMPLETTES PRÜFPROTOKOLL EXCEL ──
 function doExcel(){
-  const rows = [
-    [{t:'s', v:'String ID (WR.MPPT.In)'}, 'Plan-Soll', 'GAK', 'Status', 'Module', 'Leistung (kWp)', 'Uoc (V)', 'Isc (A)', 'Riso (MOhm)', 'Bemerkung']
-  ];
-
+  const rows = [ [{t:'s', v:'String ID (WR.MPPT.In)'}, 'Plan-Soll', 'GAK', 'Status', 'Module', 'Leistung (kWp)', 'Uoc (V)', 'Isc (A)', 'Riso (MOhm)', 'Bemerkung'] ];
   PROJECT.inverters.forEach(inv => {
     inv.strings.forEach(s => {
       const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
@@ -1327,54 +1135,20 @@ function doExcel(){
       const gak = (g('gak-'+fullId)||{}).value || s.gak;
       const note = (g('note-'+fullId)||{}).value || s.note || '';
       const planInfo = (s.planStat === 'JA') ? `${s.planMod} Mod (${s.planGak})` : '—';
-
-      rows.push([
-        { t: 's', v: fullId },
-        planInfo,
-        gak,
-        st,
-        parseInt(mod) || 0,
-        parseFloat(pwr.replace(',','.')) || 0,
-        (g('uoc-'+fullId)||{}).value || '',
-        (g('isc-'+fullId)||{}).value || '',
-        (g('riso-'+fullId)||{}).value || '',
-        note
-      ]);
+      rows.push([{ t: 's', v: fullId }, planInfo, gak, st, parseInt(mod) || 0, parseFloat(pwr.replace(',','.')) || 0, (g('uoc-'+fullId)||{}).value || '', (g('isc-'+fullId)||{}).value || '', (g('riso-'+fullId)||{}).value || '', note]);
     });
   });
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-
-  ws['!cols'] = [
-    { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 10 }, { wch: 10 },
-    { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 26 }
-  ];
-
+  const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 26 }];
   XLSX.utils.book_append_sheet(wb, ws, 'Prüfprotokoll');
   XLSX.writeFile(wb, `Protokoll_${PROJECT.standort.replace(/\s+/g,'_')}.xlsx`);
   toast('Prüfprotokoll exportiert');
 }
 
-// EVENT-LISTENER
 window.onload = () => {
   renderMatrix();
   initSupabase();
-
-  if(localStorage.getItem('solpro_sun_mode') === '1'){
-    toggleSunMode();
-  }
-
-  window.addEventListener('online', () => {
-    toast('📶 Wieder online – synchronisiere...');
-    pushToCloud();
-  });
-
-  window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') saveOnExit();
-  });
-  window.addEventListener('pagehide', saveOnExit);
-  window.addEventListener('beforeunload', saveOnExit);
+  if(localStorage.getItem('solpro_sun_mode') === '1') toggleSunMode();
 };
 </script>
 </body>

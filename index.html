@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#05080f">
-<title>SOLPRO | PV MAN P52 (Live Supabase)</title>
+<title>SOLPRO | PV MAN P52 (Vollständige MPPT-Matrix)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -122,6 +122,7 @@ table.mt tbody tr.row-nein { opacity: 0.22; }
   .wr-head { background: #f1f5f9 !important; color: #000 !important; }
   table.mt th { background: #e2e8f0 !important; color: #000 !important; border: 1px solid #94a3b8; }
   table.mt td { border: 1px solid #cbd5e1 !important; color: #000 !important; }
+  table.mt tbody tr.row-nein { display: none !important; } /* Unbelegte Strings beim Drucken ausblenden */
   .sp-inp, .tog-wrap { display: none !important; }
   .print-cell { display: inline !important; font-weight: 700 !important; }
 }
@@ -145,8 +146,8 @@ table.mt tbody tr.row-nein { opacity: 0.22; }
       <div class="kpi-value" id="d-mods">1736</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Gemessene Strings</div>
-      <div class="kpi-value"><span id="d-done">0</span><span style="font-size:0.8rem;color:#64748b;"> / 94</span></div>
+      <div class="kpi-label">Aktive Strings (Belegt)</div>
+      <div class="kpi-value"><span id="d-act">94</span><span style="font-size:0.75rem;color:#64748b;"> / 144 Slots</span></div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Supabase Cloud-Status</div>
@@ -163,7 +164,7 @@ table.mt tbody tr.row-nein { opacity: 0.22; }
   <div id="toolbar" class="no-print">
     <div>
       <div style="font-weight:800;font-size:0.95rem;" id="tb-loc">PV MAN P52</div>
-      <div style="font-size:0.7rem;color:#64748b;" id="tb-sub">MAN München &middot; 465 Wp &middot; 6x SMA STP 125 &middot; Live Sync aktiv</div>
+      <div style="font-size:0.7rem;color:#64748b;" id="tb-sub">MAN München &middot; 465 Wp &middot; 6x SMA STP 125 (Alle 12 MPPTs &middot; .1 / .2 sichtbar)</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <button onclick="manualSync()" class="btn btn-blue">🔄 Cloud-Sync</button>
@@ -173,13 +174,12 @@ table.mt tbody tr.row-nein { opacity: 0.22; }
     </div>
   </div>
 
-  <!-- INVERTER TABLES (WR 1 BIS 6) -->
+  <!-- INVERTER TABLES -->
   <div id="tables"></div>
 
 </div>
 
 <script>
-// DEINE FEST HINTERLEGTEN SUPABASE-ZUGANGSDATEN
 const SB_URL = "https://rcuimtfmjkpxkazbsggj.supabase.co";
 const SB_KEY = "sb_publishable_pe8Ye20-e9az1D5MvNCB5A_8_ai7afc";
 
@@ -192,139 +192,146 @@ function toast(msg, ms=2600){
   clearTimeout(toast_t); toast_t = setTimeout(() => t.classList.remove('show'), ms);
 }
 
-// VOLLSTÄNDIGER DATENSATZ ALLER 6 WECHSELRICHTER (94 STRINGS, 1.736 MODULE, 12 GAKs)
+// DEFINIERT DIE BELEGTEN STRINGS AUS DEM SLD-PLAN
+const SLD_PLAN_STRINGS = {
+  // WR 1 (12 aktiv, 12 inaktiv)
+  "1.1.1": { gak: "GAK 1.1", mod: 23, stat: "JA", note: "Fläche A" },
+  "1.2.1": { gak: "GAK 1.1", mod: 23, stat: "JA", note: "Fläche A" },
+  "1.3.1": { gak: "GAK 1.1", mod: 22, stat: "JA", note: "Fläche A" },
+  "1.4.1": { gak: "GAK 1.1", mod: 22, stat: "JA", note: "Fläche A" },
+  "1.5.1": { gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A" },
+  "1.5.2": { gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A" },
+  "1.6.1": { gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A" },
+  "1.6.2": { gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A" },
+  "1.7.1": { gak: "GAK 1.2", mod: 20, stat: "JA", note: "Fläche A" },
+  "1.8.1": { gak: "GAK 1.2", mod: 20, stat: "JA", note: "Fläche A" },
+  "1.9.1": { gak: "GAK 1.2", mod: 21, stat: "JA", note: "Fläche A" },
+  "1.10.1": { gak: "GAK 1.2", mod: 21, stat: "JA", note: "Fläche A" },
+
+  // WR 2 (14 aktiv, 10 inaktiv)
+  "2.1.1": { gak: "GAK 2.1", mod: 13, stat: "JA", note: "Fläche B" },
+  "2.2.1": { gak: "GAK 2.1", mod: 13, stat: "JA", note: "Fläche B" },
+  "2.3.1": { gak: "GAK 2.1", mod: 21, stat: "JA", note: "Fläche B" },
+  "2.4.1": { gak: "GAK 2.1", mod: 21, stat: "JA", note: "Fläche B" },
+  "2.5.1": { gak: "GAK 2.2", mod: 20, stat: "JA", note: "Fläche B" },
+  "2.6.1": { gak: "GAK 2.2", mod: 20, stat: "JA", note: "Fläche B" },
+  "2.7.1": { gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B" },
+  "2.7.2": { gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B" },
+  "2.8.1": { gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B" },
+  "2.8.2": { gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B" },
+  "2.9.1": { gak: "GAK 2.2", mod: 14, stat: "JA", note: "Fläche B (10 mm²)" },
+  "2.10.1": { gak: "GAK 2.2", mod: 14, stat: "JA", note: "Fläche B (10 mm²)" },
+  "2.11.1": { gak: "GAK 2.2", mod: 18, stat: "JA", note: "Fläche B (10 mm²)" },
+  "2.12.1": { gak: "GAK 2.2", mod: 18, stat: "JA", note: "Fläche B (10 mm²)" },
+
+  // WR 3 (18 aktiv, 6 inaktiv)
+  "3.1.1": { gak: "GAK 3.1", mod: 13, stat: "JA", note: "Fläche C" },
+  "3.2.1": { gak: "GAK 3.1", mod: 13, stat: "JA", note: "Fläche C" },
+  "3.3.1": { gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C" },
+  "3.3.2": { gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C" },
+  "3.4.1": { gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C" },
+  "3.4.2": { gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C" },
+  "3.5.1": { gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C" },
+  "3.5.2": { gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C" },
+  "3.6.1": { gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C" },
+  "3.6.2": { gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C" },
+  "3.7.1": { gak: "GAK 3.1", mod: 8,  stat: "JA", note: "Fläche C" },
+  "3.8.1": { gak: "GAK 3.1", mod: 8,  stat: "JA", note: "Fläche C" },
+  "3.9.1": { gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C" },
+  "3.9.2": { gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C" },
+  "3.10.1": { gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C" },
+  "3.10.2": { gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C" },
+  "3.11.1": { gak: "GAK 3.2", mod: 15, stat: "JA", note: "Fläche C" },
+  "3.12.1": { gak: "GAK 3.2", mod: 15, stat: "JA", note: "Fläche C" },
+
+  // WR 4 (16 aktiv, 8 inaktiv)
+  "4.1.1": { gak: "GAK 4.1", mod: 16, stat: "JA", note: "Fläche D" },
+  "4.2.1": { gak: "GAK 4.1", mod: 16, stat: "JA", note: "Fläche D" },
+  "4.3.1": { gak: "GAK 4.1", mod: 23, stat: "JA", note: "Fläche D" },
+  "4.4.1": { gak: "GAK 4.1", mod: 23, stat: "JA", note: "Fläche D" },
+  "4.5.1": { gak: "GAK 4.1", mod: 8,  stat: "JA", note: "Fläche D" },
+  "4.6.1": { gak: "GAK 4.1", mod: 8,  stat: "JA", note: "Fläche D" },
+  "4.7.1": { gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D" },
+  "4.7.2": { gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D" },
+  "4.8.1": { gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D" },
+  "4.8.2": { gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D" },
+  "4.9.1": { gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)" },
+  "4.9.2": { gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)" },
+  "4.10.1": { gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)" },
+  "4.10.2": { gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)" },
+  "4.11.1": { gak: "GAK 4.2", mod: 20, stat: "JA", note: "Fläche D (10 mm²)" },
+  "4.12.1": { gak: "GAK 4.2", mod: 20, stat: "JA", note: "Fläche D (10 mm²)" },
+
+  // WR 5 (18 aktiv, 6 inaktiv)
+  "5.1.1": { gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E" },
+  "5.1.2": { gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E" },
+  "5.2.1": { gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E" },
+  "5.2.2": { gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E" },
+  "5.3.1": { gak: "GAK 5.1", mod: 17, stat: "JA", note: "Fläche E" },
+  "5.4.1": { gak: "GAK 5.1", mod: 17, stat: "JA", note: "Fläche E" },
+  "5.5.1": { gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E" },
+  "5.6.1": { gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E" },
+  "5.7.1": { gak: "GAK 5.1", mod: 13, stat: "JA", note: "Fläche E" },
+  "5.7.2": { gak: "GAK 5.1", mod: 13, stat: "JA", note: "Fläche E" },
+  "5.8.1": { gak: "GAK 5.1", mod: 18, stat: "JA", note: "Fläche E" },
+  "5.8.2": { gak: "GAK 5.1", mod: 18, stat: "JA", note: "Fläche E" },
+  "5.9.1": { gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E" },
+  "5.9.2": { gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (10 mm²)" },
+  "5.10.1": { gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E" },
+  "5.10.2": { gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (10 mm²)" },
+  "5.11.1": { gak: "GAK 5.2", mod: 13, stat: "JA", note: "Fläche E (10 mm²)" },
+  "5.12.1": { gak: "GAK 5.2", mod: 13, stat: "JA", note: "Fläche E (10 mm²)" },
+
+  // WR 6 (16 aktiv, 8 inaktiv)
+  "6.1.1": { gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.1.2": { gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.2.1": { gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.2.2": { gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.3.1": { gak: "GAK 6.2", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.4.1": { gak: "GAK 6.2", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.5.1": { gak: "GAK 6.2", mod: 20, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.6.1": { gak: "GAK 6.2", mod: 20, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.7.1": { gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.8.1": { gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.9.1": { gak: "GAK 6.2", mod: 17, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.10.1": { gak: "GAK 6.2", mod: 17, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.11.1": { gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.11.2": { gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.12.1": { gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.12.2": { gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" }
+};
+
+// INITIALISIERT ALLE 6 WECHSELRICHTER MIT EXAKT 24 EINGÄNGEN PRO WR
 let PROJECT = {
   id: "PV_MAN_P52",
   standort: "PV MAN P52",
   sub: "MAN München · Dachauer Str. 667 · 6x SMA STP 125 (807,24 kWp)",
   pruefer: "Christoph Huber / Sven",
   modulWp: 465,
-  inverters: [
-    {
-      wr: 1, name: "SMA Sunny Tripower 125 (WR 1)",
-      strings: [
-        { mppt: 1, in: 1, gak: "GAK 1.1", mod: 23, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
-        { mppt: 2, in: 1, gak: "GAK 1.1", mod: 23, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
-        { mppt: 3, in: 1, gak: "GAK 1.1", mod: 22, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
-        { mppt: 4, in: 1, gak: "GAK 1.1", mod: 22, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
-        { mppt: 5, in: 1, gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
-        { mppt: 5, in: 2, gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
-        { mppt: 6, in: 1, gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
-        { mppt: 6, in: 2, gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
-        { mppt: 7, in: 1, gak: "GAK 1.2", mod: 20, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
-        { mppt: 8, in: 1, gak: "GAK 1.2", mod: 20, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
-        { mppt: 9, in: 1, gak: "GAK 1.2", mod: 21, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
-        { mppt: 10,in: 1, gak: "GAK 1.2", mod: 21, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" }
-      ]
-    },
-    {
-      wr: 2, name: "SMA Sunny Tripower 125 (WR 2)",
-      strings: [
-        { mppt: 1, in: 1, gak: "GAK 2.1", mod: 13, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
-        { mppt: 2, in: 1, gak: "GAK 2.1", mod: 13, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
-        { mppt: 3, in: 1, gak: "GAK 2.1", mod: 21, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
-        { mppt: 4, in: 1, gak: "GAK 2.1", mod: 21, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
-        { mppt: 5, in: 1, gak: "GAK 2.2", mod: 20, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
-        { mppt: 6, in: 1, gak: "GAK 2.2", mod: 20, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
-        { mppt: 7, in: 1, gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
-        { mppt: 7, in: 2, gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
-        { mppt: 8, in: 1, gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
-        { mppt: 8, in: 2, gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
-        { mppt: 9, in: 1, gak: "GAK 2.2", mod: 14, stat: "JA", note: "Fläche B (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 10,in: 1, gak: "GAK 2.2", mod: 14, stat: "JA", note: "Fläche B (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 11,in: 1, gak: "GAK 2.2", mod: 18, stat: "JA", note: "Fläche B (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 12,in: 1, gak: "GAK 2.2", mod: 18, stat: "JA", note: "Fläche B (10 mm²)", uoc: "", isc: "", riso: "" }
-      ]
-    },
-    {
-      wr: 3, name: "SMA Sunny Tripower 125 (WR 3)",
-      strings: [
-        { mppt: 1, in: 1, gak: "GAK 3.1", mod: 13, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 2, in: 1, gak: "GAK 3.1", mod: 13, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 3, in: 1, gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 3, in: 2, gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 4, in: 1, gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 4, in: 2, gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 5, in: 1, gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 5, in: 2, gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 6, in: 1, gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 6, in: 2, gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 7, in: 1, gak: "GAK 3.1", mod: 8,  stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 8, in: 1, gak: "GAK 3.1", mod: 8,  stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 9, in: 1, gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 9, in: 2, gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 10,in: 1, gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 10,in: 2, gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 11,in: 1, gak: "GAK 3.2", mod: 15, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
-        { mppt: 12,in: 1, gak: "GAK 3.2", mod: 15, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" }
-      ]
-    },
-    {
-      wr: 4, name: "SMA Sunny Tripower 125 (WR 4)",
-      strings: [
-        { mppt: 1, in: 1, gak: "GAK 4.1", mod: 16, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
-        { mppt: 2, in: 1, gak: "GAK 4.1", mod: 16, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
-        { mppt: 3, in: 1, gak: "GAK 4.1", mod: 23, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
-        { mppt: 4, in: 1, gak: "GAK 4.1", mod: 23, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
-        { mppt: 5, in: 1, gak: "GAK 4.1", mod: 8,  stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
-        { mppt: 6, in: 1, gak: "GAK 4.1", mod: 8,  stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
-        { mppt: 7, in: 1, gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
-        { mppt: 7, in: 2, gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
-        { mppt: 8, in: 1, gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
-        { mppt: 8, in: 2, gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
-        { mppt: 9, in: 1, gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 9, in: 2, gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 10,in: 1, gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 10,in: 2, gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 11,in: 1, gak: "GAK 4.2", mod: 20, stat: "JA", note: "Fläche D (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 12,in: 1, gak: "GAK 4.2", mod: 20, stat: "JA", note: "Fläche D (10 mm²)", uoc: "", isc: "", riso: "" }
-      ]
-    },
-    {
-      wr: 5, name: "SMA Sunny Tripower 125 (WR 5)",
-      strings: [
-        { mppt: 1, in: 1, gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 1, in: 2, gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 2, in: 1, gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 2, in: 2, gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 3, in: 1, gak: "GAK 5.1", mod: 17, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 4, in: 1, gak: "GAK 5.1", mod: 17, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 5, in: 1, gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 6, in: 1, gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 7, in: 1, gak: "GAK 5.1", mod: 13, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 7, in: 2, gak: "GAK 5.1", mod: 13, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 8, in: 1, gak: "GAK 5.1", mod: 18, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 8, in: 2, gak: "GAK 5.1", mod: 18, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 9, in: 1, gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 9, in: 2, gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 10,in: 1, gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
-        { mppt: 10,in: 2, gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 11,in: 1, gak: "GAK 5.2", mod: 13, stat: "JA", note: "Fläche E (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 12,in: 1, gak: "GAK 5.2", mod: 13, stat: "JA", note: "Fläche E (10 mm²)", uoc: "", isc: "", riso: "" }
-      ]
-    },
-    {
-      wr: 6, name: "SMA Sunny Tripower 125 (WR 6)",
-      strings: [
-        { mppt: 1, in: 1, gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 1, in: 2, gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 2, in: 1, gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 2, in: 2, gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 3, in: 1, gak: "GAK 6.2", mod: 23, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 4, in: 1, gak: "GAK 6.2", mod: 23, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 5, in: 1, gak: "GAK 6.2", mod: 20, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 6, in: 1, gak: "GAK 6.2", mod: 20, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 7, in: 1, gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 8, in: 1, gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 9, in: 1, gak: "GAK 6.2", mod: 17, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 10,in: 1, gak: "GAK 6.2", mod: 17, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 11,in: 1, gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 11,in: 2, gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 12,in: 1, gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
-        { mppt: 12,in: 2, gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" }
-      ]
+  inverters: [1, 2, 3, 4, 5, 6].map(wr => {
+    const strings = [];
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const def = SLD_PLAN_STRINGS[fullId] || {
+          gak: `GAK ${wr}.${m <= 6 ? '1' : '2'}`,
+          mod: 0,
+          stat: "NEIN",
+          note: ""
+        };
+        strings.push({
+          mppt: m,
+          in: s,
+          gak: def.gak,
+          mod: def.mod,
+          stat: def.stat,
+          note: def.note,
+          uoc: "", isc: "", riso: ""
+        });
+      }
     }
-  ]
+    return { wr: wr, name: `SMA Sunny Tripower 125 (WR ${wr})`, strings: strings };
+  })
 };
 
 function renderMatrix(){
@@ -342,10 +349,11 @@ function renderMatrix(){
       const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
       const isMpptDiv = (lastMppt !== null && s.mppt !== lastMppt);
       lastMppt = s.mppt;
-      const pwr = ((s.mod * PROJECT.modulWp)/1000).toFixed(2);
+      const isNein = (s.stat === 'NEIN');
+      const pwr = (s.stat === 'JA' && s.mod > 0) ? ((s.mod * PROJECT.modulWp)/1000).toFixed(2) + ' kWp' : '—';
 
       rows += `
-        <tr id="row-${fullId}" class="${isMpptDiv ? 'mppt-div' : ''}">
+        <tr id="row-${fullId}" class="${isMpptDiv ? 'mppt-div' : ''} ${isNein ? 'row-nein' : ''}">
           <td style="text-align:left;padding-left:14px;">
             <span class="string-id">${fullId}</span>
             <span style="font-size:0.65rem;color:#64748b;margin-left:4px;">(MPPT ${s.mppt}.${s.in})</span>
@@ -356,16 +364,16 @@ function renderMatrix(){
           </td>
           <td class="no-print">
             <div class="tog-wrap">
-              <button id="tja-${fullId}" class="tog on-ja" onclick="setStatus('${fullId}','JA')">JA</button>
-              <button id="tnei-${fullId}" class="tog" onclick="setStatus('${fullId}','NEIN')">NEIN</button>
+              <button id="tja-${fullId}" class="tog ${s.stat==='JA'?'on-ja':''}" onclick="setStatus('${fullId}','JA')">JA</button>
+              <button id="tnei-${fullId}" class="tog ${s.stat==='NEIN'?'on-nei':''}" onclick="setStatus('${fullId}','NEIN')">NEIN</button>
             </div>
-            <input type="hidden" id="stat-${fullId}" value="JA">
+            <input type="hidden" id="stat-${fullId}" value="${s.stat}">
           </td>
           <td>
             <input type="number" id="mod-${fullId}" value="${s.mod}" class="sp-inp" style="width:52px;" oninput="onModInput('${inv.wr}','${s.mppt}','${s.in}',this.value)">
-            <span class="print-cell" id="pm-${fullId}">${s.mod}</span>
+            <span class="print-cell" id="pm-${fullId}">${s.mod > 0 ? s.mod : '—'}</span>
           </td>
-          <td class="pwr-cell" id="pw-${fullId}">${pwr} kWp</td>
+          <td class="pwr-cell" id="pw-${fullId}">${pwr}</td>
           <td><input type="text" id="uoc-${fullId}" value="${s.uoc||''}" placeholder="V" class="sp-inp" style="width:65px;" oninput="queueAutoSync()"></td>
           <td><input type="text" id="isc-${fullId}" value="${s.isc||''}" placeholder="A" class="sp-inp" style="width:65px;" oninput="queueAutoSync()"></td>
           <td><input type="text" id="riso-${fullId}" value="${s.riso||''}" placeholder="MΩ" class="sp-inp" style="width:65px;" oninput="queueAutoSync()"></td>
@@ -408,7 +416,7 @@ function renderMatrix(){
   updateKpis();
 }
 
-// AUTO-SYNC FÜR PARALLELE STRINGS
+// AUTO-SYNC FÜR PARALLELE STRINGS AM SELBEN MPPT
 function onModInput(wr, mppt, input, val){
   const partnerInput = (input === '1') ? '2' : '1';
   const partnerId = `${wr}.${mppt}.${partnerInput}`;
@@ -445,14 +453,19 @@ function recalcRow(id){
     if(pm) pm.textContent = '—';
   } else {
     row.classList.remove('row-nein');
-    pw.textContent = ((mod * PROJECT.modulWp)/1000).toFixed(2) + ' kWp';
-    if(pm) pm.textContent = mod;
+    if(mod > 0){
+      pw.textContent = ((mod * PROJECT.modulWp)/1000).toFixed(2) + ' kWp';
+      if(pm) pm.textContent = mod;
+    } else {
+      pw.textContent = '—';
+      if(pm) pm.textContent = '—';
+    }
   }
   updateKpis();
 }
 
 function updateKpis(){
-  let totMods = 0, totPwr = 0, totDone = 0;
+  let totMods = 0, totPwr = 0, totActive = 0;
 
   PROJECT.inverters.forEach(inv => {
     let wrMods = 0, wrPwr = 0;
@@ -464,9 +477,7 @@ function updateKpis(){
         const pwr = (mod * PROJECT.modulWp) / 1000;
         wrMods += mod; wrPwr += pwr;
         totMods += mod; totPwr += pwr;
-
-        const uocVal = (g('uoc-'+fullId)||{}).value;
-        if(uocVal && uocVal.trim() !== '') totDone++;
+        totActive++;
       }
     });
     const wm = g('wr-mod-'+inv.wr), wp = g('wr-pwr-'+inv.wr);
@@ -476,7 +487,7 @@ function updateKpis(){
 
   g('d-mods').textContent = totMods;
   g('d-pwr').textContent = totPwr.toFixed(2);
-  g('d-done').textContent = totDone;
+  g('d-act').textContent = totActive;
 }
 
 // ── SUPABASE CLOUD SYNC ENGINE ──
@@ -520,7 +531,7 @@ function collectData(){
       const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
       payload[fullId] = {
         gak: (g('gak-'+fullId)||{}).value || s.gak,
-        stat: (g('stat-'+fullId)||{}).value || 'JA',
+        stat: (g('stat-'+fullId)||{}).value || s.stat,
         mod: (g('mod-'+fullId)||{}).value || s.mod,
         uoc: (g('uoc-'+fullId)||{}).value || '',
         isc: (g('isc-'+fullId)||{}).value || '',
@@ -569,7 +580,6 @@ async function fetchCloudProject(){
       applyRemoteData(data.data);
       toast('☁️ Live-Daten aus Supabase geladen');
     } else {
-      // Wenn das Projekt in Supabase noch nicht existiert, direkt anlegen:
       pushToCloud();
     }
   } catch(e) {}
@@ -617,7 +627,7 @@ function exportGakPickerl(){
     inv.strings.forEach(s => {
       const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
       const st = g('stat-'+fullId);
-      if(!st || st.value !== 'JA') return;
+      if(!st || st.value !== 'JA') return; // Unbelegte ("NEIN") nicht exportieren
 
       const mod = parseFloat((g('mod-'+fullId)||{}).value) || 0;
       if(mod <= 0) return;
@@ -640,17 +650,15 @@ function exportGakPickerl(){
 }
 
 function doExcel(){
-  const rows = [['String ID (WR.MPPT.In)', 'GAK', 'Module', 'Leistung (kWp)', 'Uoc (V)', 'Isc (A)', 'Riso (MOhm)', 'Bemerkung']];
+  const rows = [['String ID (WR.MPPT.In)', 'GAK', 'Status', 'Module', 'Leistung (kWp)', 'Uoc (V)', 'Isc (A)', 'Riso (MOhm)', 'Bemerkung']];
   PROJECT.inverters.forEach(inv => {
     inv.strings.forEach(s => {
       const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
-      const st = g('stat-'+fullId);
-      if(st && st.value === 'JA'){
-        const mod = (g('mod-'+fullId)||{}).value;
-        const pwr = ((mod * PROJECT.modulWp)/1000).toFixed(2);
-        const gak = (g('gak-'+fullId)||{}).value || '';
-        rows.push([fullId, gak, mod, pwr, (g('uoc-'+fullId)||{}).value||'', (g('isc-'+fullId)||{}).value||'', (g('riso-'+fullId)||{}).value||'', (g('note-'+fullId)||{}).value||'']);
-      }
+      const st = (g('stat-'+fullId)||{}).value || 'JA';
+      const mod = (g('mod-'+fullId)||{}).value || '0';
+      const pwr = (st === 'JA' && parseFloat(mod) > 0) ? ((parseFloat(mod) * PROJECT.modulWp)/1000).toFixed(2) : '0';
+      const gak = (g('gak-'+fullId)||{}).value || '';
+      rows.push([fullId, gak, st, mod, pwr, (g('uoc-'+fullId)||{}).value||'', (g('isc-'+fullId)||{}).value||'', (g('riso-'+fullId)||{}).value||'', (g('note-'+fullId)||{}).value||'']);
     });
   });
   const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet(rows);

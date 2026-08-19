@@ -3,941 +3,1210 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#12110F">
+<meta name="theme-color" content="#05080f">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="SOLPRO Messung">
-<title>SOLPRO · Messprotokoll Suite</title>
-
-<!-- Schriften -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
-
-<!-- Libs -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta name="apple-mobile-web-app-title" content="SOLPRO">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="SOLPRO PV Mess- und Prüfprotokoll &middot; Offline-Tool für Photovoltaik-Anlagen">
+<link rel="apple-touch-icon" href="Logo_Solpro.jpg">
+<title>SOLPRO | Prüfprotokoll</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-<!-- Supabase Konfiguration -->
-<script>
-  window.SUPABASE_URL = 'https://rcuimtfmjkpxkazbsggj.supabase.co';
-  window.SUPABASE_KEY = 'sb_publishable_pe8Ye20-e9az1D5MvNCB5A_8_ai7afc';
-</script>
-
+<script>tailwind.config={theme:{extend:{colors:{sp:{green:'#9fc131',dark:'#7a9420',glow:'#c6e84a'}}}}}</script>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
+
 :root {
-  --cream: #F7F4EE; --cream-deep: #EDE9DF; --ink: #12110F; --ink-mid: #3a3730;
-  --ink-muted: #8a8478; --lime: #B8D84B; --lime-dk: #8faa2c; --lime-glow: rgba(184,216,75,0.22);
-  --gold: #D4A017; --danger: #C8303A; --danger-bg: rgba(200,48,58,0.08);
-  --success: #1A7A4A; --warn: #B86A10; --info: #2563eb;
-  --glass-bg: rgba(247,244,238,0.65); --glass-bg-heavy: rgba(247,244,238,0.92);
-  --glass-border: rgba(255,255,255,0.80);
-  --glass-shadow: 0 8px 32px rgba(18,17,15,0.09), 0 1.5px 0 rgba(255,255,255,0.7) inset;
-  --glass-shadow-lg: 0 20px 60px rgba(18,17,15,0.15), 0 1.5px 0 rgba(255,255,255,0.7) inset;
-  --radius: 14px; --radius-sm: 8px;
-  --font-display: 'Syne', sans-serif; --font-body: 'Inter', sans-serif; --font-mono: 'JetBrains Mono', monospace;
-  --ease: cubic-bezier(.2,.8,.2,1);
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{min-height:100%;height:auto}
-body{
-  font-family:var(--font-body);background:var(--cream);color:var(--ink);
-  background-image:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(184,216,75,0.14) 0%,transparent 70%),radial-gradient(ellipse 60% 40% at 100% 100%,rgba(212,160,23,0.08) 0%,transparent 60%);
-  -webkit-tap-highlight-color:transparent;touch-action:manipulation;padding-bottom:50px;
+  --bg:       #05080f;
+  --surface:  #0c1220;
+  --panel:    #111827;
+  --border:   rgba(255,255,255,0.07);
+  --green:    #9fc131;
+  --green-d:  #7a9420;
+  --green-g:  rgba(159,193,49,0.15);
+  --text:     #f0f4f8;
+  --muted:    #64748b;
+  --dim:      #1e2a3a;
 }
 
-.bg-blob{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(90px);opacity:.35}
-.blob-1{width:550px;height:400px;background:var(--lime);top:-100px;left:-80px}
-.blob-2{width:450px;height:350px;background:var(--gold);bottom:10%;right:-80px;opacity:.2}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-#loader{position:fixed;inset:0;z-index:99999;background:rgba(18,17,15,0.75);backdrop-filter:blur(20px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px}
-#loader.show{display:flex}
-.spinner{width:44px;height:44px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--lime);border-radius:50%;animation:spin .9s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loader-text{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:2px}
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
-.topbar{position:sticky;top:0;z-index:200;background:var(--glass-bg-heavy);border-bottom:1px solid var(--glass-border);box-shadow:0 4px 20px rgba(18,17,15,0.06);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:space-between;padding:10px 18px;gap:10px}
-.logo{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--ink)}
-.logo span{color:var(--lime-dk)}
-.user-chip{display:flex;align-items:center;gap:8px;padding:5px 12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:30px;font-size:12px;font-weight:700;cursor:pointer}
-.user-avatar{width:26px;height:26px;border-radius:50%;background:var(--lime);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
-
-.tab-nav{display:flex;background:var(--glass-bg);border-bottom:1px solid var(--glass-border);backdrop-filter:blur(14px);overflow-x:auto;padding:0 16px;gap:6px}
-.tab{padding:12px 16px;font-size:11px;font-weight:700;cursor:pointer;color:var(--ink-muted);border-bottom:2.5px solid transparent;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap;transition:.15s}
-.tab.active{color:var(--ink);border-color:var(--lime-dk)}
-
-.shell{max-width:1100px;margin:20px auto;padding:0 16px;position:relative;z-index:10}
-.card{background:var(--glass-bg-heavy);border:1px solid var(--glass-border);border-radius:var(--radius);padding:20px;box-shadow:var(--glass-shadow);margin-bottom:16px;backdrop-filter:blur(16px)}
-.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
-.card-title{font-family:var(--font-display);font-size:20px;font-weight:800}
-
-.kpi-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
-.kpi-pill{flex:1;min-width:130px;background:rgba(255,255,255,0.65);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:12px;text-align:center;box-shadow:var(--glass-shadow)}
-.kpi-val{font-family:var(--font-mono);font-size:22px;font-weight:800;color:var(--ink)}
-.kpi-lbl{font-size:9px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
-
-.btn{background:var(--glass-bg);border:1px solid var(--glass-border);padding:9px 15px;font-size:11px;font-weight:700;border-radius:var(--radius-sm);color:var(--ink);text-transform:uppercase;letter-spacing:.3px;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;box-shadow:var(--glass-shadow)}
-.btn:hover{background:var(--cream-deep);transform:translateY(-1px)}
-.btn:active{transform:translateY(1px)}
-.btn.primary{background:var(--ink);color:var(--lime);border-color:var(--ink)}
-.btn.success{background:var(--success);color:#fff;border-color:var(--success)}
-.btn.warn{background:var(--warn);color:#fff;border-color:var(--warn)}
-.btn.danger{background:var(--danger-bg);color:var(--danger);border-color:rgba(200,48,58,0.2)}
-.btn.sm{padding:5px 10px;font-size:10px}
-
-/* Batch Action Bar (Schnell-Aktionen) */
-.batch-bar{display:flex;align-items:center;gap:8px;padding:12px;background:rgba(184,216,75,0.15);border:1.5px dashed var(--lime-dk);border-radius:var(--radius);margin-bottom:16px;flex-wrap:wrap}
-.batch-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink);margin-right:4px}
-
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-.form-field label{display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
-.form-field input,.form-field select,.form-field textarea{width:100%;padding:10px 12px;border:1.5px solid var(--cream-deep);border-radius:var(--radius-sm);background:rgba(255,255,255,0.85);font-size:13px;font-weight:600;color:var(--ink);outline:none;transition:border-color .15s}
-.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--lime-dk);box-shadow:0 0 0 3px var(--lime-glow)}
-.form-field input.is-locked{background:var(--cream-deep);color:var(--ink-mid);cursor:not-allowed}
-
-/* WR & String Matrix */
-.wr-block{background:rgba(255,255,255,0.65);border:1.5px solid var(--glass-border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;box-shadow:var(--glass-shadow)}
-.wr-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(135deg,rgba(184,216,75,0.12) 0%,rgba(255,255,255,0.3) 100%);border-bottom:1px solid var(--cream-deep)}
-.wr-title{font-family:var(--font-display);font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}
-.wr-badge{background:var(--ink);color:var(--lime);font-size:10px;font-family:var(--font-mono);padding:2px 8px;border-radius:6px;font-weight:800}
-
-/* String Card / Row */
-.string-row{display:grid;grid-template-columns:80px 140px 80px 150px 100px 140px 80px 150px;gap:8px;padding:12px 16px;align-items:center;border-bottom:1px solid rgba(0,0,0,0.05);transition:background .15s, opacity .15s}
-.string-table-head{display:grid;grid-template-columns:80px 140px 80px 150px 100px 140px 80px 150px;gap:8px;padding:8px 16px;font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase;border-bottom:1px solid var(--cream-deep)}
-
-/* Bestätigt Zustand */
-.string-row.is-confirmed{background:rgba(26,122,74,0.07);border-left:4px solid var(--success)}
-.string-row.is-confirmed input{background:var(--cream-deep)!important;color:var(--ink-mid)!important;cursor:not-allowed}
-.string-row.inactive{opacity:.4;background:rgba(237,233,223,0.5)}
-.string-row.inactive input{background:var(--cream-deep)!important;cursor:not-allowed}
-
-/* Stepper für Module */
-.stepper-wrap{display:flex;align-items:center;border:1.5px solid var(--cream-deep);border-radius:var(--radius-sm);overflow:hidden;background:#fff}
-.stepper-btn{width:32px;height:38px;border:none;background:rgba(0,0,0,0.03);font-size:16px;font-weight:800;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s}
-.stepper-btn:hover{background:var(--lime)}
-.stepper-input{flex:1;width:38px;border:none;text-align:center;font-family:var(--font-mono);font-size:14px;font-weight:800;outline:none}
-
-.str-id-badge{font-family:var(--font-mono);font-size:13px;font-weight:800;background:var(--ink);color:var(--lime);padding:8px 6px;border-radius:6px;text-align:center}
-.str-pwr{font-family:var(--font-mono);font-size:13px;font-weight:800;color:var(--ink-mid);text-align:center}
-.str-input{width:100%;padding:9px 6px;border:1.5px solid var(--cream-deep);border-radius:6px;text-align:center;font-family:var(--font-mono);font-size:14px;font-weight:700;background:#fff;outline:none}
-.str-input:focus{border-color:var(--lime-dk);background:rgba(184,216,75,0.05);box-shadow:0 0 0 2px var(--lime-glow)}
-
-/* Plausibilitäts-Badges */
-.volt-check-wrap{display:flex;flex-direction:column;gap:3px}
-.volt-badge{font-size:9px;font-weight:800;font-family:var(--font-mono);padding:2px 6px;border-radius:4px;text-align:center;text-transform:uppercase}
-.volt-badge.ok{background:rgba(26,122,74,0.18);color:var(--success)}
-.volt-badge.warn{background:rgba(184,106,16,0.18);color:var(--warn)}
-.volt-badge.bad{background:var(--danger-bg);color:var(--danger)}
-
-/* Riso Quick Pills */
-.riso-pills{display:flex;gap:3px}
-.riso-pill{flex:1;padding:6px 2px;border:1px solid var(--cream-deep);background:#fff;border-radius:4px;font-size:9px;font-weight:800;text-align:center;cursor:pointer;white-space:nowrap}
-.riso-pill.active{background:var(--ink);color:var(--lime);border-color:var(--ink)}
-
-.tog-grp{display:flex;border-radius:6px;overflow:hidden;border:1px solid var(--cream-deep)}
-.tog-btn{flex:1;padding:8px 2px;font-size:10px;font-weight:800;border:none;background:#fff;cursor:pointer}
-.tog-btn.on-yes{background:var(--lime);color:var(--ink)}
-.tog-btn.on-no{background:var(--ink-muted);color:#fff}
-
-/* Mobile Responsive */
-@media (max-width:960px){
-  .string-table-head{display:none}
-  .string-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px;background:#fff;margin:10px;border-radius:12px;border:1.5px solid var(--cream-deep);box-shadow:0 4px 12px rgba(0,0,0,0.03)}
-  .string-row > div{display:flex;flex-direction:column;gap:4px}
-  .string-row > div::before{content:attr(data-label);font-size:10px;font-weight:800;color:var(--ink-muted);text-transform:uppercase}
-  .str-id-badge{grid-column:1/-1;text-align:left;background:var(--ink);color:var(--lime);padding:8px 12px;font-size:14px}
-  .str-confirm-cell{grid-column:1/-1}
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-.proto-item{display:flex;align-items:center;justify-content:space-between;padding:16px;background:rgba(255,255,255,0.7);border:1px solid var(--glass-border);border-radius:var(--radius-sm);margin-bottom:10px;cursor:pointer;transition:transform .15s;gap:12px;flex-wrap:wrap}
-.proto-item:hover{transform:translateY(-2px);background:#fff}
-.proto-title{font-size:16px;font-weight:800}
-.proto-meta{font-size:11px;color:var(--ink-muted);font-family:var(--font-mono);margin-top:2px}
-.status-badge{padding:4px 10px;border-radius:20px;font-size:9px;font-weight:800;text-transform:uppercase;font-family:var(--font-mono)}
-.status-vorbereitet{background:rgba(37,99,235,0.12);color:var(--info)}
-.status-fertig{background:rgba(26,122,74,0.15);color:var(--success)}
+/* Keyboard-focus visibility (a11y) */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
 
-#authOverlay{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(18,17,15,0.6);backdrop-filter:blur(24px)}
-.auth-card{background:var(--glass-bg-heavy);border:1px solid var(--glass-border);box-shadow:var(--glass-shadow-lg);backdrop-filter:blur(18px);border-radius:20px;padding:36px 32px;width:380px;max-width:92vw;text-align:center}
-.auth-tabs{display:flex;margin-bottom:18px;background:var(--cream-deep);border-radius:8px;padding:3px}
-.auth-tab{flex:1;padding:9px;border-radius:6px;font-size:11px;font-weight:700;color:var(--ink-muted);background:transparent;border:none;cursor:pointer;text-transform:uppercase}
-.auth-tab.active{background:var(--ink);color:var(--lime)}
-.auth-input{width:100%;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--cream-deep);background:rgba(255,255,255,0.8);font-size:13px;font-weight:500;margin-top:6px;outline:none}
-.auth-btn{width:100%;margin-top:20px;padding:14px;background:var(--ink);color:var(--lime);border:none;border-radius:var(--radius-sm);font-family:var(--font-display);font-size:14px;font-weight:800;cursor:pointer}
-.auth-status{margin-top:10px;font-size:11px;color:var(--danger);font-family:var(--font-mono);min-height:16px}
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
 
-.overlay{position:fixed;inset:0;background:rgba(18,17,15,0.5);backdrop-filter:blur(8px);z-index:9000;display:none;align-items:center;justify-content:center;padding:16px}
-.overlay.show{display:flex}
-.modal{background:var(--glass-bg-heavy);border:1px solid var(--glass-border);border-radius:var(--radius);padding:24px;width:100%;max-width:400px;box-shadow:var(--glass-shadow-lg);text-align:center}
+/* BACKGROUND GRID */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(159,193,49,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(159,193,49,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  top: -200px; left: 50%;
+  transform: translateX(-50%);
+  width: 800px; height: 500px;
+  background: radial-gradient(ellipse, rgba(159,193,49,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
 
-.toast-stack{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
-.toast{background:var(--ink);color:var(--cream);padding:12px 18px;border-radius:10px;font-size:12px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,0.25);border-left:4px solid var(--lime)}
+.wrap { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: clamp(14px,4vw,24px) clamp(10px,3vw,20px) 100px; }
+
+/* SETUP SCREEN */
+#setup-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px,4vw,24px);
+  padding-top: max(clamp(12px,4vw,24px), env(safe-area-inset-top));
+  padding-bottom: max(clamp(12px,4vw,24px), env(safe-area-inset-bottom));
+}
+
+.setup-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: clamp(16px,4vw,24px);
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(159,193,49,0.08);
+}
+
+.setup-hero {
+  padding: clamp(28px,6vw,40px) clamp(20px,6vw,36px) clamp(22px,5vw,32px);
+  background: linear-gradient(160deg, rgba(159,193,49,0.1) 0%, var(--panel) 50%);
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  position: relative;
+}
+.setup-hero::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 60%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+}
+
+.logo-img { height: clamp(40px,10vw,52px); margin: 0 auto 20px; display: block; object-fit: contain; }
+.logo-placeholder { display: none; }
+
+.hero-title {
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--green);
+  line-height: 1;
+}
+.hero-sub {
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.setup-body { padding: clamp(20px,5vw,28px) clamp(18px,5vw,28px) clamp(24px,6vw,32px); display: flex; flex-direction: column; gap: 20px; }
+
+/* PROJECT SELECTOR */
+.project-box {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.field-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* INPUTS */
+.sp-input {
+  width: 100%;
+  background: rgba(5,8,15,0.8);
+  border: 1.5px solid rgba(100,116,139,0.25);
+  border-radius: 10px;
+  padding: 13px 14px;
+  min-height: 46px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+@media (min-width:641px){ .sp-input { font-size: 0.875rem; } }
+.sp-input::placeholder { color: #2d3d52; }
+.sp-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(159,193,49,0.1); }
+.sp-input:hover:not(:focus) { border-color: rgba(100,116,139,0.4); }
+
+.input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width:380px){ .input-row { grid-template-columns: 1fr; } }
+
+/* BUTTONS */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  font-family: 'Inter', sans-serif; font-weight: 700; cursor: pointer; border: none;
+  border-radius: 10px; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.01em;
+  min-height: 44px; touch-action: manipulation;
+}
+.btn-green {
+  background: linear-gradient(135deg, #a8cc35 0%, #7a9420 100%);
+  color: #061200;
+  padding: 13px 22px;
+  font-size: 0.875rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(159,193,49,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+  width: 100%;
+}
+.btn-green:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(159,193,49,0.4); }
+.btn-green:active { transform: translateY(0); }
+
+.btn-ghost {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #94a3b8;
+  padding: 9px 16px;
+  font-size: 0.8rem;
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.09); color: var(--text); border-color: rgba(255,255,255,0.18); }
+
+.btn-blue {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  padding: 9px 16px;
+  font-size: 0.8rem;
+  box-shadow: 0 2px 12px rgba(59,130,246,0.3);
+}
+.btn-blue:hover { filter: brightness(1.1); box-shadow: 0 4px 18px rgba(59,130,246,0.45); }
+
+.btn-red {
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: #f87171;
+  padding: 9px 13px;
+  font-size: 0.8rem;
+}
+.btn-red:hover { background: rgba(239,68,68,0.22); }
+
+.btn-print {
+  background: rgba(255,255,255,0.05);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  color: #94a3b8;
+  padding: 13px 20px;
+  font-size: 0.875rem;
+  border-radius: 12px;
+  flex: 1;
+}
+.btn-print:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+
+.btn-xl-green {
+  background: linear-gradient(135deg, #a8cc35 0%, #7a9420 100%);
+  color: #061200; font-weight: 900; font-size: 0.875rem; letter-spacing: 0.05em;
+  text-transform: uppercase; padding: 13px 20px; border-radius: 12px; flex: 1;
+  box-shadow: 0 4px 20px rgba(159,193,49,0.28);
+}
+.btn-xl-green:hover { filter: brightness(1.1); }
+
+/* HINT TEXT */
+.hint { font-size: 0.7rem; color: #334d66; line-height: 1.6; }
+.hint strong { color: #4a6a85; }
+
+/* FILLABLE OPTION BOX */
+.fill-option-box {
+  background: rgba(159,193,49,0.05);
+  border: 1px solid rgba(159,193,49,0.18);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.fill-option-box .field-label { color: #7a9a40; }
+
+/* DASHBOARD */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(8px,2.5vw,12px);
+  margin-bottom: 16px;
+}
+.kpi-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: clamp(12px,3vw,16px);
+  padding: clamp(12px,3.5vw,18px) clamp(12px,4vw,20px);
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+}
+.kpi-label { font-size: clamp(0.56rem,2.2vw,0.63rem); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; line-height: 1.3; }
+@media (min-width:480px){ .kpi-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.1em; } }
+.kpi-value { font-size: clamp(1.15rem,5.5vw,1.8rem); font-weight: 900; color: var(--text); line-height: 1; }
+.kpi-unit { font-size: 0.72rem; font-weight: 700; color: var(--green); margin-left: 3px; }
+.kpi-accent { color: var(--green); }
+@media (max-width:420px){ .dashboard{ gap:8px; } }
+
+.progress-track { height: 3px; background: rgba(100,116,139,0.15); border-radius: 99px; overflow: hidden; margin-top: 10px; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), #c6e84a); border-radius: 99px; transition: width 0.5s cubic-bezier(.4,0,.2,1); }
+
+/* TOOLBAR */
+#toolbar {
+  position: sticky; top: max(0px, env(safe-area-inset-top)); z-index: 50;
+  background: rgba(5,8,15,0.85);
+  backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  flex-wrap: wrap;
+}
+.toolbar-info { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; flex: 1 1 180px; }
+.toolbar-project { font-size: 0.875rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.toolbar-sep { color: #1e2a3a; }
+.toolbar-tech { font-size: 0.8rem; color: var(--muted); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.toolbar-badge {
+  font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--green); background: rgba(159,193,49,0.1); border: 1px solid rgba(159,193,49,0.2);
+  padding: 2px 8px; border-radius: 99px;
+  opacity: 0; transition: opacity 0.3s;
+  white-space: nowrap;
+}
+.toolbar-actions { display: flex; gap: 8px; flex-shrink: 0; }
+@media (max-width:560px){
+  #toolbar { padding: 10px 12px; }
+  .toolbar-tech { max-width: 110px; }
+  .toolbar-actions { width: 100%; }
+  .toolbar-actions .btn { flex: 1; }
+}
+
+/* WR BLOCK */
+.wr-block {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.wr-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 14px clamp(14px,4vw,20px);
+  background: linear-gradient(135deg, rgba(159,193,49,0.07) 0%, transparent 60%);
+  border-bottom: 1px solid rgba(159,193,49,0.1);
+}
+.wr-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+  background: var(--green); color: #061200;
+  padding: 3px 10px; border-radius: 6px;
+  text-transform: uppercase;
+}
+.wr-name { font-size: 0.875rem; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.06em; }
+.wr-meta { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+
+.wr-gak-wrap { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.wr-gak-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.wr-gak-inp {
+  width: 64px; background: rgba(5,8,15,0.8); border: 1.5px solid rgba(100,116,139,0.25);
+  border-radius: 7px; padding: 5px 8px; color: var(--text); min-height: 30px;
+  font-family: 'Inter', sans-serif; font-size: 0.78rem; text-align: center; outline: none;
+  transition: border-color 0.15s;
+}
+.wr-gak-inp:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(159,193,49,0.12); }
+.wr-gak-inp::placeholder { color: #2d3d52; }
+.wr-gak-print { display: none; }
+@media (max-width:700px){
+  .wr-gak-inp { font-size: 16px; min-height: 34px; }
+}
+
+/* TABLE */
+.tbl-wrap { overflow-x: auto; }
+table.mt {
+  width: 100%;
+  border-collapse: collapse;
+}
+table.mt thead tr {
+  border-bottom: 1px solid rgba(159,193,49,0.12);
+}
+table.mt thead th {
+  padding: 10px 12px;
+  font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: #3d5a6e;
+  text-align: center;
+  white-space: nowrap;
+}
+table.mt thead th:first-child { text-align: left; padding-left: 20px; }
+table.mt tbody tr {
+  border-bottom: 1px solid rgba(255,255,255,0.035);
+  transition: background 0.1s;
+}
+table.mt tbody tr:nth-child(even) { background: rgba(255,255,255,0.018); }
+table.mt tbody tr:hover { background: rgba(159,193,49,0.04); }
+table.mt tbody tr.row-nein { opacity: 0.22; }
+table.mt tbody tr.mppt-div { border-top: 1px solid rgba(159,193,49,0.1); }
+table.mt td {
+  padding: 8px 12px;
+  vertical-align: middle;
+  text-align: center;
+  font-size: 0.82rem;
+}
+table.mt td:first-child { text-align: left; padding-left: 20px; }
+
+.string-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem; font-weight: 700;
+  color: var(--green);
+}
+
+/* Toggle */
+.tog-wrap { display: inline-flex; background: rgba(5,8,15,0.8); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 2px; gap: 2px; }
+.tog {
+  padding: 3px 12px; border-radius: 6px; font-size: 0.68rem; font-weight: 800;
+  letter-spacing: 0.06em; cursor: pointer; border: none;
+  background: transparent; color: #2d3d52; transition: all 0.15s;
+  touch-action: manipulation;
+}
+@media (max-width:700px){ .tog { padding: 9px 16px; font-size: 0.72rem; } }
+.tog.ton-ja.on  { background: rgba(159,193,49,0.2); color: #a8cc35; }
+.tog.ton-nei.on { background: rgba(100,116,139,0.2); color: #64748b; }
+
+/* Mod input */
+.mod-inp {
+  width: 64px; background: rgba(5,8,15,0.8); border: 1px solid rgba(100,116,139,0.2);
+  border-radius: 7px; padding: 5px 6px; color: var(--text); min-height: 36px;
+  font-family: 'Inter', sans-serif; font-size: 0.82rem; text-align: center; outline: none;
+  transition: border-color 0.15s;
+}
+.mod-inp:focus { border-color: var(--green); }
+
+/* Measurement input (Uoc, Isc, Riso) */
+.msr-inp {
+  width: 72px; background: rgba(5,8,15,0.8); border: 1px solid rgba(100,116,139,0.2);
+  border-radius: 7px; padding: 5px 6px; color: var(--text); min-height: 36px;
+  font-family: 'Inter', sans-serif; font-size: 0.82rem; text-align: center; outline: none;
+  transition: border-color 0.15s;
+}
+.msr-inp:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(159,193,49,0.12); }
+.msr-inp::placeholder { color: #2d3d52; font-size: 0.7rem; }
+@media (max-width:700px){
+  .mod-inp, .msr-inp { font-size: 16px; min-height: 40px; }
+  .note-inp { font-size: 16px; }
+}
+
+/* Power cell */
+.pwr-cell { font-weight: 700; font-size: 0.8rem; color: #2d3d52; font-family: 'JetBrains Mono', monospace; }
+.pwr-cell.has-val { color: var(--green); }
+
+/* Note input */
+.note-inp {
+  width: 100%; min-width: 120px; background: transparent;
+  border: 1px solid rgba(255,255,255,0.04); border-radius: 6px; padding: 4px 8px;
+  color: #475569; font-family: 'Inter', sans-serif; font-size: 0.75rem; outline: none;
+  transition: border-color 0.15s, color 0.15s;
+}
+.note-inp:focus { border-color: rgba(100,116,139,0.3); color: #94a3b8; }
+.note-inp::placeholder { color: #1a2535; }
+
+/* ── RESPONSIVE TABLE → CARD LAYOUT (phones) ── */
+@media (max-width: 700px){
+  .tbl-wrap { overflow-x: visible; }
+  table.mt, table.mt tbody, table.mt tr, table.mt td { display: block; width: 100%; }
+  table.mt thead { display: none; }
+  table.mt tfoot { display: block; width: 100%; }
+  table.mt tfoot tr { display: block; }
+  table.mt tbody tr {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin: 10px;
+    background: rgba(255,255,255,0.02);
+    overflow: hidden;
+  }
+  table.mt tbody tr:nth-child(even) { background: rgba(255,255,255,0.035); }
+  table.mt tbody tr.mppt-div { border-top-color: rgba(159,193,49,0.35); margin-top: 18px; }
+  table.mt td {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    text-align: right; padding: 10px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.85rem;
+  }
+  table.mt td:last-child { border-bottom: none; }
+  table.mt td::before {
+    content: attr(data-label);
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); text-align: left; flex-shrink: 0;
+  }
+  table.mt td:first-child {
+    text-align: left; padding-left: 14px;
+    background: rgba(159,193,49,0.05);
+    border-bottom: 1px solid rgba(159,193,49,0.12);
+  }
+  table.mt td:first-child::before { content: ''; }
+  table.mt td.col-mod, table.mt td.col-pwr, table.mt td.col-msr { justify-content: space-between; }
+  table.mt td .tog-wrap { margin-left: auto; }
+  table.mt td .mod-inp, table.mt td .msr-inp { width: 100px; margin-left: auto; }
+  table.mt td .note-inp { text-align: right; }
+  .wr-block { margin-bottom: 16px; border-radius: 16px; }
+  .wr-block .tbl-wrap { padding-bottom: 4px; }
+}
+
+/* TOAST */
+#toast {
+  position: fixed; bottom: 30px; left: 50%;
+  transform: translateX(-50%) translateY(110%);
+  z-index: 9999;
+  background: rgba(10,16,28,0.98);
+  border: 1px solid rgba(159,193,49,0.25);
+  color: var(--text);
+  padding: 11px 22px;
+  border-radius: 12px;
+  font-size: 0.85rem; font-weight: 600;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  transition: transform 0.35s cubic-bezier(.34,1.56,.64,1), opacity 0.2s;
+  opacity: 0;
+  max-width: 92vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+@media (max-width:700px){
+  #toast { bottom: max(94px, calc(84px + env(safe-area-inset-bottom))); font-size: 0.8rem; padding: 10px 18px; }
+}
+
+.gak-export-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  padding: 14px 18px; margin-top: 16px;
+}
+.gak-export-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.gak-export-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width:560px){
+  .gak-export-bar { flex-direction: column; align-items: stretch; padding: 14px 16px; }
+  .gak-export-actions { width: 100%; }
+  .gak-export-actions .btn { flex: 1; font-size: 0.78rem; }
+}
+
+/* BOTTOM BAR */
+.bottom-bar {
+  display: flex; gap: 10px;
+  padding-top: 16px; padding-bottom: 60px;
+}
+@media (max-width:700px){
+  .bottom-bar {
+    position: sticky; bottom: 0; width: 100%;
+    gap: 8px;
+    padding: 12px 4vw;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    margin-top: 20px;
+    background: rgba(5,8,15,0.92);
+    backdrop-filter: blur(20px) saturate(1.5);
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
+    z-index: 40;
+  }
+  .btn-print { font-size: 0.8rem; padding: 13px 12px; }
+  .btn-xl-green { font-size: 0.8rem; padding: 13px 12px; }
+}
+
+/* PRINT */
+.print-only { display: none !important; }
+.print-blank { display: none; }
+.screen-dash { display: inline; }
+.print-dash  { display: none; }
+
+@page { size: A4 landscape; margin: 10mm 13mm 17mm;
+  @bottom-center { content: "SOLPRO Pruefprotokoll  \00B7  Seite " counter(page) " von " counter(pages); font-family: 'Inter', Arial, sans-serif; font-size: 7pt; color: #94a3b8; } }
+
+@media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body { background: #fff !important; color: #111 !important; padding: 0 !important; font-size: 10pt; }
+  body::before, body::after { display: none !important; }
+  .no-print { display: none !important; }
+  .print-only { display: revert !important; }
+  thead .print-only { display: table-cell !important; }
+  tbody .print-only { display: table-cell !important; }
+  tfoot .print-only { display: table-cell !important; }
+  .wrap { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+  #matrix-view { display: block !important; }
+
+  .pr-break { page-break-after: always !important; break-after: page !important; }
+  .pr-break:last-child { page-break-after: auto !important; break-after: auto !important; }
+
+  /* Print header */
+  #ph {
+    display: flex !important; align-items: flex-start; justify-content: space-between; gap: 24px;
+    padding-bottom: 8px; margin-bottom: 10px; border-bottom: 2.5px solid #9fc131;
+  }
+  .ph-title { font-size: 18pt; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; color: #111; line-height: 1; }
+  .ph-sub { font-size: 7pt; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: #9fc131; margin-top: 4px; }
+  .ph-grid { display: grid !important; grid-template-columns: 1fr 1fr; gap: 2px 28px; font-size: 8pt; min-width: 300px; }
+  .ph-grid .lbl { color: #64748b; font-weight: 600; }
+  .ph-grid strong { color: #111; font-weight: 800; }
+
+  #toolbar, #toast, .bottom-bar, .dashboard { display: none !important; }
+
+  .wr-block { background: #fff !important; border: none !important; border-radius: 0 !important; margin: 0 0 10px !important; padding: 0 !important; break-inside: avoid-page !important; box-shadow: none !important; }
+  .wr-head { background: #f1f5f9 !important; border: 1px solid #cbd5e1 !important; border-bottom: 2px solid #9fc131 !important; border-radius: 0 !important; padding: 5px 10px !important; }
+  .wr-num { background: #9fc131 !important; color: #061200 !important; font-size: 7pt !important; }
+  .wr-name { font-size: 9pt !important; color: #111 !important; }
+  .wr-meta { display: none !important; }
+  .wr-gak-print { font-size: 7.5pt !important; font-weight: 800 !important; letter-spacing: .05em !important; text-transform: uppercase !important; color: #3d5800 !important; background: #e4f0b0 !important; padding: 2px 8px !important; border-radius: 99px !important; margin-left: auto !important; }
+
+  table.mt { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
+  table.mt thead tr { border-bottom: none !important; }
+  table.mt thead th { background: #dde4ee !important; color: #1e293b !important; border: 1px solid #7e96ae !important; padding: 8px 5px !important; font-size: 8.5pt !important; font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: .04em !important; text-align: center !important; vertical-align: middle !important; line-height: 1.3 !important; }
+  table.mt thead th:first-child { text-align: left !important; padding-left: 10px !important; }
+  .col-id   { width: 10% !important; }
+  .col-stat { width: 9%  !important; }
+  .col-mod  { width: 9%  !important; }
+  .col-pwr  { width: 14% !important; }
+  .col-msr  { width: 10% !important; }
+  .col-note { width: auto !important; }
+  table.mt td { border: 1px solid #7e96ae !important; color: #111 !important; padding: 0 7px !important; font-size: 10pt !important; vertical-align: middle !important; text-align: center !important; height: 42px !important; }
+  table.mt td:first-child { text-align: left !important; padding-left: 10px !important; }
+  table.mt tbody tr:nth-child(even) td { background: #f4f7fb !important; }
+  table.mt tbody tr:nth-child(odd)  td { background: #fff !important; }
+  .string-id { font-family: ui-monospace, monospace !important; font-weight: 800 !important; color: #3d5800 !important; font-size: 9.5pt !important; }
+  .pwr-cell  { font-family: ui-monospace, monospace !important; font-weight: 700 !important; color: #3d5800 !important; font-size: 9.5pt !important; }
+  table.mt td.col-note { font-size: 9pt !important; color: #334155 !important; text-align: left !important; padding-left: 10px !important; }
+  table.mt tbody tr.row-nein { display: none !important; }
+  table.mt td.col-msr { border-bottom: 2px solid #475569 !important; }
+  table.mt tbody tr.mppt-div { border-top: 1.5px solid rgba(159,193,49,.45) !important; }
+
+  .tog-wrap  { display: none !important; }
+  .mod-inp   { display: none !important; }
+  .msr-inp   { display: none !important; }
+  .note-inp  { display: none !important; }
+  .screen-dash { display: none !important; }
+  .print-only  { display: revert !important; }
+  .print-cell  { display: inline !important; font-weight: 700 !important; }
+  .print-note  { display: inline !important; }
+  .print-blank { display: block !important; min-height: 28px !important; background: #fff !important; }
+  .row-nein .print-blank { display: none !important; }
+  .row-nein .print-dash  { display: inline !important; color: #94a3b8 !important; }
+
+  .tot-row td { background: #e4f0b0 !important; font-weight: 800 !important; font-size: 10pt !important; border-top: 2.5px solid #9fc131 !important; color: #1a2e00 !important; border: 1px solid #7e96ae !important; height: 38px !important; }
+
+  #pr-sig { display: flex !important; gap: 32px; margin-top: 18px; padding-top: 12px; border-top: 1px solid #cbd5e1; }
+  .sig-f { flex: 1; }
+  .sig-l { border-bottom: 2px solid #334155; height: 40px; margin-bottom: 6px; }
+  .sig-t { font-size: 7pt; color: #64748b; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+
+  .wr-block .tbl-wrap { overflow: visible !important; }
+}
 </style>
 </head>
 <body>
 
-<div class="bg-blob blob-1"></div>
-<div class="bg-blob blob-2"></div>
+<div id="toast"></div>
 
-<div id="loader"><div class="spinner"></div><div class="loader-text" id="loaderText">Lade Suite…</div></div>
-
-<!-- AUTH OVERLAY -->
-<div id="authOverlay">
-  <div class="auth-card">
-    <div class="logo" style="font-size:32px;justify-content:center;margin-bottom:2px">SOL<span>PRO</span></div>
-    <div style="font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:24px">Messprotokoll Suite</div>
-    
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Anmelden</button>
-      <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Registrieren</button>
+<!-- SETUP -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <div class="setup-hero">
+      <img src="Logo_Solpro.jpg" alt="SOLPRO" class="logo-img" onerror="this.style.display='none'">
+      <div class="hero-title">SOLPRO</div>
+      <div class="hero-sub">PV &middot; Mess- &amp; Prüfprotokoll &middot; Offline</div>
     </div>
+    <div class="setup-body">
 
-    <div id="formLogin">
-      <input class="auth-input" type="email" id="authEmail" placeholder="E-Mail" autocomplete="email">
-      <input class="auth-input" type="password" id="authPassword" placeholder="Passwort" autocomplete="current-password">
-      <button class="auth-btn" id="btnLogin" onclick="handleLogin()">Anmelden</button>
-      <div class="auth-status" id="authStatus"></div>
-    </div>
+      <!-- Saved projects -->
+      <div class="project-box">
+        <label class="field-label">Gespeicherte Projekte</label>
+        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
+          <select id="project-list" class="sp-input" style="flex:1 1 140px;min-width:0;padding:9px 12px;border-radius:8px;"></select>
+          <button onclick="loadProject()" class="btn btn-ghost" style="flex:0 0 auto;">Laden</button>
+          <button onclick="deleteProject()" class="btn btn-red" style="flex:0 0 auto;">&#x2715;</button>
+        </div>
+      </div>
 
-    <div id="formSignup" style="display:none">
-      <input class="auth-input" type="text" id="signupName" placeholder="Dein Name (z.B. Sven)">
-      <input class="auth-input" type="email" id="signupEmail" placeholder="E-Mail" autocomplete="email">
-      <input class="auth-input" type="password" id="signupPassword" placeholder="Passwort (min. 6 Zeichen)" autocomplete="new-password">
-      <button class="auth-btn" id="btnSignup" onclick="handleSignup()">Sofort Registrieren</button>
-      <div class="auth-status" id="signupStatus"></div>
+      <!-- Fields -->
+      <div id="setup-form" style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label class="field-label" for="standort">Standort / Projektname</label>
+          <input id="standort" type="text" autocomplete="organization" placeholder="z.B. Mustergasse 12, Wien" class="sp-input">
+        </div>
+        <div>
+          <label class="field-label" for="pruefer">Prüfer / Techniker</label>
+          <input id="pruefer" type="text" autocomplete="name" placeholder="Vor- und Nachname" class="sp-input">
+        </div>
+        <div>
+          <label class="field-label" for="pruef-datum">Prüfdatum</label>
+          <input id="pruef-datum" type="date" class="sp-input" style="color-scheme:dark;">
+        </div>
+        <div class="input-row">
+          <div>
+            <label class="field-label" for="modul">Modulleistung (Wp)</label>
+            <input id="modul" type="number" min="1" placeholder="z.B. 440" class="sp-input">
+          </div>
+          <div>
+            <label class="field-label" for="mppt">MPPTs pro WR</label>
+            <input id="mppt" placeholder="z.B. 2,3" class="sp-input">
+          </div>
+        </div>
+        <p class="hint" style="margin-top:-4px;">Kommagetrennt &#8212; <strong>2,3</strong> = WR&nbsp;1 mit 2&nbsp;MPPTs, WR&nbsp;2 mit 3&nbsp;MPPTs. Jeder MPPT hat 2&nbsp;String-Eingänge.</p>
+
+        <!-- Messwerte ausfüllbar Toggle -->
+        <div class="fill-option-box">
+          <label class="field-label" style="margin-bottom:10px;">Messwerte digital ausfüllbar</label>
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;row-gap:10px;">
+            <div class="tog-wrap">
+              <button id="fill-ja"  class="tog ton-ja"      onclick="setFillMode(true)"  style="padding:7px 18px;font-size:0.72rem;">JA</button>
+              <button id="fill-nei" class="tog ton-nei on"  onclick="setFillMode(false)" style="padding:7px 18px;font-size:0.72rem;">NEIN</button>
+            </div>
+            <span style="font-size:0.7rem;color:#4a6a85;line-height:1.5;">Uoc&nbsp;(V) &middot; Isc&nbsp;(A) &middot; Riso&nbsp;(M&#8486;)<br><span style="color:#2d3d52;">Werte direkt am Gerät eingeben</span></span>
+          </div>
+        </div>
+
+        <button onclick="startApp()" class="btn btn-green" style="margin-top:4px;font-size:0.9rem;padding:14px;">
+          &#9889;&nbsp; Matrix laden
+        </button>
+      </div>
+
     </div>
   </div>
 </div>
 
-<!-- TOPBAR -->
-<header class="topbar" id="appTopbar" style="display:none">
-  <div class="logo">SOL<span>PRO</span> <span style="font-size:12px;font-family:var(--font-mono);color:var(--lime-dk);font-weight:700">· Messung</span></div>
-  <div style="display:flex;align-items:center;gap:10px">
-    <div class="user-chip" id="btnUserMenu" onclick="logout()">
-      <div class="user-avatar" id="userAvatar">S</div>
-      <span id="userName">Sven</span>
-      <span style="font-size:10px;color:var(--danger);margin-left:4px">✕</span>
-    </div>
-  </div>
-</header>
+<!-- MATRIX VIEW -->
+<div id="matrix-view" style="display:none;">
+  <div class="wrap">
 
-<!-- TABS -->
-<nav class="tab-nav" id="appTabs" style="display:none">
-  <div class="tab active" data-view="viewList" onclick="switchView('viewList')">📂 Projekte Übersicht</div>
-  <div class="tab" data-view="viewEditor" onclick="switchView('viewEditor')">📋 Aktuelle Messung</div>
-</nav>
-
-<!-- MAIN APP -->
-<main class="shell" id="appMain" style="display:none">
-
-  <!-- VIEW 1: PROJEKT-ÜBERSICHT -->
-  <section id="viewList">
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <h1 class="card-title">Mess-Projekte</h1>
-          <p style="font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.8px;margin-top:2px">Vorbereitete & abgeschlossene Messungen</p>
-        </div>
-        <button class="btn primary" onclick="prepareNewProject()">+ Projekt vorbereiten (Admin)</button>
+    <!-- Print header (hidden on screen) -->
+    <div id="ph" style="display:none;">
+      <div>
+        <div class="ph-title">Prüfprotokoll</div>
+        <div class="ph-sub">PV-Generator &middot; Messprotokoll</div>
       </div>
-      <div id="projectListContainer">
-        <div style="text-align:center;padding:30px;color:var(--ink-muted)">Lade Protokolle…</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- VIEW 2: MESSUNG / EDITOR -->
-  <section id="viewEditor" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-      <button class="btn" onclick="switchView('viewList')">← Zur Übersicht</button>
-      <div style="display:flex;gap:6px">
-        <button class="btn success" onclick="saveCurrentProtocol(true)">💾 Fertigstellen</button>
-        <button class="btn" onclick="exportExcel()">📊 Excel</button>
-        <button class="btn primary" onclick="window.print()">📄 Drucken</button>
+      <div class="ph-grid">
+        <div><span class="lbl">Standort: </span><strong id="ph-loc"></strong></div>
+        <div><span class="lbl">Prüfdatum: </span><strong id="ph-date"></strong></div>
+        <div><span class="lbl">Prüfer: </span><strong id="ph-tech"></strong></div>
+        <div><span class="lbl">Modulleistung: </span><strong id="ph-mod"></strong></div>
       </div>
     </div>
 
-    <!-- Stammdaten Card -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <h2 class="card-title" id="editorTitle">Projekt-Messung</h2>
-          <div id="lockStateBadge" style="font-size:11px;font-family:var(--font-mono);color:var(--info);margin-top:2px">🔒 Für Sven gesperrt (Stammdaten fixiert)</div>
-        </div>
-        <button class="btn warn" id="btnAdminUnlock" onclick="toggleAdminLock()">🔒 Admin-Freigabe</button>
+    <!-- Dashboard -->
+    <div class="dashboard no-print">
+      <div class="kpi-card">
+        <div class="kpi-label">Gesamtleistung</div>
+        <div class="kpi-value"><span id="d-pwr">0.00</span><span class="kpi-unit">kWp</span></div>
       </div>
-
-      <div class="form-grid">
-        <div class="form-field">
-          <label>Standort / Anlage <span id="lckIcon1">🔒</span></label>
-          <input type="text" id="inpStandort" placeholder="z.B. Musterstraße 1, Wien" class="is-locked" readonly>
-        </div>
-        <div class="form-field">
-          <label>Kunde / Bauherr <span id="lckIcon2">🔒</span></label>
-          <input type="text" id="inpKunde" placeholder="z.B. Familie Huber" class="is-locked" readonly>
-        </div>
-        <div class="form-field">
-          <label>Prüfer (Sven) ✍️</label>
-          <input type="text" id="inpPruefer" placeholder="Sven">
-        </div>
-        <div class="form-field">
-          <label>Prüfdatum 📅</label>
-          <input type="date" id="inpDatum">
-        </div>
-        
-        <!-- Modul-Preset & Uoc Referenz -->
-        <div class="form-field">
-          <label>Modultyp / Preset <span id="lckIconMod">🔒</span></label>
-          <select id="inpModulSelect" class="is-locked" disabled onchange="handleModuleSelect(this.value)">
-            <!-- Wird dynamisch befüllt -->
-          </select>
-        </div>
-        
-        <div class="form-field">
-          <label>Modul Uoc STC (V/Modul) <span id="lckIconUoc">🔒</span></label>
-          <input type="number" step="0.1" id="inpModulUoc" value="40.5" class="is-locked" readonly onchange="renderMatrix()">
-        </div>
-
-        <div class="form-field">
-          <label>Modulleistung (Wp) <span id="lckIcon3">🔒</span></label>
-          <input type="number" id="inpModulWp" value="440" class="is-locked" readonly onchange="recalculateTotals()">
-        </div>
-
-        <div class="form-field">
-          <label>MPPT-Konfig (WR) <span id="lckIcon4">🔒</span></label>
-          <input type="text" id="inpMpptConfig" value="2,2" placeholder="z.B. 2,3" class="is-locked" readonly onchange="rebuildMatrix()">
-        </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Module gesamt</div>
+        <div class="kpi-value" id="d-mods">0</div>
+        <div class="progress-track"><div class="progress-fill" id="d-prog" style="width:0%"></div></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Aktive Strings</div>
+        <div class="kpi-value" id="d-str">0</div>
       </div>
     </div>
 
-    <!-- Live KPIs -->
-    <div class="kpi-row">
-      <div class="kpi-pill">
-        <div class="kpi-val" id="kpiKwp">0.00</div>
-        <div class="kpi-lbl">kWp Gesamt</div>
+    <!-- Toolbar -->
+    <div id="toolbar" class="no-print">
+      <div class="toolbar-info">
+        <span style="font-size:0.75rem;color:#1e3a5f;">&#128205;</span>
+        <span class="toolbar-project" id="tb-loc"></span>
+        <span class="toolbar-sep">&middot;</span>
+        <span class="toolbar-tech" id="tb-tech"></span>
+        <span class="toolbar-badge" id="tb-badge">&#10003; Gespeichert</span>
       </div>
-      <div class="kpi-pill">
-        <div class="kpi-val" id="kpiModules">0</div>
-        <div class="kpi-lbl">Module Gesamt</div>
+      <div class="toolbar-actions">
+        <button onclick="saveProject()" class="btn btn-blue" title="Strg+S">&#128190; Speichern</button>
+        <button onclick="goMenu()" class="btn btn-ghost">&#x2715; Menü</button>
       </div>
-      <div class="kpi-pill">
-        <div class="kpi-val" id="kpiActiveStrings">0</div>
-        <div class="kpi-lbl">Aktive Strings</div>
+    </div>
+
+    <!-- WR Tables -->
+    <div id="tables"></div>
+
+    <!-- Grand total print row -->
+    <div id="grand-total" class="print-only" style="margin-top:10px;padding:8px 10px;background:#e4f0b0;border:2px solid #9fc131;border-radius:0;display:none;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="font-size:8.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1a2e00;padding:4px 8px;width:40%;">Gesamtanlage</td>
+          <td style="font-size:8.5pt;font-weight:700;color:#1a2e00;padding:4px 8px;width:20%;text-align:center;"><span id="gt-mod"></span></td>
+          <td style="font-size:8.5pt;font-weight:700;color:#1a2e00;padding:4px 8px;width:20%;text-align:center;"><span id="gt-pwr"></span></td>
+          <td style="font-size:8.5pt;color:#475569;padding:4px 8px;">Module gesamt &middot; kWp Gesamtleistung</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- GAK-Pickerl / SmartScript Export -->
+    <div class="gak-export-bar no-print">
+      <div class="gak-export-label">GAK-Pickerl &middot; nur aktive Strings</div>
+      <div class="gak-export-actions">
+        <button onclick="exportActiveStrings()" class="btn btn-ghost" title="Nur die IDs der aktiven Strings, eine pro Zeile">&#128203; Aktive Strings (Liste)</button>
+        <button onclick="exportGakPickerl()" class="btn btn-blue" title="CSV für SmartScript: BVH;String;GAK;Module;Leistung">&#127991;&#65039; GAK-Pickerl (CSV)</button>
       </div>
     </div>
 
-    <!-- NEU: BATCH-SCHNELL-AKTIONEN FÜR SVEN -->
-    <div class="batch-bar">
-      <span class="batch-title">⚡ Schnell-Aktionen:</span>
-      <button class="btn sm" onclick="applyBulkModules()">🔢 Module für alle setzen</button>
-      <button class="btn sm" onclick="applyBulkRiso('> 20')">⚡ Riso > 20 MΩ für alle</button>
-      <button class="btn sm" onclick="applyBulkRiso('> 100')">⚡ Riso > 100 MΩ für alle</button>
-      <button class="btn sm" onclick="unlockAllStrings()">🔓 Alle Strings entsperren</button>
+    <!-- Action buttons -->
+    <div class="bottom-bar no-print">
+      <button onclick="doPrint()" class="btn btn-print">
+        &#128196; Als PDF drucken <span style="font-size:0.7rem;color:#2d3d52;margin-left:6px;">(Strg+P)</span>
+      </button>
+      <button onclick="doExcel()" class="btn btn-xl-green">
+        &#128202; Excel exportieren
+      </button>
     </div>
 
-    <!-- String Matrix -->
-    <div id="matrixContainer"></div>
-
-    <!-- Bemerkungen -->
-    <div class="card">
-      <div class="card-header"><h3 class="card-title">Notizen & Bemerkungen</h3></div>
-      <div class="form-field">
-        <textarea id="inpNotizen" rows="3" placeholder="Besonderheiten bei der Messung, Wetter etc."></textarea>
-      </div>
+    <!-- Print signature -->
+    <div id="pr-sig" style="display:none;">
+      <div class="sig-f"><div class="sig-l"></div><div class="sig-t">Datum &amp; Unterschrift Prüfer</div></div>
+      <div class="sig-f"><div class="sig-l"></div><div class="sig-t">Datum &amp; Unterschrift Auftraggeber</div></div>
+      <div class="sig-f"><div class="sig-l"></div><div class="sig-t">Stempel / Firmenstempel</div></div>
     </div>
-  </section>
 
-</main>
-
-<!-- MODAL: ADMIN PASSWORT -->
-<div class="overlay" id="adminModal">
-  <div class="modal">
-    <div class="card-title" style="margin-bottom:6px">Admin-Freischaltung</div>
-    <p style="font-size:12px;color:var(--ink-muted);margin-bottom:16px">Passwort eingeben, um Standort und WR-Matrix zu bearbeiten:</p>
-    <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Passwort eingeben" style="text-align:center;font-size:16px;margin-bottom:14px">
-    <div style="display:flex;gap:8px">
-      <button class="btn primary" style="flex:1" onclick="verifyAdminPassword()">Freischalten</button>
-      <button class="btn" onclick="closeAdminModal()">Abbrechen</button>
-    </div>
   </div>
 </div>
-
-<div class="toast-stack" id="toastStack"></div>
 
 <script>
-'use strict';
+let cfg={}, toast_t=null, save_t=null;
+let fillable=false;
 
-const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+/* ── Input helpers: allow only numbers (and decimal point/comma) ── */
+function filterNum(el){
+  const pos=el.selectionStart;
+  const old=el.value;
+  // allow digits, dot and comma as decimal separator
+  let v=old.replace(/[^0-9.,]/g,'');
+  // normalise comma to dot
+  v=v.replace(',','.');
+  // only one dot allowed
+  const parts=v.split('.');
+  if(parts.length>2) v=parts[0]+'.'+parts.slice(1).join('');
+  if(el.value!==v){ el.value=v; try{el.setSelectionRange(pos,pos);}catch(e){} }
+}
+function filterInt(el){
+  const pos=el.selectionStart;
+  const v=el.value.replace(/[^0-9]/g,'');
+  if(el.value!==v){ el.value=v; try{el.setSelectionRange(pos,pos);}catch(e){} }
+}
 
-const $ = id => document.getElementById(id);
-const showLoader = on => $('loader').classList.toggle('show', on);
-const showToast = msg => {
-  const t = document.createElement('div');
-  t.className = 'toast';
-  t.textContent = msg;
-  $('toastStack').appendChild(t);
-  setTimeout(() => t.remove(), 3500);
+/* ── Fill mode toggle ── */
+function setFillMode(val){
+  fillable=val;
+  const ja=g('fill-ja'), nei=g('fill-nei');
+  if(ja&&nei){
+    if(val){ ja.classList.add('on'); nei.classList.remove('on'); }
+    else   { nei.classList.add('on'); ja.classList.remove('on'); }
+  }
+}
+
+/* ── Init ── */
+window.onload=()=>{
+  updateDD();
+  const s=JSON.parse(localStorage.getItem('sp_cfg')||'{}');
+  if(s.standort) g('standort').value=s.standort;
+  if(s.pruefer)  g('pruefer').value=s.pruefer;
+  if(s.modul)    g('modul').value=s.modul;
+  if(s.mppt)     g('mppt').value=s.mppt;
+  if(s.fillable) setFillMode(true); else setFillMode(false);
+  // default date to today
+  const td=new Date(); const pruef=g('pruef-datum');
+  if(pruef) pruef.value=td.toISOString().slice(0,10);
+  // restore saved date if present
+  const sc=JSON.parse(localStorage.getItem('sp_cfg')||'{}');
+  if(sc.datum) pruef.value=sc.datum;
+  g('setup-form').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();startApp();}});
+  document.addEventListener('keydown',e=>{
+    const inM=g('matrix-view').style.display!=='none';
+    if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();if(inM)saveProject();}
+    if((e.ctrlKey||e.metaKey)&&e.key==='p'){e.preventDefault();if(inM)doPrint();}
+  });
 };
 
-// Standard Module Presets
-const DEFAULT_MODULES = [
-  { name: 'Trina Vertex S+ 445W', wp: 445, uoc: 52.6 },
-  { name: 'Jinko Tiger Neo 440W', wp: 440, uoc: 39.4 },
-  { name: 'Aiko Neostar 2S+ 450W', wp: 450, uoc: 40.5 },
-  { name: 'Longi Hi-MO X6 435W', wp: 435, uoc: 39.3 },
-  { name: 'Benutzerdefiniert...', wp: 440, uoc: 40.0 }
-];
+const g=id=>document.getElementById(id);
 
-const state = {
-  user: null,
-  profile: null,
-  isAdminUnlocked: false,
-  protocols: [],
-  modulesList: DEFAULT_MODULES,
-  currentId: null,
-  currentStrings: []
-};
-
-// ─── AUTHENTICATION ───
-function switchAuthTab(mode) {
-  $('tabLogin').classList.toggle('active', mode === 'login');
-  $('tabSignup').classList.toggle('active', mode === 'signup');
-  $('formLogin').style.display = mode === 'login' ? 'block' : 'none';
-  $('formSignup').style.display = mode === 'signup' ? 'block' : 'none';
-  $('authStatus').textContent = '';
-  $('signupStatus').textContent = '';
+function toast(msg,ms=2800){
+  const t=g('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toast_t); toast_t=setTimeout(()=>t.classList.remove('show'),ms);
 }
 
-async function handleLogin() {
-  const email = $('authEmail').value.trim();
-  const password = $('authPassword').value;
-  if (!email || !password) return ($('authStatus').textContent = 'E-Mail & Passwort angeben');
-  
-  showLoader(true);
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  showLoader(false);
-  if (error) return ($('authStatus').textContent = error.message);
-  bootApp(data.user);
-}
+function parseMPPT(raw){return raw.split(',').map(s=>s.trim()).filter(Boolean).map(Number).filter(n=>n>0&&Number.isInteger(n));}
+function safeName(n){return(n||'Projekt').replace(/[<>:"\/\\|?*\s]+/g,'_').replace(/_+/g,'_').slice(0,80);}
 
-async function handleSignup() {
-  const name = $('signupName').value.trim();
-  const email = $('signupEmail').value.trim();
-  const password = $('signupPassword').value;
-  if (!name || !email || !password) return ($('signupStatus').textContent = 'Alle Felder erforderlich');
-  if (password.length < 6) return ($('signupStatus').textContent = 'Passwort min. 6 Zeichen');
-
-  showLoader(true);
-  const { data, error } = await sb.auth.signUp({
-    email, password, options: { data: { display_name: name } }
+function updateDD(){
+  const proj=JSON.parse(localStorage.getItem('sp_archive')||'{}');
+  const sel=g('project-list');
+  sel.innerHTML='<option value="">&#8212; Neues Projekt &#8212;</option>';
+  Object.keys(proj).sort((a,b)=>a.localeCompare(b,'de')).forEach(n=>{
+    const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o);
   });
+}
 
-  if (error) {
-    showLoader(false);
-    return ($('signupStatus').textContent = error.message);
-  }
+function setStatus(id,val){
+  g('stat-'+id).value=val;
+  const ja=g('tja-'+id), nei=g('tnei-'+id);
+  if(val==='JA'){ja.classList.add('on');nei.classList.remove('on');}
+  else{nei.classList.add('on');ja.classList.remove('on');}
+  processRow(id);
+}
 
-  if (data.session) {
-    showLoader(false);
-    bootApp(data.user);
+function processRow(id){
+  const stat=g('stat-'+id).value;
+  const mod=parseFloat(g('mod-'+id).value)||0;
+  const row=g('row-'+id);
+  const pw=g('pw-'+id);
+  const ps=g('ps-'+id);
+  const pm=g('pm-'+id);
+  if(stat==='NEIN'){
+    row.classList.add('row-nein');
+    pw.textContent='—'; pw.classList.remove('has-val');
+    if(ps){ps.textContent='NEIN'; ps.style.color='#94a3b8';}
+    if(pm) pm.textContent='—';
   } else {
-    const { data: logData, error: logErr } = await sb.auth.signInWithPassword({ email, password });
-    showLoader(false);
-    if (logErr) return ($('signupStatus').textContent = 'Registriert! Bitte anmelden.');
-    bootApp(logData.user);
+    row.classList.remove('row-nein');
+    if(mod>0){pw.textContent=((mod*cfg.modul)/1000).toFixed(2)+' kWp'; pw.classList.add('has-val');}
+    else{pw.textContent='—'; pw.classList.remove('has-val');}
+    if(ps){ps.textContent='JA'; ps.style.color='#4d6b00';}
+    if(pm) pm.textContent=mod>0?String(mod):'—';
   }
+  scheduleSave(); updateDash();
 }
 
-async function logout() {
-  await sb.auth.signOut();
-  location.reload();
+function collect(){
+  const d={};
+  document.querySelectorAll('[id^="mod-"],[id^="note-"],[id^="stat-"],[id^="uoc-"],[id^="isc-"],[id^="riso-"],[id^="gak-"]').forEach(el=>{ d[el.id]=el.value; });
+  return d;
+}
+function scheduleSave(){
+  clearTimeout(save_t);
+  save_t=setTimeout(()=>{
+    localStorage.setItem('sp_autosave',JSON.stringify(collect()));
+    const b=g('tb-badge'); if(b){b.style.opacity='1'; setTimeout(()=>b.style.opacity='0',2200);}
+  },400);
 }
 
-// ─── APP BOOT ───
-async function bootApp(user) {
-  state.user = user;
-  $('authOverlay').style.display = 'none';
-  $('appTopbar').style.display = 'flex';
-  $('appTabs').style.display = 'flex';
-  $('appMain').style.display = 'block';
-
-  const name = user.user_metadata?.display_name || user.email.split('@')[0];
-  $('userName').textContent = name;
-  $('userAvatar').textContent = name[0].toUpperCase();
-
-  await loadModulesFromDB();
-  populateModuleDropdown();
-  await loadProtocols();
-  
-  sb.channel('realtime_proto').on('postgres_changes', { event: '*', schema: 'public', table: 'protocols' }, () => {
-    loadProtocols(false);
-  }).subscribe();
+function updateDash(){
+  let pwr=0,mods=0,strs=0,filled=0;
+  document.querySelectorAll('[id^="stat-"]').forEach(s=>{
+    if(s.value!=='JA') return;
+    strs++;
+    const id=s.id.replace('stat-','');
+    const v=parseFloat((g('mod-'+id)||{}).value)||0;
+    mods+=v; pwr+=(v*cfg.modul)/1000;
+    if(v>0) filled++;
+  });
+  g('d-pwr').textContent=pwr.toFixed(2);
+  g('d-mods').textContent=mods;
+  g('d-str').textContent=strs;
+  g('d-prog').style.width=(strs>0?Math.round(filled/strs*100):0)+'%';
+  // print header
+  const pl=g('ph-loc'),pt=g('ph-tech'),pm=g('ph-mod');
+  if(pl) pl.textContent=cfg.standort||'—';
+  if(pt) pt.textContent=cfg.pruefer||'—';
+  if(pm) pm.textContent=cfg.modul+' Wp';
 }
 
-async function loadModulesFromDB() {
-  try {
-    const { data } = await sb.from('pv_modules').select('*');
-    if (data && data.length > 0) {
-      state.modulesList = [...data, { name: 'Benutzerdefiniert...', wp: 440, uoc: 40.0 }];
+function saveProject(){
+  const name=(g('standort').value||'').trim();
+  if(!name) return toast('Bitte Standort eingeben');
+  const proj=JSON.parse(localStorage.getItem('sp_archive')||'{}');
+  proj[name]={cfg:{standort:name,pruefer:g('pruefer').value,modul:g('modul').value,mppt:g('mppt').value,fillable:cfg.fillable},data:collect(),ts:new Date().toISOString()};
+  localStorage.setItem('sp_archive',JSON.stringify(proj));
+  updateDD(); g('project-list').value=name;
+  toast('✓ "'+name+'" gespeichert');
+}
+function loadProject(){
+  const sel=g('project-list').value; if(!sel) return toast('Bitte Projekt auswählen');
+  const p=(JSON.parse(localStorage.getItem('sp_archive')||'{}')||{})[sel]; if(!p) return toast('Nicht gefunden');
+  g('standort').value=p.cfg.standort; g('pruefer').value=p.cfg.pruefer; g('modul').value=p.cfg.modul; g('mppt').value=p.cfg.mppt;
+  if(p.cfg.fillable) setFillMode(true); else setFillMode(false);
+  startApp({restore:true,data:p.data}); toast('📂 "'+sel+'" geladen');
+}
+function deleteProject(){
+  const sel=g('project-list').value; if(!sel) return;
+  if(!confirm('Projekt "'+sel+'" wirklich löschen?')) return;
+  const proj=JSON.parse(localStorage.getItem('sp_archive')||'{}'); delete proj[sel];
+  localStorage.setItem('sp_archive',JSON.stringify(proj)); updateDD(); toast('Gelöscht');
+}
+function goMenu(){if(confirm('Zurück zum Menü? Auto-Save bleibt erhalten.')) location.reload();}
+
+function updateTotalsNotes(){
+  let gtMods=0, gtPwr=0;
+  parseMPPT(cfg.mppt).forEach((cnt,wi)=>{
+    const wr=wi+1; let ms=0,pw=0;
+    for(let m=1;m<=cnt;m++) for(let s=1;s<=2;s++){
+      const id=`${wr}.${m}.${s}`;
+      const st=g('stat-'+id); if(!st||st.value!=='JA') continue;
+      const v=parseFloat((g('mod-'+id)||{}).value)||0; ms+=v; pw+=(v*cfg.modul)/1000;
+      const ne=g('note-'+id), pn=g('pn-'+id);
+      if(ne&&pn){pn.textContent=ne.value; pn.style.display=ne.value?'inline':'none';}
+      // sync measurement print cells
+      ['uoc','isc','riso'].forEach(f=>{
+        const inp=g(f+'-'+id), pc=g('p'+f+'-'+id);
+        if(inp&&pc){pc.textContent=inp.value; pc.style.display=inp.value?'inline':'none';}
+      });
     }
-  } catch (e) {
-    console.log('Verwende Standardmodule');
-  }
-}
-
-function populateModuleDropdown(selectedName = '') {
-  const sel = $('inpModulSelect');
-  sel.innerHTML = state.modulesList.map(m => `
-    <option value="${m.name}" ${m.name === selectedName ? 'selected' : ''}>${m.name} (${m.wp}Wp, ${m.uoc}V)</option>
-  `).join('');
-}
-
-function handleModuleSelect(modName) {
-  const m = state.modulesList.find(x => x.name === modName);
-  if (!m) return;
-  $('inpModulWp').value = m.wp;
-  $('inpModulUoc').value = m.uoc;
-  recalculateTotals();
-  renderMatrix();
-}
-
-// ─── PROTOKOLLE LADEN & RENDERN ───
-async function loadProtocols(reRender = true) {
-  const { data, error } = await sb.from('protocols').select('*').order('created_at', { ascending: false });
-  if (error) return console.error(error);
-  state.protocols = data || [];
-  if (reRender) renderProtocolList();
-}
-
-function renderProtocolList() {
-  const c = $('projectListContainer');
-  if (!state.protocols.length) {
-    c.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-muted)">Keine Messungen vorhanden. Klicke oben auf "+ Projekt vorbereiten".</div>`;
-    return;
-  }
-  c.innerHTML = state.protocols.map(p => `
-    <div class="proto-item" onclick="openProtocol('${p.id}')">
-      <div>
-        <div class="proto-title">${p.standort}</div>
-        <div class="proto-meta">${p.kunde ? p.kunde + ' · ' : ''}${p.pruefdatum || ''} · ${p.modul_wp || 440} Wp</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="status-badge status-${p.status || 'vorbereitet'}">${p.status || 'vorbereitet'}</span>
-        <button class="btn" style="padding:6px 12px" onclick="event.stopPropagation();openProtocol('${p.id}')">Öffnen →</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function switchView(viewId) {
-  $('viewList').style.display = viewId === 'viewList' ? 'block' : 'none';
-  $('viewEditor').style.display = viewId === 'viewEditor' ? 'block' : 'none';
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === viewId));
-  if (viewId === 'viewList') loadProtocols();
-}
-
-// ─── ADMIN PASSWORD & LOCK ───
-function toggleAdminLock() {
-  if (state.isAdminUnlocked) {
-    state.isAdminUnlocked = false;
-    applyLockUI();
-    showToast('Sven-Modus aktiv: Stammdaten gesperrt');
-  } else {
-    $('adminPasswordInput').value = '';
-    $('adminModal').classList.add('show');
-    $('adminPasswordInput').focus();
-  }
-}
-
-function closeAdminModal() { $('adminModal').classList.remove('show'); }
-
-function verifyAdminPassword() {
-  const pwd = $('adminPasswordInput').value.trim();
-  if (pwd === 'ADMIN') {
-    state.isAdminUnlocked = true;
-    closeAdminModal();
-    applyLockUI();
-    showToast('🔑 Admin freigeschaltet! Du kannst Stammdaten ändern.');
-  } else {
-    alert('Falsches Passwort! Nur "ADMIN" schaltet die Stammdaten frei.');
-  }
-}
-
-function applyLockUI() {
-  const isLocked = !state.isAdminUnlocked;
-  $('btnAdminUnlock').textContent = isLocked ? '🔒 Admin-Freigabe' : '🔓 Admin sperren';
-  $('btnAdminUnlock').className = isLocked ? 'btn warn' : 'btn primary';
-  $('lockStateBadge').textContent = isLocked ? '🔒 Für Sven gesperrt (Stammdaten fixiert)' : '🔓 Admin-Modus: Alle Stammdaten editierbar';
-  $('lockStateBadge').style.color = isLocked ? 'var(--info)' : 'var(--lime-dk)';
-
-  ['inpStandort','inpKunde','inpModulWp','inpMpptConfig','inpModulUoc'].forEach(id => {
-    const el = $(id);
-    if (isLocked) { el.classList.add('is-locked'); el.setAttribute('readonly','true'); }
-    else { el.classList.remove('is-locked'); el.removeAttribute('readonly'); }
+    gtMods+=ms; gtPwr+=pw;
+    const tm=g('tm-'+wr),tp=g('tp-'+wr);
+    if(tm) tm.textContent=ms>0?ms+' Stk.':'—';
+    if(tp) tp.textContent=pw>0?pw.toFixed(2)+' kWp':'—';
+    const gakEl=g('gak-'+wr), gakp=g('gakp-'+wr);
+    if(gakp){ const gv=(gakEl&&gakEl.value.trim())?gakEl.value.trim():''; gakp.textContent=gv?('GAK '+gv):''; gakp.style.display=gv?'inline':'none'; }
   });
+  // grand total
+  const gt=g('grand-total');
+  if(gt){ gt.style.display='block'; g('gt-mod').textContent=gtMods+' Module gesamt'; g('gt-pwr').textContent=gtPwr.toFixed(2)+' kWp'; }
+}
 
-  if (isLocked) {
-    $('inpModulSelect').classList.add('is-locked');
-    $('inpModulSelect').setAttribute('disabled','true');
+function doPrint(){
+  updateTotalsNotes();
+  const datumEl=g('pruef-datum');
+  if(datumEl&&datumEl.value){
+    const [y,mo,d]=datumEl.value.split('-');
+    const months=['Jänner','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+    g('ph-date').textContent=parseInt(d)+'. '+months[parseInt(mo)-1]+' '+y;
   } else {
-    $('inpModulSelect').classList.remove('is-locked');
-    $('inpModulSelect').removeAttribute('disabled');
+    g('ph-date').textContent=new Date().toLocaleDateString('de-AT',{day:'numeric',month:'long',year:'numeric'});
   }
+  let s=g('_plo'); if(!s){s=document.createElement('style');s.id='_plo';s.textContent='@media print{@page{size:A4 landscape!important;}}';document.head.appendChild(s);}
+  window.print();
+}
 
-  ['lckIcon1','lckIcon2','lckIcon3','lckIcon4','lckIconMod','lckIconUoc'].forEach(id => {
-    if ($(id)) $(id).textContent = isLocked ? '🔒' : '✏️';
+function doExcel(){
+  const exDatum=cfg.datum?new Date(cfg.datum).toLocaleDateString('de-AT'):new Date().toLocaleDateString('de-AT');
+  const rows=[['SOLPRO MESS- UND PRUEFPROTOKOLL'],['Projekt:',cfg.standort,'','Pruefer:',cfg.pruefer],['Modulleistung:',cfg.modul+' Wp','','Pruefdatum:',exDatum],[],['String','Module','Leistung (kWp)','Uoc (V)','Isc (A)','Riso (MOhm)','Bemerkung']];
+  document.querySelectorAll('[id^="stat-"]').forEach(s=>{
+    if(s.value!=='JA') return;
+    const id=s.id.replace('stat-','');
+    rows.push([
+      {t:'s',v:id},
+      (g('mod-'+id)||{}).value,
+      (g('pw-'+id)||{}).textContent.replace(' kWp','').replace('—','').replace('—',''),
+      cfg.fillable ? ((g('uoc-'+id)||{}).value||'') : '',
+      cfg.fillable ? ((g('isc-'+id)||{}).value||'') : '',
+      cfg.fillable ? ((g('riso-'+id)||{}).value||'') : '',
+      (g('note-'+id)||{}).value
+    ]);
   });
+  const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:13},{wch:9},{wch:14},{wch:10},{wch:10},{wch:12},{wch:32}];
+  XLSX.utils.book_append_sheet(wb,ws,'Protokoll');
+  XLSX.writeFile(wb,'SOLPRO_'+safeName(cfg.standort)+'.xlsx');
+  toast('Excel exportiert');
 }
 
-// ─── PROJEKT ÖFFNEN & VORBEREITEN ───
-function prepareNewProject() {
-  state.currentId = null;
-  state.isAdminUnlocked = true;
-  applyLockUI();
-
-  $('editorTitle').textContent = 'Neues Projekt vorbereiten (Admin)';
-  $('inpStandort').value = '';
-  $('inpKunde').value = '';
-  $('inpPruefer').value = 'Sven';
-  $('inpDatum').value = new Date().toISOString().split('T')[0];
-  
-  populateModuleDropdown(DEFAULT_MODULES[0].name);
-  $('inpModulWp').value = DEFAULT_MODULES[0].wp;
-  $('inpModulUoc').value = DEFAULT_MODULES[0].uoc;
-  $('inpMpptConfig').value = '2,2';
-  $('inpNotizen').value = '';
-
-  rebuildMatrix();
-  switchView('viewEditor');
+/* ── GAK-Pickerl / SmartScript Export ── */
+function downloadText(text,filename){
+  const blob=new Blob([text],{type:'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
-function openProtocol(id) {
-  const p = state.protocols.find(x => x.id === id);
-  if (!p) return;
-
-  state.currentId = p.id;
-  state.isAdminUnlocked = false;
-  applyLockUI();
-
-  $('editorTitle').textContent = p.standort || 'Messung';
-  $('inpStandort').value = p.standort || '';
-  $('inpKunde').value = p.kunde || '';
-  $('inpPruefer').value = p.pruefer || 'Sven';
-  $('inpDatum').value = p.pruefdatum || new Date().toISOString().split('T')[0];
-  
-  populateModuleDropdown();
-  $('inpModulWp').value = p.modul_wp || 440;
-  $('inpModulUoc').value = p.modul_uoc || 40.5;
-  $('inpMpptConfig').value = p.mppt_config || '2,2';
-  $('inpNotizen').value = p.notizen || '';
-
-  if (p.string_data && Array.isArray(p.string_data) && p.string_data.length > 0) {
-    state.currentStrings = p.string_data;
-    renderMatrix();
-  } else {
-    rebuildMatrix();
-  }
-  switchView('viewEditor');
+function exportActiveStrings(){
+  const ids=[];
+  document.querySelectorAll('[id^="stat-"]').forEach(s=>{ if(s.value==='JA') ids.push(s.id.replace('stat-','')); });
+  if(!ids.length) return toast('Keine aktiven Strings vorhanden');
+  downloadText(ids.join('\r\n'),'SOLPRO_Strings_'+safeName(cfg.standort)+'.txt');
+  toast(ids.length+' aktive Strings exportiert');
 }
 
-// ─── BATCH AKTIONEN (FÜR SCHNELLES AUSFÜLLEN) ───
-function applyBulkModules() {
-  const count = prompt('Wie viele Module haben die Strings standardmäßig?', '14');
-  if (count === null) return;
-  const num = parseInt(count) || 0;
-  state.currentStrings.forEach(s => {
-    if (!s.is_confirmed && s.is_active) s.modules = num;
+function exportGakPickerl(){
+  const rows=[['BVH','String','GAK','Module','Leistung']];
+  document.querySelectorAll('[id^="stat-"]').forEach(s=>{
+    if(s.value!=='JA') return;
+    const id=s.id.replace('stat-','');
+    const wr=id.split('.')[0];
+    const modVal=parseFloat((g('mod-'+id)||{}).value)||0;
+    if(modVal<=0) return;
+    const gakEl=g('gak-'+wr);
+    const gakVal=(gakEl&&gakEl.value.trim())?gakEl.value.trim():wr;
+    const pwrVal=((modVal*cfg.modul)/1000).toFixed(2).replace('.',',');
+    rows.push([cfg.standort, id, 'GAK '+gakVal, modVal+' Module', pwrVal+' kWp']);
   });
-  renderMatrix();
-  recalculateTotals();
-  showToast(`${num} Module auf offene Strings angewendet`);
+  if(rows.length<=1) return toast('Keine aktiven Strings mit Modulanzahl vorhanden — bitte Module eintragen');
+  const csv=rows.map(r=>r.join(';')).join('\r\n');
+  downloadText('\uFEFF'+csv,'SOLPRO_GAK-Pickerl_'+safeName(cfg.standort)+'.csv');
+  toast((rows.length-1)+' Pickerl-Zeilen exportiert');
 }
 
-function applyBulkRiso(val) {
-  state.currentStrings.forEach(s => {
-    if (!s.is_confirmed && s.is_active) s.riso = val;
-  });
-  renderMatrix();
-  showToast(`Riso "${val} MΩ" für alle gesetzt`);
-}
 
-function unlockAllStrings() {
-  state.currentStrings.forEach(s => s.is_confirmed = false);
-  renderMatrix();
-  showToast('Alle Strings entsperrt');
-}
+function startApp(opts={}){
+  cfg.standort=(g('standort').value||'').trim();
+  cfg.pruefer =(g('pruefer').value ||'').trim();
+  cfg.modul   =parseFloat(g('modul').value)||0;
+  cfg.mppt    =(g('mppt').value||'').trim();
+  cfg.fillable=fillable;
+  if(!cfg.standort) return toast('Bitte Standort/Projektname eingeben');
+  if(!cfg.mppt)     return toast('Bitte MPPTs eingeben');
+  if(!cfg.modul)    return toast('Bitte Modulleistung (Wp) eingeben');
+  const mpptList=parseMPPT(cfg.mppt);
+  if(!mpptList.length) return toast('Ungueltige MPPT-Eingabe — z.B. 2,3');
+  cfg.mppt=mpptList.join(','); g('mppt').value=cfg.mppt;
+  cfg.datum=(g('pruef-datum')||{}).value||'';
+  localStorage.setItem('sp_cfg',JSON.stringify(cfg));
+  g('tb-loc').textContent=cfg.standort; g('tb-tech').textContent=cfg.pruefer;
+  document.title='SOLPRO | '+cfg.standort;
 
-// ─── STRING MATRIX & SPANNUNGS-PLAUSIBILITÄT ───
-function rebuildMatrix() {
-  const mpptRaw = $('inpMpptConfig').value || '2';
-  const strings = [];
-  let sId = 1;
+  const cont=g('tables'); cont.innerHTML='';
 
-  mpptRaw.split(',').forEach((m, wrIdx) => {
-    const mCount = parseInt(m.trim()) || 0;
-    for (let mppt = 1; mppt <= mCount; mppt++) {
-      for (let str = 1; str <= 2; str++) {
-        strings.push({
-          id: sId++, wr: wrIdx + 1, mppt: mppt, str: str,
-          label: `${wrIdx + 1}.${mppt}.${str}`,
-          modules: 14, uoc: '', isc: '', riso: '> 20', is_active: true, is_confirmed: false
-        });
+  mpptList.forEach((cnt,wi)=>{
+    const wr=wi+1;
+    const bl=document.createElement('div');
+    bl.className='wr-block pr-break';
+
+    // Build measurement column cells based on fillable mode
+    function msrCell(field, id, placeholder, label){
+      if(cfg.fillable){
+        return `<td class="col-msr" data-label="${label}">
+          <input type="text" inputmode="decimal" id="${field}-${id}" oninput="filterNum(this);scheduleSave()" class="msr-inp no-print" placeholder="${placeholder}" autocomplete="off">
+          <span class="print-only print-cell" id="p${field}-${id}"></span>
+          <div class="print-blank print-only"></div>
+        </td>`;
+      } else {
+        return `<td class="col-msr" data-label="${label}">
+          <span class="screen-dash" style="color:#1e2a3a;font-size:0.7rem;">&#8212;</span>
+          <div class="print-blank"></div>
+          <span class="print-dash">&#8212;</span>
+        </td>`;
       }
     }
-  });
 
-  state.currentStrings = strings;
-  renderMatrix();
-}
-
-function renderMatrix() {
-  const c = $('matrixContainer');
-  c.innerHTML = '';
-
-  const singleUoc = parseFloat($('inpModulUoc').value) || 40.5;
-  const wrMap = new Map();
-  state.currentStrings.forEach(s => {
-    if (!wrMap.has(s.wr)) wrMap.set(s.wr, []);
-    wrMap.get(s.wr).push(s);
-  });
-
-  wrMap.forEach((strings, wrNum) => {
-    const block = document.createElement('div');
-    block.className = 'wr-block';
-    let html = `
-      <div class="wr-header">
-        <div class="wr-title"><span>Wechselrichter ${wrNum}</span><span class="wr-badge">${strings.length / 2} MPPTs</span></div>
+    bl.innerHTML=`
+      <div class="wr-head">
+        <span class="wr-num">WR ${wr}</span>
+        <span class="wr-name">Wechselrichter ${wr}</span>
+        <span class="wr-meta">&nbsp;&middot; ${cnt} MPPT &middot; ${cnt*2} Strings</span>
+        <span class="wr-gak-wrap no-print">
+          <label class="wr-gak-label" for="gak-${wr}">GAK</label>
+          <input type="text" id="gak-${wr}" class="wr-gak-inp" placeholder="Nr." oninput="scheduleSave()" autocomplete="off">
+        </span>
+        <span class="wr-gak-print" id="gakp-${wr}"></span>
       </div>
-      <div class="string-table-head">
-        <div>String</div>
-        <div style="text-align:center">Module (±)</div>
-        <div style="text-align:center">kWp</div>
-        <div style="text-align:center">Uoc (V)</div>
-        <div style="text-align:center">Isc (A)</div>
-        <div style="text-align:center">Riso (MΩ)</div>
-        <div style="text-align:center">Aktiv</div>
-        <div style="text-align:center">Bestätigen</div>
-      </div>
-    `;
+      <div class="tbl-wrap">
+      <table class="mt">
+        <thead><tr>
+          <th class="col-id" style="text-align:left;padding-left:20px;">Input</th>
+          <th class="no-print">Aktiv</th>
+          <th class="print-only col-stat">Status</th>
+          <th class="col-mod">Module</th>
+          <th class="col-pwr">Leistung</th>
+          <th class="col-msr">Uoc (V)</th>
+          <th class="col-msr">Isc (A)</th>
+          <th class="col-msr">Riso (M&#8486;)</th>
+          <th class="col-note no-print">Bemerkung</th>
+          <th class="col-note print-only">Bemerkung</th>
+        </tr></thead>
+        <tbody id="tb-${wr}"></tbody>
+        <tfoot>
+          <tr class="tot-row print-only">
+            <td colspan="2" style="text-align:left;padding-left:8px;font-size:7pt;text-transform:uppercase;letter-spacing:.05em;">Summe WR ${wr}</td>
+            <td></td>
+            <td id="tm-${wr}" style="text-align:center;"></td>
+            <td id="tp-${wr}" style="text-align:center;color:#4d6b00;"></td>
+            <td colspan="4"></td>
+          </tr>
+        </tfoot>
+      </table>
+      </div>`;
+    cont.appendChild(bl);
 
-    strings.forEach(s => {
-      const isDisabled = (!s.is_active || s.is_confirmed) ? 'disabled' : '';
-      const pwr = s.is_active ? ((s.modules || 0) * (parseFloat($('inpModulWp').value) || 440) / 1000).toFixed(2) : '0.00';
-      
-      // Spannungs-Plausibilitätsprüfung
-      let voltBadge = '';
-      if (s.is_active && (s.modules || 0) > 0 && s.uoc) {
-        const expectedUoc = s.modules * singleUoc;
-        const measured = parseFloat(s.uoc);
-        const diffPercent = Math.abs(measured - expectedUoc) / expectedUoc;
-        
-        if (diffPercent <= 0.12) {
-          voltBadge = `<span class="volt-badge ok">🟢 Soll ~${Math.round(expectedUoc)}V (Passt!)</span>`;
-        } else if (diffPercent <= 0.25) {
-          voltBadge = `<span class="volt-badge warn">🟡 Soll ~${Math.round(expectedUoc)}V (Prüfen)</span>`;
-        } else {
-          voltBadge = `<span class="volt-badge bad">🔴 Achtung! Soll ~${Math.round(expectedUoc)}V</span>`;
-        }
-      }
-
-      html += `
-        <div class="string-row ${!s.is_active ? 'inactive' : ''} ${s.is_confirmed ? 'is-confirmed' : ''}" id="row_${s.id}">
-          <div class="str-id-badge" data-label="String">${s.label}</div>
-          
-          <div data-label="Module">
-            <div class="stepper-wrap">
-              <button class="stepper-btn" ${isDisabled} onclick="stepModule(${s.id}, -1)">−</button>
-              <input type="number" inputmode="numeric" class="stepper-input" value="${s.modules || 0}" min="0" ${isDisabled} onchange="updateStr(${s.id},'modules',this.value)">
-              <button class="stepper-btn" ${isDisabled} onclick="stepModule(${s.id}, 1)">+</button>
-            </div>
+    const tbody=g('tb-'+wr);
+    for(let m=1;m<=cnt;m++) for(let s=1;s<=2;s++){
+      const id=`${wr}.${m}.${s}`;
+      const tr=document.createElement('tr');
+      tr.id='row-'+id;
+      if(s===1&&m>1) tr.classList.add('mppt-div');
+      tr.innerHTML=`
+        <td class="col-id"><span class="string-id">${id}</span></td>
+        <td class="no-print" data-label="Aktiv">
+          <div class="tog-wrap">
+            <button id="tja-${id}"  class="tog ton-ja on"  onclick="setStatus('${id}','JA')">JA</button>
+            <button id="tnei-${id}" class="tog ton-nei"    onclick="setStatus('${id}','NEIN')">NEIN</button>
           </div>
-          
-          <div class="str-pwr" id="pwr_${s.id}" data-label="kWp">${pwr}</div>
-          
-          <div data-label="Uoc (V)" class="volt-check-wrap">
-            <input type="number" id="inp_uoc_${s.id}" inputmode="decimal" step="0.1" class="str-input" placeholder="0.0" value="${s.uoc || ''}" ${isDisabled} onchange="updateStr(${s.id},'uoc',this.value)" onkeydown="handleEnterNext(event, ${s.id}, 'uoc')">
-            ${voltBadge}
-          </div>
-          
-          <div data-label="Isc (A)">
-            <input type="number" id="inp_isc_${s.id}" inputmode="decimal" step="0.1" class="str-input" placeholder="0.0" value="${s.isc || ''}" ${isDisabled} onchange="updateStr(${s.id},'isc',this.value)" onkeydown="handleEnterNext(event, ${s.id}, 'isc')">
-          </div>
-
-          <div data-label="Riso (MΩ)">
-            <div class="riso-pills">
-              <div class="riso-pill ${s.riso === '> 20' ? 'active' : ''}" onclick="${!isDisabled ? `setRiso(${s.id}, '> 20')` : ''}">> 20</div>
-              <div class="riso-pill ${s.riso === '> 100' ? 'active' : ''}" onclick="${!isDisabled ? `setRiso(${s.id}, '> 100')` : ''}">> 100</div>
-              <div class="riso-pill ${s.riso === '> 500' ? 'active' : ''}" onclick="${!isDisabled ? `setRiso(${s.id}, '> 500')` : ''}">> 500</div>
-            </div>
-          </div>
-          
-          <div data-label="Aktiv">
-            <div class="tog-grp">
-              <button class="tog-btn ${s.is_active ? 'on-yes' : ''}" ${s.is_confirmed ? 'disabled' : ''} onclick="toggleStr(${s.id},true)">JA</button>
-              <button class="tog-btn ${!s.is_active ? 'on-no' : ''}" ${s.is_confirmed ? 'disabled' : ''} onclick="toggleStr(${s.id},false)">NEIN</button>
-            </div>
-          </div>
-
-          <div data-label="Status" class="str-confirm-cell" style="text-align:center">
-            ${s.is_confirmed 
-              ? `<button class="btn success" style="padding:8px 8px;font-size:10px;width:100%" onclick="toggleConfirm(${s.id})">✓ Bestätigt (Freigeben)</button>` 
-              : `<button class="btn primary" style="padding:8px 8px;font-size:10px;width:100%" ${!s.is_active ? 'disabled' : ''} onclick="confirmAndNext(${s.id})">🔒 Bestätigen & Weiter</button>`
-            }
-          </div>
-        </div>
-      `;
-    });
-
-    block.innerHTML = html;
-    c.appendChild(block);
-  });
-  recalculateTotals();
-}
-
-function stepModule(id, delta) {
-  const s = state.currentStrings.find(x => x.id === id);
-  if (!s || s.is_confirmed || !s.is_active) return;
-  s.modules = Math.max(0, (s.modules || 0) + delta);
-  renderMatrix();
-  recalculateTotals();
-}
-
-function setRiso(id, val) {
-  const s = state.currentStrings.find(x => x.id === id);
-  if (!s || s.is_confirmed || !s.is_active) return;
-  s.riso = val;
-  renderMatrix();
-}
-
-function updateStr(id, field, val) {
-  const s = state.currentStrings.find(x => x.id === id);
-  if (!s) return;
-  s[field] = field === 'modules' ? parseInt(val) || 0 : val;
-  recalculateTotals();
-  renderMatrix();
-}
-
-function toggleStr(id, active) {
-  const s = state.currentStrings.find(x => x.id === id);
-  if (!s) return;
-  s.is_active = active;
-  renderMatrix();
-}
-
-function toggleConfirm(id) {
-  const s = state.currentStrings.find(x => x.id === id);
-  if (!s) return;
-  s.is_confirmed = !s.is_confirmed;
-  renderMatrix();
-}
-
-// ─── WORKFLOW: BESTÄTIGEN & DIREKT ZUM NÄCHSTEN SPRINGEN ───
-function confirmAndNext(currentId) {
-  const s = state.currentStrings.find(x => x.id === currentId);
-  if (s) s.is_confirmed = true;
-  
-  renderMatrix();
-  showToast(`String ${s.label} bestätigt!`);
-
-  // Finde nächsten aktiven und unbestätigten String
-  const nextString = state.currentStrings.find(x => x.id > currentId && x.is_active && !x.is_confirmed);
-  if (nextString) {
-    setTimeout(() => {
-      const nextInput = document.getElementById(`inp_uoc_${nextString.id}`);
-      if (nextInput) {
-        nextInput.focus();
-        nextInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 100);
-  } else {
-    showToast('🎉 Alle aktiven Strings vollständig gemessen!');
-  }
-}
-
-function handleEnterNext(e, currentId, field) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    if (field === 'uoc') {
-      const iscInput = document.getElementById(`inp_isc_${currentId}`);
-      if (iscInput) iscInput.focus();
-    } else if (field === 'isc') {
-      confirmAndNext(currentId);
-    }
-  }
-}
-
-function recalculateTotals() {
-  const wp = parseFloat($('inpModulWp').value) || 440;
-  let totalMod = 0, totalKwp = 0, activeCount = 0;
-
-  state.currentStrings.forEach(s => {
-    if (s.is_active) {
-      const m = s.modules || 0;
-      totalMod += m;
-      totalKwp += (m * wp) / 1000;
-      activeCount++;
+          <select id="stat-${id}" style="display:none;" onchange="processRow('${id}')">
+            <option value="JA">JA</option><option value="NEIN">NEIN</option>
+          </select>
+        </td>
+        <td class="print-only col-stat" id="ps-${id}" style="font-weight:700;color:#4d6b00;">JA</td>
+        <td class="col-mod" data-label="Module">
+          <input type="text" inputmode="numeric" id="mod-${id}" oninput="filterInt(this);processRow('${id}')" class="mod-inp" placeholder="&#8212;" autocomplete="off">
+          <span class="print-only print-cell" id="pm-${id}"></span>
+        </td>
+        <td class="col-pwr pwr-cell" id="pw-${id}" data-label="Leistung">&#8212;</td>
+        ${msrCell('uoc', id, 'V', 'Uoc (V)')}
+        ${msrCell('isc', id, 'A', 'Isc (A)')}
+        ${msrCell('riso', id, 'M\u03a9', 'Riso (M\u03a9)')}
+        <td class="col-note no-print" data-label="Bemerkung">
+          <input type="text" id="note-${id}" oninput="scheduleSave()" placeholder="Bemerkung&#8230;" class="note-inp">
+        </td>
+        <td class="col-note print-only">
+          <span id="pn-${id}" class="print-note" style="display:none;font-size:9pt;color:#334155;"></span>
+        </td>`;
+      tbody.appendChild(tr);
     }
   });
 
-  $('kpiKwp').textContent = totalKwp.toFixed(2);
-  $('kpiModules').textContent = totalMod;
-  $('kpiActiveStrings').textContent = `${activeCount} / ${state.currentStrings.length}`;
-}
+  g('setup-screen').style.display='none';
+  g('matrix-view').style.display='block';
 
-// ─── SPEICHERN & EXPORT ───
-async function saveCurrentProtocol(isFinish = false) {
-  const standort = $('inpStandort').value.trim();
-  if (!standort) return alert('Bitte Standort angeben!');
-
-  const payload = {
-    standort,
-    kunde: $('inpKunde').value.trim() || null,
-    pruefer: $('inpPruefer').value.trim() || 'Sven',
-    pruefdatum: $('inpDatum').value,
-    modul_wp: parseFloat($('inpModulWp').value) || 440,
-    modul_uoc: parseFloat($('inpModulUoc').value) || 40.5,
-    mppt_config: $('inpMpptConfig').value.trim(),
-    notizen: $('inpNotizen').value.trim() || null,
-    status: isFinish ? 'fertig' : (state.isAdminUnlocked ? 'vorbereitet' : 'in_messung'),
-    string_data: state.currentStrings,
-    updated_at: new Date().toISOString()
-  };
-
-  showLoader(true);
-  if (state.currentId) {
-    await sb.from('protocols').update(payload).eq('id', state.currentId);
+  if(opts.restore&&opts.data){
+    for(const k in opts.data){const el=g(k);if(el) el.value=opts.data[k];}
+    document.querySelectorAll('[id^="stat-"]').forEach(s=>setStatus(s.id.replace('stat-',''),s.value));
   } else {
-    const { data } = await sb.from('protocols').insert(payload).select().single();
-    if (data) state.currentId = data.id;
+    const saved=localStorage.getItem('sp_autosave');
+    if(saved){const d=JSON.parse(saved); for(const k in d){const el=g(k);if(el)el.value=d[k];}}
+    document.querySelectorAll('[id^="stat-"]').forEach(s=>setStatus(s.id.replace('stat-',''),s.value));
   }
-  showLoader(false);
-  showToast(isFinish ? '✅ Messung abgeschlossen & gespeichert!' : '💾 Gespeichert!');
+  // update print-cell visibility for mod fields
+  document.querySelectorAll('[id^="mod-"]').forEach(el=>{
+    const id=el.id.replace('mod-',''); const pm=g('pm-'+id);
+    if(pm&&el.value){pm.textContent=el.value; pm.style.display='inline';}
+  });
+  updateDash();
 }
-
-function exportExcel() {
-  const rows = state.currentStrings.map(s => ({
-    String: s.label,
-    WR: s.wr,
-    MPPT: s.mppt,
-    Module: s.is_active ? s.modules : 0,
-    kWp: s.is_active ? ((s.modules * (parseFloat($('inpModulWp').value) || 440)) / 1000).toFixed(2) : '0.00',
-    Uoc_V: s.is_active ? (s.uoc || '') : '',
-    Isc_A: s.is_active ? (s.isc || '') : '',
-    Riso_MOhm: s.is_active ? (s.riso || '') : '',
-    Aktiv: s.is_active ? 'JA' : 'NEIN',
-    Bestaetigt: s.is_confirmed ? 'JA' : 'NEIN'
-  }));
-
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Messprotokoll');
-  XLSX.writeFile(wb, `Messung_${$('inpStandort').value || 'Export'}.xlsx`);
-}
-
-// ─── AUTO-INIT ───
-(async () => {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) bootApp(session.user);
-})();
 </script>
 </body>
 </html>

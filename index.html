@@ -4,1209 +4,670 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#05080f">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="SOLPRO">
-<meta name="format-detection" content="telephone=no">
-<meta name="description" content="SOLPRO PV Mess- und Prüfprotokoll &middot; Offline-Tool für Photovoltaik-Anlagen">
-<link rel="apple-touch-icon" href="Logo_Solpro.jpg">
-<title>SOLPRO | Prüfprotokoll</title>
+<title>SOLPRO | PV MAN P52 (Live Supabase)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>tailwind.config={theme:{extend:{colors:{sp:{green:'#9fc131',dark:'#7a9420',glow:'#c6e84a'}}}}}</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
 :root {
-  --bg:       #05080f;
-  --surface:  #0c1220;
-  --panel:    #111827;
-  --border:   rgba(255,255,255,0.07);
-  --green:    #9fc131;
-  --green-d:  #7a9420;
-  --green-g:  rgba(159,193,49,0.15);
-  --text:     #f0f4f8;
-  --muted:    #64748b;
-  --dim:      #1e2a3a;
+  --bg: #05080f;
+  --surface: #0c1220;
+  --panel: #111827;
+  --border: rgba(255,255,255,0.08);
+  --green: #9fc131;
+  --text: #f0f4f8;
+  --muted: #64748b;
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: 'Inter', sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
-  min-height: 100dvh;
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Keyboard-focus visibility (a11y) */
-a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
-  outline: 2px solid var(--green);
-  outline-offset: 2px;
-}
-
-/* Respect reduced-motion preference */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-}
-
-/* BACKGROUND GRID */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(159,193,49,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(159,193,49,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-  z-index: 0;
-}
-body::after {
-  content: '';
-  position: fixed;
-  top: -200px; left: 50%;
-  transform: translateX(-50%);
-  width: 800px; height: 500px;
-  background: radial-gradient(ellipse, rgba(159,193,49,0.08) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.wrap { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: clamp(14px,4vw,24px) clamp(10px,3vw,20px) 100px; }
-
-/* SETUP SCREEN */
-#setup-screen {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(12px,4vw,24px);
-  padding-top: max(clamp(12px,4vw,24px), env(safe-area-inset-top));
-  padding-bottom: max(clamp(12px,4vw,24px), env(safe-area-inset-bottom));
-}
-
-.setup-card {
-  width: 100%;
-  max-width: 480px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: clamp(16px,4vw,24px);
-  overflow: hidden;
-  box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(159,193,49,0.08);
-}
-
-.setup-hero {
-  padding: clamp(28px,6vw,40px) clamp(20px,6vw,36px) clamp(22px,5vw,32px);
-  background: linear-gradient(160deg, rgba(159,193,49,0.1) 0%, var(--panel) 50%);
-  border-bottom: 1px solid var(--border);
-  text-align: center;
-  position: relative;
-}
-.setup-hero::before {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 60%; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--green), transparent);
-}
-
-.logo-img { height: clamp(40px,10vw,52px); margin: 0 auto 20px; display: block; object-fit: contain; }
-.logo-placeholder { display: none; }
-
-.hero-title {
-  font-size: clamp(1.5rem, 6vw, 2rem);
-  font-weight: 900;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--green);
-  line-height: 1;
-}
-.hero-sub {
-  font-size: 0.67rem;
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-top: 6px;
-}
-
-.setup-body { padding: clamp(20px,5vw,28px) clamp(18px,5vw,28px) clamp(24px,6vw,32px); display: flex; flex-direction: column; gap: 20px; }
-
-/* PROJECT SELECTOR */
-.project-box {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 14px;
-  padding: 14px 16px;
-}
-.field-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  display: block;
-  margin-bottom: 8px;
-}
-
-/* INPUTS */
-.sp-input {
-  width: 100%;
-  background: rgba(5,8,15,0.8);
-  border: 1.5px solid rgba(100,116,139,0.25);
-  border-radius: 10px;
-  padding: 13px 14px;
-  min-height: 46px;
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  font-size: 16px;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  -webkit-appearance: none;
-}
-@media (min-width:641px){ .sp-input { font-size: 0.875rem; } }
-.sp-input::placeholder { color: #2d3d52; }
-.sp-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(159,193,49,0.1); }
-.sp-input:hover:not(:focus) { border-color: rgba(100,116,139,0.4); }
-
-.input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width:380px){ .input-row { grid-template-columns: 1fr; } }
-
-/* BUTTONS */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  font-family: 'Inter', sans-serif; font-weight: 700; cursor: pointer; border: none;
-  border-radius: 10px; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.01em;
-  min-height: 44px; touch-action: manipulation;
-}
-.btn-green {
-  background: linear-gradient(135deg, #a8cc35 0%, #7a9420 100%);
-  color: #061200;
-  padding: 13px 22px;
-  font-size: 0.875rem;
-  font-weight: 900;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(159,193,49,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
-  width: 100%;
-}
-.btn-green:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(159,193,49,0.4); }
-.btn-green:active { transform: translateY(0); }
-
-.btn-ghost {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #94a3b8;
-  padding: 9px 16px;
-  font-size: 0.8rem;
-}
-.btn-ghost:hover { background: rgba(255,255,255,0.09); color: var(--text); border-color: rgba(255,255,255,0.18); }
-
-.btn-blue {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  color: #fff;
-  padding: 9px 16px;
-  font-size: 0.8rem;
-  box-shadow: 0 2px 12px rgba(59,130,246,0.3);
-}
-.btn-blue:hover { filter: brightness(1.1); box-shadow: 0 4px 18px rgba(59,130,246,0.45); }
-
-.btn-red {
-  background: rgba(239,68,68,0.12);
-  border: 1px solid rgba(239,68,68,0.25);
-  color: #f87171;
-  padding: 9px 13px;
-  font-size: 0.8rem;
-}
-.btn-red:hover { background: rgba(239,68,68,0.22); }
-
-.btn-print {
-  background: rgba(255,255,255,0.05);
-  border: 1.5px solid rgba(255,255,255,0.1);
-  color: #94a3b8;
-  padding: 13px 20px;
-  font-size: 0.875rem;
-  border-radius: 12px;
-  flex: 1;
-}
-.btn-print:hover { background: rgba(255,255,255,0.09); color: var(--text); }
-
-.btn-xl-green {
-  background: linear-gradient(135deg, #a8cc35 0%, #7a9420 100%);
-  color: #061200; font-weight: 900; font-size: 0.875rem; letter-spacing: 0.05em;
-  text-transform: uppercase; padding: 13px 20px; border-radius: 12px; flex: 1;
-  box-shadow: 0 4px 20px rgba(159,193,49,0.28);
-}
-.btn-xl-green:hover { filter: brightness(1.1); }
-
-/* HINT TEXT */
-.hint { font-size: 0.7rem; color: #334d66; line-height: 1.6; }
-.hint strong { color: #4a6a85; }
-
-/* FILLABLE OPTION BOX */
-.fill-option-box {
-  background: rgba(159,193,49,0.05);
-  border: 1px solid rgba(159,193,49,0.18);
-  border-radius: 12px;
-  padding: 14px 16px;
-}
-.fill-option-box .field-label { color: #7a9a40; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 16px 16px 100px; }
 
 /* DASHBOARD */
-.dashboard {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: clamp(8px,2.5vw,12px);
-  margin-bottom: 16px;
-}
-.kpi-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: clamp(12px,3vw,16px);
-  padding: clamp(12px,3.5vw,18px) clamp(12px,4vw,20px);
-  position: relative;
-  overflow: hidden;
-  min-width: 0;
-}
-.kpi-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--green), transparent);
-}
-.kpi-label { font-size: clamp(0.56rem,2.2vw,0.63rem); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; line-height: 1.3; }
-@media (min-width:480px){ .kpi-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.1em; } }
-.kpi-value { font-size: clamp(1.15rem,5.5vw,1.8rem); font-weight: 900; color: var(--text); line-height: 1; }
-.kpi-unit { font-size: 0.72rem; font-weight: 700; color: var(--green); margin-left: 3px; }
-.kpi-accent { color: var(--green); }
-@media (max-width:420px){ .dashboard{ gap:8px; } }
-
-.progress-track { height: 3px; background: rgba(100,116,139,0.15); border-radius: 99px; overflow: hidden; margin-top: 10px; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), #c6e84a); border-radius: 99px; transition: width 0.5s cubic-bezier(.4,0,.2,1); }
+.dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+@media (max-width: 768px){ .dashboard { grid-template-columns: repeat(2, 1fr); } }
+.kpi-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px 18px; position: relative; }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--green), transparent); }
+.kpi-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.kpi-value { font-size: 1.55rem; font-weight: 900; color: var(--text); line-height: 1; }
+.kpi-unit { font-size: 0.75rem; color: var(--green); margin-left: 3px; }
 
 /* TOOLBAR */
 #toolbar {
-  position: sticky; top: max(0px, env(safe-area-inset-top)); z-index: 50;
-  background: rgba(5,8,15,0.85);
-  backdrop-filter: blur(20px) saturate(1.5);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 10px 16px;
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  margin-bottom: 16px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
-  flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(17,24,39,0.94); backdrop-filter: blur(16px);
+  border: 1px solid var(--border); border-radius: 14px;
+  padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 16px; flex-wrap: wrap; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
-.toolbar-info { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; flex: 1 1 180px; }
-.toolbar-project { font-size: 0.875rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
-.toolbar-sep { color: #1e2a3a; }
-.toolbar-tech { font-size: 0.8rem; color: var(--muted); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
-.toolbar-badge {
-  font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--green); background: rgba(159,193,49,0.1); border: 1px solid rgba(159,193,49,0.2);
-  padding: 2px 8px; border-radius: 99px;
-  opacity: 0; transition: opacity 0.3s;
-  white-space: nowrap;
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-family: 'Inter', sans-serif; font-weight: 700; cursor: pointer; border: none;
+  border-radius: 10px; padding: 8px 14px; font-size: 0.8rem; transition: all 0.15s;
 }
-.toolbar-actions { display: flex; gap: 8px; flex-shrink: 0; }
-@media (max-width:560px){
-  #toolbar { padding: 10px 12px; }
-  .toolbar-tech { max-width: 110px; }
-  .toolbar-actions { width: 100%; }
-  .toolbar-actions .btn { flex: 1; }
-}
+.btn-green { background: linear-gradient(135deg, #a8cc35, #7a9420); color: #061200; font-weight: 900; }
+.btn-blue  { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; }
+.btn-ghost { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; }
+.btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
-/* WR BLOCK */
-.wr-block {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  overflow: hidden;
-  margin-bottom: 12px;
+/* CLOUD STATUS BADGE */
+.cloud-badge {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; font-weight: 700;
+  padding: 4px 10px; border-radius: 99px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3);
 }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot-green  { background: #a8cc35; box-shadow: 0 0 8px #a8cc35; }
+.dot-yellow { background: #eab308; box-shadow: 0 0 8px #eab308; }
+.dot-red    { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+/* WR BLOCK & TABLES */
+.wr-block { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 16px; }
 .wr-head {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 14px clamp(14px,4vw,20px);
-  background: linear-gradient(135deg, rgba(159,193,49,0.07) 0%, transparent 60%);
-  border-bottom: 1px solid rgba(159,193,49,0.1);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 18px; background: linear-gradient(135deg, rgba(159,193,49,0.08) 0%, transparent 60%);
+  border-bottom: 1px solid rgba(159,193,49,0.15); flex-wrap: wrap;
 }
-.wr-num {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
-  background: var(--green); color: #061200;
-  padding: 3px 10px; border-radius: 6px;
-  text-transform: uppercase;
-}
-.wr-name { font-size: 0.875rem; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.06em; }
-.wr-meta { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+.wr-title-wrap { display: flex; align-items: center; gap: 10px; }
+.wr-num { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 700; background: var(--green); color: #061200; padding: 2px 8px; border-radius: 6px; }
+.wr-name { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.wr-kpis { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
 
-.wr-gak-wrap { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
-.wr-gak-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-.wr-gak-inp {
-  width: 64px; background: rgba(5,8,15,0.8); border: 1.5px solid rgba(100,116,139,0.25);
-  border-radius: 7px; padding: 5px 8px; color: var(--text); min-height: 30px;
-  font-family: 'Inter', sans-serif; font-size: 0.78rem; text-align: center; outline: none;
-  transition: border-color 0.15s;
-}
-.wr-gak-inp:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(159,193,49,0.12); }
-.wr-gak-inp::placeholder { color: #2d3d52; }
-.wr-gak-print { display: none; }
-@media (max-width:700px){
-  .wr-gak-inp { font-size: 16px; min-height: 34px; }
-}
-
-/* TABLE */
-.tbl-wrap { overflow-x: auto; }
-table.mt {
-  width: 100%;
-  border-collapse: collapse;
-}
-table.mt thead tr {
-  border-bottom: 1px solid rgba(159,193,49,0.12);
-}
+table.mt { width: 100%; border-collapse: collapse; }
 table.mt thead th {
-  padding: 10px 12px;
-  font-size: 0.62rem; font-weight: 700;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  color: #3d5a6e;
-  text-align: center;
-  white-space: nowrap;
+  padding: 8px 6px; font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+  color: #64748b; background: rgba(0,0,0,0.25); text-align: center; white-space: nowrap;
 }
-table.mt thead th:first-child { text-align: left; padding-left: 20px; }
-table.mt tbody tr {
-  border-bottom: 1px solid rgba(255,255,255,0.035);
-  transition: background 0.1s;
-}
-table.mt tbody tr:nth-child(even) { background: rgba(255,255,255,0.018); }
-table.mt tbody tr:hover { background: rgba(159,193,49,0.04); }
+table.mt td { padding: 6px 6px; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.03); text-align: center; vertical-align: middle; }
+table.mt tbody tr:hover { background: rgba(159,193,49,0.03); }
+table.mt tbody tr.mppt-div { border-top: 1.5px solid rgba(159,193,49,0.18); }
 table.mt tbody tr.row-nein { opacity: 0.22; }
-table.mt tbody tr.mppt-div { border-top: 1px solid rgba(159,193,49,0.1); }
-table.mt td {
-  padding: 8px 12px;
-  vertical-align: middle;
-  text-align: center;
-  font-size: 0.82rem;
-}
-table.mt td:first-child { text-align: left; padding-left: 20px; }
 
-.string-id {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.78rem; font-weight: 700;
-  color: var(--green);
-}
+.string-id { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--green); }
+.pwr-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--green); }
 
-/* Toggle */
-.tog-wrap { display: inline-flex; background: rgba(5,8,15,0.8); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 2px; gap: 2px; }
-.tog {
-  padding: 3px 12px; border-radius: 6px; font-size: 0.68rem; font-weight: 800;
-  letter-spacing: 0.06em; cursor: pointer; border: none;
-  background: transparent; color: #2d3d52; transition: all 0.15s;
-  touch-action: manipulation;
+.sp-inp {
+  background: rgba(5,8,15,0.8); border: 1px solid rgba(100,116,139,0.25);
+  border-radius: 6px; padding: 4px 6px; color: var(--text); font-size: 0.8rem; text-align: center; outline: none;
 }
-@media (max-width:700px){ .tog { padding: 9px 16px; font-size: 0.72rem; } }
-.tog.ton-ja.on  { background: rgba(159,193,49,0.2); color: #a8cc35; }
-.tog.ton-nei.on { background: rgba(100,116,139,0.2); color: #64748b; }
+.sp-inp:focus { border-color: var(--green); }
+.sp-inp-gak { color: #a8cc35; font-weight: 700; font-family: 'JetBrains Mono', monospace; width: 75px; }
 
-/* Mod input */
-.mod-inp {
-  width: 64px; background: rgba(5,8,15,0.8); border: 1px solid rgba(100,116,139,0.2);
-  border-radius: 7px; padding: 5px 6px; color: var(--text); min-height: 36px;
-  font-family: 'Inter', sans-serif; font-size: 0.82rem; text-align: center; outline: none;
-  transition: border-color 0.15s;
-}
-.mod-inp:focus { border-color: var(--green); }
+/* TOGGLE */
+.tog-wrap { display: inline-flex; background: rgba(0,0,0,0.4); border-radius: 6px; padding: 2px; }
+.tog { padding: 2px 7px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; border: none; cursor: pointer; background: transparent; color: #475569; }
+.tog.on-ja  { background: rgba(159,193,49,0.25); color: #a8cc35; }
+.tog.on-nei { background: rgba(100,116,139,0.25); color: #94a3b8; }
 
-/* Measurement input (Uoc, Isc, Riso) */
-.msr-inp {
-  width: 72px; background: rgba(5,8,15,0.8); border: 1px solid rgba(100,116,139,0.2);
-  border-radius: 7px; padding: 5px 6px; color: var(--text); min-height: 36px;
-  font-family: 'Inter', sans-serif; font-size: 0.82rem; text-align: center; outline: none;
-  transition: border-color 0.15s;
-}
-.msr-inp:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(159,193,49,0.12); }
-.msr-inp::placeholder { color: #2d3d52; font-size: 0.7rem; }
-@media (max-width:700px){
-  .mod-inp, .msr-inp { font-size: 16px; min-height: 40px; }
-  .note-inp { font-size: 16px; }
-}
-
-/* Power cell */
-.pwr-cell { font-weight: 700; font-size: 0.8rem; color: #2d3d52; font-family: 'JetBrains Mono', monospace; }
-.pwr-cell.has-val { color: var(--green); }
-
-/* Note input */
-.note-inp {
-  width: 100%; min-width: 120px; background: transparent;
-  border: 1px solid rgba(255,255,255,0.04); border-radius: 6px; padding: 4px 8px;
-  color: #475569; font-family: 'Inter', sans-serif; font-size: 0.75rem; outline: none;
-  transition: border-color 0.15s, color 0.15s;
-}
-.note-inp:focus { border-color: rgba(100,116,139,0.3); color: #94a3b8; }
-.note-inp::placeholder { color: #1a2535; }
-
-/* ── RESPONSIVE TABLE → CARD LAYOUT (phones) ── */
-@media (max-width: 700px){
-  .tbl-wrap { overflow-x: visible; }
-  table.mt, table.mt tbody, table.mt tr, table.mt td { display: block; width: 100%; }
-  table.mt thead { display: none; }
-  table.mt tfoot { display: block; width: 100%; }
-  table.mt tfoot tr { display: block; }
-  table.mt tbody tr {
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    margin: 10px;
-    background: rgba(255,255,255,0.02);
-    overflow: hidden;
-  }
-  table.mt tbody tr:nth-child(even) { background: rgba(255,255,255,0.035); }
-  table.mt tbody tr.mppt-div { border-top-color: rgba(159,193,49,0.35); margin-top: 18px; }
-  table.mt td {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    text-align: right; padding: 10px 14px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    font-size: 0.85rem;
-  }
-  table.mt td:last-child { border-bottom: none; }
-  table.mt td::before {
-    content: attr(data-label);
-    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--muted); text-align: left; flex-shrink: 0;
-  }
-  table.mt td:first-child {
-    text-align: left; padding-left: 14px;
-    background: rgba(159,193,49,0.05);
-    border-bottom: 1px solid rgba(159,193,49,0.12);
-  }
-  table.mt td:first-child::before { content: ''; }
-  table.mt td.col-mod, table.mt td.col-pwr, table.mt td.col-msr { justify-content: space-between; }
-  table.mt td .tog-wrap { margin-left: auto; }
-  table.mt td .mod-inp, table.mt td .msr-inp { width: 100px; margin-left: auto; }
-  table.mt td .note-inp { text-align: right; }
-  .wr-block { margin-bottom: 16px; border-radius: 16px; }
-  .wr-block .tbl-wrap { padding-bottom: 4px; }
-}
-
-/* TOAST */
 #toast {
-  position: fixed; bottom: 30px; left: 50%;
-  transform: translateX(-50%) translateY(110%);
-  z-index: 9999;
-  background: rgba(10,16,28,0.98);
-  border: 1px solid rgba(159,193,49,0.25);
-  color: var(--text);
-  padding: 11px 22px;
-  border-radius: 12px;
-  font-size: 0.85rem; font-weight: 600;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-  transition: transform 0.35s cubic-bezier(.34,1.56,.64,1), opacity 0.2s;
-  opacity: 0;
-  max-width: 92vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(120%);
+  background: #0f172a; border: 1px solid var(--green); color: #fff; padding: 10px 20px;
+  border-radius: 10px; font-size: 0.85rem; font-weight: 600; transition: transform 0.3s; z-index: 9999;
 }
-#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-@media (max-width:700px){
-  #toast { bottom: max(94px, calc(84px + env(safe-area-inset-bottom))); font-size: 0.8rem; padding: 10px 18px; }
-}
-
-.gak-export-bar {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
-  padding: 14px 18px; margin-top: 16px;
-}
-.gak-export-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.gak-export-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-@media (max-width:560px){
-  .gak-export-bar { flex-direction: column; align-items: stretch; padding: 14px 16px; }
-  .gak-export-actions { width: 100%; }
-  .gak-export-actions .btn { flex: 1; font-size: 0.78rem; }
-}
-
-/* BOTTOM BAR */
-.bottom-bar {
-  display: flex; gap: 10px;
-  padding-top: 16px; padding-bottom: 60px;
-}
-@media (max-width:700px){
-  .bottom-bar {
-    position: sticky; bottom: 0; width: 100%;
-    gap: 8px;
-    padding: 12px 4vw;
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
-    margin-top: 20px;
-    background: rgba(5,8,15,0.92);
-    backdrop-filter: blur(20px) saturate(1.5);
-    border-top: 1px solid var(--border);
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
-    z-index: 40;
-  }
-  .btn-print { font-size: 0.8rem; padding: 13px 12px; }
-  .btn-xl-green { font-size: 0.8rem; padding: 13px 12px; }
-}
+#toast.show { transform: translateX(-50%) translateY(0); }
 
 /* PRINT */
-.print-only { display: none !important; }
-.print-blank { display: none; }
-.screen-dash { display: inline; }
-.print-dash  { display: none; }
-
-@page { size: A4 landscape; margin: 10mm 13mm 17mm;
-  @bottom-center { content: "SOLPRO Pruefprotokoll  \00B7  Seite " counter(page) " von " counter(pages); font-family: 'Inter', Arial, sans-serif; font-size: 7pt; color: #94a3b8; } }
-
 @media print {
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  body { background: #fff !important; color: #111 !important; padding: 0 !important; font-size: 10pt; }
-  body::before, body::after { display: none !important; }
+  body { background: #fff !important; color: #000 !important; font-size: 8pt; }
   .no-print { display: none !important; }
-  .print-only { display: revert !important; }
-  thead .print-only { display: table-cell !important; }
-  tbody .print-only { display: table-cell !important; }
-  tfoot .print-only { display: table-cell !important; }
-  .wrap { max-width: none !important; margin: 0 !important; padding: 0 !important; }
-  #matrix-view { display: block !important; }
-
-  .pr-break { page-break-after: always !important; break-after: page !important; }
-  .pr-break:last-child { page-break-after: auto !important; break-after: auto !important; }
-
-  /* Print header */
-  #ph {
-    display: flex !important; align-items: flex-start; justify-content: space-between; gap: 24px;
-    padding-bottom: 8px; margin-bottom: 10px; border-bottom: 2.5px solid #9fc131;
-  }
-  .ph-title { font-size: 18pt; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; color: #111; line-height: 1; }
-  .ph-sub { font-size: 7pt; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: #9fc131; margin-top: 4px; }
-  .ph-grid { display: grid !important; grid-template-columns: 1fr 1fr; gap: 2px 28px; font-size: 8pt; min-width: 300px; }
-  .ph-grid .lbl { color: #64748b; font-weight: 600; }
-  .ph-grid strong { color: #111; font-weight: 800; }
-
-  #toolbar, #toast, .bottom-bar, .dashboard { display: none !important; }
-
-  .wr-block { background: #fff !important; border: none !important; border-radius: 0 !important; margin: 0 0 10px !important; padding: 0 !important; break-inside: avoid-page !important; box-shadow: none !important; }
-  .wr-head { background: #f1f5f9 !important; border: 1px solid #cbd5e1 !important; border-bottom: 2px solid #9fc131 !important; border-radius: 0 !important; padding: 5px 10px !important; }
-  .wr-num { background: #9fc131 !important; color: #061200 !important; font-size: 7pt !important; }
-  .wr-name { font-size: 9pt !important; color: #111 !important; }
-  .wr-meta { display: none !important; }
-  .wr-gak-print { font-size: 7.5pt !important; font-weight: 800 !important; letter-spacing: .05em !important; text-transform: uppercase !important; color: #3d5800 !important; background: #e4f0b0 !important; padding: 2px 8px !important; border-radius: 99px !important; margin-left: auto !important; }
-
-  table.mt { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
-  table.mt thead tr { border-bottom: none !important; }
-  table.mt thead th { background: #dde4ee !important; color: #1e293b !important; border: 1px solid #7e96ae !important; padding: 8px 5px !important; font-size: 8.5pt !important; font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: .04em !important; text-align: center !important; vertical-align: middle !important; line-height: 1.3 !important; }
-  table.mt thead th:first-child { text-align: left !important; padding-left: 10px !important; }
-  .col-id   { width: 10% !important; }
-  .col-stat { width: 9%  !important; }
-  .col-mod  { width: 9%  !important; }
-  .col-pwr  { width: 14% !important; }
-  .col-msr  { width: 10% !important; }
-  .col-note { width: auto !important; }
-  table.mt td { border: 1px solid #7e96ae !important; color: #111 !important; padding: 0 7px !important; font-size: 10pt !important; vertical-align: middle !important; text-align: center !important; height: 42px !important; }
-  table.mt td:first-child { text-align: left !important; padding-left: 10px !important; }
-  table.mt tbody tr:nth-child(even) td { background: #f4f7fb !important; }
-  table.mt tbody tr:nth-child(odd)  td { background: #fff !important; }
-  .string-id { font-family: ui-monospace, monospace !important; font-weight: 800 !important; color: #3d5800 !important; font-size: 9.5pt !important; }
-  .pwr-cell  { font-family: ui-monospace, monospace !important; font-weight: 700 !important; color: #3d5800 !important; font-size: 9.5pt !important; }
-  table.mt td.col-note { font-size: 9pt !important; color: #334155 !important; text-align: left !important; padding-left: 10px !important; }
-  table.mt tbody tr.row-nein { display: none !important; }
-  table.mt td.col-msr { border-bottom: 2px solid #475569 !important; }
-  table.mt tbody tr.mppt-div { border-top: 1.5px solid rgba(159,193,49,.45) !important; }
-
-  .tog-wrap  { display: none !important; }
-  .mod-inp   { display: none !important; }
-  .msr-inp   { display: none !important; }
-  .note-inp  { display: none !important; }
-  .screen-dash { display: none !important; }
-  .print-only  { display: revert !important; }
-  .print-cell  { display: inline !important; font-weight: 700 !important; }
-  .print-note  { display: inline !important; }
-  .print-blank { display: block !important; min-height: 28px !important; background: #fff !important; }
-  .row-nein .print-blank { display: none !important; }
-  .row-nein .print-dash  { display: inline !important; color: #94a3b8 !important; }
-
-  .tot-row td { background: #e4f0b0 !important; font-weight: 800 !important; font-size: 10pt !important; border-top: 2.5px solid #9fc131 !important; color: #1a2e00 !important; border: 1px solid #7e96ae !important; height: 38px !important; }
-
-  #pr-sig { display: flex !important; gap: 32px; margin-top: 18px; padding-top: 12px; border-top: 1px solid #cbd5e1; }
-  .sig-f { flex: 1; }
-  .sig-l { border-bottom: 2px solid #334155; height: 40px; margin-bottom: 6px; }
-  .sig-t { font-size: 7pt; color: #64748b; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-
-  .wr-block .tbl-wrap { overflow: visible !important; }
+  .wr-block { break-inside: avoid-page; border: 1px solid #cbd5e1 !important; margin-bottom: 10px; }
+  .wr-head { background: #f1f5f9 !important; color: #000 !important; }
+  table.mt th { background: #e2e8f0 !important; color: #000 !important; border: 1px solid #94a3b8; }
+  table.mt td { border: 1px solid #cbd5e1 !important; color: #000 !important; }
+  .sp-inp, .tog-wrap { display: none !important; }
+  .print-cell { display: inline !important; font-weight: 700 !important; }
 }
+.print-cell { display: none; }
 </style>
 </head>
 <body>
 
 <div id="toast"></div>
 
-<!-- SETUP -->
-<div id="setup-screen">
-  <div class="setup-card">
-    <div class="setup-hero">
-      <img src="Logo_Solpro.jpg" alt="SOLPRO" class="logo-img" onerror="this.style.display='none'">
-      <div class="hero-title">SOLPRO</div>
-      <div class="hero-sub">PV &middot; Mess- &amp; Prüfprotokoll &middot; Offline</div>
+<div class="wrap">
+
+  <!-- DASHBOARD -->
+  <div class="dashboard no-print">
+    <div class="kpi-card">
+      <div class="kpi-label">Gesamtleistung</div>
+      <div class="kpi-value"><span id="d-pwr">807.24</span><span class="kpi-unit">kWp</span></div>
     </div>
-    <div class="setup-body">
-
-      <!-- Saved projects -->
-      <div class="project-box">
-        <label class="field-label">Gespeicherte Projekte</label>
-        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
-          <select id="project-list" class="sp-input" style="flex:1 1 140px;min-width:0;padding:9px 12px;border-radius:8px;"></select>
-          <button onclick="loadProject()" class="btn btn-ghost" style="flex:0 0 auto;">Laden</button>
-          <button onclick="deleteProject()" class="btn btn-red" style="flex:0 0 auto;">&#x2715;</button>
-        </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Module gesamt</div>
+      <div class="kpi-value" id="d-mods">1736</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Gemessene Strings</div>
+      <div class="kpi-value"><span id="d-done">0</span><span style="font-size:0.8rem;color:#64748b;"> / 94</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Supabase Cloud-Status</div>
+      <div class="kpi-value" style="font-size:1.05rem;margin-top:4px;">
+        <span class="cloud-badge">
+          <span class="status-dot dot-yellow" id="cloud-dot"></span>
+          <span id="cloud-text">Verbinde...</span>
+        </span>
       </div>
-
-      <!-- Fields -->
-      <div id="setup-form" style="display:flex;flex-direction:column;gap:14px;">
-        <div>
-          <label class="field-label" for="standort">Standort / Projektname</label>
-          <input id="standort" type="text" autocomplete="organization" placeholder="z.B. Mustergasse 12, Wien" class="sp-input">
-        </div>
-        <div>
-          <label class="field-label" for="pruefer">Prüfer / Techniker</label>
-          <input id="pruefer" type="text" autocomplete="name" placeholder="Vor- und Nachname" class="sp-input">
-        </div>
-        <div>
-          <label class="field-label" for="pruef-datum">Prüfdatum</label>
-          <input id="pruef-datum" type="date" class="sp-input" style="color-scheme:dark;">
-        </div>
-        <div class="input-row">
-          <div>
-            <label class="field-label" for="modul">Modulleistung (Wp)</label>
-            <input id="modul" type="number" min="1" placeholder="z.B. 440" class="sp-input">
-          </div>
-          <div>
-            <label class="field-label" for="mppt">MPPTs pro WR</label>
-            <input id="mppt" placeholder="z.B. 2,3" class="sp-input">
-          </div>
-        </div>
-        <p class="hint" style="margin-top:-4px;">Kommagetrennt &#8212; <strong>2,3</strong> = WR&nbsp;1 mit 2&nbsp;MPPTs, WR&nbsp;2 mit 3&nbsp;MPPTs. Jeder MPPT hat 2&nbsp;String-Eingänge.</p>
-
-        <!-- Messwerte ausfüllbar Toggle -->
-        <div class="fill-option-box">
-          <label class="field-label" style="margin-bottom:10px;">Messwerte digital ausfüllbar</label>
-          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;row-gap:10px;">
-            <div class="tog-wrap">
-              <button id="fill-ja"  class="tog ton-ja"      onclick="setFillMode(true)"  style="padding:7px 18px;font-size:0.72rem;">JA</button>
-              <button id="fill-nei" class="tog ton-nei on"  onclick="setFillMode(false)" style="padding:7px 18px;font-size:0.72rem;">NEIN</button>
-            </div>
-            <span style="font-size:0.7rem;color:#4a6a85;line-height:1.5;">Uoc&nbsp;(V) &middot; Isc&nbsp;(A) &middot; Riso&nbsp;(M&#8486;)<br><span style="color:#2d3d52;">Werte direkt am Gerät eingeben</span></span>
-          </div>
-        </div>
-
-        <button onclick="startApp()" class="btn btn-green" style="margin-top:4px;font-size:0.9rem;padding:14px;">
-          &#9889;&nbsp; Matrix laden
-        </button>
-      </div>
-
     </div>
   </div>
-</div>
 
-<!-- MATRIX VIEW -->
-<div id="matrix-view" style="display:none;">
-  <div class="wrap">
-
-    <!-- Print header (hidden on screen) -->
-    <div id="ph" style="display:none;">
-      <div>
-        <div class="ph-title">Prüfprotokoll</div>
-        <div class="ph-sub">PV-Generator &middot; Messprotokoll</div>
-      </div>
-      <div class="ph-grid">
-        <div><span class="lbl">Standort: </span><strong id="ph-loc"></strong></div>
-        <div><span class="lbl">Prüfdatum: </span><strong id="ph-date"></strong></div>
-        <div><span class="lbl">Prüfer: </span><strong id="ph-tech"></strong></div>
-        <div><span class="lbl">Modulleistung: </span><strong id="ph-mod"></strong></div>
-      </div>
+  <!-- TOOLBAR -->
+  <div id="toolbar" class="no-print">
+    <div>
+      <div style="font-weight:800;font-size:0.95rem;" id="tb-loc">PV MAN P52</div>
+      <div style="font-size:0.7rem;color:#64748b;" id="tb-sub">MAN München &middot; 465 Wp &middot; 6x SMA STP 125 &middot; Live Sync aktiv</div>
     </div>
-
-    <!-- Dashboard -->
-    <div class="dashboard no-print">
-      <div class="kpi-card">
-        <div class="kpi-label">Gesamtleistung</div>
-        <div class="kpi-value"><span id="d-pwr">0.00</span><span class="kpi-unit">kWp</span></div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Module gesamt</div>
-        <div class="kpi-value" id="d-mods">0</div>
-        <div class="progress-track"><div class="progress-fill" id="d-prog" style="width:0%"></div></div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Aktive Strings</div>
-        <div class="kpi-value" id="d-str">0</div>
-      </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button onclick="manualSync()" class="btn btn-blue">🔄 Cloud-Sync</button>
+      <button onclick="exportGakPickerl()" class="btn btn-green">🏷️ GAK-Pickerl (CSV)</button>
+      <button onclick="doExcel()" class="btn btn-ghost">📊 Excel</button>
+      <button onclick="window.print()" class="btn btn-ghost">📄 Drucken</button>
     </div>
-
-    <!-- Toolbar -->
-    <div id="toolbar" class="no-print">
-      <div class="toolbar-info">
-        <span style="font-size:0.75rem;color:#1e3a5f;">&#128205;</span>
-        <span class="toolbar-project" id="tb-loc"></span>
-        <span class="toolbar-sep">&middot;</span>
-        <span class="toolbar-tech" id="tb-tech"></span>
-        <span class="toolbar-badge" id="tb-badge">&#10003; Gespeichert</span>
-      </div>
-      <div class="toolbar-actions">
-        <button onclick="saveProject()" class="btn btn-blue" title="Strg+S">&#128190; Speichern</button>
-        <button onclick="goMenu()" class="btn btn-ghost">&#x2715; Menü</button>
-      </div>
-    </div>
-
-    <!-- WR Tables -->
-    <div id="tables"></div>
-
-    <!-- Grand total print row -->
-    <div id="grand-total" class="print-only" style="margin-top:10px;padding:8px 10px;background:#e4f0b0;border:2px solid #9fc131;border-radius:0;display:none;">
-      <table style="width:100%;border-collapse:collapse;">
-        <tr>
-          <td style="font-size:8.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1a2e00;padding:4px 8px;width:40%;">Gesamtanlage</td>
-          <td style="font-size:8.5pt;font-weight:700;color:#1a2e00;padding:4px 8px;width:20%;text-align:center;"><span id="gt-mod"></span></td>
-          <td style="font-size:8.5pt;font-weight:700;color:#1a2e00;padding:4px 8px;width:20%;text-align:center;"><span id="gt-pwr"></span></td>
-          <td style="font-size:8.5pt;color:#475569;padding:4px 8px;">Module gesamt &middot; kWp Gesamtleistung</td>
-        </tr>
-      </table>
-    </div>
-
-    <!-- GAK-Pickerl / SmartScript Export -->
-    <div class="gak-export-bar no-print">
-      <div class="gak-export-label">GAK-Pickerl &middot; nur aktive Strings</div>
-      <div class="gak-export-actions">
-        <button onclick="exportActiveStrings()" class="btn btn-ghost" title="Nur die IDs der aktiven Strings, eine pro Zeile">&#128203; Aktive Strings (Liste)</button>
-        <button onclick="exportGakPickerl()" class="btn btn-blue" title="CSV für SmartScript: BVH;String;GAK;Module;Leistung">&#127991;&#65039; GAK-Pickerl (CSV)</button>
-      </div>
-    </div>
-
-    <!-- Action buttons -->
-    <div class="bottom-bar no-print">
-      <button onclick="doPrint()" class="btn btn-print">
-        &#128196; Als PDF drucken <span style="font-size:0.7rem;color:#2d3d52;margin-left:6px;">(Strg+P)</span>
-      </button>
-      <button onclick="doExcel()" class="btn btn-xl-green">
-        &#128202; Excel exportieren
-      </button>
-    </div>
-
-    <!-- Print signature -->
-    <div id="pr-sig" style="display:none;">
-      <div class="sig-f"><div class="sig-l"></div><div class="sig-t">Datum &amp; Unterschrift Prüfer</div></div>
-      <div class="sig-f"><div class="sig-l"></div><div class="sig-t">Datum &amp; Unterschrift Auftraggeber</div></div>
-      <div class="sig-f"><div class="sig-l"></div><div class="sig-t">Stempel / Firmenstempel</div></div>
-    </div>
-
   </div>
+
+  <!-- INVERTER TABLES (WR 1 BIS 6) -->
+  <div id="tables"></div>
+
 </div>
 
 <script>
-let cfg={}, toast_t=null, save_t=null;
-let fillable=false;
+// DEINE FEST HINTERLEGTEN SUPABASE-ZUGANGSDATEN
+const SB_URL = "https://rcuimtfmjkpxkazbsggj.supabase.co";
+const SB_KEY = "sb_publishable_pe8Ye20-e9az1D5MvNCB5A_8_ai7afc";
 
-/* ── Input helpers: allow only numbers (and decimal point/comma) ── */
-function filterNum(el){
-  const pos=el.selectionStart;
-  const old=el.value;
-  // allow digits, dot and comma as decimal separator
-  let v=old.replace(/[^0-9.,]/g,'');
-  // normalise comma to dot
-  v=v.replace(',','.');
-  // only one dot allowed
-  const parts=v.split('.');
-  if(parts.length>2) v=parts[0]+'.'+parts.slice(1).join('');
-  if(el.value!==v){ el.value=v; try{el.setSelectionRange(pos,pos);}catch(e){} }
-}
-function filterInt(el){
-  const pos=el.selectionStart;
-  const v=el.value.replace(/[^0-9]/g,'');
-  if(el.value!==v){ el.value=v; try{el.setSelectionRange(pos,pos);}catch(e){} }
+const g = id => document.getElementById(id);
+let toast_t = null, sync_timeout = null;
+let supabaseClient = null;
+
+function toast(msg, ms=2600){
+  const t = g('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast_t); toast_t = setTimeout(() => t.classList.remove('show'), ms);
 }
 
-/* ── Fill mode toggle ── */
-function setFillMode(val){
-  fillable=val;
-  const ja=g('fill-ja'), nei=g('fill-nei');
-  if(ja&&nei){
-    if(val){ ja.classList.add('on'); nei.classList.remove('on'); }
-    else   { nei.classList.add('on'); ja.classList.remove('on'); }
-  }
-}
-
-/* ── Init ── */
-window.onload=()=>{
-  updateDD();
-  const s=JSON.parse(localStorage.getItem('sp_cfg')||'{}');
-  if(s.standort) g('standort').value=s.standort;
-  if(s.pruefer)  g('pruefer').value=s.pruefer;
-  if(s.modul)    g('modul').value=s.modul;
-  if(s.mppt)     g('mppt').value=s.mppt;
-  if(s.fillable) setFillMode(true); else setFillMode(false);
-  // default date to today
-  const td=new Date(); const pruef=g('pruef-datum');
-  if(pruef) pruef.value=td.toISOString().slice(0,10);
-  // restore saved date if present
-  const sc=JSON.parse(localStorage.getItem('sp_cfg')||'{}');
-  if(sc.datum) pruef.value=sc.datum;
-  g('setup-form').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();startApp();}});
-  document.addEventListener('keydown',e=>{
-    const inM=g('matrix-view').style.display!=='none';
-    if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();if(inM)saveProject();}
-    if((e.ctrlKey||e.metaKey)&&e.key==='p'){e.preventDefault();if(inM)doPrint();}
-  });
+// VOLLSTÄNDIGER DATENSATZ ALLER 6 WECHSELRICHTER (94 STRINGS, 1.736 MODULE, 12 GAKs)
+let PROJECT = {
+  id: "PV_MAN_P52",
+  standort: "PV MAN P52",
+  sub: "MAN München · Dachauer Str. 667 · 6x SMA STP 125 (807,24 kWp)",
+  pruefer: "Christoph Huber / Sven",
+  modulWp: 465,
+  inverters: [
+    {
+      wr: 1, name: "SMA Sunny Tripower 125 (WR 1)",
+      strings: [
+        { mppt: 1, in: 1, gak: "GAK 1.1", mod: 23, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
+        { mppt: 2, in: 1, gak: "GAK 1.1", mod: 23, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
+        { mppt: 3, in: 1, gak: "GAK 1.1", mod: 22, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
+        { mppt: 4, in: 1, gak: "GAK 1.1", mod: 22, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
+        { mppt: 5, in: 1, gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
+        { mppt: 5, in: 2, gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
+        { mppt: 6, in: 1, gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
+        { mppt: 6, in: 2, gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
+        { mppt: 7, in: 1, gak: "GAK 1.2", mod: 20, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
+        { mppt: 8, in: 1, gak: "GAK 1.2", mod: 20, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
+        { mppt: 9, in: 1, gak: "GAK 1.2", mod: 21, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" },
+        { mppt: 10,in: 1, gak: "GAK 1.2", mod: 21, stat: "JA", note: "Fläche A", uoc: "", isc: "", riso: "" }
+      ]
+    },
+    {
+      wr: 2, name: "SMA Sunny Tripower 125 (WR 2)",
+      strings: [
+        { mppt: 1, in: 1, gak: "GAK 2.1", mod: 13, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
+        { mppt: 2, in: 1, gak: "GAK 2.1", mod: 13, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
+        { mppt: 3, in: 1, gak: "GAK 2.1", mod: 21, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
+        { mppt: 4, in: 1, gak: "GAK 2.1", mod: 21, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
+        { mppt: 5, in: 1, gak: "GAK 2.2", mod: 20, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
+        { mppt: 6, in: 1, gak: "GAK 2.2", mod: 20, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
+        { mppt: 7, in: 1, gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
+        { mppt: 7, in: 2, gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
+        { mppt: 8, in: 1, gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
+        { mppt: 8, in: 2, gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B", uoc: "", isc: "", riso: "" },
+        { mppt: 9, in: 1, gak: "GAK 2.2", mod: 14, stat: "JA", note: "Fläche B (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 10,in: 1, gak: "GAK 2.2", mod: 14, stat: "JA", note: "Fläche B (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 11,in: 1, gak: "GAK 2.2", mod: 18, stat: "JA", note: "Fläche B (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 12,in: 1, gak: "GAK 2.2", mod: 18, stat: "JA", note: "Fläche B (10 mm²)", uoc: "", isc: "", riso: "" }
+      ]
+    },
+    {
+      wr: 3, name: "SMA Sunny Tripower 125 (WR 3)",
+      strings: [
+        { mppt: 1, in: 1, gak: "GAK 3.1", mod: 13, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 2, in: 1, gak: "GAK 3.1", mod: 13, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 3, in: 1, gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 3, in: 2, gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 4, in: 1, gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 4, in: 2, gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 5, in: 1, gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 5, in: 2, gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 6, in: 1, gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 6, in: 2, gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 7, in: 1, gak: "GAK 3.1", mod: 8,  stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 8, in: 1, gak: "GAK 3.1", mod: 8,  stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 9, in: 1, gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 9, in: 2, gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 10,in: 1, gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 10,in: 2, gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 11,in: 1, gak: "GAK 3.2", mod: 15, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" },
+        { mppt: 12,in: 1, gak: "GAK 3.2", mod: 15, stat: "JA", note: "Fläche C", uoc: "", isc: "", riso: "" }
+      ]
+    },
+    {
+      wr: 4, name: "SMA Sunny Tripower 125 (WR 4)",
+      strings: [
+        { mppt: 1, in: 1, gak: "GAK 4.1", mod: 16, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
+        { mppt: 2, in: 1, gak: "GAK 4.1", mod: 16, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
+        { mppt: 3, in: 1, gak: "GAK 4.1", mod: 23, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
+        { mppt: 4, in: 1, gak: "GAK 4.1", mod: 23, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
+        { mppt: 5, in: 1, gak: "GAK 4.1", mod: 8,  stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
+        { mppt: 6, in: 1, gak: "GAK 4.1", mod: 8,  stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
+        { mppt: 7, in: 1, gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
+        { mppt: 7, in: 2, gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
+        { mppt: 8, in: 1, gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
+        { mppt: 8, in: 2, gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D", uoc: "", isc: "", riso: "" },
+        { mppt: 9, in: 1, gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 9, in: 2, gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 10,in: 1, gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 10,in: 2, gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 11,in: 1, gak: "GAK 4.2", mod: 20, stat: "JA", note: "Fläche D (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 12,in: 1, gak: "GAK 4.2", mod: 20, stat: "JA", note: "Fläche D (10 mm²)", uoc: "", isc: "", riso: "" }
+      ]
+    },
+    {
+      wr: 5, name: "SMA Sunny Tripower 125 (WR 5)",
+      strings: [
+        { mppt: 1, in: 1, gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 1, in: 2, gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 2, in: 1, gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 2, in: 2, gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 3, in: 1, gak: "GAK 5.1", mod: 17, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 4, in: 1, gak: "GAK 5.1", mod: 17, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 5, in: 1, gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 6, in: 1, gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 7, in: 1, gak: "GAK 5.1", mod: 13, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 7, in: 2, gak: "GAK 5.1", mod: 13, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 8, in: 1, gak: "GAK 5.1", mod: 18, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 8, in: 2, gak: "GAK 5.1", mod: 18, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 9, in: 1, gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 9, in: 2, gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 10,in: 1, gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E", uoc: "", isc: "", riso: "" },
+        { mppt: 10,in: 2, gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 11,in: 1, gak: "GAK 5.2", mod: 13, stat: "JA", note: "Fläche E (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 12,in: 1, gak: "GAK 5.2", mod: 13, stat: "JA", note: "Fläche E (10 mm²)", uoc: "", isc: "", riso: "" }
+      ]
+    },
+    {
+      wr: 6, name: "SMA Sunny Tripower 125 (WR 6)",
+      strings: [
+        { mppt: 1, in: 1, gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 1, in: 2, gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 2, in: 1, gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 2, in: 2, gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 3, in: 1, gak: "GAK 6.2", mod: 23, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 4, in: 1, gak: "GAK 6.2", mod: 23, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 5, in: 1, gak: "GAK 6.2", mod: 20, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 6, in: 1, gak: "GAK 6.2", mod: 20, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 7, in: 1, gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 8, in: 1, gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 9, in: 1, gak: "GAK 6.2", mod: 17, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 10,in: 1, gak: "GAK 6.2", mod: 17, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 11,in: 1, gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 11,in: 2, gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 12,in: 1, gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" },
+        { mppt: 12,in: 2, gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)", uoc: "", isc: "", riso: "" }
+      ]
+    }
+  ]
 };
 
-const g=id=>document.getElementById(id);
+function renderMatrix(){
+  const cont = g('tables');
+  cont.innerHTML = '';
 
-function toast(msg,ms=2800){
-  const t=g('toast'); t.textContent=msg; t.classList.add('show');
-  clearTimeout(toast_t); toast_t=setTimeout(()=>t.classList.remove('show'),ms);
-}
+  PROJECT.inverters.forEach(inv => {
+    const bl = document.createElement('div');
+    bl.className = 'wr-block';
 
-function parseMPPT(raw){return raw.split(',').map(s=>s.trim()).filter(Boolean).map(Number).filter(n=>n>0&&Number.isInteger(n));}
-function safeName(n){return(n||'Projekt').replace(/[<>:"\/\\|?*\s]+/g,'_').replace(/_+/g,'_').slice(0,80);}
+    let rows = '';
+    let lastMppt = null;
 
-function updateDD(){
-  const proj=JSON.parse(localStorage.getItem('sp_archive')||'{}');
-  const sel=g('project-list');
-  sel.innerHTML='<option value="">&#8212; Neues Projekt &#8212;</option>';
-  Object.keys(proj).sort((a,b)=>a.localeCompare(b,'de')).forEach(n=>{
-    const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o);
+    inv.strings.forEach(s => {
+      const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
+      const isMpptDiv = (lastMppt !== null && s.mppt !== lastMppt);
+      lastMppt = s.mppt;
+      const pwr = ((s.mod * PROJECT.modulWp)/1000).toFixed(2);
+
+      rows += `
+        <tr id="row-${fullId}" class="${isMpptDiv ? 'mppt-div' : ''}">
+          <td style="text-align:left;padding-left:14px;">
+            <span class="string-id">${fullId}</span>
+            <span style="font-size:0.65rem;color:#64748b;margin-left:4px;">(MPPT ${s.mppt}.${s.in})</span>
+          </td>
+          <td>
+            <input type="text" id="gak-${fullId}" value="${s.gak}" class="sp-inp sp-inp-gak" oninput="queueAutoSync()">
+            <span class="print-cell" style="color:#3d5800;">${s.gak}</span>
+          </td>
+          <td class="no-print">
+            <div class="tog-wrap">
+              <button id="tja-${fullId}" class="tog on-ja" onclick="setStatus('${fullId}','JA')">JA</button>
+              <button id="tnei-${fullId}" class="tog" onclick="setStatus('${fullId}','NEIN')">NEIN</button>
+            </div>
+            <input type="hidden" id="stat-${fullId}" value="JA">
+          </td>
+          <td>
+            <input type="number" id="mod-${fullId}" value="${s.mod}" class="sp-inp" style="width:52px;" oninput="onModInput('${inv.wr}','${s.mppt}','${s.in}',this.value)">
+            <span class="print-cell" id="pm-${fullId}">${s.mod}</span>
+          </td>
+          <td class="pwr-cell" id="pw-${fullId}">${pwr} kWp</td>
+          <td><input type="text" id="uoc-${fullId}" value="${s.uoc||''}" placeholder="V" class="sp-inp" style="width:65px;" oninput="queueAutoSync()"></td>
+          <td><input type="text" id="isc-${fullId}" value="${s.isc||''}" placeholder="A" class="sp-inp" style="width:65px;" oninput="queueAutoSync()"></td>
+          <td><input type="text" id="riso-${fullId}" value="${s.riso||''}" placeholder="MΩ" class="sp-inp" style="width:65px;" oninput="queueAutoSync()"></td>
+          <td style="text-align:left;">
+            <input type="text" id="note-${fullId}" value="${s.note||''}" class="sp-inp" style="width:100%;text-align:left;color:#94a3b8;" oninput="queueAutoSync()">
+            <span class="print-cell" style="font-size:7pt;color:#475569;">${s.note||''}</span>
+          </td>
+        </tr>`;
+    });
+
+    bl.innerHTML = `
+      <div class="wr-head">
+        <div class="wr-title-wrap">
+          <span class="wr-num">WR ${inv.wr}</span>
+          <span class="wr-name">${inv.name}</span>
+        </div>
+        <div class="wr-kpis">
+          <span id="wr-mod-${inv.wr}">0</span> Module &middot; <span id="wr-pwr-${inv.wr}" style="color:#a8cc35;">0.00 kWp</span>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="mt">
+          <thead><tr>
+            <th style="width:16%;text-align:left;padding-left:14px;">String ID (WR.MPPT.In)</th>
+            <th style="width:10%;">GAK</th>
+            <th class="no-print" style="width:8%;">Aktiv</th>
+            <th style="width:8%;">Module</th>
+            <th style="width:11%;">Leistung</th>
+            <th style="width:9%;">Uoc (V)</th>
+            <th style="width:9%;">Isc (A)</th>
+            <th style="width:9%;">Riso (MΩ)</th>
+            <th style="width:20%;text-align:left;">Bemerkung</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    cont.appendChild(bl);
   });
+
+  updateKpis();
 }
 
-function setStatus(id,val){
-  g('stat-'+id).value=val;
-  const ja=g('tja-'+id), nei=g('tnei-'+id);
-  if(val==='JA'){ja.classList.add('on');nei.classList.remove('on');}
-  else{nei.classList.add('on');ja.classList.remove('on');}
-  processRow(id);
+// AUTO-SYNC FÜR PARALLELE STRINGS
+function onModInput(wr, mppt, input, val){
+  const partnerInput = (input === '1') ? '2' : '1';
+  const partnerId = `${wr}.${mppt}.${partnerInput}`;
+  const partnerEl = g('mod-' + partnerId);
+  const partnerStat = g('stat-' + partnerId);
+
+  if(partnerEl && partnerStat && partnerStat.value === 'JA'){
+    partnerEl.value = val;
+    recalcRow(partnerId);
+  }
+  recalcRow(`${wr}.${mppt}.${input}`);
+  queueAutoSync();
 }
 
-function processRow(id){
-  const stat=g('stat-'+id).value;
-  const mod=parseFloat(g('mod-'+id).value)||0;
-  const row=g('row-'+id);
-  const pw=g('pw-'+id);
-  const ps=g('ps-'+id);
-  const pm=g('pm-'+id);
-  if(stat==='NEIN'){
+function setStatus(id, st){
+  g('stat-'+id).value = st;
+  const ja = g('tja-'+id), nei = g('tnei-'+id);
+  if(st === 'JA'){ ja.className = 'tog on-ja'; nei.className = 'tog'; }
+  else { nei.className = 'tog on-nei'; ja.className = 'tog'; }
+  recalcRow(id);
+  queueAutoSync();
+}
+
+function recalcRow(id){
+  const st = g('stat-'+id).value;
+  const mod = parseFloat(g('mod-'+id).value) || 0;
+  const row = g('row-'+id);
+  const pw = g('pw-'+id);
+  const pm = g('pm-'+id);
+
+  if(st === 'NEIN'){
     row.classList.add('row-nein');
-    pw.textContent='—'; pw.classList.remove('has-val');
-    if(ps){ps.textContent='NEIN'; ps.style.color='#94a3b8';}
-    if(pm) pm.textContent='—';
+    pw.textContent = '—';
+    if(pm) pm.textContent = '—';
   } else {
     row.classList.remove('row-nein');
-    if(mod>0){pw.textContent=((mod*cfg.modul)/1000).toFixed(2)+' kWp'; pw.classList.add('has-val');}
-    else{pw.textContent='—'; pw.classList.remove('has-val');}
-    if(ps){ps.textContent='JA'; ps.style.color='#4d6b00';}
-    if(pm) pm.textContent=mod>0?String(mod):'—';
+    pw.textContent = ((mod * PROJECT.modulWp)/1000).toFixed(2) + ' kWp';
+    if(pm) pm.textContent = mod;
   }
-  scheduleSave(); updateDash();
+  updateKpis();
 }
 
-function collect(){
-  const d={};
-  document.querySelectorAll('[id^="mod-"],[id^="note-"],[id^="stat-"],[id^="uoc-"],[id^="isc-"],[id^="riso-"],[id^="gak-"]').forEach(el=>{ d[el.id]=el.value; });
-  return d;
-}
-function scheduleSave(){
-  clearTimeout(save_t);
-  save_t=setTimeout(()=>{
-    localStorage.setItem('sp_autosave',JSON.stringify(collect()));
-    const b=g('tb-badge'); if(b){b.style.opacity='1'; setTimeout(()=>b.style.opacity='0',2200);}
-  },400);
-}
+function updateKpis(){
+  let totMods = 0, totPwr = 0, totDone = 0;
 
-function updateDash(){
-  let pwr=0,mods=0,strs=0,filled=0;
-  document.querySelectorAll('[id^="stat-"]').forEach(s=>{
-    if(s.value!=='JA') return;
-    strs++;
-    const id=s.id.replace('stat-','');
-    const v=parseFloat((g('mod-'+id)||{}).value)||0;
-    mods+=v; pwr+=(v*cfg.modul)/1000;
-    if(v>0) filled++;
+  PROJECT.inverters.forEach(inv => {
+    let wrMods = 0, wrPwr = 0;
+    inv.strings.forEach(s => {
+      const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
+      const st = g('stat-'+fullId);
+      if(st && st.value === 'JA'){
+        const mod = parseFloat((g('mod-'+fullId)||{}).value) || 0;
+        const pwr = (mod * PROJECT.modulWp) / 1000;
+        wrMods += mod; wrPwr += pwr;
+        totMods += mod; totPwr += pwr;
+
+        const uocVal = (g('uoc-'+fullId)||{}).value;
+        if(uocVal && uocVal.trim() !== '') totDone++;
+      }
+    });
+    const wm = g('wr-mod-'+inv.wr), wp = g('wr-pwr-'+inv.wr);
+    if(wm) wm.textContent = wrMods;
+    if(wp) wp.textContent = wrPwr.toFixed(2) + ' kWp';
   });
-  g('d-pwr').textContent=pwr.toFixed(2);
-  g('d-mods').textContent=mods;
-  g('d-str').textContent=strs;
-  g('d-prog').style.width=(strs>0?Math.round(filled/strs*100):0)+'%';
-  // print header
-  const pl=g('ph-loc'),pt=g('ph-tech'),pm=g('ph-mod');
-  if(pl) pl.textContent=cfg.standort||'—';
-  if(pt) pt.textContent=cfg.pruefer||'—';
-  if(pm) pm.textContent=cfg.modul+' Wp';
+
+  g('d-mods').textContent = totMods;
+  g('d-pwr').textContent = totPwr.toFixed(2);
+  g('d-done').textContent = totDone;
 }
 
-function saveProject(){
-  const name=(g('standort').value||'').trim();
-  if(!name) return toast('Bitte Standort eingeben');
-  const proj=JSON.parse(localStorage.getItem('sp_archive')||'{}');
-  proj[name]={cfg:{standort:name,pruefer:g('pruefer').value,modul:g('modul').value,mppt:g('mppt').value,fillable:cfg.fillable},data:collect(),ts:new Date().toISOString()};
-  localStorage.setItem('sp_archive',JSON.stringify(proj));
-  updateDD(); g('project-list').value=name;
-  toast('✓ "'+name+'" gespeichert');
-}
-function loadProject(){
-  const sel=g('project-list').value; if(!sel) return toast('Bitte Projekt auswählen');
-  const p=(JSON.parse(localStorage.getItem('sp_archive')||'{}')||{})[sel]; if(!p) return toast('Nicht gefunden');
-  g('standort').value=p.cfg.standort; g('pruefer').value=p.cfg.pruefer; g('modul').value=p.cfg.modul; g('mppt').value=p.cfg.mppt;
-  if(p.cfg.fillable) setFillMode(true); else setFillMode(false);
-  startApp({restore:true,data:p.data}); toast('📂 "'+sel+'" geladen');
-}
-function deleteProject(){
-  const sel=g('project-list').value; if(!sel) return;
-  if(!confirm('Projekt "'+sel+'" wirklich löschen?')) return;
-  const proj=JSON.parse(localStorage.getItem('sp_archive')||'{}'); delete proj[sel];
-  localStorage.setItem('sp_archive',JSON.stringify(proj)); updateDD(); toast('Gelöscht');
-}
-function goMenu(){if(confirm('Zurück zum Menü? Auto-Save bleibt erhalten.')) location.reload();}
-
-function updateTotalsNotes(){
-  let gtMods=0, gtPwr=0;
-  parseMPPT(cfg.mppt).forEach((cnt,wi)=>{
-    const wr=wi+1; let ms=0,pw=0;
-    for(let m=1;m<=cnt;m++) for(let s=1;s<=2;s++){
-      const id=`${wr}.${m}.${s}`;
-      const st=g('stat-'+id); if(!st||st.value!=='JA') continue;
-      const v=parseFloat((g('mod-'+id)||{}).value)||0; ms+=v; pw+=(v*cfg.modul)/1000;
-      const ne=g('note-'+id), pn=g('pn-'+id);
-      if(ne&&pn){pn.textContent=ne.value; pn.style.display=ne.value?'inline':'none';}
-      // sync measurement print cells
-      ['uoc','isc','riso'].forEach(f=>{
-        const inp=g(f+'-'+id), pc=g('p'+f+'-'+id);
-        if(inp&&pc){pc.textContent=inp.value; pc.style.display=inp.value?'inline':'none';}
-      });
+// ── SUPABASE CLOUD SYNC ENGINE ──
+function initSupabase(){
+  if(window.supabase && SB_URL && SB_KEY){
+    try {
+      supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+      setCloudStatus('online', 'Live mit Supabase');
+      subscribeRealtime();
+      fetchCloudProject();
+    } catch(e) {
+      setCloudStatus('offline', 'Verbindungsfehler');
     }
-    gtMods+=ms; gtPwr+=pw;
-    const tm=g('tm-'+wr),tp=g('tp-'+wr);
-    if(tm) tm.textContent=ms>0?ms+' Stk.':'—';
-    if(tp) tp.textContent=pw>0?pw.toFixed(2)+' kWp':'—';
-    const gakEl=g('gak-'+wr), gakp=g('gakp-'+wr);
-    if(gakp){ const gv=(gakEl&&gakEl.value.trim())?gakEl.value.trim():''; gakp.textContent=gv?('GAK '+gv):''; gakp.style.display=gv?'inline':'none'; }
-  });
-  // grand total
-  const gt=g('grand-total');
-  if(gt){ gt.style.display='block'; g('gt-mod').textContent=gtMods+' Module gesamt'; g('gt-pwr').textContent=gtPwr.toFixed(2)+' kWp'; }
+  } else {
+    setCloudStatus('offline', 'Lokal');
+  }
 }
 
-function doPrint(){
-  updateTotalsNotes();
-  const datumEl=g('pruef-datum');
-  if(datumEl&&datumEl.value){
-    const [y,mo,d]=datumEl.value.split('-');
-    const months=['Jänner','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-    g('ph-date').textContent=parseInt(d)+'. '+months[parseInt(mo)-1]+' '+y;
-  } else {
-    g('ph-date').textContent=new Date().toLocaleDateString('de-AT',{day:'numeric',month:'long',year:'numeric'});
+function setCloudStatus(status, text){
+  const dot = g('cloud-dot'), txt = g('cloud-text');
+  txt.textContent = text;
+  if(status === 'online'){ dot.className = 'status-dot dot-green'; }
+  else if(status === 'syncing'){ dot.className = 'status-dot dot-yellow'; }
+  else { dot.className = 'status-dot dot-red'; }
+}
+
+function queueAutoSync(){
+  localStorage.setItem('sp_local_backup', JSON.stringify(collectData()));
+  updateKpis();
+
+  if(!supabaseClient) return;
+  setCloudStatus('syncing', 'Synchronisiere...');
+  clearTimeout(sync_timeout);
+  sync_timeout = setTimeout(pushToCloud, 500);
+}
+
+function collectData(){
+  const payload = {};
+  PROJECT.inverters.forEach(inv => {
+    inv.strings.forEach(s => {
+      const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
+      payload[fullId] = {
+        gak: (g('gak-'+fullId)||{}).value || s.gak,
+        stat: (g('stat-'+fullId)||{}).value || 'JA',
+        mod: (g('mod-'+fullId)||{}).value || s.mod,
+        uoc: (g('uoc-'+fullId)||{}).value || '',
+        isc: (g('isc-'+fullId)||{}).value || '',
+        riso: (g('riso-'+fullId)||{}).value || '',
+        note: (g('note-'+fullId)||{}).value || ''
+      };
+    });
+  });
+  return payload;
+}
+
+async function pushToCloud(){
+  if(!supabaseClient) return;
+  try {
+    const { error } = await supabaseClient
+      .from('pv_projects')
+      .upsert({
+        id: PROJECT.id,
+        name: PROJECT.standort,
+        pruefer: PROJECT.pruefer,
+        modul_wp: PROJECT.modulWp,
+        data: collectData(),
+        updated_at: new Date().toISOString()
+      });
+
+    if(!error){
+      setCloudStatus('online', 'Live mit Supabase');
+    } else {
+      setCloudStatus('offline', 'Sync-Fehler');
+    }
+  } catch(e) {
+    setCloudStatus('offline', 'Offline');
   }
-  let s=g('_plo'); if(!s){s=document.createElement('style');s.id='_plo';s.textContent='@media print{@page{size:A4 landscape!important;}}';document.head.appendChild(s);}
-  window.print();
+}
+
+async function fetchCloudProject(){
+  if(!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('pv_projects')
+      .select('*')
+      .eq('id', PROJECT.id)
+      .single();
+
+    if(data && data.data){
+      applyRemoteData(data.data);
+      toast('☁️ Live-Daten aus Supabase geladen');
+    } else {
+      // Wenn das Projekt in Supabase noch nicht existiert, direkt anlegen:
+      pushToCloud();
+    }
+  } catch(e) {}
+}
+
+function subscribeRealtime(){
+  if(!supabaseClient) return;
+  supabaseClient
+    .channel('pv_projects_realtime')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pv_projects', filter: `id=eq.${PROJECT.id}` }, payload => {
+      if(payload.new && payload.new.data){
+        applyRemoteData(payload.new.data);
+        toast('⚡ Live-Update von Sven empfangen!');
+      }
+    })
+    .subscribe();
+}
+
+function applyRemoteData(remoteData){
+  for(const fullId in remoteData){
+    const row = remoteData[fullId];
+    if(g('gak-'+fullId))  g('gak-'+fullId).value = row.gak;
+    if(g('mod-'+fullId))  g('mod-'+fullId).value = row.mod;
+    if(g('uoc-'+fullId))  g('uoc-'+fullId).value = row.uoc;
+    if(g('isc-'+fullId))  g('isc-'+fullId).value = row.isc;
+    if(g('riso-'+fullId)) g('riso-'+fullId).value = row.riso;
+    if(g('note-'+fullId)) g('note-'+fullId).value = row.note;
+    if(g('stat-'+fullId)) setStatus(fullId, row.stat);
+  }
+  updateKpis();
+}
+
+function manualSync(){
+  pushToCloud();
+  fetchCloudProject();
+  toast('🔄 Synchronisation gestartet');
+}
+
+// ── SMARTSCRIPT CSV & EXCEL EXPORT ──
+function exportGakPickerl(){
+  const rows = [['BVH', 'String', 'GAK', 'Module', 'Leistung']];
+  let cnt = 0;
+
+  PROJECT.inverters.forEach(inv => {
+    inv.strings.forEach(s => {
+      const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
+      const st = g('stat-'+fullId);
+      if(!st || st.value !== 'JA') return;
+
+      const mod = parseFloat((g('mod-'+fullId)||{}).value) || 0;
+      if(mod <= 0) return;
+
+      const gak = (g('gak-'+fullId)||{}).value || s.gak;
+      const pwr = ((mod * PROJECT.modulWp)/1000).toFixed(2).replace('.', ',');
+
+      rows.push([PROJECT.standort, fullId, gak, mod + ' Module', pwr + ' kWp']);
+      cnt++;
+    });
+  });
+
+  const csv = rows.map(r => r.join(';')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `GAK-Pickerl_${PROJECT.standort.replace(/\s+/g,'_')}.csv`;
+  a.click();
+  toast(cnt + ' GAK-Pickerl exportiert');
 }
 
 function doExcel(){
-  const exDatum=cfg.datum?new Date(cfg.datum).toLocaleDateString('de-AT'):new Date().toLocaleDateString('de-AT');
-  const rows=[['SOLPRO MESS- UND PRUEFPROTOKOLL'],['Projekt:',cfg.standort,'','Pruefer:',cfg.pruefer],['Modulleistung:',cfg.modul+' Wp','','Pruefdatum:',exDatum],[],['String','Module','Leistung (kWp)','Uoc (V)','Isc (A)','Riso (MOhm)','Bemerkung']];
-  document.querySelectorAll('[id^="stat-"]').forEach(s=>{
-    if(s.value!=='JA') return;
-    const id=s.id.replace('stat-','');
-    rows.push([
-      {t:'s',v:id},
-      (g('mod-'+id)||{}).value,
-      (g('pw-'+id)||{}).textContent.replace(' kWp','').replace('—','').replace('—',''),
-      cfg.fillable ? ((g('uoc-'+id)||{}).value||'') : '',
-      cfg.fillable ? ((g('isc-'+id)||{}).value||'') : '',
-      cfg.fillable ? ((g('riso-'+id)||{}).value||'') : '',
-      (g('note-'+id)||{}).value
-    ]);
+  const rows = [['String ID (WR.MPPT.In)', 'GAK', 'Module', 'Leistung (kWp)', 'Uoc (V)', 'Isc (A)', 'Riso (MOhm)', 'Bemerkung']];
+  PROJECT.inverters.forEach(inv => {
+    inv.strings.forEach(s => {
+      const fullId = `${inv.wr}.${s.mppt}.${s.in}`;
+      const st = g('stat-'+fullId);
+      if(st && st.value === 'JA'){
+        const mod = (g('mod-'+fullId)||{}).value;
+        const pwr = ((mod * PROJECT.modulWp)/1000).toFixed(2);
+        const gak = (g('gak-'+fullId)||{}).value || '';
+        rows.push([fullId, gak, mod, pwr, (g('uoc-'+fullId)||{}).value||'', (g('isc-'+fullId)||{}).value||'', (g('riso-'+fullId)||{}).value||'', (g('note-'+fullId)||{}).value||'']);
+      }
+    });
   });
-  const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:13},{wch:9},{wch:14},{wch:10},{wch:10},{wch:12},{wch:32}];
-  XLSX.utils.book_append_sheet(wb,ws,'Protokoll');
-  XLSX.writeFile(wb,'SOLPRO_'+safeName(cfg.standort)+'.xlsx');
+  const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Prüfprotokoll');
+  XLSX.writeFile(wb, `Protokoll_${PROJECT.standort.replace(/\s+/g,'_')}.xlsx`);
   toast('Excel exportiert');
 }
 
-/* ── GAK-Pickerl / SmartScript Export ── */
-function downloadText(text,filename){
-  const blob=new Blob([text],{type:'text/plain;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download=filename;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
-}
+window.onload = () => {
+  renderMatrix();
+  initSupabase();
 
-function exportActiveStrings(){
-  const ids=[];
-  document.querySelectorAll('[id^="stat-"]').forEach(s=>{ if(s.value==='JA') ids.push(s.id.replace('stat-','')); });
-  if(!ids.length) return toast('Keine aktiven Strings vorhanden');
-  downloadText(ids.join('\r\n'),'SOLPRO_Strings_'+safeName(cfg.standort)+'.txt');
-  toast(ids.length+' aktive Strings exportiert');
-}
-
-function exportGakPickerl(){
-  const rows=[['BVH','String','GAK','Module','Leistung']];
-  document.querySelectorAll('[id^="stat-"]').forEach(s=>{
-    if(s.value!=='JA') return;
-    const id=s.id.replace('stat-','');
-    const wr=id.split('.')[0];
-    const modVal=parseFloat((g('mod-'+id)||{}).value)||0;
-    if(modVal<=0) return;
-    const gakEl=g('gak-'+wr);
-    const gakVal=(gakEl&&gakEl.value.trim())?gakEl.value.trim():wr;
-    const pwrVal=((modVal*cfg.modul)/1000).toFixed(2).replace('.',',');
-    rows.push([cfg.standort, id, 'GAK '+gakVal, modVal+' Module', pwrVal+' kWp']);
+  window.addEventListener('online', () => {
+    toast('📶 Wieder online – synchronisiere...');
+    pushToCloud();
   });
-  if(rows.length<=1) return toast('Keine aktiven Strings mit Modulanzahl vorhanden — bitte Module eintragen');
-  const csv=rows.map(r=>r.join(';')).join('\r\n');
-  downloadText('\uFEFF'+csv,'SOLPRO_GAK-Pickerl_'+safeName(cfg.standort)+'.csv');
-  toast((rows.length-1)+' Pickerl-Zeilen exportiert');
-}
-
-
-function startApp(opts={}){
-  cfg.standort=(g('standort').value||'').trim();
-  cfg.pruefer =(g('pruefer').value ||'').trim();
-  cfg.modul   =parseFloat(g('modul').value)||0;
-  cfg.mppt    =(g('mppt').value||'').trim();
-  cfg.fillable=fillable;
-  if(!cfg.standort) return toast('Bitte Standort/Projektname eingeben');
-  if(!cfg.mppt)     return toast('Bitte MPPTs eingeben');
-  if(!cfg.modul)    return toast('Bitte Modulleistung (Wp) eingeben');
-  const mpptList=parseMPPT(cfg.mppt);
-  if(!mpptList.length) return toast('Ungueltige MPPT-Eingabe — z.B. 2,3');
-  cfg.mppt=mpptList.join(','); g('mppt').value=cfg.mppt;
-  cfg.datum=(g('pruef-datum')||{}).value||'';
-  localStorage.setItem('sp_cfg',JSON.stringify(cfg));
-  g('tb-loc').textContent=cfg.standort; g('tb-tech').textContent=cfg.pruefer;
-  document.title='SOLPRO | '+cfg.standort;
-
-  const cont=g('tables'); cont.innerHTML='';
-
-  mpptList.forEach((cnt,wi)=>{
-    const wr=wi+1;
-    const bl=document.createElement('div');
-    bl.className='wr-block pr-break';
-
-    // Build measurement column cells based on fillable mode
-    function msrCell(field, id, placeholder, label){
-      if(cfg.fillable){
-        return `<td class="col-msr" data-label="${label}">
-          <input type="text" inputmode="decimal" id="${field}-${id}" oninput="filterNum(this);scheduleSave()" class="msr-inp no-print" placeholder="${placeholder}" autocomplete="off">
-          <span class="print-only print-cell" id="p${field}-${id}"></span>
-          <div class="print-blank print-only"></div>
-        </td>`;
-      } else {
-        return `<td class="col-msr" data-label="${label}">
-          <span class="screen-dash" style="color:#1e2a3a;font-size:0.7rem;">&#8212;</span>
-          <div class="print-blank"></div>
-          <span class="print-dash">&#8212;</span>
-        </td>`;
-      }
-    }
-
-    bl.innerHTML=`
-      <div class="wr-head">
-        <span class="wr-num">WR ${wr}</span>
-        <span class="wr-name">Wechselrichter ${wr}</span>
-        <span class="wr-meta">&nbsp;&middot; ${cnt} MPPT &middot; ${cnt*2} Strings</span>
-        <span class="wr-gak-wrap no-print">
-          <label class="wr-gak-label" for="gak-${wr}">GAK</label>
-          <input type="text" id="gak-${wr}" class="wr-gak-inp" placeholder="Nr." oninput="scheduleSave()" autocomplete="off">
-        </span>
-        <span class="wr-gak-print" id="gakp-${wr}"></span>
-      </div>
-      <div class="tbl-wrap">
-      <table class="mt">
-        <thead><tr>
-          <th class="col-id" style="text-align:left;padding-left:20px;">Input</th>
-          <th class="no-print">Aktiv</th>
-          <th class="print-only col-stat">Status</th>
-          <th class="col-mod">Module</th>
-          <th class="col-pwr">Leistung</th>
-          <th class="col-msr">Uoc (V)</th>
-          <th class="col-msr">Isc (A)</th>
-          <th class="col-msr">Riso (M&#8486;)</th>
-          <th class="col-note no-print">Bemerkung</th>
-          <th class="col-note print-only">Bemerkung</th>
-        </tr></thead>
-        <tbody id="tb-${wr}"></tbody>
-        <tfoot>
-          <tr class="tot-row print-only">
-            <td colspan="2" style="text-align:left;padding-left:8px;font-size:7pt;text-transform:uppercase;letter-spacing:.05em;">Summe WR ${wr}</td>
-            <td></td>
-            <td id="tm-${wr}" style="text-align:center;"></td>
-            <td id="tp-${wr}" style="text-align:center;color:#4d6b00;"></td>
-            <td colspan="4"></td>
-          </tr>
-        </tfoot>
-      </table>
-      </div>`;
-    cont.appendChild(bl);
-
-    const tbody=g('tb-'+wr);
-    for(let m=1;m<=cnt;m++) for(let s=1;s<=2;s++){
-      const id=`${wr}.${m}.${s}`;
-      const tr=document.createElement('tr');
-      tr.id='row-'+id;
-      if(s===1&&m>1) tr.classList.add('mppt-div');
-      tr.innerHTML=`
-        <td class="col-id"><span class="string-id">${id}</span></td>
-        <td class="no-print" data-label="Aktiv">
-          <div class="tog-wrap">
-            <button id="tja-${id}"  class="tog ton-ja on"  onclick="setStatus('${id}','JA')">JA</button>
-            <button id="tnei-${id}" class="tog ton-nei"    onclick="setStatus('${id}','NEIN')">NEIN</button>
-          </div>
-          <select id="stat-${id}" style="display:none;" onchange="processRow('${id}')">
-            <option value="JA">JA</option><option value="NEIN">NEIN</option>
-          </select>
-        </td>
-        <td class="print-only col-stat" id="ps-${id}" style="font-weight:700;color:#4d6b00;">JA</td>
-        <td class="col-mod" data-label="Module">
-          <input type="text" inputmode="numeric" id="mod-${id}" oninput="filterInt(this);processRow('${id}')" class="mod-inp" placeholder="&#8212;" autocomplete="off">
-          <span class="print-only print-cell" id="pm-${id}"></span>
-        </td>
-        <td class="col-pwr pwr-cell" id="pw-${id}" data-label="Leistung">&#8212;</td>
-        ${msrCell('uoc', id, 'V', 'Uoc (V)')}
-        ${msrCell('isc', id, 'A', 'Isc (A)')}
-        ${msrCell('riso', id, 'M\u03a9', 'Riso (M\u03a9)')}
-        <td class="col-note no-print" data-label="Bemerkung">
-          <input type="text" id="note-${id}" oninput="scheduleSave()" placeholder="Bemerkung&#8230;" class="note-inp">
-        </td>
-        <td class="col-note print-only">
-          <span id="pn-${id}" class="print-note" style="display:none;font-size:9pt;color:#334155;"></span>
-        </td>`;
-      tbody.appendChild(tr);
-    }
-  });
-
-  g('setup-screen').style.display='none';
-  g('matrix-view').style.display='block';
-
-  if(opts.restore&&opts.data){
-    for(const k in opts.data){const el=g(k);if(el) el.value=opts.data[k];}
-    document.querySelectorAll('[id^="stat-"]').forEach(s=>setStatus(s.id.replace('stat-',''),s.value));
-  } else {
-    const saved=localStorage.getItem('sp_autosave');
-    if(saved){const d=JSON.parse(saved); for(const k in d){const el=g(k);if(el)el.value=d[k];}}
-    document.querySelectorAll('[id^="stat-"]').forEach(s=>setStatus(s.id.replace('stat-',''),s.value));
-  }
-  // update print-cell visibility for mod fields
-  document.querySelectorAll('[id^="mod-"]').forEach(el=>{
-    const id=el.id.replace('mod-',''); const pm=g('pm-'+id);
-    if(pm&&el.value){pm.textContent=el.value; pm.style.display='inline';}
-  });
-  updateDash();
-}
+};
 </script>
 </body>
 </html>

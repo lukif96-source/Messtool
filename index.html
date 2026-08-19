@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=0">
 <meta name="theme-color" content="#05080f">
-<title>SOLPRO | PV MAN P52</title>
+<title>SOLPRO | PV MAN P52 (Chronologische Sortierung)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -48,11 +48,16 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .wr-tab { flex: 0 0 auto; background: var(--panel); border: 1px solid var(--border); color: var(--muted); font-size: 0.72rem; font-weight: 700; border-radius: 8px; padding: 6px 12px; cursor: pointer; }
 .wr-tab.active { background: var(--green); color: #061200; border-color: var(--green); }
 
-/* TABLES */
+.proj-select {
+  background: rgba(5,8,15,0.9); border: 1px solid rgba(159,193,49,0.4);
+  color: var(--text); font-weight: 700; font-size: 0.8rem; border-radius: 8px;
+  padding: 5px 8px; outline: none; cursor: pointer;
+}
+
+/* WR BLOCK & TABLES */
 .wr-block { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 14px; }
 .wr-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; background: linear-gradient(135deg, rgba(159,193,49,0.08) 0%, transparent 60%); border-bottom: 1px solid rgba(159,193,49,0.15); flex-wrap: wrap; }
 .wr-num { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700; background: var(--green); color: #061200; padding: 2px 7px; border-radius: 5px; }
-.wr-kpis { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
 
 table.mt { width: 100%; border-collapse: collapse; }
 table.mt thead th { padding: 8px 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; color: #64748b; background: rgba(0,0,0,0.25); text-align: center; white-space: nowrap; }
@@ -63,6 +68,7 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
 
 .string-id { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--green); }
 .pwr-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--green); }
+
 .plan-badge { font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.05); color: #94a3b8; font-family: 'JetBrains Mono', monospace; }
 .plan-badge-green { background: rgba(159,193,49,0.12); color: #a8cc35; border: 1px solid rgba(159,193,49,0.25); }
 
@@ -75,10 +81,10 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
 .tog.on-ja  { background: rgba(159,193,49,0.25); color: #a8cc35; }
 .tog.on-nei { background: rgba(100,116,139,0.25); color: #94a3b8; }
 
-#toast { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%) translateY(120%); background: #0f172a; border: 1px solid var(--green); color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; transition: transform 0.3s; z-index: 9999; }
+#toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(150%); background: #0f172a; border: 1px solid var(--green); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; transition: transform 0.3s; z-index: 9999; }
 #toast.show { transform: translateX(-50%) translateY(0); }
 
-/* MOBILE KACHEL LAYOUT */
+/* MOBILE CARD LAYOUT */
 @media (max-width: 800px) {
   table.mt, table.mt tbody, table.mt tr, table.mt td { display: block; width: 100%; }
   table.mt thead { display: none; }
@@ -115,43 +121,43 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
 
 <div class="wrap">
 
+  <!-- DASHBOARD -->
   <div class="dashboard no-print">
     <div class="kpi-card">
-      <div class="kpi-label">Ist-Leistung</div>
-      <div class="kpi-value"><span id="d-pwr">0.00</span><span class="kpi-unit">kWp</span></div>
+      <div class="kpi-label">Leistung Gesamt</div>
+      <div class="kpi-value"><span id="d-pwr">807.24</span><span style="font-size:0.75rem;color:var(--green);margin-left:2px;">kWp</span></div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Ist-Module</div>
-      <div class="kpi-value" id="d-mods">0</div>
+      <div class="kpi-label">Module Gesamt</div>
+      <div class="kpi-value" id="d-mods">1736</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Aktiv &middot; Belegt</div>
-      <div class="kpi-value"><span id="d-act">0</span><span style="font-size:0.7rem;color:#64748b;" id="d-slots"> / 144</span></div>
+      <div class="kpi-label">Belegte Strings</div>
+      <div class="kpi-value"><span id="d-act">94</span><span style="font-size:0.7rem;color:#64748b;"> / 144</span></div>
     </div>
-    <div class="kpi-card" id="cloud-info">
-      <div class="kpi-label">Cloud-Status</div>
-      <div class="kpi-value" style="font-size:1.1rem;margin-top:2px;">
-        <span style="font-size:0.75rem; color:#ef4444; font-weight:700;">Lokal / Offline</span>
+    <div class="kpi-card">
+      <div class="kpi-label">Modus</div>
+      <div class="kpi-value" style="font-size:0.95rem;color:var(--green);font-weight:800;margin-top:2px;">
+        🔒 Manuell (Lokal gesichert)
       </div>
     </div>
   </div>
 
+  <!-- TOOLBAR -->
   <div id="toolbar" class="no-print">
-    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-      <div style="background:rgba(5,8,15,0.9); padding:6px 12px; border-radius:8px; border:1px solid #cbd5e1; font-weight:800; font-size:0.9rem;">
-        PV MAN P52 (Dachauer Str.)
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div style="background:rgba(5,8,15,0.9); padding:6px 12px; border-radius:8px; border:1px solid #64748b; font-weight:800; font-size:0.88rem;">
+        PV MAN P52 (465 Wp)
       </div>
       <button onclick="toggleSunMode()" class="btn btn-ghost" id="btn-sun">☀️ Dach-Modus</button>
-      
-      <!-- DIE MAGISCHE RETTUNG: -->
-      <button onclick="factoryResetCloud()" class="btn" style="background:#dc2626;color:#fff;font-weight:900;" title="Zerstört den fehlerhaften DB-Eintrag & macht Plan-Neustart">🚨 PLAN-RESET</button>
+      <button onclick="factoryResetCloud()" class="btn" style="background:#dc2626;color:#fff;font-weight:900;" title="Setzt alles sauber auf die chronologische Reihenfolge zurück">🚨 PLAN-RESET</button>
     </div>
 
     <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
-      <button onclick="fetchCloudProject()" class="btn btn-ghost" style="border-color:#38bdf8;color:#38bdf8;">📥 Aus Cloud laden</button>
-      <button onclick="pushToCloud()" class="btn btn-blue" style="box-shadow:0 0 10px rgba(59,130,246,0.5);">☁️ In Cloud sichern</button>
-      <button onclick="printMontagePlan()" class="btn btn-ghost" style="border-color:#eab308;color:#eab308;" title="Speziell fürs Ausdrucken & Verkabeln auf Baustelle">📋 Druck-Montageplan</button>
-      <button onclick="exportSmartScriptExcel()" class="btn btn-green">🏷️ GAK-Pickerl (.xlsx)</button>
+      <button onclick="fetchCloudDataManually()" class="btn btn-ghost" style="border-color:#38bdf8;color:#38bdf8;">📥 Aus Cloud laden</button>
+      <button onclick="pushCloudDataManually()" class="btn btn-blue">☁️ In Cloud sichern</button>
+      <button onclick="printWRMontagePlan()" class="btn btn-ghost" style="border-color:#eab308;color:#eab308;" title="1 Seite pro Wechselrichter in A4">📋 Montage-Plan</button>
+      <button onclick="exportSmartScriptExcel()" class="btn btn-green">🏷️ GAK (.xlsx)</button>
       <button onclick="exportStringNumbersExcel()" class="btn btn-ghost" style="border-color:#a8cc35;color:#a8cc35;">🔢 Strings (.xlsx)</button>
       <button onclick="doExcel()" class="btn btn-ghost">📊 Protokoll</button>
     </div>
@@ -167,496 +173,630 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
     <button class="wr-tab" onclick="filterInverter(6, this)">WR 6</button>
   </div>
 
-  <!-- HIER WIRD DIE MATRIX ERZEUGT -->
+  <!-- TABLES -->
   <div id="tables"></div>
 
 </div>
 
 <script>
-// --- VERBINDUNG ZU SUPABASE ---
 const SB_URL = "https://rcuimtfmjkpxkazbsggj.supabase.co";
 const SB_KEY = "sb_publishable_pe8Ye20-e9az1D5MvNCB5A_8_ai7afc";
 let supabaseClient = window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null;
+const PROJECT_ID = "PV_MAN_P52";
+const MODEL_WP = 465;
 
 const g = id => document.getElementById(id);
 let toast_t = null;
-function toast(msg, ms=2600){
+function toast(msg, ms=3000){
   const t = g('toast'); t.textContent = msg; t.classList.add('show');
   clearTimeout(toast_t); toast_t = setTimeout(() => t.classList.remove('show'), ms);
 }
 
-// DAS STRENG VORGANGENE MODELL: ALLES ANDERE IST "NEIN/0" (Belegungsmatrix gem. Plan MAN)
-const SLD_PLAN = {
-  // WR 1 (12 MPPTs belegt)
-  "1.1.1": { planName: "STR 1", gak: "GAK 1.1", mod: 23, stat: "JA", note: "Fläche A" },
-  "1.2.1": { planName: "STR 2", gak: "GAK 1.1", mod: 23, stat: "JA", note: "Fläche A" },
-  "1.3.1": { planName: "STR 3", gak: "GAK 1.1", mod: 22, stat: "JA", note: "Fläche A" },
-  "1.4.1": { planName: "STR 4", gak: "GAK 1.1", mod: 22, stat: "JA", note: "Fläche A" },
-  "1.5.1": { planName: "STR 5", gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A" },
-  "1.6.1": { planName: "STR 6", gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A" },
-  "1.7.1": { planName: "STR 7", gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A" },
-  "1.8.1": { planName: "STR 8", gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A" },
-  "1.9.1": { planName: "STR 9", gak: "GAK 1.2", mod: 20, stat: "JA", note: "Fläche A" },
-  "1.10.1":{ planName: "STR 10", gak: "GAK 1.2", mod: 20, stat: "JA", note: "Fläche A" },
-  "1.11.1":{ planName: "STR 11", gak: "GAK 1.2", mod: 21, stat: "JA", note: "Fläche A" },
-  "1.12.1":{ planName: "STR 12", gak: "GAK 1.2", mod: 21, stat: "JA", note: "Fläche A" },
+function toggleSunMode(){
+  document.body.classList.toggle('sun-mode');
+  g('btn-sun').textContent = document.body.classList.contains('sun-mode') ? '🌙 Dark-Modus' : '☀️ Dach-Modus';
+}
 
-  // WR 2 (14 MPPTs = MPPT 1..12 einzeln, MPPT 7 & 8 doppelt!)
-  "2.1.1": { planName: "STR 1", gak: "GAK 2.1", mod: 13, stat: "JA", note: "Fläche B" },
-  "2.2.1": { planName: "STR 2", gak: "GAK 2.1", mod: 13, stat: "JA", note: "Fläche B" },
-  "2.3.1": { planName: "STR 3", gak: "GAK 2.1", mod: 21, stat: "JA", note: "Fläche B" },
-  "2.4.1": { planName: "STR 4", gak: "GAK 2.1", mod: 21, stat: "JA", note: "Fläche B" },
-  "2.5.1": { planName: "STR 5", gak: "GAK 2.2", mod: 20, stat: "JA", note: "Fläche B" },
-  "2.6.1": { planName: "STR 6", gak: "GAK 2.2", mod: 20, stat: "JA", note: "Fläche B" },
-  "2.7.1": { planName: "STR 7", gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B (Doppel)" },
-  "2.7.2": { planName: "STR 11", gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B (Doppel)" },
-  "2.8.1": { planName: "STR 8", gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B (Doppel)" },
-  "2.8.2": { planName: "STR 12", gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B (Doppel)" },
-  "2.9.1": { planName: "STR 9", gak: "GAK 2.2", mod: 14, stat: "JA", note: "Fläche B (10 mm²)" },
-  "2.10.1":{ planName: "STR 10", gak: "GAK 2.2", mod: 14, stat: "JA", note: "Fläche B (10 mm²)" },
-  "2.11.1":{ planName: "STR 13", gak: "GAK 2.2", mod: 18, stat: "JA", note: "Fläche B (10 mm²)" },
-  "2.12.1":{ planName: "STR 14", gak: "GAK 2.2", mod: 18, stat: "JA", note: "Fläche B (10 mm²)" },
+function filterInverter(n, btn){
+  document.querySelectorAll('.wr-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.wr-block').forEach((d,i) => {
+    d.style.display = (n === 0 || i + 1 === n) ? 'block' : 'none';
+  });
+}
 
-  // WR 3 (18 Strings: MPPT 3-6 und 9-10 doppelt)
-  "3.1.1": { planName: "STR 1", gak: "GAK 3.1", mod: 13, stat: "JA", note: "Fläche C" },
-  "3.2.1": { planName: "STR 2", gak: "GAK 3.1", mod: 13, stat: "JA", note: "Fläche C" },
-  "3.3.1": { planName: "STR 3", gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
-  "3.3.2": { planName: "STR 7", gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
-  "3.4.1": { planName: "STR 4", gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
-  "3.4.2": { planName: "STR 8", gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
-  "3.5.1": { planName: "STR 5", gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C (Doppel)" },
-  "3.5.2": { planName: "STR 9", gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C (Doppel)" },
-  "3.6.1": { planName: "STR 6", gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C (Doppel)" },
-  "3.6.2": { planName: "STR 10", gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C (Doppel)" },
-  "3.7.1": { planName: "STR 11", gak: "GAK 3.1", mod: 8,  stat: "JA", note: "Fläche C" },
-  "3.8.1": { planName: "STR 12", gak: "GAK 3.1", mod: 8,  stat: "JA", note: "Fläche C" },
-  "3.9.1": { planName: "STR 13", gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
-  "3.9.2": { planName: "STR 17", gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
-  "3.10.1":{ planName: "STR 14", gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
-  "3.10.2":{ planName: "STR 18", gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
-  "3.11.1":{ planName: "STR 15", gak: "GAK 3.2", mod: 15, stat: "JA", note: "Fläche C" },
-  "3.12.1":{ planName: "STR 16", gak: "GAK 3.2", mod: 15, stat: "JA", note: "Fläche C" },
-
-  // WR 4 (16 Strings: MPPT 7-10 doppelt)
-  "4.1.1": { planName: "STR 1", gak: "GAK 4.1", mod: 16, stat: "JA", note: "Fläche D" },
-  "4.2.1": { planName: "STR 2", gak: "GAK 4.1", mod: 16, stat: "JA", note: "Fläche D" },
-  "4.3.1": { planName: "STR 3", gak: "GAK 4.1", mod: 23, stat: "JA", note: "Fläche D" },
-  "4.4.1": { planName: "STR 4", gak: "GAK 4.1", mod: 23, stat: "JA", note: "Fläche D" },
-  "4.5.1": { planName: "STR 5", gak: "GAK 4.1", mod: 8,  stat: "JA", note: "Fläche D" },
-  "4.6.1": { planName: "STR 6", gak: "GAK 4.1", mod: 8,  stat: "JA", note: "Fläche D" },
-  "4.7.1": { planName: "STR 7", gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D (Doppel)" },
-  "4.7.2": { planName: "STR 11", gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D (Doppel)" },
-  "4.8.1": { planName: "STR 8", gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D (Doppel)" },
-  "4.8.2": { planName: "STR 12", gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D (Doppel)" },
-  "4.9.1": { planName: "STR 9", gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)" },
-  "4.9.2": { planName: "STR 13", gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)" },
-  "4.10.1":{ planName: "STR 10", gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)" },
-  "4.10.2":{ planName: "STR 14", gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)" },
-  "4.11.1":{ planName: "STR 15", gak: "GAK 4.2", mod: 20, stat: "JA", note: "Fläche D (10 mm²)" },
-  "4.12.1":{ planName: "STR 16", gak: "GAK 4.2", mod: 20, stat: "JA", note: "Fläche D (10 mm²)" },
-
-  // WR 5 (18 Strings: MPPT 1-2 & 7-10 doppelt)
-  "5.1.1": { planName: "STR 1", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E (Doppel)" },
-  "5.1.2": { planName: "STR 3", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E (Doppel)" },
-  "5.2.1": { planName: "STR 2", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E (Doppel)" },
-  "5.2.2": { planName: "STR 4", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E (Doppel)" },
-  "5.3.1": { planName: "STR 5", gak: "GAK 5.1", mod: 17, stat: "JA", note: "Fläche E" },
-  "5.4.1": { planName: "STR 6", gak: "GAK 5.1", mod: 17, stat: "JA", note: "Fläche E" },
-  "5.5.1": { planName: "STR 7", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E" },
-  "5.6.1": { planName: "STR 8", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E" },
-  "5.7.1": { planName: "STR 9", gak: "GAK 5.1", mod: 13, stat: "JA", note: "Fläche E (Doppel)" },
-  "5.7.2": { planName: "STR 10", gak: "GAK 5.1", mod: 13, stat: "JA", note: "Fläche E (Doppel)" },
-  "5.8.1": { planName: "STR 11", gak: "GAK 5.1", mod: 18, stat: "JA", note: "Fläche E (Doppel)" },
-  "5.8.2": { planName: "STR 12", gak: "GAK 5.1", mod: 18, stat: "JA", note: "Fläche E (Doppel)" },
-  "5.9.1": { planName: "STR 13", gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (Doppel)" },
-  "5.9.2": { planName: "STR 15", gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (10 mm²)" },
-  "5.10.1":{ planName: "STR 14", gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (Doppel)" },
-  "5.10.2":{ planName: "STR 16", gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (10 mm²)" },
-  "5.11.1":{ planName: "STR 17", gak: "GAK 5.2", mod: 13, stat: "JA", note: "Fläche E (10 mm²)" },
-  "5.12.1":{ planName: "STR 18", gak: "GAK 5.2", mod: 13, stat: "JA", note: "Fläche E (10 mm²)" },
-
-  // WR 6 (16 Strings: MPPT 1-2 & 11-12 doppelt)
-  "6.1.1": { planName: "STR 1", gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.1.2": { planName: "STR 3", gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.2.1": { planName: "STR 2", gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.2.2": { planName: "STR 4", gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.3.1": { planName: "STR 5", gak: "GAK 6.2", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.4.1": { planName: "STR 6", gak: "GAK 6.2", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.5.1": { planName: "STR 7", gak: "GAK 6.2", mod: 20, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.6.1": { planName: "STR 8", gak: "GAK 6.2", mod: 20, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.7.1": { planName: "STR 9", gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.8.1": { planName: "STR 10", gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.9.1": { planName: "STR 11", gak: "GAK 6.2", mod: 17, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.10.1":{ planName: "STR 12", gak: "GAK 6.2", mod: 17, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.11.1":{ planName: "STR 13", gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.11.2":{ planName: "STR 15", gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.12.1":{ planName: "STR 14", gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
-  "6.12.2":{ planName: "STR 16", gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" }
+// ── DIE STRENG CHRONOLOGISCHE AUFTEILUNG (KEINE ZAHLENSPRÜNGE MEHR!) ──
+const STRICT_CHRONO_PLAN = {
+  // WR 1: STR 1 bis 12 sauber auf 1.1.1 bis 1.12.1
+  1: [
+    { p: 1,  m: 23, g: 1, n: "Fläche A" },
+    { p: 2,  m: 23, g: 1, n: "Fläche A" },
+    { p: 3,  m: 22, g: 1, n: "Fläche A" },
+    { p: 4,  m: 22, g: 1, n: "Fläche A" },
+    { p: 5,  m: 21, g: 1, n: "Fläche A" },
+    { p: 6,  m: 21, g: 1, n: "Fläche A" },
+    { p: 7,  m: 21, g: 1, n: "Fläche A" },
+    { p: 8,  m: 21, g: 1, n: "Fläche A" },
+    { p: 9,  m: 20, g: 2, n: "Fläche A" },
+    { p: 10, m: 20, g: 2, n: "Fläche A" },
+    { p: 11, m: 21, g: 2, n: "Fläche A" },
+    { p: 12, m: 21, g: 2, n: "Fläche A" }
+  ],
+  // WR 2: STR 1 bis 14 lückenlos (1&2 auf MPPT 1, 3&4 auf MPPT 2, 5..14 auf MPPT 3..12)
+  2: [
+    { p: 1,  m: 13, g: 1, n: "Fläche B" },
+    { p: 2,  m: 13, g: 1, n: "Fläche B" },
+    { p: 3,  m: 21, g: 1, n: "Fläche B" },
+    { p: 4,  m: 21, g: 1, n: "Fläche B" },
+    { p: 5,  m: 20, g: 2, n: "Fläche B" },
+    { p: 6,  m: 20, g: 2, n: "Fläche B" },
+    { p: 7,  m: 21, g: 2, n: "Fläche B" },
+    { p: 8,  m: 21, g: 2, n: "Fläche B" },
+    { p: 9,  m: 21, g: 2, n: "Fläche B" },
+    { p: 10, m: 21, g: 2, n: "Fläche B" },
+    { p: 11, m: 14, g: 2, n: "Fläche B (10 mm²)" },
+    { p: 12, m: 14, g: 2, n: "Fläche B (10 mm²)" },
+    { p: 13, m: 18, g: 2, n: "Fläche B (10 mm²)" },
+    { p: 14, m: 18, g: 2, n: "Fläche B (10 mm²)" }
+  ],
+  // WR 3: STR 1 bis 18 lückenlos (1..12 auf MPPT 1..6 doppelt, 13..18 auf MPPT 7..12 einzeln)
+  3: [
+    { p: 1,  m: 13, g: 1, n: "Fläche C" },
+    { p: 2,  m: 13, g: 1, n: "Fläche C" },
+    { p: 3,  m: 16, g: 1, n: "Fläche C" },
+    { p: 4,  m: 16, g: 1, n: "Fläche C" },
+    { p: 5,  m: 16, g: 1, n: "Fläche C" },
+    { p: 6,  m: 16, g: 1, n: "Fläche C" },
+    { p: 7,  m: 23, g: 1, n: "Fläche C" },
+    { p: 8,  m: 23, g: 1, n: "Fläche C" },
+    { p: 9,  m: 23, g: 1, n: "Fläche C" },
+    { p: 10, m: 23, g: 1, n: "Fläche C" },
+    { p: 11, m: 8,  g: 1, n: "Fläche C" },
+    { p: 12, m: 8,  g: 1, n: "Fläche C" },
+    { p: 13, m: 16, g: 2, n: "Fläche C" },
+    { p: 14, m: 16, g: 2, n: "Fläche C" },
+    { p: 15, m: 16, g: 2, n: "Fläche C" },
+    { p: 16, m: 16, g: 2, n: "Fläche C" },
+    { p: 17, m: 15, g: 2, n: "Fläche C" },
+    { p: 18, m: 15, g: 2, n: "Fläche C" }
+  ],
+  // WR 4: STR 1 bis 16 lückenlos (1..8 auf MPPT 1..4 doppelt, 9..16 auf MPPT 5..12 einzeln)
+  4: [
+    { p: 1,  m: 16, g: 1, n: "Fläche D" },
+    { p: 2,  m: 16, g: 1, n: "Fläche D" },
+    { p: 3,  m: 23, g: 1, n: "Fläche D" },
+    { p: 4,  m: 23, g: 1, n: "Fläche D" },
+    { p: 5,  m: 8,  g: 1, n: "Fläche D" },
+    { p: 6,  m: 8,  g: 1, n: "Fläche D" },
+    { p: 7,  m: 16, g: 2, n: "Fläche D" },
+    { p: 8,  m: 16, g: 2, n: "Fläche D" },
+    { p: 9,  m: 16, g: 2, n: "Fläche D" },
+    { p: 10, m: 16, g: 2, n: "Fläche D" },
+    { p: 11, m: 23, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 12, m: 23, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 13, m: 23, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 14, m: 23, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 15, m: 20, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 16, m: 20, g: 2, n: "Fläche D (10 mm²)" }
+  ],
+  // WR 5: STR 1 bis 18 lückenlos (1..12 auf MPPT 1..6 doppelt, 13..18 auf MPPT 7..12 einzeln)
+  5: [
+    { p: 1,  m: 22, g: 1, n: "Fläche E" },
+    { p: 2,  m: 22, g: 1, n: "Fläche E" },
+    { p: 3,  m: 22, g: 1, n: "Fläche E" },
+    { p: 4,  m: 22, g: 1, n: "Fläche E" },
+    { p: 5,  m: 17, g: 1, n: "Fläche E" },
+    { p: 6,  m: 17, g: 1, n: "Fläche E" },
+    { p: 7,  m: 22, g: 1, n: "Fläche E" },
+    { p: 8,  m: 22, g: 1, n: "Fläche E" },
+    { p: 9,  m: 13, g: 1, n: "Fläche E" },
+    { p: 10, m: 13, g: 1, n: "Fläche E" },
+    { p: 11, m: 18, g: 1, n: "Fläche E" },
+    { p: 12, m: 18, g: 1, n: "Fläche E" },
+    { p: 13, m: 17, g: 2, n: "Fläche E" },
+    { p: 14, m: 17, g: 2, n: "Fläche E" },
+    { p: 15, m: 17, g: 2, n: "Fläche E (10 mm²)" },
+    { p: 16, m: 17, g: 2, n: "Fläche E (10 mm²)" },
+    { p: 17, m: 13, g: 2, n: "Fläche E (10 mm²)" },
+    { p: 18, m: 13, g: 2, n: "Fläche E (10 mm²)" }
+  ],
+  // WR 6: STR 1 bis 16 lückenlos (1..8 auf MPPT 1..4 doppelt, 9..16 auf MPPT 5..12 einzeln)
+  6: [
+    { p: 1,  m: 23, g: 1, n: "Fläche F (10 mm²)" },
+    { p: 2,  m: 23, g: 1, n: "Fläche F (10 mm²)" },
+    { p: 3,  m: 23, g: 1, n: "Fläche F (10 mm²)" },
+    { p: 4,  m: 23, g: 1, n: "Fläche F (10 mm²)" },
+    { p: 5,  m: 23, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 6,  m: 23, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 7,  m: 20, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 8,  m: 20, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 9,  m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 10, m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 11, m: 17, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 12, m: 17, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 13, m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 14, m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 15, m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 16, m: 18, g: 2, n: "Fläche F (10 mm²)" }
+  ]
 };
 
-// FACTORY PROJEKT KONFIGURATION (LÄDT GENAU DAS GÜLTIGE ARRAY)
-function loadFreshMatrix(){
-  const pr = {
-    id: "PV_MAN_P52",
-    standort: "PV MAN P52",
-    pruefer: "Christoph Huber",
-    modulWp: 465,
-    mppts: [12,12,12,12,12,12]
-  };
+// ERZEUGT DIE PERFEKTE 144-SLOT MATRIX OHNE FEHLER
+function generateStrictState(){
+  const result = {};
+  [1, 2, 3, 4, 5, 6].forEach(wr => {
+    const list = STRICT_CHRONO_PLAN[wr];
+    const totalStrings = list.length;
+    const doubleCount = Math.max(0, totalStrings - 12); // z.B. 14-12 = 2 Pärchen
+    let ptr = 0;
 
-  pr.inverters = [1,2,3,4,5,6].map(wr => {
-    const arr = [];
     for(let m = 1; m <= 12; m++){
-      for(let s = 1; s <= 2; s++){
-        const fid = `${wr}.${m}.${s}`;
-        const template = SLD_PLAN[fid] || { planName: "", gak: `GAK ${wr}.${m <= 6 ? '1':'2'}`, mod: 0, stat: "NEIN", note: "" };
-        arr.push({
-          mppt: m,
-          in: s,
-          planName: template.planName,
-          planGak: template.gak,
-          planMod: template.mod,
-          planStat: template.stat,
-          planNote: template.note,
-          gak: template.gak,
-          mod: template.mod,  // <<< Dieser Parameter zwingt die exakten "Modul" Anzahlen rein
-          stat: template.stat, // <<< Erzwingt JA bei echten Strings, und "NEIN" bei freigelassenen .2 !
-          note: template.note,
-          uoc: "", isc: "", riso: ""
-        });
+      if(m <= doubleCount){
+        // MPPT ist doppelt belegt: .1 und .2 bekommen STR (ptr+1) und STR (ptr+2)
+        const s1 = list[ptr++];
+        const s2 = list[ptr++];
+        result[`${wr}.${m}.1`] = { planName: `STR ${s1.p}`, gak: `GAK ${wr}.${s1.g}`, mod: s1.m, stat: "JA", note: s1.n || "" };
+        result[`${wr}.${m}.2`] = { planName: `STR ${s2.p}`, gak: `GAK ${wr}.${s2.g}`, mod: s2.m, stat: "JA", note: s2.n || "" };
+      } else {
+        // MPPT ist einzeln belegt: .1 bekommt STR (ptr+1), .2 ist frei
+        if(ptr < totalStrings){
+          const s1 = list[ptr++];
+          result[`${wr}.${m}.1`] = { planName: `STR ${s1.p}`, gak: `GAK ${wr}.${s1.g}`, mod: s1.m, stat: "JA", note: s1.n || "" };
+          result[`${wr}.${m}.2`] = { planName: "", gak: `GAK ${wr}.${s1.g}`, mod: 0, stat: "NEIN", note: "" };
+        } else {
+          result[`${wr}.${m}.1`] = { planName: "", gak: `GAK ${wr}.2`, mod: 0, stat: "NEIN", note: "" };
+          result[`${wr}.${m}.2`] = { planName: "", gak: `GAK ${wr}.2`, mod: 0, stat: "NEIN", note: "" };
+        }
       }
     }
-    return { wr: wr, name: `SMA Sunny Tripower 125 (WR ${wr})`, strings: arr };
   });
-
-  return pr;
+  return result;
 }
 
-let PROJECT = loadFreshMatrix();
+let APP_STATE = generateStrictState();
 
-// EXTREMER RESET (Überbügelt ALLES - lokal und Remote - mit den Basiswerten)
-async function factoryResetCloud(){
-  if(!confirm("Achtung: Dies setzt PV MAN P52 im kompletten Firmennetz (Büro und Cloud) sofort wieder in den Urzustand des THE CONSULTING-Montageplans zurück. Alle alten, verschobenen Cloud-Speicherstände verschwinden damit! Bist du dir sicher?")) return;
-  
-  localStorage.removeItem('sp_local_backup');
-  PROJECT = loadFreshMatrix(); // Reset App
-  renderTables();
-  
-  if(!supabaseClient) return toast('Lokaler Reset ok - Für Cloud-Reset bitte erst Verbindung herstellen');
-
-  try {
-    await supabaseClient.from('pv_projects').upsert({
-      id: "PV_MAN_P52",
-      name: "PV MAN P52",
-      pruefer: "Christoph Huber",
-      modul_wp: 465,
-      data: collectCurrentMeasurements(), // Collect den sauberen aktuellen Nullzustand!
-      updated_at: new Date().toISOString()
+function renderMatrix(remoteOverride){
+  if(remoteOverride){
+    Object.keys(remoteOverride).forEach(k => {
+      if(APP_STATE[k]){
+        APP_STATE[k].gak = remoteOverride[k].gak !== undefined ? remoteOverride[k].gak : APP_STATE[k].gak;
+        APP_STATE[k].mod = remoteOverride[k].mod !== undefined ? remoteOverride[k].mod : APP_STATE[k].mod;
+        APP_STATE[k].stat = remoteOverride[k].stat || APP_STATE[k].stat;
+        APP_STATE[k].uoc = remoteOverride[k].uoc || "";
+        APP_STATE[k].isc = remoteOverride[k].isc || "";
+        APP_STATE[k].riso = remoteOverride[k].riso || "";
+        APP_STATE[k].note = remoteOverride[k].note || APP_STATE[k].note;
+      }
     });
-    toast('✅ CLOUD-GHOSTS GETILGT! Ab jetzt arbeitet ihr 100% sauber.');
-  } catch(e) {}
-}
+  }
 
-
-// APP BERECHNUNGS LOGIK 
-function renderTables(){
   const container = g('tables');
   container.innerHTML = '';
 
-  PROJECT.inverters.forEach(inv => {
-    let wrap = document.createElement('div');
-    wrap.className = 'wr-block';
-    
-    let htmlTrs = '';
-    let currMPPT = -1;
+  [1, 2, 3, 4, 5, 6].forEach(wr => {
+    const bl = document.createElement('div');
+    bl.className = 'wr-block';
 
-    inv.strings.forEach(s => {
-      let fID = `${inv.wr}.${s.mppt}.${s.in}`;
-      let divider = (currMPPT !== -1 && currMPPT !== s.mppt) ? "mppt-div" : "";
-      currMPPT = s.mppt;
-      
-      let rowGreyed = (s.stat === 'NEIN') ? 'row-nein' : '';
-      let activePwr = (s.stat === 'JA' && s.mod > 0) ? ((s.mod * PROJECT.modulWp)/1000).toFixed(2) : "0.00";
-      
-      let planPille = (s.planStat === "JA") 
-          ? `<span class="plan-badge plan-badge-green">${s.planName||'-'} &middot; ${s.planMod}M</span>` 
-          : `<span class="plan-badge">-- FREI --</span>`;
+    let rowsHtml = '';
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const item = APP_STATE[fullId];
+        const isMpptDiv = (s === 1 && m > 1);
+        const isNein = (item.stat === 'NEIN');
+        const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * MODEL_WP)/1000).toFixed(2) + ' kWp' : '—';
+        const planBadge = (item.planName)
+          ? `<span class="plan-badge plan-badge-green"><b>${item.planName}</b> · ${item.mod}M · ${item.gak}</span>`
+          : `<span class="plan-badge" style="opacity:0.35;">Freier Eingang</span>`;
 
-      htmlTrs += `
-        <tr id="r_${fID}" class="${divider} ${rowGreyed}">
-          <td data-label="Klemme (Ist)" style="text-align:left;padding-left:14px;"><span class="string-id">${fID}</span> <span style="font-size:0.6rem;color:#64748b;">M${s.mppt}.${s.in}</span></td>
-          <td data-label="Planung (Soll)" class="no-print" style="text-align:left;">${planPille}</td>
-          <td data-label="GAK (Ist)">
-            <input type="text" id="g_${fID}" value="${s.gak}" class="sp-inp sp-inp-gak" style="width:70px;">
-          </td>
-          <td data-label="Aktiv" class="no-print">
-            <div class="tog-wrap">
-              <button id="tj_${fID}" class="tog ${s.stat==='JA'?'on-ja':''}" onclick="setBool('${fID}','JA')">JA</button>
-              <button id="tn_${fID}" class="tog ${s.stat==='NEIN'?'on-nei':''}" onclick="setBool('${fID}','NEIN')">NEIN</button>
-            </div>
-            <input type="hidden" id="st_${fID}" value="${s.stat}">
-          </td>
-          <td data-label="Module">
-            <input type="number" inputmode="numeric" id="m_${fID}" value="${s.mod>0 ? s.mod:''}" class="sp-inp" style="width:50px;" oninput="applyModuleSync('${fID}', this.value)">
-          </td>
-          <td data-label="Leistung kWp" style="font-weight:900;color:var(--green);font-family:monospace;" id="pw_${fID}">${s.stat==='JA' && s.mod>0 ? activePwr : '—'}</td>
-          <td data-label="Uoc (V)"><input type="text" inputmode="decimal" id="uo_${fID}" value="${s.uoc||''}" placeholder="V" class="sp-inp" style="width:58px;"></td>
-          <td data-label="Isc (A)"><input type="text" inputmode="decimal" id="is_${fID}" value="${s.isc||''}" placeholder="A" class="sp-inp" style="width:58px;"></td>
-          <td data-label="Riso (MΩ)"><input type="text" inputmode="decimal" id="ri_${fID}" value="${s.riso||''}" placeholder="MΩ" class="sp-inp" style="width:58px;"></td>
-          <td data-label="Info (Bemerk.)"><input type="text" id="no_${fID}" value="${s.note||''}" class="sp-inp" style="width:100%;text-align:left;"></td>
-        </tr>`;
-    });
+        rowsHtml += `
+          <tr id="row-${fullId}" class="${isMpptDiv ? 'mppt-div' : ''} ${isNein ? 'row-nein' : ''}">
+            <td data-label="Klemme" style="padding-left:14px;text-align:left;">
+              <span class="string-id">${fullId}</span>
+              <span style="font-size:0.62rem;color:#64748b;margin-left:4px;">(M${m}.${s})</span>
+            </td>
+            <td data-label="Plan-Soll (SLD)" class="no-print" style="text-align:left;">
+              ${planBadge}
+            </td>
+            <td data-label="GAK (Ist)">
+              <input type="text" id="gak-${fullId}" value="${item.gak}" class="sp-inp sp-inp-gak" oninput="saveLocal()">
+              <span class="print-cell" style="color:#3d5800;">${item.gak}</span>
+            </td>
+            <td data-label="Aktiv" class="no-print">
+              <div class="tog-wrap">
+                <button id="tja-${fullId}" class="tog ${item.stat==='JA'?'on-ja':''}" onclick="setStatus('${fullId}','JA')">JA</button>
+                <button id="tnei-${fullId}" class="tog ${item.stat==='NEIN'?'on-nei':''}" onclick="setStatus('${fullId}','NEIN')">NEIN</button>
+              </div>
+              <input type="hidden" id="stat-${fullId}" value="${item.stat}">
+            </td>
+            <td data-label="Module">
+              <input type="number" inputmode="numeric" id="mod-${fullId}" value="${item.mod > 0 ? item.mod : ''}" class="sp-inp" style="width:50px;" oninput="onModInput('${wr}','${m}','${s}',this.value)">
+              <span class="print-cell" id="pm-${fullId}">${item.mod > 0 ? item.mod : '—'}</span>
+            </td>
+            <td data-label="Leistung" class="pwr-cell" id="pw-${fullId}">${pwr}</td>
+            <td data-label="Uoc (V)"><input type="text" inputmode="decimal" id="uoc-${fullId}" value="${item.uoc||''}" placeholder="V" class="sp-inp" style="width:60px;" oninput="saveLocal()"></td>
+            <td data-label="Isc (A)"><input type="text" inputmode="decimal" id="isc-${fullId}" value="${item.isc||''}" placeholder="A" class="sp-inp" style="width:60px;" oninput="saveLocal()"></td>
+            <td data-label="Riso (MΩ)"><input type="text" inputmode="decimal" id="riso-${fullId}" value="${item.riso||''}" placeholder="MΩ" class="sp-inp" style="width:60px;" oninput="saveLocal()"></td>
+            <td data-label="Info" class="col-note" style="text-align:left;">
+              <input type="text" id="note-${fullId}" value="${item.note||''}" class="sp-inp" style="width:100%;text-align:left;" oninput="saveLocal()">
+              <span class="print-cell" style="font-size:7pt;color:#475569;">${item.note||''}</span>
+            </td>
+          </tr>`;
+      }
+    }
 
-    wrap.innerHTML = `
+    bl.innerHTML = `
       <div class="wr-head">
-        <div><span class="wr-num">WR ${inv.wr}</span><span style="font-size:0.8rem;font-weight:700;color:#f0f4f8;text-transform:uppercase;margin-left:6px;">${inv.name}</span></div>
-        <div class="wr-kpis"><span id="wm_${inv.wr}">0</span> Module &middot; <span id="wp_${inv.wr}" style="color:var(--green);">0.00</span> kWp</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="wr-num">WR ${wr}</span>
+          <span style="font-weight:800;font-size:0.88rem;color:#f0f4f8;">SMA Sunny Tripower 125 (WR ${wr})</span>
+        </div>
+        <div class="wr-kpis">
+          <span id="wr-mod-${wr}">0</span> Module &middot; <span id="wr-pwr-${wr}" style="color:#a8cc35;">0.00 kWp</span>
+        </div>
       </div>
       <div style="overflow-x:auto;">
-      <table class="mt">
-        <thead>
-          <tr>
-            <th style="width:11%;text-align:left;padding-left:14px;">Ist Klemme</th>
-            <th class="no-print" style="width:12%;text-align:left;">Plan-Soll (Montage)</th>
-            <th style="width:8%;">GAK</th>
-            <th class="no-print" style="width:11%;">Sammelplatz</th>
-            <th style="width:6%;">Module</th>
-            <th style="width:10%;">Leistung (kWp)</th>
-            <th style="width:7%;">Uoc (V)</th>
-            <th style="width:7%;">Isc (A)</th>
+        <table class="mt">
+          <thead><tr>
+            <th style="width:14%;padding-left:14px;text-align:left;">Klemme (WR.M.In)</th>
+            <th class="no-print" style="width:15%;text-align:left;">Plan-Soll (Chronologisch)</th>
+            <th style="width:9%;">GAK</th>
+            <th class="no-print" style="width:8%;">Aktiv</th>
+            <th style="width:7%;">Module</th>
+            <th style="width:10%;">Leistung</th>
+            <th style="width:8%;">Uoc (V)</th>
+            <th style="width:8%;">Isc (A)</th>
             <th style="width:8%;">Riso (MΩ)</th>
-            <th style="width:20%;text-align:left;">String INFO</th>
-          </tr>
-        </thead>
-        <tbody>${htmlTrs}</tbody>
-      </table>
+            <th style="width:14%;text-align:left;">Bemerkung</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
       </div>`;
-    container.appendChild(wrap);
+    container.appendChild(bl);
   });
-  
-  refreshGlobalKpis();
+
+  updateKpis();
 }
 
-function setBool(id, choice){
-  g(`st_${id}`).value = choice;
-  if(choice === "JA"){ g(`tj_${id}`).classList.add("on-ja"); g(`tn_${id}`).classList.remove("on-nei"); g(`r_${id}`).classList.remove("row-nein"); }
-  else { g(`tj_${id}`).classList.remove("on-ja"); g(`tn_${id}`).classList.add("on-nei"); g(`r_${id}`).classList.add("row-nein"); }
-  refreshGlobalKpis();
-}
+function onModInput(wr, mppt, input, val){
+  const partnerInput = (input === '1') ? '2' : '1';
+  const partnerId = `${wr}.${mppt}.${partnerInput}`;
+  const partnerStat = g('stat-' + partnerId);
+  const partnerEl = g('mod-' + partnerId);
 
-function applyModuleSync(fID, amount){
-  // Ermittelt partner Klemme 5.12.1 <-> 5.12.2 (Gleiche MPPT logik!)
-  let ps = fID.split(".");
-  let partnerNum = (ps[2]==='1') ? '2' : '1';
-  let partnerId = `${ps[0]}.${ps[1]}.${partnerNum}`;
-
-  let stEl = g(`st_${partnerId}`);
-  let pEl = g(`m_${partnerId}`);
-  if(pEl && stEl && stEl.value==='JA'){
-    pEl.value = amount;
+  // Parallele Doppelbelegung automatisch synchronisieren
+  if(partnerEl && partnerStat && partnerStat.value === 'JA'){
+    partnerEl.value = val;
+    recalcRow(partnerId);
   }
-  refreshGlobalKpis();
+  recalcRow(`${wr}.${mppt}.${input}`);
+  saveLocal();
 }
 
-function refreshGlobalKpis(){
-  let globalM = 0; let globalP = 0; let sloti = 0;
-  
-  for(let w = 1; w<=6; w++){
-    let wm = 0; let wp = 0;
-    for(let mp = 1; mppt <= 12; mp++){
-       [1,2].forEach(ii => {
-         let fid = `${w}.${mp}.${ii}`;
-         let el_s = g(`st_${fid}`);
-         if(!el_s) return;
-         let val = parseFloat(g(`m_${fid}`).value)||0;
-         
-         let pt = 0;
-         if(el_s.value === "JA") {
-            if(val>0){ sloti++; pt=(val*PROJECT.modulWp)/1000; wm+=val; wp+=pt; globalM+=val; globalP+=pt;}
-            g(`pw_${fid}`).textContent = val>0 ? pt.toFixed(2): '—';
-         } else {
-            g(`pw_${fid}`).textContent = '—';
-         }
-       });
-    }
-    // Update local inverter head
-    let pR_M = g(`wm_${w}`); if(pR_M) pR_M.textContent = wm;
-    let pR_P = g(`wp_${w}`); if(pR_P) pR_P.textContent = wp.toFixed(2);
-  }
-  g("d-mods").textContent = globalM;
-  g("d-pwr").textContent = globalP.toFixed(2);
-  g("d-act").textContent = sloti;
+function setStatus(id, st){
+  g('stat-'+id).value = st;
+  const ja = g('tja-'+id), nei = g('tnei-'+id);
+  if(st === 'JA'){ ja.className = 'tog on-ja'; nei.className = 'tog'; }
+  else { nei.className = 'tog on-nei'; ja.className = 'tog'; }
+  recalcRow(id);
+  saveLocal();
 }
 
-// TOGGLE VIEWS
-function toggleSunMode(){
-  document.body.classList.toggle('sun-mode');
-  localStorage.setItem('solpro_sun_mode', document.body.classList.contains('sun-mode') ? '1' : '0');
-}
-function filterInverter(n, btn){
-  document.querySelectorAll('.wr-tab').forEach(b => b.classList.remove('active')); btn.classList.add('active');
-  const dbs = document.querySelectorAll('.wr-block');
-  dbs.forEach((d,i)=>{ d.style.display = (n===0 || i+1===n) ? 'block' : 'none'; });
-}
+function recalcRow(id){
+  const st = g('stat-'+id).value;
+  const mod = parseFloat(g('mod-'+id).value) || 0;
+  const row = g('row-'+id);
+  const pw = g('pw-'+id);
+  const pm = g('pm-'+id);
 
-// ── MANUAL SYNC MIT DATENSAMMLER  ──
-function collectCurrentMeasurements(){
-  const obj = {};
-  for(let w=1; w<=6; w++){
-    for(let m=1; m<=12; m++){
-       for(let i=1; i<=2; i++){
-          let id = `${w}.${m}.${i}`;
-          let gSt = g(`st_${id}`);
-          if(gSt){
-             obj[id] = {
-               stat: gSt.value,
-               gak: g(`g_${id}`).value,
-               mod: g(`m_${id}`).value,
-               uoc: g(`uo_${id}`).value,
-               isc: g(`is_${id}`).value,
-               riso: g(`ri_${id}`).value,
-               note: g(`no_${id}`).value
-             }
-          }
-       }
-    }
-  }
-  return obj;
-}
-
-async function pushToCloud(){
-  if(!supabaseClient) return;
-  toast("☁️ Speichere im Projekt in Cloud...");
-  let pd = collectCurrentMeasurements();
-  localStorage.setItem("sp_pvm_backup", JSON.stringify(pd));
-  try {
-     const { error } = await supabaseClient.from('pv_projects').upsert({ id: "PV_MAN_P52", name: "PV MAN P52", pruefer: "Christoph Huber", data: pd, modul_wp: 465 });
-     if(error) throw "Net Error";
-     toast("✅ Plan & Werte online verriegelt.");
-     g("cloud-text").textContent = "Gespeichert!";
-     g("cloud-dot").className = "status-dot dot-green";
-  }catch(e){ toast("Keine Datenverbindung!"); }
-}
-
-async function fetchCloudProject(){
-  if(!supabaseClient) return;
-  toast("📥 Rufe Serverzustand...");
-  try {
-    let { data, error } = await supabaseClient.from("pv_projects").select("data").eq("id","PV_MAN_P52").single();
-    if(data && data.data) {
-        let xms = data.data;
-        Object.keys(xms).forEach(ik => {
-            let cx = xms[ik];
-            if(g(`st_${ik}`)){
-                g(`g_${ik}`).value = cx.gak || "";
-                g(`m_${ik}`).value = cx.mod || "";
-                g(`uo_${ik}`).value = cx.uoc || "";
-                g(`is_${ik}`).value = cx.isc || "";
-                g(`ri_${ik}`).value = cx.riso || "";
-                g(`no_${ik}`).value = cx.note || "";
-                setBool(ik, cx.stat||'JA');
-            }
-        });
-        toast("Download beendet - Display aktualisiert");
+  if(st === 'NEIN'){
+    row.classList.add('row-nein');
+    pw.textContent = '—';
+    if(pm) pm.textContent = '—';
+  } else {
+    row.classList.remove('row-nein');
+    if(mod > 0){
+      pw.textContent = ((mod * MODEL_WP)/1000).toFixed(2) + ' kWp';
+      if(pm) pm.textContent = mod;
     } else {
-        toast("DB Eintrag leer! Klicke 'Plan-Reset' zum Neustart.");
+      pw.textContent = '—';
+      if(pm) pm.textContent = '—';
     }
-  }catch(ex){ }
+  }
+  updateKpis();
 }
 
-// ── COMPACT MONTAGEPLAN-PRINT. DIE WAFFE. ──
-function printMontagePlan(){
-  let doc = window.open('', '_blank');
-  let printRows = "";
+function updateKpis(){
+  let totMods = 0, totPwr = 0, totActive = 0;
 
-  PROJECT.inverters.forEach(w =>{
-    let hasActiv = w.strings.filter(e => e.planStat==="JA" || g(`st_${w.wr}.${e.mppt}.${e.in}`)?.value==="JA").length;
-    if(hasActiv===0) return;
-    printRows += `<tr><td colspan="3" style="font-weight:900; background:#334155; color:#fff; font-size:18pt; padding:15px; border-bottom:3px solid #111;">🔌 ${w.name} - ANSCHLÜSSE BELEGT:</td></tr>`;
-    w.strings.forEach(st => {
-      let ix = `${w.wr}.${st.mppt}.${st.in}`;
-      let cxIsOn = (g(`st_${ix}`).value==="JA");
-      if(st.planStat!=="JA" && !cxIsOn) return; 
+  for(let wr = 1; wr <= 6; wr++){
+    let wrM = 0, wrP = 0;
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const st = g('stat-'+fullId);
+        if(st && st.value === 'JA'){
+          const mod = parseFloat((g('mod-'+fullId)||{}).value) || 0;
+          const pwr = (mod * MODEL_WP) / 1000;
+          wrM += mod; wrP += pwr;
+          totMods += mod; totPwr += pwr;
+          if(mod > 0) totActive++;
+        }
+      }
+    }
+    const wm = g(`wr-mod-${wr}`), wp = g(`wr-pwr-${wr}`);
+    if(wm) wm.textContent = wrM;
+    if(wp) wp.textContent = wrP.toFixed(2) + ' kWp';
+  }
 
-      // Fallback
-      let labelP = st.planName ? `Plan: ${st.planName}` : `FREMD / Nachgerüstet!`;
-      let gName = g(`g_${ix}`).value || st.planGak;
-      
-      printRows += `
-      <tr>
-         <td style="font-size:15pt;font-weight:800;padding:12px;border:2px solid #64748b;color:#1d4ed8;">${labelP} <br><span style="font-size:10pt;font-weight:400;color:#000;">-> in</span></td>
-         <td style="font-size:22pt;font-weight:900;font-family:monospace;border:2px solid #64748b;color:#166534;background:#f0fdf4;">${ix}</td>
-         <td style="font-size:16pt;font-weight:800;border:2px solid #64748b;">${gName} <br><span style="font-size:9pt;font-weight:500;">(${st.planMod} Mod)</span></td>
-      </tr>`;
+  g('d-mods').textContent = totMods;
+  g('d-pwr').textContent = totPwr.toFixed(2);
+  g('d-act').textContent = totActive;
+}
+
+function saveLocal(){
+  const payload = collectData();
+  localStorage.setItem('sp_local_backup_chrono', JSON.stringify(payload));
+}
+
+function collectData(){
+  const payload = {};
+  for(let wr = 1; wr <= 6; wr++){
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        payload[fullId] = {
+          gak: (g('gak-'+fullId)||{}).value || "",
+          stat: (g('stat-'+fullId)||{}).value || "NEIN",
+          mod: parseFloat((g('mod-'+fullId)||{}).value) || 0,
+          uoc: (g('uoc-'+fullId)||{}).value || "",
+          isc: (g('isc-'+fullId)||{}).value || "",
+          riso: (g('riso-'+fullId)||{}).value || "",
+          note: (g('note-'+fullId)||{}).value || ""
+        };
+      }
+    }
+  }
+  return payload;
+}
+
+// ── MANUELLER CLOUD SYNC: NUR AUF KNOPFDRUCK! ──
+async function pushCloudDataManually(){
+  if(!supabaseClient) return toast('Keine Cloud-Verbindung konfiguriert');
+  toast('☁️ Lade Daten in Supabase hoch...');
+  try {
+    const { error } = await supabaseClient.from('pv_projects').upsert({
+      id: PROJECT_ID,
+      name: "PV MAN P52",
+      pruefer: "Christoph Huber / Sven",
+      modul_wp: MODEL_WP,
+      mppts: "12,12,12,12,12,12",
+      data: collectData(),
+      updated_at: new Date().toISOString()
     });
-  });
-
-  doc.document.write(`
-   <html>
-    <head><title>Anschluss Plan & Montage MAN</title></head>
-    <body onload="window.print()" style="font-family:sans-serif; margin:15px; color:#111;">
-      <h1 style="font-size:32px;text-transform:uppercase;">MONTAGE UND ANSCHLUSS VOR ORT - WR.KLEMMEN:</h1>
-      <p style="font-size:14pt;">BvH PV MAN P52 - Bitte strikt an Wechselrichterbeschriftung (Eingang M1.1 bis M12.2) stecken.</p>
-      <table style="width:100%;text-align:center;border-collapse:collapse;">${printRows}</table>
-    </body>
-   </html>
-  `);
-  doc.document.close();
+    if(!error){
+      saveLocal();
+      toast('✅ Daten erfolgreich in Supabase gespeichert!');
+    } else {
+      toast('Fehler beim Speichern in Cloud');
+    }
+  } catch(e) { toast('Verbindungsfehler zur Cloud'); }
 }
 
+async function fetchCloudDataManually(){
+  if(!supabaseClient) return toast('Keine Cloud-Verbindung');
+  toast('📥 Lade aktuellen Stand aus Cloud...');
+  try {
+    const { data, error } = await supabaseClient
+      .from('pv_projects')
+      .select('*')
+      .eq('id', PROJECT_ID)
+      .single();
+
+    if(data && data.data){
+      renderMatrix(data.data);
+      saveLocal();
+      toast('✅ Stand aus Cloud erfolgreich geladen');
+    } else {
+      toast('Cloud-Eintrag ist noch leer.');
+    }
+  } catch(e) { toast('Fehler beim Abrufen aus Cloud'); }
+}
+
+async function factoryResetCloud(){
+  if(!confirm("Achtung: Dies setzt den Plan 'PV MAN P52' auf die saubere chronologische 12-MPPT-Matrix zurück und überschreibt die alten Cloud-Daten. Fortfahren?")) return;
+  localStorage.removeItem('sp_local_backup_chrono');
+  APP_STATE = generateStrictState();
+  renderMatrix(null);
+  await pushCloudDataManually();
+  toast('✅ Plan sauber zurückgesetzt und in Cloud fixiert!');
+}
+
+// ── DRUCK-MONTAGEPLAN: 1 BLATT (A4) PRO WECHSELRICHTER! ──
+function printWRMontagePlan(){
+  let win = window.open('', '_blank');
+  let pagesHtml = '';
+
+  for(let wr = 1; wr <= 6; wr++){
+    let rowsHtml = '';
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const item = APP_STATE[fullId];
+        const st = (g('stat-'+fullId)||{}).value || item.stat;
+        if(st !== 'JA') continue; // Unbelegte Klemmen ausblenden
+
+        const mod = (g('mod-'+fullId)||{}).value || item.mod;
+        const gak = (g('gak-'+fullId)||{}).value || item.gak;
+        const planName = item.planName || `STR ?`;
+
+        rowsHtml += `
+          <tr>
+            <td style="padding:10px 14px;border:2px solid #334155;font-size:14pt;font-weight:800;color:#1e3a8a;">${planName}</td>
+            <td style="padding:10px 14px;border:2px solid #334155;font-size:16pt;font-weight:900;font-family:monospace;color:#15803d;background:#f0fdf4;text-align:center;">🔌 ${fullId}</td>
+            <td style="padding:10px 14px;border:2px solid #334155;font-size:13pt;font-weight:800;">${gak} <span style="font-size:10pt;font-weight:500;color:#475569;">(${mod} Mod.)</span></td>
+          </tr>`;
+      }
+    }
+
+    pagesHtml += `
+      <div style="page-break-after: always; padding-bottom: 20px;">
+        <h1 style="background:#0f172a;color:#fff;padding:12px 16px;border-radius:6px;font-size:16pt;margin:0 0 8px;">
+          WECHSELRICHTER ${wr} &middot; KABEL-MONTAGEPLAN
+        </h1>
+        <p style="margin:0 0 16px;font-size:10pt;color:#475569;">
+          <strong>Bauvorhaben:</strong> PV MAN P52 (Dachauer Str.) &middot; <strong>Gerät:</strong> SMA Sunny Tripower 125 (WR ${wr})
+        </p>
+        <table style="width:100%;border-collapse:collapse;text-align:left;">
+          <thead>
+            <tr style="background:#e2e8f0;">
+              <th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:35%;">Plan-String (SLD)</th>
+              <th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:35%;text-align:center;">WR-Klemme (Matrix)</th>
+              <th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:30%;">GAK</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+  }
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>SOLPRO | Montageplan PV MAN P52</title>
+      <style>
+        body { font-family: 'Inter', Arial, sans-serif; padding: 20px; color: #111; }
+        @media print { @page { size: A4 portrait; margin: 12mm; } }
+      </style>
+    </head>
+    <body onload="window.print()">
+      ${pagesHtml}
+    </body>
+    </html>
+  `);
+  win.document.close();
+}
+
+// ── EXPORT FUNKTIONEN (SmartScript & Excel) ──
+function exportSmartScriptExcel(){
+  const rows = [['Etikett']];
+  let cnt = 0;
+
+  for(let wr = 1; wr <= 6; wr++){
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const st = (g('stat-'+fullId)||{}).value || APP_STATE[fullId].stat;
+        if(st !== 'JA') continue;
+
+        const mod = parseFloat((g('mod-'+fullId)||{}).value) || APP_STATE[fullId].mod || 0;
+        if(mod <= 0) continue;
+
+        const gak = (g('gak-'+fullId)||{}).value || APP_STATE[fullId].gak;
+        const note = (g('note-'+fullId)||{}).value || APP_STATE[fullId].note || '';
+        const pwr = ((mod * MODEL_WP)/1000).toFixed(2).replace('.', ',');
+
+        const labelText = [
+          `BVH PV MAN P52`,
+          fullId,
+          gak,
+          `${mod} Module`,
+          `${pwr} kWp`,
+          note
+        ].filter(Boolean).join('\r\n');
+
+        rows.push([{ t: 's', v: labelText }]);
+        cnt++;
+      }
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 35 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Etiketten');
+  XLSX.writeFile(wb, `SmartScript_GAK-Pickerl_PV_MAN_P52.xlsx`);
+  toast(`${cnt} GAK-Pickerl exportiert`);
+}
+
+function exportStringNumbersExcel(){
+  const rows = [['String']];
+  let cnt = 0;
+
+  for(let wr = 1; wr <= 6; wr++){
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const st = (g('stat-'+fullId)||{}).value || APP_STATE[fullId].stat;
+        if(st !== 'JA') continue;
+        const mod = parseFloat((g('mod-'+fullId)||{}).value) || APP_STATE[fullId].mod || 0;
+        if(mod <= 0) continue;
+
+        rows.push([{ t: 's', v: fullId }]);
+        cnt++;
+      }
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 15 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'String-Nummern');
+  XLSX.writeFile(wb, `SmartScript_String-Nummern_PV_MAN_P52.xlsx`);
+  toast(`${cnt} String-Nummern exportiert`);
+}
 
 function doExcel(){
-  const rows = [[{t:'s', v:'Klemme ID (WR.M.I)'}, 'Zugehöriger GAK', 'Status Klemme', 'Soll Name/Bereich', 'Soll Modulanz.', 'Tats. Ist Module (Befüllt)', 'Riso in Ohm']];
-  
-  PROJECT.inverters.forEach(wx => {
-      wx.strings.forEach(ee =>{
-         let xI = `${wx.wr}.${ee.mppt}.${ee.in}`;
-         let el_stat = g(`st_${xI}`).value;
-         let amnt_mod = g(`m_${xI}`).value || "0";
-         rows.push([
-            {t:'s',v: xI}, g(`g_${xI}`).value||ee.planGak, el_stat, ee.planName||'-', ee.planMod||'-', amnt_mod, g(`ri_${xI}`).value||'' 
-         ]);
-      });
-  });
+  const rows = [
+    [{t:'s', v:'Klemme (WR.M.In)'}, 'Plan-String', 'GAK', 'Status', 'Module', 'Leistung (kWp)', 'Uoc (V)', 'Isc (A)', 'Riso (MOhm)', 'Bemerkung']
+  ];
 
-  let sht = XLSX.utils.aoa_to_sheet(rows);
-  let nbook = XLSX.utils.book_new();
-  sht['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 25 }, { wch: 12 }, { wch: 18 }];
-  XLSX.utils.book_append_sheet(nbook, sht, "Abgleich Excel");
-  XLSX.writeFile(nbook, "ZUSTAND.xlsx");
-}
-function exportSmartScriptExcel(){
-    let etks = [["Etikett"]];
-    PROJECT.inverters.forEach(x => {
-        x.strings.forEach(p =>{
-            let dx = `${x.wr}.${p.mppt}.${p.in}`;
-            if(g(`st_${dx}`).value==="JA" && parseFloat(g(`m_${dx}`).value)>0){
-                etks.push([{t:'s',v:`BVH P52\r\n${dx}\r\n${g('g_'+dx).value}\r\n${g('m_'+dx).value} Mod`}]);
-            }
-        });
-    });
-    const wx = XLSX.utils.aoa_to_sheet(etks); wx['!cols']=[{wch:25}]; const bf = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(bf,wx,"SS"); XLSX.writeFile(bf,"Pick.xlsx");
-}
-function exportStringNumbersExcel(){
-    let etks = [["String ID Text"]];
-    PROJECT.inverters.forEach(x => x.strings.forEach(p => { let dx=`${x.wr}.${p.mppt}.${p.in}`; if(g(`st_${dx}`).value==="JA") etks.push([{t:'s',v:dx}]); }));
-    const wx = XLSX.utils.aoa_to_sheet(etks); wx['!cols']=[{wch:12}]; const bf = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(bf,wx,"Z"); XLSX.writeFile(bf,"Zahlen.xlsx");
+  for(let wr = 1; wr <= 6; wr++){
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const item = APP_STATE[fullId];
+        const st = (g('stat-'+fullId)||{}).value || item.stat;
+        const mod = (g('mod-'+fullId)||{}).value || item.mod;
+        const pwr = (st === 'JA' && parseFloat(mod) > 0) ? ((parseFloat(mod) * MODEL_WP)/1000).toFixed(2) : '0';
+        const gak = (g('gak-'+fullId)||{}).value || item.gak;
+        const note = (g('note-'+fullId)||{}).value || item.note || '';
+
+        rows.push([
+          { t: 's', v: fullId },
+          item.planName || '—',
+          gak,
+          st,
+          parseInt(mod) || 0,
+          parseFloat(pwr.replace(',','.')) || 0,
+          (g('uoc-'+fullId)||{}).value || '',
+          (g('isc-'+fullId)||{}).value || '',
+          (g('riso-'+fullId)||{}).value || '',
+          note
+        ]);
+      }
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 18 }, { wch: 16 }, { wch: 12 }, { wch: 10 }, { wch: 10 },
+    { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 26 }
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'Prüfprotokoll');
+  XLSX.writeFile(wb, `Protokoll_PV_MAN_P52.xlsx`);
+  toast('Prüfprotokoll exportiert');
 }
 
 window.onload = () => {
-  renderTables();
-  let db_back = localStorage.getItem("sp_pvm_backup");
-  if(window.supabase){ supabaseClient = window.supabase.createClient(SB_URL, SB_KEY); }
-  
-  if(db_back) {
-      try { 
-         let z_obj = JSON.parse(db_back);
-         Object.keys(z_obj).forEach(dk =>{
-              let bNode = g(`st_${dk}`); if(bNode) { g(`g_${dk}`).value = z_obj[dk].gak||""; g(`m_${dk}`).value=z_obj[dk].mod; g(`uo_${dk}`).value=z_obj[dk].uoc; g(`ri_${dk}`).value=z_obj[dk].riso; setBool(dk, z_obj[dk].stat); }
-         });
-         toast("Aus dem Cache geladen.");
-      }catch(r){}
-  }
+  let localCache = null;
+  try {
+    localCache = JSON.parse(localStorage.getItem('sp_local_backup_chrono') || '{}');
+  } catch(e){}
+
+  renderMatrix(localCache && Object.keys(localCache).length > 5 ? localCache : null);
 };
 </script>
 </body>

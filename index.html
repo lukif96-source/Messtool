@@ -1026,6 +1026,66 @@ body {
   height: 24px;
   color: var(--text-primary);
 }
+
+/* ROLE BADGE */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.role-badge.site-mode {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.dark-mode .role-badge.site-mode {
+  color: #fbbf24;
+}
+
+/* DRAW CANVAS */
+.draw-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.draw-canvas-wrap {
+  position: relative;
+  background: repeating-conic-gradient(var(--bg-tertiary) 0% 25%, var(--bg-secondary) 0% 50%) 50% / 20px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  touch-action: none;
+}
+
+#draw-canvas {
+  display: block;
+  width: 100%;
+  cursor: crosshair;
+}
+
+.draw-area-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  margin-bottom: 0.5rem;
+}
 </style>
 </head>
 <body>
@@ -1040,14 +1100,15 @@ body {
     
     <div class="nav-links">
       <button class="nav-link active" onclick="switchPage('home')">Home</button>
-      <button class="nav-link" onclick="switchPage('setup')">Setup</button>
-      <button class="nav-link" onclick="switchPage('plans')">Plans</button>
+      <button class="nav-link planner-only" onclick="switchPage('setup')">Setup</button>
+      <button class="nav-link planner-only" onclick="switchPage('plans')">Plans</button>
       <button class="nav-link" onclick="switchPage('about')">About</button>
       <button class="nav-link" onclick="switchPage('faq')">FAQ</button>
     </div>
     
-    <button class="nav-cta" onclick="createNewProject()">+ Neues Projekt</button>
-    <button class="btn btn-secondary" style="padding:0.625rem 1rem;border-radius:var(--radius-sm);font-weight:600;font-size:0.875rem;border:1px solid var(--border);cursor:pointer;transition:all 0.2s ease;white-space:nowrap;background:var(--bg-secondary);color:var(--text-primary);" onclick="openModal('config-modal')">⚙️ Konfiguration</button>
+    <button class="role-badge" id="role-badge" onclick="onRoleBadgeClick()">🧑‍💼 Planer-Modus</button>
+    <button class="nav-cta planner-only" onclick="createNewProject()">+ Neues Projekt</button>
+    <button class="btn btn-secondary planner-only" style="padding:0.625rem 1rem;border-radius:var(--radius-sm);font-weight:600;font-size:0.875rem;border:1px solid var(--border);cursor:pointer;transition:all 0.2s ease;white-space:nowrap;background:var(--bg-secondary);color:var(--text-primary);" onclick="openModal('config-modal')">⚙️ Konfiguration</button>
   </div>
 </nav>
 
@@ -1087,23 +1148,24 @@ body {
         <div style="background: var(--bg-tertiary); padding: 0.5rem 1rem; border-radius: var(--radius-sm); font-weight: 700; font-size: 0.875rem; border: 1px solid var(--border);">
           <span id="project-name-display">PV MAN P52</span> (<span id="project-wp-display">465</span> Wp)
         </div>
-        <button class="btn btn-secondary" onclick="restoreP52Original()" title="P52 Original wiederherstellen">🔄 P52</button>
-        <button class="btn btn-secondary" onclick="openModal('config-modal')">⚙️ Konfiguration</button>
-        <button class="btn btn-danger" onclick="factoryReset()" title="Plan zurücksetzen">🔄 Reset</button>
+        <button class="btn btn-secondary planner-only" onclick="restoreP52Original()" title="P52 Original wiederherstellen">🔄 P52</button>
+        <button class="btn btn-secondary planner-only" onclick="openModal('config-modal')">⚙️ Konfiguration</button>
+        <button class="btn btn-danger planner-only" onclick="factoryReset()" title="Plan zurücksetzen">🔄 Reset</button>
       </div>
       
       <div class="action-bar-right">
-        <button class="btn btn-secondary" onclick="openCablePlanDrawer()">📐 Kabelplan</button>
-        <button class="btn btn-secondary" onclick="openAreaCalculator()">📐 Flächen-Belegung</button>
-        <button class="btn btn-secondary" onclick="autoDistributeStrings()">🤖 Auto-Verteilung</button>
-        <button class="btn btn-secondary" onclick="importPVSOL()">📥 PV*SOL Import</button>
-        <button class="btn btn-secondary" onclick="loadFromCloud()">☁️ Cloud Laden</button>
+        <button class="btn btn-secondary planner-only" onclick="openCablePlanDrawer()">📐 Kabelplan</button>
+        <button class="btn btn-secondary planner-only" onclick="openAreaCalculator()">📐 Flächen-Belegung</button>
+        <button class="btn btn-secondary planner-only" onclick="openDrawCanvas()">🖊️ Modul-Zeichner</button>
+        <button class="btn btn-secondary planner-only" onclick="autoDistributeStrings()">🤖 Auto-Verteilung</button>
+        <button class="btn btn-secondary planner-only" onclick="importPVSOL()">📥 PV*SOL Import</button>
+        <button class="btn btn-secondary planner-only" onclick="loadFromCloud()">☁️ Cloud Laden</button>
         <button class="btn btn-primary" onclick="saveToCloud()">☁️ Speichern</button>
         <button class="btn btn-secondary" onclick="printMontagePlan()">📋 Plan</button>
         <button class="btn btn-success" onclick="exportGakExcel()">🏷️ GAK</button>
         <button class="btn btn-secondary" onclick="exportStringsExcel()">🔢 Strings</button>
         <button class="btn btn-secondary" onclick="exportProtocol()">📊 Protokoll</button>
-        <button class="btn btn-secondary" onclick="exportCSV()">📄 CSV</button>
+        <button class="btn btn-secondary planner-only" onclick="exportCSV()">📄 CSV</button>
         <button class="btn btn-secondary" onclick="showValidation()">✓ Prüfen</button>
       </div>
     </div>
@@ -1167,6 +1229,21 @@ body {
           <div class="config-row">
             <button class="btn btn-primary" onclick="testSupabaseConnection()">Verbindung testen</button>
             <button class="btn btn-success" onclick="saveSupabaseConfig()">Speichern</button>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <div class="config-section-title">Bauleitung-Zugriff</div>
+          <div style="background:var(--bg-tertiary);padding:1rem;border-radius:var(--radius-sm);margin-bottom:1rem;">
+            <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:0.75rem;">
+              Lege hier ein Planer-Passwort fest. Damit kann man vom Bauleitung-Modus zurück in den Planer-Modus wechseln.
+              Ohne gesetztes Passwort ist der Rückweg mit dem Standard-Passwort <code>planer</code> möglich.
+            </p>
+            <div class="config-row">
+              <span class="config-label">Neues Passwort:</span>
+              <input type="password" id="setup-planner-pw" class="input config-select" placeholder="Planer-Passwort" style="max-width:220px;">
+              <button class="btn btn-primary" onclick="savePlannerPassword()">Speichern</button>
+            </div>
           </div>
         </div>
         
@@ -1287,12 +1364,14 @@ CREATE INDEX IF NOT EXISTS idx_pv_projects_updated_at ON pv_projects(updated_at 
             <li>Plausibilitäts-Prüfungen</li>
             <li>Cloud-Sync mit Supabase</li>
             <li>Export in verschiedene Formate</li>
+            <li>Modul-Zeichner für Dachflächen</li>
+            <li>Rollen: Planer- und Bauleitung-Modus</li>
           </ul>
         </div>
         
         <div>
           <h3 style="font-size:1.125rem;font-weight:700;margin-bottom:0.5rem;">Version</h3>
-          <p style="color:var(--text-secondary);">Version 1.0.0 · 2024</p>
+          <p style="color:var(--text-secondary);">Version 1.1.0 · 2024</p>
         </div>
       </div>
     </div>
@@ -1352,6 +1431,19 @@ CREATE INDEX IF NOT EXISTS idx_pv_projects_updated_at ON pv_projects(updated_at 
           <p style="color:var(--text-secondary);line-height:1.6;">
             Das System prüft deine Eingaben auf Plausibilität: max. 30 Module pro String, Spannungsbereich 200-1000V, 
             max. 15A Strom. Warnungen und Fehler werden im Validierungsbericht angezeigt.
+          </p>
+        </div>
+      </div>
+
+      <div class="inverter-card">
+        <div style="padding:1.25rem;">
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Wie funktioniert der Bauleitung-Modus?</h3>
+          <p style="color:var(--text-secondary);line-height:1.6;">
+            Im Konfigurations-Dialog kannst du unter "Basic" → "Bauleitung freigeben" eine PIN erzeugen. Diese gibst du
+            an die Bauleitung weiter. Über den Button oben rechts ("Planer-Modus") kann in den Bauleitung-Modus gewechselt
+            werden — dort sind nur String-Status, Modulzahlen, Messwerte (Uoc/Isc/Riso) und Bemerkungen editierbar,
+            keine Projekt- oder Konfigurationsverwaltung. Zurück in den Planer-Modus geht es mit dem Planer-Passwort
+            (Setup-Seite, Standard: <code>planer</code>).
           </p>
         </div>
       </div>
@@ -1484,6 +1576,89 @@ CREATE INDEX IF NOT EXISTS idx_pv_projects_updated_at ON pv_projects(updated_at 
   </div>
 </div>
 
+<!-- MODULE DRAW CANVAS MODAL -->
+<div class="modal-overlay" id="draw-canvas-modal">
+  <div class="modal" style="max-width:960px;">
+    <div class="modal-header">
+      <h2 class="modal-title">🖊️ Modul-Zeichner</h2>
+      <button class="modal-close" onclick="closeModal('draw-canvas-modal')">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="config-section">
+        <div class="config-section-title">Werkzeuge</div>
+        <div class="draw-toolbar">
+          <button class="btn btn-secondary" id="draw-tool-polygon" onclick="setDrawTool('polygon')">✏️ Fläche umranden</button>
+          <button class="btn btn-secondary" id="draw-tool-erase" onclick="setDrawTool('erase')">🧹 Modul entfernen/hinzufügen</button>
+          <button class="btn btn-secondary" onclick="undoLastPoint()">↩️ Letzten Punkt entfernen</button>
+          <button class="btn btn-danger" onclick="clearDrawCanvas()">🗑️ Alles löschen</button>
+          <label class="btn btn-secondary" style="cursor:pointer;">
+            🖼️ Hintergrundbild
+            <input type="file" id="draw-bg-input" accept="image/*" style="display:none;" onchange="loadDrawBackground(event)">
+          </label>
+          <button class="btn btn-secondary" onclick="removeDrawBackground()">Bild entfernen</button>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">
+          💡 Optional ein Dachfoto/Grundriss als Hintergrund laden, dann mit Klicks die Dachfläche umranden (letzten Punkt
+          nochmal anklicken zum Schließen) und mit "Fläche füllen" automatisch Module einsetzen. Mit dem Werkzeug
+          "Modul entfernen/hinzufügen" kannst du einzelne Module (z.B. wegen Kamin/Fenster) rausklicken.
+        </div>
+      </div>
+
+      <div class="config-section">
+        <div class="config-section-title">Modul-Raster</div>
+        <div class="config-row">
+          <span class="config-label">Modul-Wp:</span>
+          <input type="number" id="draw-module-wp" class="input input-compact" value="465">
+          <span class="config-label">Maße (m):</span>
+          <input type="number" id="draw-module-width" class="input input-compact" value="1.1" step="0.05">
+          <span class="config-label">×</span>
+          <input type="number" id="draw-module-height" class="input input-compact" value="1.7" step="0.05">
+        </div>
+        <div class="config-row">
+          <span class="config-label">Ausrichtung:</span>
+          <select id="draw-module-orientation" class="input config-select" style="max-width:160px;">
+            <option value="portrait">Hochkant</option>
+            <option value="landscape">Querformat</option>
+          </select>
+          <span class="config-label">Abstand (m):</span>
+          <input type="number" id="draw-module-spacing" class="input input-compact" value="0.02" step="0.01">
+          <span class="config-label">Maßstab (m/100px):</span>
+          <input type="number" id="draw-scale" class="input input-compact" value="1" step="0.1">
+        </div>
+        <div class="config-row">
+          <button class="btn btn-primary" onclick="fillModulesInCurrentPolygon()">🔲 Fläche füllen</button>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <div class="config-section-title">Zeichenfläche</div>
+        <div class="draw-canvas-wrap">
+          <canvas id="draw-canvas" width="900" height="500"></canvas>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;" id="draw-canvas-status">
+          Noch keine Fläche umrandet.
+        </div>
+      </div>
+
+      <div class="config-section">
+        <div class="config-section-title">Gezeichnete Flächen</div>
+        <div class="config-row">
+          <input type="text" id="draw-area-name" class="input config-select" placeholder="Name der Fläche (z.B. Fläche Süd)" style="max-width:260px;">
+          <button class="btn btn-success" onclick="saveDrawnArea()">💾 Fläche speichern</button>
+        </div>
+        <div id="draw-areas-list"></div>
+        <div style="font-weight:700;margin-top:0.5rem;" id="draw-areas-total">Gesamt: 0 Module · 0.00 kWp</div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('draw-canvas-modal')">Schließen</button>
+      <button class="btn btn-success" onclick="applyDrawnAreasToProject()">✓ In Auto-Verteilung übernehmen</button>
+    </div>
+  </div>
+</div>
+
 <!-- PV*SOL IMPORT MODAL -->
 <div class="modal-overlay" id="pvsol-import-modal">
   <div class="modal">
@@ -1607,6 +1782,23 @@ CREATE INDEX IF NOT EXISTS idx_pv_projects_updated_at ON pv_projects(updated_at 
           <div class="config-row">
             <span class="config-label">Modul-Wp:</span>
             <input type="number" id="cfg-model-wp" class="input input-compact" value="465">
+          </div>
+        </div>
+
+        <div class="config-section">
+          <div class="config-section-title">Bauleitung freigeben</div>
+          <div style="background:var(--bg-tertiary);padding:1rem;border-radius:var(--radius-sm);">
+            <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:0.75rem;">
+              Erzeuge eine PIN für die Bauleitung. Mit dieser PIN kann im Bauleitung-Modus nur die String-Konfiguration
+              (Status, Module, Uoc/Isc/Riso, Bemerkung) eingesehen und bearbeitet werden — keine Projekt- oder
+              WR-Konfiguration.
+            </p>
+            <div class="config-row">
+              <span class="config-label">Aktuelle PIN:</span>
+              <span class="string-id" id="cfg-site-pin" style="font-size:1.125rem;">— keine —</span>
+              <button class="btn btn-primary" onclick="generateSitePin()">🔑 Neue PIN erzeugen</button>
+              <button class="btn btn-danger" onclick="revokeSitePin()">Zugriff sperren</button>
+            </div>
           </div>
         </div>
         
@@ -2137,7 +2329,8 @@ let projectConfig = {
     { id: 6, type: "SMA_STP125", name: "WR 6" }
   ],
   customMppts: 12,
-  customInputs: 2
+  customInputs: 2,
+  sitePin: null
 };
 
 let APP_STATE = {};
@@ -2145,6 +2338,7 @@ let userTemplates = {};
 let projectsList = {};
 let currentProjectId = PROJECT_ID;
 let supabaseClient = null;
+let currentRole = 'planner'; // 'planner' | 'site'
 
 // UTILITIES
 const g = id => document.getElementById(id);
@@ -2158,6 +2352,10 @@ function toast(msg, duration = 3000) {
 
 // NAVIGATION
 function switchPage(pageId) {
+  if(currentRole === 'site' && (pageId === 'setup' || pageId === 'plans')){
+    toast('Im Bauleitung-Modus nicht verfügbar');
+    return;
+  }
   document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active'));
   event.target.classList.add('active');
   
@@ -2167,6 +2365,10 @@ function switchPage(pageId) {
 
 // MODAL
 function openModal(modalId) {
+  if(currentRole === 'site' && modalId === 'config-modal'){
+    toast('Im Bauleitung-Modus gesperrt');
+    return;
+  }
   g(modalId).classList.add('active');
   if(modalId === 'config-modal') {
     updateConfigUI();
@@ -2186,6 +2388,100 @@ function toggleDarkMode() {
   } else {
     icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />';
   }
+}
+
+// ============================================================
+// ROLE MANAGEMENT (Planer vs. Bauleitung)
+// ============================================================
+function applyRoleUI() {
+  const isSite = currentRole === 'site';
+  document.querySelectorAll('.planner-only').forEach(el => {
+    el.style.display = isSite ? 'none' : '';
+  });
+
+  const badge = g('role-badge');
+  if(isSite){
+    badge.textContent = '👷 Bauleitung-Modus (zurück)';
+    badge.classList.add('site-mode');
+  } else {
+    badge.textContent = '🧑‍💼 Planer-Modus';
+    badge.classList.remove('site-mode');
+  }
+
+  // Falls gerade eine planner-only Seite aktiv war, zurück auf Home
+  if(isSite){
+    const activePage = document.querySelector('[id^="page-"][style*="block"]');
+    if(activePage && (activePage.id === 'page-setup' || activePage.id === 'page-plans')){
+      document.querySelectorAll('[id^="page-"]').forEach(p => p.style.display = 'none');
+      g('page-home').style.display = 'block';
+      document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
+      document.querySelector('.nav-link').classList.add('active');
+    }
+  }
+}
+
+function onRoleBadgeClick() {
+  if(currentRole === 'planner'){
+    enterSiteMode();
+  } else {
+    exitSiteMode();
+  }
+}
+
+function enterSiteMode() {
+  if(!projectConfig.sitePin){
+    toast('Zuerst in der Konfiguration eine Bauleitung-PIN erzeugen');
+    return;
+  }
+  const entered = prompt('PIN für Bauleitung-Modus eingeben:');
+  if(entered === null) return;
+  if(entered.trim() !== String(projectConfig.sitePin)){
+    toast('❌ Falsche PIN');
+    return;
+  }
+  currentRole = 'site';
+  applyRoleUI();
+  toast('👷 Bauleitung-Modus aktiv');
+}
+
+function exitSiteMode() {
+  const saved = localStorage.getItem('sp_planner_password');
+  const expected = saved || 'planer';
+  const entered = prompt('Planer-Passwort eingeben, um zurückzuwechseln:');
+  if(entered === null) return;
+  if(entered !== expected){
+    toast('❌ Falsches Passwort');
+    return;
+  }
+  currentRole = 'planner';
+  applyRoleUI();
+  toast('🧑‍💼 Planer-Modus aktiv');
+}
+
+function savePlannerPassword() {
+  const pw = (g('setup-planner-pw').value || '').trim();
+  if(!pw){
+    toast('Bitte ein Passwort eingeben');
+    return;
+  }
+  localStorage.setItem('sp_planner_password', pw);
+  g('setup-planner-pw').value = '';
+  toast('Planer-Passwort gespeichert');
+}
+
+function generateSitePin() {
+  const pin = String(Math.floor(1000 + Math.random() * 9000));
+  projectConfig.sitePin = pin;
+  g('cfg-site-pin').textContent = pin;
+  saveLocal();
+  toast(`Neue Bauleitung-PIN: ${pin} (bitte notieren und weitergeben)`);
+}
+
+function revokeSitePin() {
+  projectConfig.sitePin = null;
+  g('cfg-site-pin').textContent = '— keine —';
+  saveLocal();
+  toast('Bauleitung-Zugriff gesperrt');
 }
 
 // CONFIG TABS
@@ -2475,6 +2771,7 @@ function updateConfigUI() {
   g('cfg-model-wp').value = projectConfig.modelWp;
   g('cfg-custom-mppts').value = projectConfig.customMppts;
   g('cfg-custom-inputs').value = projectConfig.customInputs;
+  g('cfg-site-pin').textContent = projectConfig.sitePin ? projectConfig.sitePin : '— keine —';
   renderInverterList();
 }
 
@@ -2733,21 +3030,23 @@ function confirmNewProject() {
   const newId = 'proj_' + Date.now();
   
   // Start with base configuration
-  let projectConfig = {
+  let newProjectConfig = {
     name: projectName,
     modelWp: modelWp,
     inverters: [
       { id: 1, type: "SMA_STP125", name: "WR 1" }
     ],
     customMppts: 12,
-    customInputs: 2
+    customInputs: 2,
+    sitePin: null
   };
   
   // Apply template if selected
   if(templateKey && CONFIG_TEMPLATES[templateKey]) {
-    projectConfig = JSON.parse(JSON.stringify(CONFIG_TEMPLATES[templateKey].config));
-    projectConfig.name = projectName;
-    projectConfig.modelWp = modelWp;
+    newProjectConfig = JSON.parse(JSON.stringify(CONFIG_TEMPLATES[templateKey].config));
+    newProjectConfig.name = projectName;
+    newProjectConfig.modelWp = modelWp;
+    newProjectConfig.sitePin = null;
   }
   
   projectsList[newId] = {
@@ -2760,7 +3059,7 @@ function confirmNewProject() {
   saveProjectsList();
   
   localStorage.setItem(`sp_project_${newId}`, JSON.stringify({
-    config: projectConfig,
+    config: newProjectConfig,
     data: {}
   }));
   
@@ -4121,6 +4420,302 @@ function applyLayoutProposal() {
   autoDistributeFromPVSOL(moduleAreas);
 }
 
+// ============================================================
+// MODUL-ZEICHNER (Canvas-Flächenplanung)
+// ============================================================
+let drawCtx = null;
+let drawTool = 'polygon';
+let currentPolygon = [];
+let drawnAreas = []; // { name, polygon:[{x,y}], modules:[{x,y,w,h}] }
+let drawBgImage = null;
+const POLY_CLOSE_THRESHOLD = 12;
+
+function openDrawCanvas() {
+  openModal('draw-canvas-modal');
+  setTimeout(() => {
+    const canvas = g('draw-canvas');
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = 500;
+    drawCtx = canvas.getContext('2d');
+
+    canvas.removeEventListener('click', handleDrawCanvasClick);
+    canvas.addEventListener('click', handleDrawCanvasClick);
+
+    renderDrawCanvas();
+    renderDrawnAreasList();
+  }, 100);
+}
+
+function setDrawTool(tool) {
+  drawTool = tool;
+  g('draw-tool-polygon').classList.toggle('btn-primary', tool === 'polygon');
+  g('draw-tool-polygon').classList.toggle('btn-secondary', tool !== 'polygon');
+  g('draw-tool-erase').classList.toggle('btn-primary', tool === 'erase');
+  g('draw-tool-erase').classList.toggle('btn-secondary', tool !== 'erase');
+  toast(tool === 'polygon' ? '✏️ Fläche umranden: Klicke die Eckpunkte' : '🧹 Klicke ein Modul zum Entfernen, oder eine leere Stelle im Raster zum Hinzufügen');
+}
+
+function loadDrawBackground(evt) {
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      drawBgImage = img;
+      renderDrawCanvas();
+      toast('Hintergrundbild geladen');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeDrawBackground() {
+  drawBgImage = null;
+  renderDrawCanvas();
+}
+
+function handleDrawCanvasClick(e) {
+  const canvas = g('draw-canvas');
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+  if(drawTool === 'polygon') {
+    if(currentPolygon.length >= 3) {
+      const first = currentPolygon[0];
+      const dist = Math.hypot(x - first.x, y - first.y);
+      if(dist < POLY_CLOSE_THRESHOLD) {
+        toast(`Fläche geschlossen (${currentPolygon.length} Punkte). Jetzt "Fläche füllen" klicken.`);
+        renderDrawCanvas();
+        return;
+      }
+    }
+    currentPolygon.push({ x, y });
+    g('draw-canvas-status').textContent = `${currentPolygon.length} Punkte gesetzt — letzten Punkt nochmal anklicken zum Schließen`;
+    renderDrawCanvas();
+  } else if(drawTool === 'erase') {
+    // toggle a module cell at this position, searching current areas' modules and the pending fill
+    let removed = false;
+    for(const area of drawnAreas) {
+      const idx = area.modules.findIndex(m => x >= m.x && x <= m.x + m.w && y >= m.y && y <= m.y + m.h);
+      if(idx >= 0) { area.modules.splice(idx, 1); removed = true; break; }
+    }
+    if(!removed && pendingFill) {
+      const idx = pendingFill.modules.findIndex(m => x >= m.x && x <= m.x + m.w && y >= m.y && y <= m.y + m.h);
+      if(idx >= 0) { pendingFill.modules.splice(idx, 1); removed = true; }
+    }
+    if(removed){
+      renderDrawCanvas();
+      renderDrawnAreasList();
+      toast('Modul entfernt');
+    } else {
+      toast('Kein Modul an dieser Stelle');
+    }
+  }
+}
+
+function undoLastPoint() {
+  currentPolygon.pop();
+  renderDrawCanvas();
+  g('draw-canvas-status').textContent = `${currentPolygon.length} Punkte gesetzt`;
+}
+
+function clearDrawCanvas() {
+  if(!confirm('Aktuelle Umrandung und alle gespeicherten Flächen löschen?')) return;
+  currentPolygon = [];
+  drawnAreas = [];
+  pendingFill = null;
+  renderDrawCanvas();
+  renderDrawnAreasList();
+  g('draw-canvas-status').textContent = 'Noch keine Fläche umrandet.';
+}
+
+// Ray-casting point-in-polygon
+function pointInPolygon(x, y, poly) {
+  let inside = false;
+  for(let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].x, yi = poly[i].y;
+    const xj = poly[j].x, yj = poly[j].y;
+    const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if(intersect) inside = !inside;
+  }
+  return inside;
+}
+
+let pendingFill = null; // { polygon, modules } — the fill for currentPolygon before saving
+
+function fillModulesInCurrentPolygon() {
+  if(currentPolygon.length < 3) {
+    toast('Bitte zuerst eine Fläche mit mind. 3 Punkten umranden und schließen');
+    return;
+  }
+  const scale = parseFloat(g('draw-scale').value) || 1; // meters per 100px
+  const pxPerMeter = 100 / scale;
+
+  let mw = parseFloat(g('draw-module-width').value) || 1.1;
+  let mh = parseFloat(g('draw-module-height').value) || 1.7;
+  if(g('draw-module-orientation').value === 'landscape') { const t = mw; mw = mh; mh = t; }
+  const spacing = parseFloat(g('draw-module-spacing').value) || 0.02;
+
+  const cellW = (mw + spacing) * pxPerMeter;
+  const cellH = (mh + spacing) * pxPerMeter;
+
+  const xs = currentPolygon.map(p => p.x), ys = currentPolygon.map(p => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+  const modules = [];
+  for(let y = minY; y + cellH <= maxY + 0.01; y += cellH) {
+    for(let x = minX; x + cellW <= maxX + 0.01; x += cellW) {
+      const cx = x + cellW / 2, cy = y + cellH / 2;
+      if(pointInPolygon(cx, cy, currentPolygon)) {
+        modules.push({ x, y, w: cellW - 2, h: cellH - 2 });
+      }
+    }
+  }
+
+  if(modules.length === 0) {
+    toast('Keine Module in dieser Fläche — Fläche evtl. zu klein oder Maßstab prüfen');
+    return;
+  }
+
+  pendingFill = { polygon: [...currentPolygon], modules };
+  renderDrawCanvas();
+  toast(`${modules.length} Module eingesetzt — Fläche jetzt benennen und speichern`);
+}
+
+function renderDrawCanvas() {
+  if(!drawCtx) return;
+  const canvas = g('draw-canvas');
+  drawCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if(drawBgImage) {
+    drawCtx.globalAlpha = 0.85;
+    drawCtx.drawImage(drawBgImage, 0, 0, canvas.width, canvas.height);
+    drawCtx.globalAlpha = 1;
+  }
+
+  // saved areas
+  drawnAreas.forEach((area, idx) => {
+    drawPolygonOutline(area.polygon, '#3b82f6');
+    area.modules.forEach(m => drawModuleCell(m, 'rgba(16,185,129,0.55)', '#059669'));
+    if(area.polygon.length){
+      const c = area.polygon[0];
+      drawCtx.fillStyle = '#0f172a';
+      drawCtx.font = 'bold 13px Inter, sans-serif';
+      drawCtx.fillText(`${area.name} (${area.modules.length} Module)`, c.x + 4, c.y - 6);
+    }
+  });
+
+  // pending fill (not yet saved)
+  if(pendingFill) {
+    drawPolygonOutline(pendingFill.polygon, '#f59e0b');
+    pendingFill.modules.forEach(m => drawModuleCell(m, 'rgba(245,158,11,0.5)', '#b45309'));
+  }
+
+  // current polygon being drawn
+  if(currentPolygon.length) {
+    drawCtx.strokeStyle = '#ef4444';
+    drawCtx.fillStyle = '#ef4444';
+    drawCtx.lineWidth = 2;
+    drawCtx.beginPath();
+    drawCtx.moveTo(currentPolygon[0].x, currentPolygon[0].y);
+    for(let i = 1; i < currentPolygon.length; i++) drawCtx.lineTo(currentPolygon[i].x, currentPolygon[i].y);
+    drawCtx.stroke();
+    currentPolygon.forEach(p => {
+      drawCtx.beginPath();
+      drawCtx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      drawCtx.fill();
+    });
+  }
+}
+
+function drawPolygonOutline(poly, color) {
+  if(!poly.length) return;
+  drawCtx.strokeStyle = color;
+  drawCtx.lineWidth = 2;
+  drawCtx.beginPath();
+  drawCtx.moveTo(poly[0].x, poly[0].y);
+  for(let i = 1; i < poly.length; i++) drawCtx.lineTo(poly[i].x, poly[i].y);
+  drawCtx.closePath();
+  drawCtx.stroke();
+}
+
+function drawModuleCell(m, fill, stroke) {
+  drawCtx.fillStyle = fill;
+  drawCtx.strokeStyle = stroke;
+  drawCtx.lineWidth = 1;
+  drawCtx.fillRect(m.x, m.y, m.w, m.h);
+  drawCtx.strokeRect(m.x, m.y, m.w, m.h);
+}
+
+function saveDrawnArea() {
+  if(!pendingFill || pendingFill.modules.length === 0) {
+    toast('Bitte zuerst eine Fläche füllen ("Fläche füllen")');
+    return;
+  }
+  const name = (g('draw-area-name').value || '').trim() || `Fläche ${drawnAreas.length + 1}`;
+  drawnAreas.push({ name, polygon: pendingFill.polygon, modules: pendingFill.modules });
+  pendingFill = null;
+  currentPolygon = [];
+  g('draw-area-name').value = '';
+  g('draw-canvas-status').textContent = 'Noch keine Fläche umrandet.';
+  renderDrawCanvas();
+  renderDrawnAreasList();
+  toast(`Fläche "${name}" gespeichert`);
+}
+
+function deleteDrawnArea(idx) {
+  drawnAreas.splice(idx, 1);
+  renderDrawCanvas();
+  renderDrawnAreasList();
+}
+
+function renderDrawnAreasList() {
+  const wp = parseFloat(g('draw-module-wp').value) || 465;
+  const list = g('draw-areas-list');
+  list.innerHTML = '';
+  let totalModules = 0;
+
+  drawnAreas.forEach((area, idx) => {
+    totalModules += area.modules.length;
+    const kwp = (area.modules.length * wp / 1000).toFixed(2);
+    const div = document.createElement('div');
+    div.className = 'draw-area-item';
+    div.innerHTML = `
+      <span class="config-item-name">${area.name}</span>
+      <span class="config-item-info">${area.modules.length} Module · ${kwp} kWp</span>
+      <button class="btn btn-danger" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="deleteDrawnArea(${idx})">✕</button>
+    `;
+    list.appendChild(div);
+  });
+
+  const totalKwp = (totalModules * wp / 1000).toFixed(2);
+  g('draw-areas-total').textContent = `Gesamt: ${totalModules} Module · ${totalKwp} kWp`;
+}
+
+function applyDrawnAreasToProject() {
+  if(drawnAreas.length === 0) {
+    toast('Keine gespeicherten Flächen vorhanden');
+    return;
+  }
+  const wp = parseFloat(g('draw-module-wp').value) || 465;
+  projectConfig.modelWp = Math.round(wp);
+  g('project-wp-display').textContent = projectConfig.modelWp;
+
+  const moduleAreas = drawnAreas.map(area => ({
+    ModuleArea: area.name,
+    NumberOfPvModules: { Value: area.modules.length },
+    PvGeneratorOutput: { Value: (area.modules.length * wp / 1000).toFixed(2) }
+  }));
+
+  localStorage.setItem('sp_pvsol_module_areas', JSON.stringify(moduleAreas));
+  closeModal('draw-canvas-modal');
+  autoDistributeFromPVSOL(moduleAreas);
+}
+
 // AUTOMATISCHE MPPT-VERTEILUNG
 function autoDistributeStrings() {
   const moduleAreasData = localStorage.getItem('sp_pvsol_module_areas');
@@ -4264,6 +4859,7 @@ function init() {
 
   if(localCache && localCache.config){
     projectConfig = localCache.config;
+    if(projectConfig.sitePin === undefined) projectConfig.sitePin = null;
     g('project-name-display').textContent = projectConfig.name;
     g('project-wp-display').textContent = projectConfig.modelWp;
   } else {
@@ -4280,7 +4876,8 @@ function init() {
         { id: 6, type: "SMA_STP125", name: "WR 6" }
       ],
       customMppts: 12,
-      customInputs: 2
+      customInputs: 2,
+      sitePin: null
     };
     g('project-name-display').textContent = projectConfig.name;
     g('project-wp-display').textContent = projectConfig.modelWp;
@@ -4293,6 +4890,7 @@ function init() {
       const p52Data = JSON.parse(p52Cache);
       if(p52Data.config) {
         projectConfig = p52Data.config;
+        if(projectConfig.sitePin === undefined) projectConfig.sitePin = null;
         g('project-name-display').textContent = projectConfig.name;
         g('project-wp-display').textContent = projectConfig.modelWp;
       }
@@ -4314,6 +4912,9 @@ function init() {
   
   // Initial setup page stats
   updateSetupPageStats();
+
+  // Rollen-UI initial anwenden
+  applyRoleUI();
 }
 
 // P52 ORIGINAL RESTORE
@@ -4330,7 +4931,8 @@ function restoreP52Original() {
       { id: 6, type: "SMA_STP125", name: "WR 6" }
     ],
     customMppts: 12,
-    customInputs: 2
+    customInputs: 2,
+    sitePin: projectConfig.sitePin || null
   };
   
   if(confirm('P52 Original-Konfiguration wiederherstellen? Aktuelle Änderungen gehen verloren.')) {

@@ -1,229 +1,2476 @@
-
-.field-radio-title { font-weight: 700; font-size: 0.9rem; }
-.field-radio-desc { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
-
-/* MPPT-Plan Editor (per WR) */
-.np-wr-row {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=0">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<title>SOLPRO | PV Planungssystem</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --border: #e2e8f0;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
 }
-.np-wr-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 8px; gap: 8px;
+
+.dark-mode {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  --border: #334155;
 }
-.np-wr-label {
-  font-weight: 800; font-size: 0.78rem; color: var(--green);
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+/* NAVIGATION */
+.nav-container {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.navbar {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.nav-brand-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.nav-link {
+  padding: 0.625rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.nav-link:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.nav-link.active {
+  background: var(--bg-tertiary);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.nav-cta {
+  background: var(--text-primary);
+  color: var(--bg-secondary);
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.nav-cta:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* MAIN CONTENT */
+.main-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+/* HEADER */
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.025em;
+}
+
+.page-subtitle {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+/* DASHBOARD */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.stat-unit {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-left: 0.25rem;
+}
+
+/* ACTION BAR */
+.action-bar {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  box-shadow: var(--shadow-sm);
+}
+
+.action-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.action-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* BUTTONS */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--border);
+}
+
+.btn-success {
+  background: var(--success);
+  color: white;
+}
+
+.btn-success:hover {
+  background: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.btn-icon {
+  padding: 0.625rem;
+  aspect-ratio: 1;
+}
+
+/* FILTER TABS */
+.filter-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  margin-bottom: 1.5rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.filter-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-tab {
+  flex: 0 0 auto;
+  padding: 0.75rem 1.25rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.filter-tab:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.filter-tab.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+/* INVERTER CARDS */
+.inverter-section {
+  margin-bottom: 1.5rem;
+}
+
+.inverter-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.inverter-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.inverter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.inverter-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.inverter-badge {
+  background: var(--accent);
+  color: white;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.inverter-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.inverter-type {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.inverter-stats {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.inverter-stats span {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* TABLE */
+.table-container {
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.data-table thead {
+  background: var(--bg-tertiary);
+}
+
+.data-table th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.02);
+}
+
+.data-table tbody tr.mppt-divider {
+  border-top: 2px solid var(--border);
+}
+
+.data-table tbody tr.inactive {
+  opacity: 0.4;
+}
+
+.string-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 0.875rem;
+}
+
+.power-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
   font-family: 'JetBrains Mono', monospace;
 }
-.np-wr-count-hint {
-  font-size: 0.68rem; color: var(--muted);
-  font-family: 'JetBrains Mono', monospace;
-}
-.np-wr-input {
-  width: 100%; background: var(--bg); border: 1px solid var(--border);
-  border-radius: 6px; padding: 8px 10px; color: var(--text);
-  font-size: 14px; min-height: 40px; outline: none;
-  font-family: 'JetBrains Mono', monospace;
-  -webkit-appearance: none; appearance: none;
-  margin-bottom: 6px;
-}
-.np-wr-input:focus { border-color: var(--green); }
-.np-wr-buttons {
-  display: flex; gap: 4px; flex-wrap: wrap;
-}
-.np-wr-buttons button {
-  background: var(--bg); border: 1px solid var(--border);
-  color: var(--muted); font-size: 0.7rem; font-weight: 700;
-  border-radius: 6px; padding: 5px 8px; cursor: pointer;
-  font-family: 'JetBrains Mono', monospace;
-  min-height: 32px; -webkit-tap-highlight-color: transparent;
-}
-.np-wr-buttons button:hover, .np-wr-buttons button:active {
-  border-color: var(--green); color: var(--green);
-}
-body.sun-mode .np-wr-row { background: #f8fafc; }
-body.sun-mode .np-wr-input { background: #ffffff; border-color: #cbd5e1; color: #0f172a; }
-body.sun-mode .np-wr-buttons button { background: #ffffff; border-color: #cbd5e1; color: #64748b; }
 
-#projects-modal .proj-modal-body > button { width: 100%; margin-top: 8px; min-height: 48px; }
+.plan-badge.active {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
 
-@media (max-width: 600px) {
+/* INPUTS */
+.input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-family: inherit;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input.error {
+  border-color: var(--danger);
+}
+
+.input-gak {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--accent);
+  text-align: center;
+}
+
+.input-compact {
+  width: 60px;
+  text-align: center;
+}
+
+/* TOGGLE SWITCH */
+.toggle-wrapper {
+  display: inline-flex;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 0.25rem;
+  gap: 0.25rem;
+}
+
+.toggle-btn {
+  padding: 0.375rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.toggle-btn.active-yes {
+  background: var(--success);
+  color: white;
+}
+
+.toggle-btn.active-no {
+  background: var(--text-muted);
+  color: white;
+}
+
+/* MODAL */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalSlideUp 0.3s ease;
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+/* CONFIG PANEL */
+.config-section {
+  margin-bottom: 1.5rem;
+}
+
+.config-section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.config-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.config-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  min-width: 120px;
+}
+
+.config-select {
+  flex: 1;
+  max-width: 300px;
+}
+
+.config-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.config-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.config-item-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  min-width: 80px;
+}
+
+.config-item-info {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--text-primary);
+  color: var(--bg-secondary);
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-lg);
+  z-index: 2000;
+  opacity: 0;
+  transition: all 0.3s ease;
+  max-width: calc(100% - 2rem);
+  text-align: center;
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+  .dashboard {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  .nav-links {
+    gap: 0.25rem;
+  }
+  
+  .nav-link {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+  
+  .main-container {
+    padding: 1.5rem 1rem;
+  }
+  
+  .dashboard {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .stat-card {
+    padding: 1.25rem;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .action-bar-left,
+  .action-bar-right {
+    justify-content: center;
+  }
+  
+  .filter-tabs {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .filter-tab {
+    padding: 0.625rem 1rem;
+    font-size: 0.8125rem;
+  }
+  
+  .inverter-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .inverter-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .data-table {
+    font-size: 0.8125rem;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 0.625rem 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-value {
+    font-size: 1.25rem;
+  }
+  
+  .nav-brand {
+    font-size: 1rem;
+  }
+  
+  .nav-brand-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+  
+  .nav-cta {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+}
+
+/* MOBILE CARD LAYOUT */
+@media (max-width: 640px) {
+  .data-table,
+  .data-table tbody,
+  .data-table tr,
+  .data-table td {
+    display: block;
+    width: 100%;
+  }
+  
+  .data-table thead {
+    display: none;
+  }
+  
+  .data-table tbody tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 0.75rem 0;
+    padding: 0.5rem 0;
+    background: var(--bg-secondary);
+  }
+  
+  .data-table tbody tr.mppt-divider {
+    border-top: 2px solid var(--border);
+    margin-top: 1.25rem;
+  }
+  
+  .data-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    min-height: 48px;
+    gap: 1rem;
+  }
+  
+  .data-table td:last-child {
+    border-bottom: none;
+  }
+  
+  .data-table td::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    flex: 0 0 auto;
+    max-width: 40%;
+  }
+  
+  .data-table td > * {
+    flex: 0 1 auto;
+  }
+  
+  .data-table td:first-child {
+    background: rgba(59, 130, 246, 0.05);
+    padding: 1rem;
+  }
+  
+  .data-table td:first-child::before {
+    display: none;
+  }
+  
+  .input {
+    max-width: 60%;
+    min-height: 44px;
+    font-size: 16px;
+  }
+  
+  .toggle-wrapper {
+    padding: 0.375rem;
+  }
+  
+  .toggle-btn {
+    padding: 0.625rem 1rem;
+    min-height: 36px;
+    font-size: 0.8125rem;
+    min-width: 50px;
+  }
+}
+
+/* PRINT */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .nav-container,
+  .action-bar,
+  .filter-tabs,
+  .modal-overlay,
+  .toast {
+    display: none !important;
+  }
+  
+  .inverter-card {
+    break-inside: avoid;
+    border: 1px solid #ccc;
+    box-shadow: none;
+  }
+  
+  .data-table {
+    display: table !important;
+  }
+  
+  .data-table thead {
+    display: table-header-group !important;
+  }
+  
+  .data-table tr {
+    display: table-row !important;
+  }
+  
+  .data-table td,
+  .data-table th {
+    display: table-cell !important;
+  }
+  
+  .data-table tbody tr.inactive {
+    display: none !important;
+  }
+  
+  .data-table td::before {
+    display: none !important;
+  }
+  
+  .input,
+  .toggle-wrapper {
+    display: none !important;
+  }
+  
+  .main-container {
+    padding: 0;
+  }
+}
+
+/* DARK MODE TOGGLE */
+.dark-mode-toggle {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s ease;
+}
+
+.dark-mode-toggle:hover {
+  transform: scale(1.1);
+}
+
+.dark-mode-toggle svg {
+  width: 24px;
+  height: 24px;
+  color: var(--text-primary);
+}
+</style>
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<nav class="nav-container">
+  <div class="navbar">
+    <a href="#" class="nav-brand">
+      <div class="nav-brand-icon">⚡</div>
+      <span>SOLPRO</span>
+    </a>
+    
+    <div class="nav-links">
+      <button class="nav-link active" onclick="switchPage('home')">Home</button>
+      <button class="nav-link" onclick="switchPage('setup')">Setup</button>
+      <button class="nav-link" onclick="switchPage('plans')">Plans</button>
+      <button class="nav-link" onclick="switchPage('about')">About</button>
+      <button class="nav-link" onclick="switchPage('faq')">FAQ</button>
+    </div>
+    
+    <button class="nav-cta" onclick="openModal('config-modal')">Konfiguration</button>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="main-container">
+  
+  <!-- HOME PAGE -->
+  <div id="page-home">
+    <header class="page-header">
+      <h1 class="page-title">PV Planungssystem</h1>
+      <p class="page-subtitle">Professionelle Wechselrichter-Konfiguration und String-Planung</p>
+    </header>
+    
+    <!-- DASHBOARD -->
+    <div class="dashboard">
+      <div class="stat-card">
+        <div class="stat-label">Leistung Gesamt</div>
+        <div class="stat-value"><span id="d-pwr">0.00</span><span class="stat-unit">kWp</span></div>
       </div>
-      <div class="field">
-        <label>Modul-Leistung (Wp)</label>
-        <input type="number" id="np-wp" value="465" min="100" max="1000" inputmode="numeric">
-        <input type="number" id="np-wp" value="465" min="100" max="1000" inputmode="numeric" oninput="recalcAllNPWRCoun()">
+      <div class="stat-card">
+        <div class="stat-label">Module Gesamt</div>
+        <div class="stat-value" id="d-mods">0</div>
       </div>
-      <div class="field">
-        <label>Start-Vorlage</label>
-        <div class="field-radio-group" id="np-template-group">
-          <label class="field-radio selected" data-value="empty">
-            <input type="radio" name="np-template" value="empty" checked>
-          <label class="field-radio selected" data-value="plan">
-            <input type="radio" name="np-template" value="plan" checked>
-            <div class="field-radio-text">
-              <div class="field-radio-title">MPPT-Plan eingeben</div>
-              <div class="field-radio-desc">Strings pro WR selbst definieren (12–24 pro WR)</div>
-            </div>
-          </label>
-          <label class="field-radio" data-value="empty">
-            <input type="radio" name="np-template" value="empty">
-            <div class="field-radio-text">
-              <div class="field-radio-title">Leer starten</div>
-              <div class="field-radio-desc">Frische Matrix ohne vordefinierte Strings</div>
-              <div class="field-radio-desc">Alle 24 Slots/WR auf NEIN, du füllst in der Tabelle</div>
-            </div>
-          </label>
-          <label class="field-radio" data-value="clone">
-            <input type="radio" name="np-template" value="clone">
-            <div class="field-radio-text">
-              <div class="field-radio-title">Klonen von bestehendem Projekt</div>
-              <div class="field-radio-desc">Übernimmt die komplette String-Matrix</div>
-              <div class="field-radio-desc">Übernimmt die komplette String-Matrix eines Projekts</div>
-            </div>
-          </label>
+      <div class="stat-card">
+        <div class="stat-label">Aktive Strings</div>
+        <div class="stat-value"><span id="d-act">0</span><span class="stat-unit">/</span><span id="d-total">0</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Wechselrichter</div>
+        <div class="stat-value" id="d-wr-count">0</div>
+      </div>
+    </div>
+    
+    <!-- ACTION BAR -->
+    <div class="action-bar">
+      <div class="action-bar-left">
+        <div style="background: var(--bg-tertiary); padding: 0.5rem 1rem; border-radius: var(--radius-sm); font-weight: 700; font-size: 0.875rem; border: 1px solid var(--border);">
+          <span id="project-name-display">PV MAN P52</span> (<span id="project-wp-display">465</span> Wp)
+        </div>
+        <button class="btn btn-secondary" onclick="openModal('config-modal')">⚙️ Konfiguration</button>
+        <button class="btn btn-danger" onclick="factoryReset()" title="Plan zurücksetzen">🔄 Reset</button>
+      </div>
+      
+      <div class="action-bar-right">
+        <button class="btn btn-secondary" onclick="loadFromCloud()">📥 Laden</button>
+        <button class="btn btn-primary" onclick="saveToCloud()">☁️ Speichern</button>
+        <button class="btn btn-secondary" onclick="printMontagePlan()">📋 Plan</button>
+        <button class="btn btn-success" onclick="exportGakExcel()">🏷️ GAK</button>
+        <button class="btn btn-secondary" onclick="exportStringsExcel()">🔢 Strings</button>
+        <button class="btn btn-secondary" onclick="exportProtocol()">📊 Protokoll</button>
+        <button class="btn btn-secondary" onclick="exportCSV()">📄 CSV</button>
+        <button class="btn btn-secondary" onclick="showValidation()">✓ Prüfen</button>
+      </div>
+    </div>
+    
+    <!-- FILTER TABS -->
+    <div class="filter-tabs" id="filter-tabs">
+      <button class="filter-tab active" onclick="filterInverter(0, this)">⚡ Alle WRs</button>
+    </div>
+    
+    <!-- INVERTER CARDS -->
+    <div id="inverter-cards"></div>
+  </div>
+  
+  <!-- SETUP PAGE -->
+  <div id="page-setup" style="display: none;">
+    <header class="page-header">
+      <h1 class="page-title">Setup</h1>
+      <p class="page-subtitle">Ersteinrichtung und Systemkonfiguration</p>
+    </header>
+    <div class="stat-card">
+      <p>Setup-Seite - Noch nicht implementiert</p>
+    </div>
+  </div>
+  
+  <!-- PLANS PAGE -->
+  <div id="page-plans" style="display: none;">
+    <header class="page-header">
+      <h1 class="page-title">Plans</h1>
+      <p class="page-subtitle">Vordefinierte Pläne und Templates</p>
+    </header>
+    <div class="stat-card">
+      <p>Plans-Seite - Noch nicht implementiert</p>
+    </div>
+  </div>
+  
+  <!-- ABOUT PAGE -->
+  <div id="page-about" style="display: none;">
+    <header class="page-header">
+      <h1 class="page-title">About</h1>
+      <p class="page-subtitle">Über SOLPRO</p>
+    </header>
+    <div class="stat-card">
+      <p>About-Seite - Noch nicht implementiert</p>
+    </div>
+  </div>
+  
+  <!-- FAQ PAGE -->
+  <div id="page-faq" style="display: none;">
+    <header class="page-header">
+      <h1 class="page-title">FAQ</h1>
+      <p class="page-subtitle">Häufig gestellte Fragen</p>
+    </header>
+    <div class="stat-card">
+      <p>FAQ-Seite - Noch nicht implementiert</p>
+    </div>
+  </div>
+  
+</main>
+
+<!-- CONFIG MODAL -->
+<div class="modal-overlay" id="config-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Konfiguration</h2>
+      <button class="modal-close" onclick="closeModal('config-modal')">&times;</button>
+    </div>
+    
+    <div class="modal-body">
+      <!-- Config Tabs -->
+      <div class="filter-tabs" style="margin-bottom: 1.5rem;">
+        <button class="filter-tab active" onclick="showConfigTab('basic')">Basic</button>
+        <button class="filter-tab" onclick="showConfigTab('templates')">Templates</button>
+        <button class="filter-tab" onclick="showConfigTab('projects')">Projekte</button>
+        <button class="filter-tab" onclick="showConfigTab('validation')">Validierung</button>
+      </div>
+      
+      <!-- Basic Tab -->
+      <div id="config-tab-basic" class="config-tab-content">
+        <div class="config-section">
+          <div class="config-section-title">Projekt-Einstellungen</div>
+          <div class="config-row">
+            <span class="config-label">Projekt-Name:</span>
+            <input type="text" id="cfg-project-name" class="input config-select" value="PV MAN P52">
+          </div>
+          <div class="config-row">
+            <span class="config-label">Modul-Wp:</span>
+            <input type="number" id="cfg-model-wp" class="input input-compact" value="465">
+          </div>
+        </div>
+        
+        <div class="config-section">
+          <div class="config-section-title">Wechselrichter hinzufügen</div>
+          <div class="config-row">
+            <span class="config-label">WR-Typ:</span>
+            <select id="cfg-wr-type" class="input config-select" onchange="updateCustomConfigInputs()">
+              <option value="SMA_STP125">SMA Sunny Tripower 125 (12 MPPT)</option>
+              <option value="SMA_STP100">SMA Sunny Tripower 100 (10 MPPT)</option>
+              <option value="SMA_STP80">SMA Sunny Tripower 80 (8 MPPT)</option>
+              <option value="HUAWEI_2000_100KTL">Huawei SUN2000-100KTL (10 MPPT)</option>
+              <option value="HUAWEI_2000_50KTL">Huawei SUN2000-50KTL (4 MPPT)</option>
+              <option value="FRONIUS_SYMO">Fronius Symo (6 MPPT)</option>
+              <option value="CUSTOM">Benutzerdefiniert</option>
+            </select>
+            <button class="btn btn-success" onclick="addInverter()">+ Hinzufügen</button>
+          </div>
+          
+          <div id="custom-config-row" class="config-row" style="display: none;">
+            <span class="config-label">MPPTs:</span>
+            <input type="number" id="cfg-custom-mppts" class="input input-compact" value="12" min="1" max="48">
+            <span class="config-label">Inputs:</span>
+            <input type="number" id="cfg-custom-inputs" class="input input-compact" value="2" min="1" max="4">
+          </div>
+        </div>
+        
+        <div class="config-section">
+          <div class="config-section-title">Aktuelle Wechselrichter</div>
+          <div class="config-item-list" id="wr-list"></div>
         </div>
       </div>
-      <div class="field" id="np-wr-count-field">
-        <label>Anzahl Wechselrichter (1–10)</label>
-        <input type="number" id="np-wr-count" value="6" min="1" max="10" inputmode="numeric">
-        <input type="number" id="np-wr-count" value="6" min="1" max="10" inputmode="numeric" oninput="renderNPWRPlan()">
-      </div>
-      <div class="field" id="np-plan-field">
-        <label>MPPT-Plan pro Wechselrichter</label>
-        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;line-height:1.4;">
-          Module pro String komma-getrennt. Quick-Buttons füllen mit Platzhalter-Werten (je 20 Module). Die ersten Strings belegen MPPT 1+2, danach MPPT 3–12.
+      
+      <!-- Templates Tab -->
+      <div id="config-tab-templates" class="config-tab-content" style="display: none;">
+        <div class="config-section">
+          <div class="config-section-title">Verfügbare Templates</div>
+          <div class="config-item-list" id="template-list"></div>
         </div>
-        <div id="np-wr-plan-list"></div>
+        
+        <div class="config-section">
+          <div class="config-section-title">Template speichern</div>
+          <div class="config-row">
+            <input type="text" id="new-template-name" class="input config-select" placeholder="Template Name" style="max-width: 200px;">
+            <input type="text" id="new-template-desc" class="input config-select" placeholder="Beschreibung" style="max-width: 250px;">
+            <button class="btn btn-success" onclick="saveTemplate()">💾 Speichern</button>
+          </div>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:20px;">
-        <button onclick="closeNewProjectModal()" class="btn btn-ghost" style="flex:1;min-height:48px;">Abbrechen</button>
-        <button onclick="doCreateNewProject()" class="btn btn-green" style="flex:1;min-height:48px;">Erstellen &amp; Öffnen</button>
-    sel.appendChild(opt);
-  });
+      
+      <!-- Projects Tab -->
+      <div id="config-tab-projects" class="config-tab-content" style="display: none;">
+        <div class="config-section">
+          <div class="config-section-title">Projekt-Verwaltung</div>
+          <div class="config-row">
+            <button class="btn btn-success" onclick="createNewProject()">+ Neues Projekt</button>
+            <button class="btn btn-primary" onclick="saveCurrentProject()">💾 Speichern</button>
+          </div>
+        </div>
+        
+        <div class="config-section">
+          <div class="config-section-title">Projekte</div>
+          <div class="config-item-list" id="projects-list"></div>
+        </div>
+      </div>
+      
+      <!-- Validation Tab -->
+      <div id="config-tab-validation" class="config-tab-content" style="display: none;">
+        <div class="config-section">
+          <div class="config-section-title">Validierung</div>
+          <div class="config-row">
+            <button class="btn btn-primary" onclick="showValidation()">📋 Bericht anzeigen</button>
+            <button class="btn btn-success" onclick="exportValidationReport()">📄 Exportieren</button>
+          </div>
+        </div>
+        
+        <div class="config-section">
+          <div class="config-section-title">Validierungsregeln</div>
+          <div class="stat-card" style="padding: 1rem;">
+            <div style="font-size: 0.875rem; color: var(--text-secondary);">
+              <div>• Max. Module pro String: <span id="rule-max-modules">30</span></div>
+              <div>• Max. Leistung pro MPPT: <span id="rule-max-power">15</span> kWp</div>
+              <div>• Spannungsbereich: <span id="rule-min-volt">200</span> - <span id="rule-max-volt">1000</span> V</div>
+              <div>• Max. Strom: <span id="rule-max-current">15</span> A</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('config-modal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="applyConfig()">✓ Anwenden</button>
+    </div>
+  </div>
+</div>
 
-  // Radio-Auswahl zurücksetzen
-  // Radio-Auswahl zurücksetzen (Default: MPPT-Plan)
-  document.querySelectorAll('input[name="np-template"]').forEach(r => {
-    r.checked = (r.value === 'empty');
-    r.closest('.field-radio').classList.toggle('selected', r.value === 'empty');
-    r.checked = (r.value === 'plan');
-    r.closest('.field-radio').classList.toggle('selected', r.value === 'plan');
-  });
-  renderNPWRPlan();
-  updateNewProjectForm();
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
 
-  g('newproj-modal').classList.add('show');
-function updateNewProjectForm(){
-  const selected = document.querySelector('input[name="np-template"]:checked');
-  if(!selected) return;
-  g('np-clone-from-field').style.display = selected.value === 'clone' ? 'block' : 'none';
-  // WR-Anzahl ist nur bei "leer" editierbar
-  g('np-wr-count-field').style.display = selected.value === 'empty' ? 'block' : 'none';
-  const v = selected.value;
-  g('np-clone-from-field').style.display = v === 'clone' ? 'block' : 'none';
-  g('np-wr-count-field').style.display = (v === 'plan' || v === 'empty') ? 'block' : 'none';
-  g('np-plan-field').style.display = v === 'plan' ? 'block' : 'none';
+<!-- DARK MODE TOGGLE -->
+<button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Dark Mode umschalten">
+  <svg id="dark-mode-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+  </svg>
+</button>
+
+<script>
+// CONSTANTS
+const SB_URL = "https://rcuimtfmjkpxkazbsggj.supabase.co";
+const SB_KEY = "sb_publishable_pe8Ye20-e9az1D5MvNCB5A_8_ai7afc";
+const PROJECT_ID = "PV_MAN_P52";
+
+// INVERTER CONFIGURATIONS
+const INVERTER_CONFIGS = {
+  "SMA_STP125": {
+    name: "SMA Sunny Tripower 125",
+    manufacturer: "SMA",
+    mppts: 12,
+    inputsPerMppt: 2,
+    defaultWp: 465,
+    description: "12 MPPTs, 2 Inputs pro MPPT"
+  },
+  "SMA_STP100": {
+    name: "SMA Sunny Tripower 100",
+    manufacturer: "SMA", 
+    mppts: 10,
+    inputsPerMppt: 2,
+    defaultWp: 465,
+    description: "10 MPPTs, 2 Inputs pro MPPT"
+  },
+  "SMA_STP80": {
+    name: "SMA Sunny Tripower 80",
+    manufacturer: "SMA",
+    mppts: 8,
+    inputsPerMppt: 2,
+    defaultWp: 465,
+    description: "8 MPPTs, 2 Inputs pro MPPT"
+  },
+  "HUAWEI_2000_100KTL": {
+    name: "Huawei SUN2000-100KTL",
+    manufacturer: "Huawei",
+    mppts: 10,
+    inputsPerMppt: 2,
+    defaultWp: 465,
+    description: "10 MPPTs, 2 Inputs pro MPPT",
+    huaweiMapping: true
+  },
+  "HUAWEI_2000_50KTL": {
+    name: "Huawei SUN2000-50KTL",
+    manufacturer: "Huawei",
+    mppts: 4,
+    inputsPerMppt: 2,
+    defaultWp: 465,
+    description: "4 MPPTs, 2 Inputs pro MPPT",
+    huaweiMapping: true
+  },
+  "FRONIUS_SYMO": {
+    name: "Fronius Symo",
+    manufacturer: "Fronius",
+    mppts: 6,
+    inputsPerMppt: 2,
+    defaultWp: 465,
+    description: "6 MPPTs, 2 Inputs pro MPPT"
+  },
+  "CUSTOM": {
+    name: "Benutzerdefiniert",
+    manufacturer: "Custom",
+    mppts: 12,
+    inputsPerMppt: 2,
+    defaultWp: 465,
+    description: "Eigene Konfiguration"
+  }
+};
+
+// CONFIGURATION TEMPLATES
+const CONFIG_TEMPLATES = {
+  "sma_standard": {
+    name: "SMA Standard (6x STP125)",
+    description: "6x SMA Sunny Tripower 125 mit 465Wp Modulen",
+    config: {
+      name: "SMA Standard Projekt",
+      modelWp: 465,
+      inverters: [
+        { id: 1, type: "SMA_STP125", name: "WR 1" },
+        { id: 2, type: "SMA_STP125", name: "WR 2" },
+        { id: 3, type: "SMA_STP125", name: "WR 3" },
+        { id: 4, type: "SMA_STP125", name: "WR 4" },
+        { id: 5, type: "SMA_STP125", name: "WR 5" },
+        { id: 6, type: "SMA_STP125", name: "WR 6" }
+      ]
+    }
+  },
+  "huawei_mix": {
+    name: "Huawei Mix (2x 100KTL + 2x 50KTL)",
+    description: "2x Huawei 100KTL + 2x Huawei 50KTL",
+    config: {
+      name: "Huawei Mix Projekt",
+      modelWp: 465,
+      inverters: [
+        { id: 1, type: "HUAWEI_2000_100KTL", name: "WR 1" },
+        { id: 2, type: "HUAWEI_2000_100KTL", name: "WR 2" },
+        { id: 3, type: "HUAWEI_2000_50KTL", name: "WR 3" },
+        { id: 4, type: "HUAWEI_2000_50KTL", name: "WR 4" }
+      ]
+    }
+  },
+  "small_system": {
+    name: "Kleinanlage (2x STP80)",
+    description: "2x SMA Sunny Tripower 80 für kleinere Anlagen",
+    config: {
+      name: "Kleinanlage",
+      modelWp: 465,
+      inverters: [
+        { id: 1, type: "SMA_STP80", name: "WR 1" },
+        { id: 2, type: "SMA_STP80", name: "WR 2" }
+      ]
+    }
+  }
+};
+
+// PLAUSIBILITY RULES
+const PLAUSIBILITY_RULES = {
+  maxModulesPerString: 30,
+  maxPowerPerMppt: 15,
+  minVoltage: 200,
+  maxVoltage: 1000,
+  maxCurrent: 15
+};
+
+// STATE
+let projectConfig = {
+  name: "PV MAN P52",
+  modelWp: 465,
+  inverters: [
+    { id: 1, type: "SMA_STP125", name: "WR 1" },
+    { id: 2, type: "SMA_STP125", name: "WR 2" },
+    { id: 3, type: "SMA_STP125", name: "WR 3" },
+    { id: 4, type: "SMA_STP125", name: "WR 4" },
+    { id: 5, type: "SMA_STP125", name: "WR 5" },
+    { id: 6, type: "SMA_STP125", name: "WR 6" }
+  ],
+  customMppts: 12,
+  customInputs: 2
+};
+
+let APP_STATE = {};
+let userTemplates = {};
+let projectsList = {};
+let currentProjectId = PROJECT_ID;
+let supabaseClient = null;
+
+// UTILITIES
+const g = id => document.getElementById(id);
+
+function toast(msg, duration = 3000) {
+  const t = g('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
 }
 
-// Erzeugt die per-WR-Eingabefelder für den MPPT-Plan
-function renderNPWRPlan(){
-  const wrap = g('np-wr-plan-list');
-  if(!wrap) return;
-  // Vorhandene Werte merken (damit sie bei WR-Anzahl-Änderung nicht verloren gehen)
-  const prev = {};
-  wrap.querySelectorAll('.np-wr-row').forEach(row => {
-    const wr = parseInt(row.dataset.wr);
-    const inp = row.querySelector('.np-wr-input');
-    if(wr && inp) prev[wr] = inp.value;
+// NAVIGATION
+function switchPage(pageId) {
+  document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  document.querySelectorAll('[id^="page-"]').forEach(page => page.style.display = 'none');
+  g(`page-${pageId}`).style.display = 'block';
+}
+
+// MODAL
+function openModal(modalId) {
+  g(modalId).classList.add('active');
+  if(modalId === 'config-modal') {
+    updateConfigUI();
+  }
+}
+
+function closeModal(modalId) {
+  g(modalId).classList.remove('active');
+}
+
+// DARK MODE
+function toggleDarkMode() {
+  document.body.classList.toggle('dark-mode');
+  const icon = g('dark-mode-icon');
+  if(document.body.classList.contains('dark-mode')) {
+    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />';
+  } else {
+    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />';
+  }
+}
+
+// CONFIG TABS
+function showConfigTab(tabName) {
+  document.querySelectorAll('.config-tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('#config-modal .filter-tab').forEach(el => el.classList.remove('active'));
+  
+  g(`config-tab-${tabName}`).style.display = 'block';
+  event.target.classList.add('active');
+  
+  if(tabName === 'templates') renderTemplateList();
+  if(tabName === 'projects') renderProjectsList();
+}
+
+// STATE GENERATION
+function generateDynamicState() {
+  const result = {};
+  
+  projectConfig.inverters.forEach((inv, wrIndex) => {
+    const wr = wrIndex + 1;
+    const config = INVERTER_CONFIGS[inv.type];
+    const totalMppts = config.mppts;
+    const inputsPerMppt = config.inputsPerMppt;
+    const isHuawei = config.huaweiMapping || false;
+    
+    for(let m = 1; m <= totalMppts; m++){
+      for(let s = 1; s <= inputsPerMppt; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        
+        if(isHuawei){
+          result[fullId] = { 
+            planName: "", 
+            gak: `GAK ${wr}.${m}`, 
+            mod: 0, 
+            stat: "NEIN", 
+            note: "Huawei WR" 
+          };
+        } else {
+          result[fullId] = { 
+            planName: "", 
+            gak: `GAK ${wr}.${s}`, 
+            mod: 0, 
+            stat: "NEIN", 
+            note: "" 
+          };
+        }
+      }
+    }
   });
-  const wrCount = Math.max(1, Math.min(10, parseInt(g('np-wr-count').value) || 6));
-  let html = '';
-  for(let wr = 1; wr <= wrCount; wr++){
-    html += `
-      <div class="np-wr-row" data-wr="${wr}">
-        <div class="np-wr-header">
-          <span class="np-wr-label">WR ${wr}</span>
-          <span class="np-wr-count-hint" id="np-wr-${wr}-count">— leer —</span>
+  
+  return result;
+}
+
+// RENDERING
+function renderMatrix(remoteOverride) {
+  if(remoteOverride){
+    Object.keys(remoteOverride).forEach(k => {
+      if(APP_STATE[k]){
+        APP_STATE[k].gak = remoteOverride[k].gak !== undefined ? remoteOverride[k].gak : APP_STATE[k].gak;
+        APP_STATE[k].mod = remoteOverride[k].mod !== undefined ? remoteOverride[k].mod : APP_STATE[k].mod;
+        APP_STATE[k].stat = remoteOverride[k].stat || APP_STATE[k].stat;
+        APP_STATE[k].uoc = remoteOverride[k].uoc || "";
+        APP_STATE[k].isc = remoteOverride[k].isc || "";
+        APP_STATE[k].riso = remoteOverride[k].riso || "";
+        APP_STATE[k].note = remoteOverride[k].note || APP_STATE[k].note;
+      }
+    });
+  }
+
+  const container = g('inverter-cards');
+  container.innerHTML = '';
+
+  projectConfig.inverters.forEach((inv, wrIndex) => {
+    const wr = wrIndex + 1;
+    const config = INVERTER_CONFIGS[inv.type];
+    const totalMppts = config.mppts;
+    const inputsPerMppt = config.inputsPerMppt;
+    
+    const card = document.createElement('div');
+    card.className = 'inverter-section';
+
+    let rowsHtml = '';
+    for(let m = 1; m <= totalMppts; m++){
+      for(let s = 1; s <= inputsPerMppt; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const item = APP_STATE[fullId] || { stat: "NEIN", mod: 0, gak: "", note: "" };
+        const isMpptDiv = (s === 1 && m > 1);
+        const isNein = (item.stat === 'NEIN');
+        const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * projectConfig.modelWp)/1000).toFixed(2) + ' kWp' : '—';
+        const planBadge = (item.planName)
+          ? `<span class="plan-badge active"><b>${item.planName}</b> · ${item.mod}M · ${item.gak}</span>` 
+          : `<span class="plan-badge">Freier Eingang</span>`;
+
+        rowsHtml += `
+          <tr id="row-${fullId}" class="${isMpptDiv ? 'mppt-divider' : ''} ${isNein ? 'inactive' : ''}">
+            <td data-label="Klemme">
+              <span class="string-id">${fullId}</span>
+              <span style="font-size:0.75rem;color:var(--text-muted);margin-left:0.5rem;">(M${m}.${s})</span>
+            </td>
+            <td data-label="Plan" class="no-print">
+              ${planBadge}
+            </td>
+            <td data-label="GAK">
+              <input type="text" id="gak-${fullId}" value="${item.gak}" class="input input-gak" oninput="saveLocal()">
+            </td>
+            <td data-label="Aktiv" class="no-print">
+              <div class="toggle-wrapper">
+                <button id="tja-${fullId}" class="toggle-btn ${item.stat==='JA'?'active-yes':''}" onclick="setStatus('${fullId}','JA')">JA</button>
+                <button id="tnei-${fullId}" class="toggle-btn ${item.stat==='NEIN'?'active-no':''}" onclick="setStatus('${fullId}','NEIN')">NEIN</button>
+              </div>
+              <input type="hidden" id="stat-${fullId}" value="${item.stat}">
+            </td>
+            <td data-label="Module">
+              <input type="number" inputmode="numeric" id="mod-${fullId}" value="${item.mod > 0 ? item.mod : ''}" class="input input-compact" oninput="onModInput('${wr}','${m}','${s}',this.value)">
+            </td>
+            <td data-label="Leistung" class="power-value" id="pw-${fullId}">${pwr}</td>
+            <td data-label="Uoc (V)"><input type="text" inputmode="decimal" id="uoc-${fullId}" value="${item.uoc||''}" placeholder="V" class="input input-compact" oninput="saveLocal()"></td>
+            <td data-label="Isc (A)"><input type="text" inputmode="decimal" id="isc-${fullId}" value="${item.isc||''}" placeholder="A" class="input input-compact" oninput="saveLocal()"></td>
+            <td data-label="Riso (MΩ)"><input type="text" inputmode="decimal" id="riso-${fullId}" value="${item.riso||''}" placeholder="MΩ" class="input input-compact" oninput="saveLocal()"></td>
+            <td data-label="Bemerkung">
+              <input type="text" id="note-${fullId}" value="${item.note||''}" class="input" style="width:100%;" oninput="saveLocal()">
+            </td>
+          </tr>`;
+      }
+    }
+
+    card.innerHTML = `
+      <div class="inverter-card">
+        <div class="inverter-header">
+          <div class="inverter-info">
+            <span class="inverter-badge">${inv.name}</span>
+            <div>
+              <div class="inverter-name">${config.name}</div>
+              <div class="inverter-type">${config.manufacturer} · ${config.mppts} MPPTs · ${config.inputsPerMppt} Inputs</div>
+            </div>
+          </div>
+          <div class="inverter-stats">
+            <span><span id="wr-mod-${wr}">0</span> Module</span>
+            <span>·</span>
+            <span><span id="wr-pwr-${wr}" style="color:var(--success);">0.00</span> kWp</span>
+          </div>
         </div>
-        <input type="text" class="np-wr-input" id="np-wr-${wr}-input"
-               placeholder="z.B. 23, 23, 22, 22, 21, 21, 21, 21, 20, 20, 21, 21"
-               oninput="updateNPWRCount(${wr})" autocomplete="off">
-        <div class="np-wr-buttons">
-          <button type="button" onclick="npFillQuick(${wr}, 12)">12 Str</button>
-          <button type="button" onclick="npFillQuick(${wr}, 14)">14 Str</button>
-          <button type="button" onclick="npFillQuick(${wr}, 16)">16 Str</button>
-          <button type="button" onclick="npFillQuick(${wr}, 18)">18 Str</button>
-          <button type="button" onclick="npFillQuick(${wr}, 24)">24 Str</button>
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr>
+              <th style="width:12%;">Klemme</th>
+              <th class="no-print" style="width:14%;">Plan</th>
+              <th style="width:10%;">GAK</th>
+              <th class="no-print" style="width:8%;">Aktiv</th>
+              <th style="width:7%;">Module</th>
+              <th style="width:9%;">Leistung</th>
+              <th style="width:8%;">Uoc (V)</th>
+              <th style="width:8%;">Isc (A)</th>
+              <th style="width:8%;">Riso (MΩ)</th>
+              <th style="width:16%;">Bemerkung</th>
+            </tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
         </div>
       </div>`;
-  }
-  wrap.innerHTML = html;
-  // Zurückgeschriebene Werte einsetzen
-  Object.keys(prev).forEach(wr => {
-    const inp = g('np-wr-' + wr + '-input');
-    if(inp) inp.value = prev[wr];
+    container.appendChild(card);
   });
-  for(let wr = 1; wr <= wrCount; wr++) updateNPWRCount(wr);
+
+  updateKpis();
 }
 
-function npFillQuick(wr, count){
-  const input = g('np-wr-' + wr + '-input');
-  if(!input) return;
-  // Vorlage: erstes String-Drittel etwas größer, Rest gleich — wirkt natürlicher als 20×count
-  // Vereinfachung: 20 × count
-  const value = Array(count).fill(20).join(', ');
-  input.value = value;
-  updateNPWRCount(wr);
-  input.focus();
+function generateFilterTabs() {
+  const bar = g('filter-tabs');
+  bar.innerHTML = `<button class="filter-tab active" onclick="filterInverter(0, this)">⚡ Alle WRs</button>`;
+  
+  projectConfig.inverters.forEach((inv, index) => {
+    bar.innerHTML += `<button class="filter-tab" onclick="filterInverter(${index + 1}, this)">${inv.name}</button>`;
+  });
 }
 
-function updateNPWRCount(wr){
-  const input = g('np-wr-' + wr + '-input');
-  const hint = g('np-wr-' + wr + '-count');
-  if(!input || !hint) return;
-  const parts = input.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n > 0);
-  const n = parts.length;
-  const totMods = parts.reduce((a,b) => a + b, 0);
-  if(n === 0){ hint.textContent = '— leer —'; hint.style.color = 'var(--muted)'; }
-  else {
-    const kwp = (totMods * (parseInt(g('np-wp').value) || 465) / 1000).toFixed(1);
-    hint.textContent = `${n} Strings · ~${kwp} kWp`;
-    hint.style.color = n > 24 ? '#dc2626' : 'var(--green)';
-  }
+function filterInverter(n, btn) {
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.inverter-section').forEach((d,i) => {
+    d.style.display = (n === 0 || i + 1 === n) ? 'block' : 'none';
+  });
 }
 
-function recalcAllNPWRCoun(){
-  const wrCount = Math.max(1, Math.min(10, parseInt(g('np-wr-count').value) || 6));
-  for(let wr = 1; wr <= wrCount; wr++) updateNPWRCount(wr);
+// INPUT HANDLING
+function onModInput(wr, mppt, input, val) {
+  recalcRow(`${wr}.${mppt}.${input}`);
+  saveLocal();
 }
 
-function doCreateNewProject(){
-  const name = g('np-name').value.trim();
-  const wp = parseInt(g('np-wp').value) || 465;
-    const cloneFromId = g('np-clone-from').value;
-    if(!PROJECTS[cloneFromId]) return toast('Quellprojekt ungültig');
-    plan = JSON.parse(JSON.stringify(PROJECTS[cloneFromId].plan));
-  } else if(template === 'plan'){
-    const wrCount = Math.max(1, Math.min(10, parseInt(g('np-wr-count').value) || 6));
-    plan = {};
-    for(let wr = 1; wr <= wrCount; wr++){
-      const input = g('np-wr-' + wr + '-input');
-      if(!input) { plan[wr] = []; continue; }
-      const parts = input.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n > 0);
-      if(parts.length === 0){ plan[wr] = []; continue; }
-      if(parts.length > 24){ return toast(`WR ${wr}: maximal 24 Strings erlaubt (habe ${parts.length})`); }
-      // Erzeuge Plan-Strings: erste N MPPTs doppelt belegt
-      // p = String-Nummer, m = Module count, g = GAK-Gruppe (1 für erstes Drittel, 2 für Rest), n = Fläche
-      plan[wr] = parts.map((mods, idx) => {
-        const p = idx + 1;
-        // GAK-Verteilung: ~erste Hälfte GAK 1, Rest GAK 2
-        const g = (idx < parts.length / 2) ? 1 : 2;
-        return { p, m: mods, g, n: '' };
-      });
-    }
+function setStatus(id, st) {
+  g('stat-'+id).value = st;
+  const ja = g('tja-'+id), nei = g('tnei-'+id);
+  if(st === 'JA'){ ja.className = 'toggle-btn active-yes'; nei.className = 'toggle-btn'; }
+  else { nei.className = 'toggle-btn active-no'; ja.className = 'toggle-btn'; }
+  recalcRow(id);
+  saveLocal();
+}
+
+function recalcRow(id) {
+  const st = g('stat-'+id).value;
+  const mod = parseFloat(g('mod-'+id).value) || 0;
+  const row = g('row-'+id);
+  const pw = g('pw-'+id);
+
+  if(st === 'NEIN'){
+    row.classList.add('inactive');
+    pw.textContent = '—';
   } else {
-    // empty
-    const wrCount = Math.max(1, Math.min(10, parseInt(g('np-wr-count').value) || 6));
-    plan = generateEmptyPlan(wrCount);
+    row.classList.remove('inactive');
+    if(mod > 0){
+      pw.textContent = ((mod * projectConfig.modelWp)/1000).toFixed(2) + ' kWp';
+    } else {
+      pw.textContent = '—';
+    }
   }
+  updateKpis();
+}
+
+function updateKpis() {
+  let totMods = 0, totPwr = 0, totActive = 0, totStrings = 0;
+
+  projectConfig.inverters.forEach((inv, wrIndex) => {
+    const wr = wrIndex + 1;
+    const config = INVERTER_CONFIGS[inv.type];
+    let wrM = 0, wrP = 0;
+    
+    for(let m = 1; m <= config.mppts; m++){
+      for(let s = 1; s <= config.inputsPerMppt; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        totStrings++;
+        const st = g('stat-'+fullId);
+        if(st && st.value === 'JA'){
+          const mod = parseFloat((g('mod-'+fullId)||{}).value) || 0;
+          const pwr = (mod * projectConfig.modelWp) / 1000;
+          wrM += mod; wrP += pwr;
+          totMods += mod; totPwr += pwr;
+          if(mod > 0) totActive++;
+        }
+      }
+    }
+    const wm = g(`wr-mod-${wr}`), wp = g(`wr-pwr-${wr}`);
+    if(wm) wm.textContent = wrM;
+    if(wp) wp.textContent = wrP.toFixed(2);
+  });
+
+  g('d-mods').textContent = totMods;
+  g('d-pwr').textContent = totPwr.toFixed(2);
+  g('d-act').textContent = totActive;
+  g('d-total').textContent = totStrings;
+  g('d-wr-count').textContent = projectConfig.inverters.length;
+}
+
+// DATA MANAGEMENT
+function saveLocal() {
+  const payload = collectData();
+  payload.config = projectConfig;
+  try { localStorage.setItem('sp_local_backup', JSON.stringify(payload)); } catch(e){}
+}
+
+function collectData() {
+  const payload = {};
+  projectConfig.inverters.forEach((inv, wrIndex) => {
+    const wr = wrIndex + 1;
+    const config = INVERTER_CONFIGS[inv.type];
+    
+    for(let m = 1; m <= config.mppts; m++){
+      for(let s = 1; s <= config.inputsPerMppt; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        payload[fullId] = {
+          gak: (g('gak-'+fullId)||{}).value || "",
+          stat: (g('stat-'+fullId)||{}).value || "NEIN",
+          mod: parseFloat((g('mod-'+fullId)||{}).value) || 0,
+          uoc: (g('uoc-'+fullId)||{}).value || "",
+          isc: (g('isc-'+fullId)||{}).value || "",
+          riso: (g('riso-'+fullId)||{}).value || "",
+          note: (g('note-'+fullId)||{}).value || ""
+        };
+      }
+    }
+  });
+  return payload;
+}
+
+// CONFIG MANAGEMENT
+function updateConfigUI() {
+  g('cfg-project-name').value = projectConfig.name;
+  g('cfg-model-wp').value = projectConfig.modelWp;
+  g('cfg-custom-mppts').value = projectConfig.customMppts;
+  g('cfg-custom-inputs').value = projectConfig.customInputs;
+  renderInverterList();
+}
+
+function updateCustomConfigInputs() {
+  const type = g('cfg-wr-type').value;
+  const customRow = g('custom-config-row');
+  customRow.style.display = (type === 'CUSTOM') ? 'flex' : 'none';
+}
+
+function renderInverterList() {
+  const list = g('wr-list');
+  list.innerHTML = '';
+  
+  projectConfig.inverters.forEach((inv, index) => {
+    const config = INVERTER_CONFIGS[inv.type];
+    const item = document.createElement('div');
+    item.className = 'config-item';
+    item.innerHTML = `
+      <span class="config-item-name">${inv.name}</span>
+      <span class="config-item-info">${config.name} (${config.mppts} MPPTs, ${config.inputsPerMppt} Inputs)</span>
+      <button class="btn btn-danger" style="padding:0.375rem 0.75rem;font-size:0.75rem;" onclick="removeInverter(${index})">✕</button>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function addInverter() {
+  const type = g('cfg-wr-type').value;
+  const config = INVERTER_CONFIGS[type];
+  
+  const newId = projectConfig.inverters.length + 1;
+  const newInv = {
+    id: newId,
+    type: type,
+    name: `WR ${newId}`
+  };
+  
+  projectConfig.inverters.push(newInv);
+  renderInverterList();
+  toast(`${config.name} hinzugefügt`);
+}
+
+function removeInverter(index) {
+  projectConfig.inverters.splice(index, 1);
+  projectConfig.inverters.forEach((inv, i) => {
+    inv.id = i + 1;
+    inv.name = `WR ${i + 1}`;
+  });
+  renderInverterList();
+}
+
+function applyConfig() {
+  projectConfig.name = g('cfg-project-name').value;
+  projectConfig.modelWp = parseInt(g('cfg-model-wp').value) || 465;
+  projectConfig.customMppts = parseInt(g('cfg-custom-mppts').value) || 12;
+  projectConfig.customInputs = parseInt(g('cfg-custom-inputs').value) || 2;
+  
+  g('project-name-display').textContent = projectConfig.name;
+  g('project-wp-display').textContent = projectConfig.modelWp;
+  
+  APP_STATE = generateDynamicState();
+  renderMatrix(null);
+  generateFilterTabs();
+  updateKpis();
+  
+  closeModal('config-modal');
+  toast('Konfiguration angewendet');
+  saveLocal();
+}
+
+// TEMPLATE MANAGEMENT
+function initTemplates() {
+  try {
+    userTemplates = JSON.parse(localStorage.getItem('sp_user_templates') || '{}');
+  } catch(e){
+    userTemplates = {};
+  }
+}
+
+function saveTemplate() {
+  const name = g('new-template-name').value;
+  const desc = g('new-template-desc').value;
+  
+  if(!name || name.trim() === '') return toast('Bitte einen Namen eingeben');
+  
+  userTemplates[name] = {
+    name: name,
+    description: desc || 'Benutzerdefiniertes Template',
+    config: JSON.parse(JSON.stringify(projectConfig))
+  };
+  
+  localStorage.setItem('sp_user_templates', JSON.stringify(userTemplates));
+  toast(`Template "${name}" gespeichert`);
+  g('new-template-name').value = '';
+  g('new-template-desc').value = '';
+  renderTemplateList();
+}
+
+function loadTemplate(templateKey) {
+  let template;
+  if(CONFIG_TEMPLATES[templateKey]){
+    template = CONFIG_TEMPLATES[templateKey];
+  } else if(userTemplates[templateKey]){
+    template = userTemplates[templateKey];
+  } else {
+    return toast('Template nicht gefunden');
+  }
+  
+  if(!confirm(`Template "${template.name}" laden? Aktuelle Konfiguration wird überschrieben.`)) return;
+  
+  projectConfig = JSON.parse(JSON.stringify(template.config));
+  g('project-name-display').textContent = projectConfig.name;
+  g('project-wp-display').textContent = projectConfig.modelWp;
+  
+  APP_STATE = generateDynamicState();
+  renderMatrix(null);
+  generateFilterTabs();
+  updateKpis();
+  
+  toast(`Template "${template.name}" geladen`);
+  saveLocal();
+}
+
+function deleteTemplate(templateKey, isUserTemplate = false) {
+  if(!confirm('Template wirklich löschen?')) return;
+  
+  if(isUserTemplate){
+    delete userTemplates[templateKey];
+    localStorage.setItem('sp_user_templates', JSON.stringify(userTemplates));
+  }
+  
+  renderTemplateList();
+  toast('Template gelöscht');
+}
+
+function renderTemplateList() {
+  const container = g('template-list');
+  container.innerHTML = '';
+  
+  Object.keys(CONFIG_TEMPLATES).forEach(key => {
+    const t = CONFIG_TEMPLATES[key];
+    const div = document.createElement('div');
+    div.className = 'config-item';
+    div.innerHTML = `
+      <span class="config-item-name">${t.name}</span>
+      <span class="config-item-info">${t.description}</span>
+      <button class="btn btn-success" style="padding:0.375rem 0.75rem;font-size:0.75rem;" onclick="loadTemplate('${key}')">Laden</button>
+    `;
+    container.appendChild(div);
+  });
+  
+  Object.keys(userTemplates).forEach(key => {
+    const t = userTemplates[key];
+    const div = document.createElement('div');
+    div.className = 'config-item';
+    div.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+    div.innerHTML = `
+      <span class="config-item-name">${t.name}</span>
+      <span class="config-item-info">${t.description}</span>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn btn-success" style="padding:0.375rem 0.75rem;font-size:0.75rem;" onclick="loadTemplate('${key}')">Laden</button>
+        <button class="btn btn-danger" style="padding:0.375rem 0.75rem;font-size:0.75rem;" onclick="deleteTemplate('${key}', true)">✕</button>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// PROJECT MANAGEMENT
+function initProjects() {
+  try {
+    projectsList = JSON.parse(localStorage.getItem('sp_projects_list') || '{}');
+  } catch(e){
+    projectsList = {};
+  }
+  
+  if(!projectsList[currentProjectId]){
+    projectsList[currentProjectId] = {
+      id: currentProjectId,
+      name: projectConfig.name,
+      createdAt: new Date().toISOString(),
+      lastModified: new Date().toISOString()
+    };
+    saveProjectsList();
+  }
+}
+
+function saveProjectsList() {
+  localStorage.setItem('sp_projects_list', JSON.stringify(projectsList));
+}
+
+function createNewProject() {
+  const name = prompt('Projekt Name:');
+  if(!name) return;
+  
+  const newId = 'proj_' + Date.now();
+  
+  projectsList[newId] = {
+    id: newId,
+    name: name,
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString()
+  };
+  
+  saveProjectsList();
+  
+  localStorage.setItem(`sp_project_${newId}`, JSON.stringify({
+    config: {
+      name: name,
+      modelWp: 465,
+      inverters: [
+        { id: 1, type: "SMA_STP125", name: "WR 1" }
+      ]
+    },
+    data: {}
+  }));
+  
+  renderProjectsList();
+  toast('Projekt erstellt');
+}
+
+function switchProject(projectId) {
+  if(!confirm('Projekt wechseln? Ungespeicherte Änderungen gehen verloren.')) return;
+  
+  currentProjectId = projectId;
+  const projectInfo = projectsList[projectId];
+  
+  try {
+    const projectData = JSON.parse(localStorage.getItem(`sp_project_${projectId}`) || '{}');
+    
+    if(projectData.config){
+      projectConfig = projectData.config;
+      g('project-name-display').textContent = projectConfig.name;
+      g('project-wp-display').textContent = projectConfig.modelWp;
+    }
+    
+    APP_STATE = generateDynamicState();
+    renderMatrix(projectData.data || null);
+    generateFilterTabs();
+    updateKpis();
+    
+    toast(`Projekt "${projectInfo.name}" geladen`);
+  } catch(e){
+    toast('Fehler beim Laden des Projekts');
+  }
+}
+
+function deleteProject(projectId) {
+  if(projectId === currentProjectId) return toast('Aktives Projekt kann nicht gelöscht werden');
+  if(!confirm('Projekt wirklich löschen? Alle Daten gehen verloren.')) return;
+  
+  delete projectsList[projectId];
+  localStorage.removeItem(`sp_project_${projectId}`);
+  saveProjectsList();
+  
+  renderProjectsList();
+  toast('Projekt gelöscht');
+}
+
+function saveCurrentProject() {
+  projectsList[currentProjectId].name = projectConfig.name;
+  projectsList[currentProjectId].lastModified = new Date().toISOString();
+  saveProjectsList();
+  
+  localStorage.setItem(`sp_project_${currentProjectId}`, JSON.stringify({
+    config: projectConfig,
+    data: collectData()
+  }));
+  
+  toast('Projekt gespeichert');
+}
+
+function renderProjectsList() {
+  const container = g('projects-list');
+  container.innerHTML = '';
+  
+  Object.keys(projectsList).forEach(id => {
+    const p = projectsList[id];
+    const isActive = id === currentProjectId;
+    const div = document.createElement('div');
+    div.className = 'config-item';
+    if(isActive) div.style.borderColor = 'var(--accent)';
+    
+    div.innerHTML = `
+      <span class="config-item-name">${p.name}</span>
+      <span class="config-item-info">${new Date(p.lastModified).toLocaleDateString()}</span>
+      <div style="display:flex;gap:0.5rem;">
+        ${!isActive ? `<button class="btn btn-success" style="padding:0.375rem 0.75rem;font-size:0.75rem;" onclick="switchProject('${id}')">Öffnen</button>` : '<span style="padding:0.375rem 0.75rem;font-size:0.75rem;color:var(--accent);font-weight:600;">Aktiv</span>'}
+        ${!isActive ? `<button class="btn btn-danger" style="padding:0.375rem 0.75rem;font-size:0.75rem;" onclick="deleteProject('${id}')">✕</button>` : ''}
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// VALIDATION
+function validateInput(id, field, value) {
+  let validation = { valid: true, message: '' };
+  
+  switch(field){
+    case 'mod':
+      const modules = parseInt(value) || 0;
+      if(modules < 0) validation = { valid: false, message: 'Negative Anzahl nicht möglich' };
+      else if(modules > PLAUSIBILITY_RULES.maxModulesPerString) validation = { valid: false, message: `Max. ${PLAUSIBILITY_RULES.maxModulesPerString} Module pro String` };
+      else if(modules > 0 && modules < 5) validation = { valid: false, message: 'Mindestens 5 Module empfohlen' };
+      break;
+      
+    case 'uoc':
+      const voltage = parseFloat(value) || 0;
+      if(voltage < 0) validation = { valid: false, message: 'Negative Spannung nicht möglich' };
+      else if(voltage > PLAUSIBILITY_RULES.maxVoltage) validation = { valid: false, message: `Max. ${PLAUSIBILITY_RULES.maxVoltage}V überschritten` };
+      else if(voltage > 0 && voltage < PLAUSIBILITY_RULES.minVoltage) validation = { valid: false, message: `Mindestens ${PLAUSIBILITY_RULES.minVoltage}V erforderlich` };
+      break;
+      
+    case 'isc':
+      const current = parseFloat(value) || 0;
+      if(current < 0) validation = { valid: false, message: 'Negativer Strom nicht möglich' };
+      else if(current > PLAUSIBILITY_RULES.maxCurrent) validation = { valid: false, message: `Max. ${PLAUSIBILITY_RULES.maxCurrent}A überschritten` };
+      break;
+  }
+  
+  return validation;
+}
+
+function validateProject() {
+  const warnings = [];
+  const errors = [];
+  
+  projectConfig.inverters.forEach((inv, wrIndex) => {
+    const wr = wrIndex + 1;
+    const config = INVERTER_CONFIGS[inv.type];
+    
+    let wrPower = 0;
+    
+    for(let m = 1; m <= config.mppts; m++){
+      for(let s = 1; s <= config.inputsPerMppt; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const st = (g('stat-'+fullId)||{}).value || "NEIN";
+        if(st === 'JA'){
+          const mod = parseFloat((g('mod-'+fullId)||{}).value) || 0;
+          const uoc = parseFloat((g('uoc-'+fullId)||{}).value) || 0;
+          const isc = parseFloat((g('isc-'+fullId)||{}).value) || 0;
+          
+          wrPower += (mod * projectConfig.modelWp) / 1000;
+          
+          if(mod > PLAUSIBILITY_RULES.maxModulesPerString){
+            errors.push(`${fullId}: Zu viele Module (${mod} > ${PLAUSIBILITY_RULES.maxModulesPerString})`);
+          }
+          
+          if(uoc > PLAUSIBILITY_RULES.maxVoltage){
+            errors.push(`${fullId}: Uoc zu hoch (${uoc}V > ${PLAUSIBILITY_RULES.maxVoltage}V)`);
+          }
+          
+          if(isc > PLAUSIBILITY_RULES.maxCurrent){
+            errors.push(`${fullId}: Isc zu hoch (${isc}A > ${PLAUSIBILITY_RULES.maxCurrent}A)`);
+          }
+        }
+      }
+    }
+    
+    if(wrPower > config.mppts * PLAUSIBILITY_RULES.maxPowerPerMppt){
+      warnings.push(`${inv.name}: Gesamtleistung sehr hoch (${wrPower.toFixed(1)}kWp)`);
+    }
+  });
+  
+  return { warnings, errors };
+}
+
+function showValidation() {
+  const { warnings, errors } = validateProject();
+  
+  let report = '📋 Plausibilitäts-Prüfung:\n\n';
+  
+  if(errors.length === 0 && warnings.length === 0){
+    report += '✅ Keine Probleme gefunden!';
+  } else {
+    if(errors.length > 0){
+      report += '❌ Fehler:\n';
+      errors.forEach(e => report += `• ${e}\n`);
+      report += '\n';
+    }
+    
+    if(warnings.length > 0){
+      report += '⚠️ Warnungen:\n';
+      warnings.forEach(w => report += `• ${w}\n`);
+    }
+  }
+  
+  alert(report);
+}
+
+function exportValidationReport() {
+  const { warnings, errors } = validateProject();
+  
+  let report = `SOLPRO Validierungsbericht\n`;
+  report += `Projekt: ${projectConfig.name}\n`;
+  report += `Datum: ${new Date().toLocaleString()}\n`;
+  report += `===============================\n\n`;
+  
+  report += `Projekt-Konfiguration:\n`;
+  report += `- Wechselrichter: ${projectConfig.inverters.length}\n`;
+  report += `- Modul-Wp: ${projectConfig.modelWp}W\n\n`;
+  
+  projectConfig.inverters.forEach(inv => {
+    const config = INVERTER_CONFIGS[inv.type];
+    report += `- ${inv.name}: ${config.name} (${config.mppts} MPPTs)\n`;
+  });
+  
+  report += `\nValidierungsergebnisse:\n`;
+  if(errors.length === 0 && warnings.length === 0){
+    report += `✅ Keine Probleme gefunden\n`;
+  } else {
+    if(errors.length > 0){
+      report += `\n❌ FEHLER (${errors.length}):\n`;
+      errors.forEach(e => report += `• ${e}\n`);
+    }
+    
+    if(warnings.length > 0){
+      report += `\n⚠️ WARNUNGEN (${warnings.length}):\n`;
+      warnings.forEach(w => report += `• ${w}\n`);
+    }
+  }
+  
+  const blob = new Blob([report], { type: 'text/plain;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `Validierungsbericht_${projectConfig.name}_${new Date().toISOString().split('T')[0]}.txt`;
+  link.click();
+  
+  toast('Validierungsbericht exportiert');
+}
+
+// CLOUD OPERATIONS
+function initSupabase() {
+  if(window.supabase) {
+    supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+  }
+}
+
+async function saveToCloud() {
+  if(!supabaseClient) return toast('Keine Cloud-Verbindung');
+  toast('☁️ Lade Daten in Cloud hoch...');
+  try {
+    const { error } = await supabaseClient.from('pv_projects').upsert({
+      id: currentProjectId,
+      name: projectConfig.name,
+      pruefer: "System",
+      modul_wp: projectConfig.modelWp,
+      mppts: projectConfig.inverters.map(inv => INVERTER_CONFIGS[inv.type].mppts).join(','),
+      data: collectData(),
+      config: projectConfig,
+      updated_at: new Date().toISOString()
+    });
+    if(!error){
+      saveLocal();
+      toast('✅ Daten erfolgreich gespeichert!');
+    } else {
+      toast('Fehler beim Speichern');
+    }
+  } catch(e) { toast('Verbindungsfehler'); }
+}
+
+async function loadFromCloud() {
+  if(!supabaseClient) return toast('Keine Cloud-Verbindung');
+  toast('📥 Lade Daten aus Cloud...');
+  try {
+    const { data, error } = await supabaseClient
+      .from('pv_projects')
+      .select('*')
+      .eq('id', currentProjectId)
+      .single();
+
+    if(data && data.data){
+      if(data.config){
+        projectConfig = data.config;
+        g('project-name-display').textContent = projectConfig.name;
+        g('project-wp-display').textContent = projectConfig.modelWp;
+        generateFilterTabs();
+      }
+      renderMatrix(data.data);
+      saveLocal();
+      toast('✅ Daten erfolgreich geladen');
+    } else {
+      toast('Cloud-Eintrag ist leer');
+    }
+  } catch(e) { toast('Fehler beim Laden'); }
+}
+
+// EXPORT FUNCTIONS
+function exportGakExcel() {
+  const rows = [['Etikett']];
+  let cnt = 0;
+
+  projectConfig.inverters.forEach((inv, wrIndex) => {
+    const wr = wrIndex + 1;
+    const config = INVERTER_CONFIGS[inv.type];
+    
+    for(let m = 1; m <= config.mppts; m++){
+      for(let s = 1; s <= config.inputsPerMppt; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const st = (g('stat-'+fullId)||{}).value || APP_STATE[fullId].stat;
+        if(st !== 'JA') continue;
+
+        const mod = parseFloat((g('mod-'+fullId)||{}).value) || APP_STATE[fullId].mod || 0;
+        if(mod <= 0) continue;
+
+        const gak = (g('gak-'+fullId)||{}).value || APP_STATE[fullId].gak;
+        const note = (g('note-'+fullId)||{}).value || APP_STATE[fullId].note || '';
+        const pwr = ((mod * projectConfig.modelWp)/1000).toFixed(2).replace('.', ',');
+
+        const labelText = [
+          `BVH ${projectConfig.name}`,
+          fullId,
+          gak,
+          `${mod} Module`,
+          `${pwr} kWp`,
+          note
+        ].filter(Boolean).join('\r\n');
+
+        rows.push([{ t: 's', v: labelText }]);
+        cnt++;
+      }
+    }
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 35 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Etiketten');
+  XLSX.writeFile(wb, `SmartScript_GAK_${projectConfig.name}.xlsx`);
+  toast(`${cnt} GAK-Pickerl exportiert`);
+}
+
+function exportStringsExcel() {
+  const rows = [['String']];
+  let cnt = 0;
+
+  projectConfig.inverters.forEach((inv, wrIndex) => {
+    const wr = wrIndex + 1;
+    const config = INVERTER_CONFIGS[inv.type];
+    
+    for(let m = 1; m <= config.mppts; m++){
+      for(let s = 1; s <= config.inputsPerMppt; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const st = (g('stat-'+fullId)||{}).value || APP_STATE[fullId].stat;
+        if(st !== 'JA') continue;
+        const mod = parseFloat((g('mod-'+fullId)||{}).value) || APP_STATE[fullId].mod || 0;
+        if(mod <= 0) continue;
+
+        rows.push([{ t: 's', v: fullId }]);
+        cnt++;
+      }
+    }
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 15 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'String-Nummern');
+  XLSX.writeFile(wb, `SmartScript_Strings_${projectConfig.name}.xlsx`);
+  toast(`${cnt} String-Nummern exportiert`);
+}
+
+function exportProtocol() {
+  const rows = [
+    [{t:'s', v:'Klemme'}, 'Plan-String', 'GAK', 'Status', 'Module', 'Leistung (kWp)', 'Uoc (V)', 'Isc (A)', 'Riso (MOhm)', 'Bemerkung']
+  ];
+
+  projectConfig.inverters.forEach((inv, wrIndex) => {
+    const wr = wrIndex + 1;
+    const config = INVERTER_CONFIGS[inv.type];
+    
+    for(let m = 1; m <= config.mppts; m++){
+      for(let s = 1; s <= config.inputsPerMppt; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const item = APP_STATE[fullId];
+        const st = (g('stat-'+fullId)||{}).value || item.stat;
+        const mod = (g('mod-'+fullId)||{}).value || item.mod;
+        const pwr = (st === 'JA' && parseFloat(mod) > 0) ? ((parseFloat(mod) * projectConfig.modelWp)/1000).toFixed(2) : '0';
+        const gak = (g('gak-'+fullId)||{}).value || item.gak;
+        const note = (g('note-'+fullId)||{}).value || item.note || '';
+
+        rows.push([
+          { t: 's', v: fullId },
+          item.planName || '—',
+          gak,
+          st,
+          parseInt(mod) || 0,
+          parseFloat(pwr.replace(',','.')) || 0,
+          (g('uoc-'+fullId)||{}).value || '',
+          (g('isc-'+fullId)||{}).value || '',
+          (g('riso-'+fullId)||{}).value || '',
+          note
+        ]);
+      }
+    }
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 18 }, { wch: 16 }, { wch: 12 }, { wch: 10 }, { wch: 10 },
+    { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 26 }
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'Prüfprotokoll');
+  XLSX.writeFile(wb, `Protokoll_${projectConfig.name}.xlsx`);
+  toast('Prüfprotokoll exportiert');
+}
+
+function exportCSV() {
+  const rows = [['Klemme', 'Plan-String', 'GAK', 'Status', 'Module', 'Leistung (kWp)', 'Uoc (V)', 'Isc (A)', 'Riso (MOhm)', 'Bemerkung']];
+
+  projectConfig.inverters.forEach((inv, wrIndex) => {
+    const wr = wrIndex + 1;
+    const config = INVERTER_CONFIGS[inv.type];
+    
+    for(let m = 1; m <= config.mppts; m++){
+      for(let s = 1; s <= config.inputsPerMppt; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const item = APP_STATE[fullId];
+        const st = (g('stat-'+fullId)||{}).value || item.stat;
+        const mod = (g('mod-'+fullId)||{}).value || item.mod;
+        const pwr = (st === 'JA' && parseFloat(mod) > 0) ? ((parseFloat(mod) * projectConfig.modelWp)/1000).toFixed(2) : '0';
+        const gak = (g('gak-'+fullId)||{}).value || item.gak;
+        const note = (g('note-'+fullId)||{}).value || item.note || '';
+
+        rows.push([
+          fullId,
+          item.planName || '—',
+          gak,
+          st,
+          parseInt(mod) || 0,
+          parseFloat(pwr.replace(',','.')) || 0,
+          (g('uoc-'+fullId)||{}).value || '',
+          (g('isc-'+fullId)||{}).value || '',
+          (g('riso-'+fullId)||{}).value || '',
+          note
+        ]);
+      }
+    }
+  });
+
+  const csvContent = rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `Export_${projectConfig.name}_${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
+  
+  toast('CSV-Export heruntergeladen');
+}
+
+function printMontagePlan() {
+  const originalTitle = document.title;
+  document.title = `SOLPRO_Montageplan_${projectConfig.name}`;
+  
+  window.print();
+  
+  setTimeout(() => {
+    document.title = originalTitle;
+  }, 1000);
+  
+  toast('Druckdialog geöffnet');
+}
+
+function factoryReset() {
+  if(!confirm("Plan zurücksetzen? Alle Daten gehen verloren.")) return;
+  
+  localStorage.removeItem('sp_local_backup');
+  APP_STATE = generateDynamicState();
+  renderMatrix(null);
+  toast('Plan zurückgesetzt');
+}
+
+// INITIALIZATION
+function init() {
+  initSupabase();
+  initTemplates();
+  initProjects();
+  
+  let localCache = null;
+  try {
+    localCache = JSON.parse(localStorage.getItem('sp_local_backup') || '{}');
+  } catch(e){}
+
+  if(localCache && localCache.config){
+    projectConfig = localCache.config;
+    g('project-name-display').textContent = projectConfig.name;
+    g('project-wp-display').textContent = projectConfig.modelWp;
+  }
+  
+  APP_STATE = generateDynamicState();
+  renderMatrix(localCache && Object.keys(localCache).length > 5 ? localCache : null);
+  generateFilterTabs();
+  
+  // Update validation rules display
+  g('rule-max-modules').textContent = PLAUSIBILITY_RULES.maxModulesPerString;
+  g('rule-max-power').textContent = PLAUSIBILITY_RULES.maxPowerPerMppt;
+  g('rule-min-volt').textContent = PLAUSIBILITY_RULES.minVoltage;
+  g('rule-max-volt').textContent = PLAUSIBILITY_RULES.maxVoltage;
+  g('rule-max-current').textContent = PLAUSIBILITY_RULES.maxCurrent;
+}
+
+// Start
+window.onload = init;
+</script>
+</body>
+</html>

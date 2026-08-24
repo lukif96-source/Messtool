@@ -1046,7 +1046,8 @@ body {
       <button class="nav-link" onclick="switchPage('faq')">FAQ</button>
     </div>
     
-    <button class="nav-cta" onclick="openModal('config-modal')">Konfiguration</button>
+    <button class="nav-cta" onclick="createNewProject()">+ Neues Projekt</button>
+    <button class="btn btn-secondary" style="padding:0.625rem 1rem;border-radius:var(--radius-sm);font-weight:600;font-size:0.875rem;border:1px solid var(--border);cursor:pointer;transition:all 0.2s ease;white-space:nowrap;background:var(--bg-secondary);color:var(--text-primary);" onclick="openModal('config-modal')">⚙️ Konfiguration</button>
   </div>
 </nav>
 
@@ -1117,8 +1118,90 @@ body {
       <h1 class="page-title">Setup</h1>
       <p class="page-subtitle">Ersteinrichtung und Systemkonfiguration</p>
     </header>
-    <div class="stat-card">
-      <p>Setup-Seite - Noch nicht implementiert</p>
+    
+    <div class="dashboard">
+      <div class="stat-card">
+        <div class="stat-label">Supabase Status</div>
+        <div class="stat-value" id="supabase-status" style="font-size:1.25rem;">⟳ Prüfe...</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Lokale Projekte</div>
+        <div class="stat-value" id="local-projects-count">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Templates</div>
+        <div class="stat-value" id="templates-count">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">System Version</div>
+        <div class="stat-value" style="font-size:1rem;">v1.0.0</div>
+      </div>
+    </div>
+    
+    <div class="inverter-card">
+      <div class="inverter-header">
+        <div class="inverter-info">
+          <span class="inverter-badge">INFO</span>
+          <div>
+            <div class="inverter-name">Supabase Konfiguration</div>
+            <div class="inverter-type">Cloud-Sync einrichten</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:1.5rem;">
+        <div class="config-section">
+          <div class="config-section-title">Supabase Verbindung</div>
+          <div class="config-row">
+            <span class="config-label">Project URL:</span>
+            <input type="text" id="setup-sb-url" class="input config-select" placeholder="https://xxx.supabase.co" style="max-width:300px;">
+          </div>
+          <div class="config-row">
+            <span class="config-label">API Key:</span>
+            <input type="password" id="setup-sb-key" class="input config-select" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." style="max-width:300px;">
+          </div>
+          <div class="config-row">
+            <button class="btn btn-primary" onclick="testSupabaseConnection()">Verbindung testen</button>
+            <button class="btn btn-success" onclick="saveSupabaseConfig()">Speichern</button>
+          </div>
+        </div>
+        
+        <div class="config-section">
+          <div class="config-section-title">Datenbank-Setup</div>
+          <div style="background:var(--bg-tertiary);padding:1rem;border-radius:var(--radius-sm);font-size:0.875rem;color:var(--text-secondary);">
+            <p style="margin-bottom:0.5rem;"><strong>SQL für Supabase:</strong></p>
+            <pre style="background:var(--bg-secondary);padding:0.75rem;border-radius:4px;overflow-x:auto;font-size:0.75rem;white-space:pre-wrap;">-- Tabelle für PV-Projekte erstellen
+CREATE TABLE IF NOT EXISTS pv_projects (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  pruefer TEXT,
+  modul_wp INTEGER,
+  mppts TEXT,
+  data JSONB,
+  config JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Index für bessere Performance
+CREATE INDEX IF NOT EXISTS idx_pv_projects_updated_at ON pv_projects(updated_at DESC);
+
+-- Row Level Security (optional)
+ALTER TABLE pv_projects ENABLE ROW LEVEL SECURITY;
+
+-- Policy für Lesezugriff
+CREATE POLICY "Enable read access for all users" 
+ON pv_projects FOR SELECT USING (true);
+
+-- Policy für Schreibzugriff
+CREATE POLICY "Enable insert for all users" 
+ON pv_projects FOR INSERT WITH CHECK (true);
+
+-- Policy für Updates
+CREATE POLICY "Enable update for all users" 
+ON pv_projects FOR UPDATE USING (true);</pre>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   
@@ -1128,9 +1211,16 @@ body {
       <h1 class="page-title">Plans</h1>
       <p class="page-subtitle">Vordefinierte Pläne und Templates</p>
     </header>
-    <div class="stat-card">
-      <p>Plans-Seite - Noch nicht implementiert</p>
+    
+    <div class="filter-tabs" id="plans-filter-tabs">
+      <button class="filter-tab active" onclick="filterPlans('all', this)">Alle</button>
+      <button class="filter-tab" onclick="filterPlans('sma', this)">SMA</button>
+      <button class="filter-tab" onclick="filterPlans('huawei', this)">Huawei</button>
+      <button class="filter-tab" onclick="filterPlans('fronius', this)">Fronius</button>
+      <button class="filter-tab" onclick="filterPlans('custom', this)">Eigene</button>
     </div>
+    
+    <div id="templates-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;"></div>
   </div>
   
   <!-- ABOUT PAGE -->
@@ -1139,8 +1229,44 @@ body {
       <h1 class="page-title">About</h1>
       <p class="page-subtitle">Über SOLPRO</p>
     </header>
-    <div class="stat-card">
-      <p>About-Seite - Noch nicht implementiert</p>
+    
+    <div class="inverter-card">
+      <div class="inverter-header">
+        <div class="inverter-info">
+          <span class="inverter-badge">SOLPRO</span>
+          <div>
+            <div class="inverter-name">PV Planungssystem</div>
+            <div class="inverter-type">Professionelle Wechselrichter-Konfiguration</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:1.5rem;">
+        <div style="margin-bottom:1.5rem;">
+          <h3 style="font-size:1.125rem;font-weight:700;margin-bottom:0.5rem;">Über SOLPRO</h3>
+          <p style="color:var(--text-secondary);line-height:1.6;">
+            SOLPRO ist ein professionelles Planungssystem für PV-Anlagen mit Fokus auf Wechselrichter-Konfiguration 
+            und String-Planung. Das System unterstützt verschiedene Wechselrichter-Hersteller wie SMA, Huawei und Fronius 
+            und ermöglicht eine flexible, projektbasierte Arbeitsweise.
+          </p>
+        </div>
+        
+        <div style="margin-bottom:1.5rem;">
+          <h3 style="font-size:1.125rem;font-weight:700;margin-bottom:0.5rem;">Features</h3>
+          <ul style="color:var(--text-secondary);line-height:1.8;list-style-position:inside;">
+            <li>Dynamische Wechselrichter-Konfiguration</li>
+            <li>MPPT-basierte String-Planung</li>
+            <li>Projekt-Management mit Templates</li>
+            <li>Plausibilitäts-Prüfungen</li>
+            <li>Cloud-Sync mit Supabase</li>
+            <li>Export in verschiedene Formate</li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 style="font-size:1.125rem;font-weight:700;margin-bottom:0.5rem;">Version</h3>
+          <p style="color:var(--text-secondary);">Version 1.0.0 · 2024</p>
+        </div>
+      </div>
     </div>
   </div>
   
@@ -1150,12 +1276,103 @@ body {
       <h1 class="page-title">FAQ</h1>
       <p class="page-subtitle">Häufig gestellte Fragen</p>
     </header>
-    <div class="stat-card">
-      <p>FAQ-Seite - Noch nicht implementiert</p>
+    
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      <div class="inverter-card">
+        <div style="padding:1.25rem;">
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Wie erstelle ich ein neues Projekt?</h3>
+          <p style="color:var(--text-secondary);line-height:1.6;">
+            Klicke auf den "+ Neues Projekt" Button in der Navigation oben rechts. Gib einen Projektnamen ein, 
+            wähle optional ein Template und klicke auf "Erstellen".
+          </p>
+        </div>
+      </div>
+      
+      <div class="inverter-card">
+        <div style="padding:1.25rem;">
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Wie funktionieren die MPPTs?</h3>
+          <p style="color:var(--text-secondary);line-height:1.6;">
+            Gib einfach die Anzahl der MPPTs und die Eingänge pro MPPT ein. Die meisten Wechselrichter haben 2 Eingänge pro MPPT, 
+            manche Modelle auch 3. Das System erstellt automatisch die entsprechende Matrix.
+          </p>
+        </div>
+      </div>
+      
+      <div class="inverter-card">
+        <div style="padding:1.25rem;">
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Wie speichere ich meine Daten?</h3>
+          <p style="color:var(--text-secondary);line-height:1.6;">
+            Daten werden automatisch im LocalStorage gespeichert. Für Cloud-Sync kannst du Supabase im Setup konfigurieren 
+            und dann auf "☁️ Speichern" klicken.
+          </p>
+        </div>
+      </div>
+      
+      <div class="inverter-card">
+        <div style="padding:1.25rem;">
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Welche Export-Formate sind verfügbar?</h3>
+          <p style="color:var(--text-secondary);line-height:1.6;">
+            Excel-Exporte für GAK-Pickerl, String-Nummern und Prüfprotokolle, CSV-Export, PDF-Druckansicht und 
+            Validierungsberichte als Textdatei.
+          </p>
+        </div>
+      </div>
+      
+      <div class="inverter-card">
+        <div style="padding:1.25rem;">
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Was bedeuten die Validierungsregeln?</h3>
+          <p style="color:var(--text-secondary);line-height:1.6;">
+            Das System prüft deine Eingaben auf Plausibilität: max. 30 Module pro String, Spannungsbereich 200-1000V, 
+            max. 15A Strom. Warnungen und Fehler werden im Validierungsbericht angezeigt.
+          </p>
+        </div>
+      </div>
     </div>
   </div>
   
 </main>
+
+<!-- NEW PROJECT MODAL -->
+<div class="modal-overlay" id="new-project-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Neues Projekt erstellen</h2>
+      <button class="modal-close" onclick="closeModal('new-project-modal')">&times;</button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="config-section">
+        <div class="config-section-title">Projekt-Informationen</div>
+        <div class="config-row">
+          <span class="config-label">Projekt-Name:</span>
+          <input type="text" id="new-project-name" class="input config-select" placeholder="z.B. PV Dachstraße 123" style="max-width: 300px;">
+        </div>
+        <div class="config-row">
+          <span class="config-label">Template:</span>
+          <select id="new-project-template" class="input config-select" style="max-width: 300px;">
+            <option value="">-- Leeres Projekt --</option>
+            <option value="sma_standard">SMA Standard (6x STP125)</option>
+            <option value="huawei_mix">Huawei Mix (2x 100KTL + 2x 50KTL)</option>
+            <option value="small_system">Kleinanlage (2x STP80)</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="config-section">
+        <div class="config-section-title">Grundeinstellungen</div>
+        <div class="config-row">
+          <span class="config-label">Modul-Wp:</span>
+          <input type="number" id="new-project-wp" class="input input-compact" value="465">
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('new-project-modal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmNewProject()">✓ Erstellen</button>
+    </div>
+  </div>
+</div>
 
 <!-- CONFIG MODAL -->
 <div class="modal-overlay" id="config-modal">
@@ -1190,25 +1407,35 @@ body {
         
         <div class="config-section">
           <div class="config-section-title">Wechselrichter hinzufügen</div>
+          
+          <!-- Direkte MPPT-Konfiguration -->
           <div class="config-row">
-            <span class="config-label">WR-Typ:</span>
-            <select id="cfg-wr-type" class="input config-select" onchange="updateCustomConfigInputs()">
-              <option value="SMA_STP125">SMA Sunny Tripower 125 (12 MPPT)</option>
-              <option value="SMA_STP100">SMA Sunny Tripower 100 (10 MPPT)</option>
-              <option value="SMA_STP80">SMA Sunny Tripower 80 (8 MPPT)</option>
-              <option value="HUAWEI_2000_100KTL">Huawei SUN2000-100KTL (10 MPPT)</option>
-              <option value="HUAWEI_2000_50KTL">Huawei SUN2000-50KTL (4 MPPT)</option>
-              <option value="FRONIUS_SYMO">Fronius Symo (6 MPPT)</option>
-              <option value="CUSTOM">Benutzerdefiniert</option>
-            </select>
-            <button class="btn btn-success" onclick="addInverter()">+ Hinzufügen</button>
+            <span class="config-label">MPPTs:</span>
+            <input type="number" id="cfg-mppts" class="input input-compact" value="12" min="1" max="48" placeholder="z.B. 12">
+            <span class="config-label">Eingänge/MPPT:</span>
+            <input type="number" id="cfg-inputs" class="input input-compact" value="2" min="1" max="4" placeholder="2 oder 3">
+            <button class="btn btn-success" onclick="addCustomInverter()">+ Hinzufügen</button>
           </div>
           
-          <div id="custom-config-row" class="config-row" style="display: none;">
-            <span class="config-label">MPPTs:</span>
-            <input type="number" id="cfg-custom-mppts" class="input input-compact" value="12" min="1" max="48">
-            <span class="config-label">Inputs:</span>
-            <input type="number" id="cfg-custom-inputs" class="input input-compact" value="2" min="1" max="4">
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">
+            💡 Gib einfach die Anzahl der MPPTs und Eingänge pro MPPT ein (meistens 2, manchmal 3)
+          </div>
+          
+          <!-- Vordefinierte WR-Typen (optional) -->
+          <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+            <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin-bottom:0.5rem;">Oder vordefinierte Typen verwenden:</div>
+            <div class="config-row">
+              <select id="cfg-preset-type" class="input config-select" style="max-width:250px;">
+                <option value="">-- Typ auswählen --</option>
+                <option value="SMA_STP125">SMA STP125 (12 MPPT, 2 Inputs)</option>
+                <option value="SMA_STP100">SMA STP100 (10 MPPT, 2 Inputs)</option>
+                <option value="SMA_STP80">SMA STP80 (8 MPPT, 2 Inputs)</option>
+                <option value="HUAWEI_2000_100KTL">Huawei 100KTL (10 MPPT, 2 Inputs)</option>
+                <option value="HUAWEI_2000_50KTL">Huawei 50KTL (4 MPPT, 2 Inputs)</option>
+                <option value="FRONIUS_SYMO">Fronius Symo (6 MPPT, 2 Inputs)</option>
+              </select>
+              <button class="btn btn-secondary" onclick="addPresetInverter()">Übernehmen</button>
+            </div>
           </div>
         </div>
         
@@ -1241,7 +1468,7 @@ body {
           <div class="config-section-title">Projekt-Verwaltung</div>
           <div class="config-row">
             <button class="btn btn-success" onclick="createNewProject()">+ Neues Projekt</button>
-            <button class="btn btn-primary" onclick="saveCurrentProject()">💾 Speichern</button>
+            <button class="btn btn-primary" onclick="saveCurrentProject()">💾 Aktuelles speichern</button>
           </div>
         </div>
         
@@ -1769,10 +1996,56 @@ function updateConfigUI() {
   renderInverterList();
 }
 
-function updateCustomConfigInputs() {
-  const type = g('cfg-wr-type').value;
-  const customRow = g('custom-config-row');
-  customRow.style.display = (type === 'CUSTOM') ? 'flex' : 'none';
+function addCustomInverter() {
+  const mppts = parseInt(g('cfg-mppts').value) || 12;
+  const inputs = parseInt(g('cfg-inputs').value) || 2;
+  
+  if(mppts < 1 || mppts > 48) {
+    toast('MPPT-Anzahl zwischen 1 und 48');
+    return;
+  }
+  
+  if(inputs < 1 || inputs > 4) {
+    toast('Eingänge zwischen 1 und 4');
+    return;
+  }
+  
+  const newId = projectConfig.inverters.length + 1;
+  const newInv = {
+    id: newId,
+    type: "CUSTOM",
+    name: `WR ${newId}`,
+    customMppts: mppts,
+    customInputs: inputs
+  };
+  
+  projectConfig.inverters.push(newInv);
+  renderInverterList();
+  toast(`WR mit ${mppts} MPPTs und ${inputs} Eingängen hinzugefügt`);
+}
+
+function addPresetInverter() {
+  const type = g('cfg-preset-type').value;
+  if(!type) {
+    toast('Bitte einen Typ auswählen');
+    return;
+  }
+  
+  const config = INVERTER_CONFIGS[type];
+  if(!config) {
+    toast('Typ nicht gefunden');
+    return;
+  }
+  
+  // Auto-fill the custom inputs with the preset values
+  g('cfg-mppts').value = config.mppts;
+  g('cfg-inputs').value = config.inputsPerMppt;
+  
+  // Add the inverter
+  addCustomInverter();
+  
+  // Clear the preset selection
+  g('cfg-preset-type').value = '';
 }
 
 function renderInverterList() {
@@ -1958,14 +2231,46 @@ function saveProjectsList() {
 }
 
 function createNewProject() {
-  const name = prompt('Projekt Name:');
-  if(!name) return;
+  // Open the new project modal
+  g('new-project-name').value = '';
+  g('new-project-template').value = '';
+  g('new-project-wp').value = 465;
+  openModal('new-project-modal');
+}
+
+function confirmNewProject() {
+  const projectName = g('new-project-name').value.trim();
+  const templateKey = g('new-project-template').value;
+  const modelWp = parseInt(g('new-project-wp').value) || 465;
+  
+  if(!projectName) {
+    toast('Bitte einen Projektnamen eingeben');
+    return;
+  }
   
   const newId = 'proj_' + Date.now();
   
+  // Start with base configuration
+  let projectConfig = {
+    name: projectName,
+    modelWp: modelWp,
+    inverters: [
+      { id: 1, type: "SMA_STP125", name: "WR 1" }
+    ],
+    customMppts: 12,
+    customInputs: 2
+  };
+  
+  // Apply template if selected
+  if(templateKey && CONFIG_TEMPLATES[templateKey]) {
+    projectConfig = JSON.parse(JSON.stringify(CONFIG_TEMPLATES[templateKey].config));
+    projectConfig.name = projectName;
+    projectConfig.modelWp = modelWp;
+  }
+  
   projectsList[newId] = {
     id: newId,
-    name: name,
+    name: projectName,
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString()
   };
@@ -1973,18 +2278,16 @@ function createNewProject() {
   saveProjectsList();
   
   localStorage.setItem(`sp_project_${newId}`, JSON.stringify({
-    config: {
-      name: name,
-      modelWp: 465,
-      inverters: [
-        { id: 1, type: "SMA_STP125", name: "WR 1" }
-      ]
-    },
+    config: projectConfig,
     data: {}
   }));
   
+  closeModal('new-project-modal');
   renderProjectsList();
-  toast('Projekt erstellt');
+  toast(`Projekt "${projectName}" erstellt`);
+  
+  // Automatically switch to the new project
+  switchProject(newId);
 }
 
 function switchProject(projectId) {
@@ -2440,8 +2743,176 @@ function factoryReset() {
   toast('Plan zurückgesetzt');
 }
 
+// SETUP PAGE FUNCTIONS
+function updateSetupPageStats() {
+  // Update local projects count
+  const projectCount = Object.keys(projectsList).length;
+  g('local-projects-count').textContent = projectCount;
+  
+  // Update templates count
+  const templateCount = Object.keys(CONFIG_TEMPLATES).length + Object.keys(userTemplates).length;
+  g('templates-count').textContent = templateCount;
+  
+  // Check Supabase status
+  if(supabaseClient) {
+    g('supabase-status').textContent = '✅ Verbunden';
+    g('supabase-status').style.color = 'var(--success)';
+  } else {
+    g('supabase-status').textContent = '⚪ Nicht konfiguriert';
+    g('supabase-status').style.color = 'var(--text-muted)';
+  }
+}
+
+function testSupabaseConnection() {
+  const url = g('setup-sb-url').value.trim();
+  const key = g('setup-sb-key').value.trim();
+  
+  if(!url || !key) {
+    toast('Bitte URL und Key eingeben');
+    return;
+  }
+  
+  try {
+    const testClient = window.supabase.createClient(url, key);
+    testClient.from('pv_projects').select('count').then(({ data, error }) => {
+      if(error) {
+        toast('Verbindung fehlgeschlagen: ' + error.message);
+        g('supabase-status').textContent = '❌ Fehler';
+        g('supabase-status').style.color = 'var(--danger)';
+      } else {
+        toast('Verbindung erfolgreich!');
+        g('supabase-status').textContent = '✅ Verbunden';
+        g('supabase-status').style.color = 'var(--success)';
+      }
+    });
+  } catch(e) {
+    toast('Verbindungsfehler: ' + e.message);
+    g('supabase-status').textContent = '❌ Fehler';
+    g('supabase-status').style.color = 'var(--danger)';
+  }
+}
+
+function saveSupabaseConfig() {
+  const url = g('setup-sb-url').value.trim();
+  const key = g('setup-sb-key').value.trim();
+  
+  if(!url || !key) {
+    toast('Bitte URL und Key eingeben');
+    return;
+  }
+  
+  localStorage.setItem('sp_supabase_url', url);
+  localStorage.setItem('sp_supabase_key', key);
+  
+  // Reinitialize Supabase
+  initSupabase();
+  
+  toast('Supabase-Konfiguration gespeichert');
+  updateSetupPageStats();
+}
+
+// PLANS PAGE FUNCTIONS
+function renderTemplatesGrid() {
+  const container = g('templates-grid');
+  if(!container) return;
+  
+  container.innerHTML = '';
+  
+  // System templates
+  Object.keys(CONFIG_TEMPLATES).forEach(key => {
+    const t = CONFIG_TEMPLATES[key];
+    const card = createTemplateCard(t, key, false);
+    container.appendChild(card);
+  });
+  
+  // User templates
+  Object.keys(userTemplates).forEach(key => {
+    const t = userTemplates[key];
+    const card = createTemplateCard(t, key, true);
+    container.appendChild(card);
+  });
+}
+
+function createTemplateCard(template, key, isUserTemplate) {
+  const card = document.createElement('div');
+  card.className = 'inverter-card';
+  card.dataset.templateType = isUserTemplate ? 'custom' : 'system';
+  card.dataset.manufacturer = template.config.inverters[0]?.type?.includes('HUAWEI') ? 'huawei' : 
+                                template.config.inverters[0]?.type?.includes('SMA') ? 'sma' : 
+                                template.config.inverters[0]?.type?.includes('FRONIUS') ? 'fronius' : 'custom';
+  
+  const wrCount = template.config.inverters.length;
+  const totalMppts = template.config.inverters.reduce((sum, inv) => {
+    const config = INVERTER_CONFIGS[inv.type] || { mppts: inv.customMppts || 12 };
+    return sum + config.mppts;
+  }, 0);
+  
+  card.innerHTML = `
+    <div style="padding:1.25rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+        <span class="plan-badge ${isUserTemplate ? 'active' : ''}">${isUserTemplate ? 'Eigene' : 'System'}</span>
+        ${isUserTemplate ? `<button class="btn btn-danger" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="deleteTemplate('${key}', true)">✕</button>` : ''}
+      </div>
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">${template.name}</h3>
+      <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:1rem;">${template.description}</p>
+      <div style="display:flex;gap:1rem;font-size:0.75rem;color:var(--text-muted);">
+        <span>${wrCount} WR</span>
+        <span>·</span>
+        <span>${totalMppts} MPPTs</span>
+        <span>·</span>
+        <span>${template.config.modelWp}Wp</span>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:1rem;" onclick="loadTemplate('${key}')">Template laden</button>
+    </div>
+  `;
+  
+  return card;
+}
+
+function filterPlans(filter, btn) {
+  document.querySelectorAll('#plans-filter-tabs .filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  
+  const cards = document.querySelectorAll('#templates-grid .inverter-card');
+  cards.forEach(card => {
+    if(filter === 'all') {
+      card.style.display = 'block';
+    } else {
+      const cardType = card.dataset.manufacturer;
+      card.style.display = (cardType === filter) ? 'block' : 'none';
+    }
+  });
+}
+
+// PAGE NAVIGATION FUNCTIONS
+function updatePageContent() {
+  const currentPage = document.querySelector('.nav-link.active')?.textContent.toLowerCase();
+  
+  if(currentPage === 'setup') {
+    updateSetupPageStats();
+  } else if(currentPage === 'plans') {
+    renderTemplatesGrid();
+  }
+}
+
+// NAVIGATION UPDATE
+const originalSwitchPage = switchPage;
+switchPage = function(pageId) {
+  originalSwitchPage.call(this, pageId);
+  setTimeout(updatePageContent, 100);
+};
+
 // INITIALIZATION
 function init() {
+  // Load Supabase config from localStorage if available
+  const savedUrl = localStorage.getItem('sp_supabase_url');
+  const savedKey = localStorage.getItem('sp_supabase_key');
+  
+  if(savedUrl && savedKey) {
+    g('setup-sb-url').value = savedUrl;
+    g('setup-sb-key').value = savedKey;
+  }
+  
   initSupabase();
   initTemplates();
   initProjects();
@@ -2467,6 +2938,9 @@ function init() {
   g('rule-min-volt').textContent = PLAUSIBILITY_RULES.minVoltage;
   g('rule-max-volt').textContent = PLAUSIBILITY_RULES.maxVoltage;
   g('rule-max-current').textContent = PLAUSIBILITY_RULES.maxCurrent;
+  
+  // Initial setup page stats
+  updateSetupPageStats();
 }
 
 // Start

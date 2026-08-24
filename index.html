@@ -2,1211 +2,662 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=0">
 <meta name="theme-color" content="#05080f">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="SOLPRO">
-<meta name="format-detection" content="telephone=no">
-<meta name="description" content="SOLPRO PV Mess- und Prüfprotokoll &middot; Offline-Tool für Photovoltaik-Anlagen">
-<link rel="apple-touch-icon" href="Logo_Solpro.jpg">
-<title>SOLPRO | Prüfprotokoll</title>
+<title>SOLPRO | PV MAN P52</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>tailwind.config={theme:{extend:{colors:{sp:{green:'#9fc131',dark:'#7a9420',glow:'#c6e84a'}}}}}</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
-:root {
-  --bg:       #05080f;
-  --surface:  #0c1220;
-  --panel:    #111827;
-  --border:   rgba(255,255,255,0.07);
-  --green:    #9fc131;
-  --green-d:  #7a9420;
-  --green-g:  rgba(159,193,49,0.15);
-  --text:     #f0f4f8;
-  --muted:    #64748b;
-  --dim:      #1e2a3a;
-}
+:root { --bg: #05080f; --surface: #0c1220; --panel: #111827; --border: rgba(255,255,255,0.08); --green: #9fc131; --text: #f0f4f8; --muted: #64748b; }
+body.sun-mode { --bg: #ffffff; --surface: #f1f5f9; --panel: #f8fafc; --border: #cbd5e1; --green: #4d7c0f; --text: #0f172a; --muted: #475569; }
+body.sun-mode .sp-inp { background: #ffffff; color: #0f172a; border-color: #94a3b8; font-weight: 700; }
+body.sun-mode #toolbar, body.sun-mode .mobile-bottom-bar { background: rgba(255,255,255,0.96); border-color: #cbd5e1; }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
 
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-
-body {
-  font-family: 'Inter', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  min-height: 100dvh;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Keyboard-focus visibility (a11y) */
-a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
-  outline: 2px solid var(--green);
-  outline-offset: 2px;
-}
-
-/* Respect reduced-motion preference */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-}
-
-/* BACKGROUND GRID */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(159,193,49,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(159,193,49,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-  z-index: 0;
-}
-body::after {
-  content: '';
-  position: fixed;
-  top: -200px; left: 50%;
-  transform: translateX(-50%);
-  width: 800px; height: 500px;
-  background: radial-gradient(ellipse, rgba(159,193,49,0.08) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.wrap { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: clamp(14px,4vw,24px) clamp(10px,3vw,20px) 100px; }
-
-/* SETUP SCREEN */
-#setup-screen {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(12px,4vw,24px);
-  padding-top: max(clamp(12px,4vw,24px), env(safe-area-inset-top));
-  padding-bottom: max(clamp(12px,4vw,24px), env(safe-area-inset-bottom));
-}
-
-.setup-card {
-  width: 100%;
-  max-width: 480px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: clamp(16px,4vw,24px);
-  overflow: hidden;
-  box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(159,193,49,0.08);
-}
-
-.setup-hero {
-  padding: clamp(28px,6vw,40px) clamp(20px,6vw,36px) clamp(22px,5vw,32px);
-  background: linear-gradient(160deg, rgba(159,193,49,0.1) 0%, var(--panel) 50%);
-  border-bottom: 1px solid var(--border);
-  text-align: center;
-  position: relative;
-}
-.setup-hero::before {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 60%; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--green), transparent);
-}
-
-.logo-img { height: clamp(40px,10vw,52px); margin: 0 auto 20px; display: block; object-fit: contain; }
-.logo-placeholder { display: none; }
-
-.hero-title {
-  font-size: clamp(1.5rem, 6vw, 2rem);
-  font-weight: 900;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--green);
-  line-height: 1;
-}
-.hero-sub {
-  font-size: 0.67rem;
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-top: 6px;
-}
-
-.setup-body { padding: clamp(20px,5vw,28px) clamp(18px,5vw,28px) clamp(24px,6vw,32px); display: flex; flex-direction: column; gap: 20px; }
-
-/* PROJECT SELECTOR */
-.project-box {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 14px;
-  padding: 14px 16px;
-}
-.field-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  display: block;
-  margin-bottom: 8px;
-}
-
-/* INPUTS */
-.sp-input {
-  width: 100%;
-  background: rgba(5,8,15,0.8);
-  border: 1.5px solid rgba(100,116,139,0.25);
-  border-radius: 10px;
-  padding: 13px 14px;
-  min-height: 46px;
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  font-size: 16px;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  -webkit-appearance: none;
-}
-@media (min-width:641px){ .sp-input { font-size: 0.875rem; } }
-.sp-input::placeholder { color: #2d3d52; }
-.sp-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(159,193,49,0.1); }
-.sp-input:hover:not(:focus) { border-color: rgba(100,116,139,0.4); }
-
-.input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width:380px){ .input-row { grid-template-columns: 1fr; } }
-
-/* BUTTONS */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  font-family: 'Inter', sans-serif; font-weight: 700; cursor: pointer; border: none;
-  border-radius: 10px; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.01em;
-  min-height: 44px; touch-action: manipulation;
-}
-.btn-green {
-  background: linear-gradient(135deg, #a8cc35 0%, #7a9420 100%);
-  color: #061200;
-  padding: 13px 22px;
-  font-size: 0.875rem;
-  font-weight: 900;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(159,193,49,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
-  width: 100%;
-}
-.btn-green:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(159,193,49,0.4); }
-.btn-green:active { transform: translateY(0); }
-
-.btn-ghost {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #94a3b8;
-  padding: 9px 16px;
-  font-size: 0.8rem;
-}
-.btn-ghost:hover { background: rgba(255,255,255,0.09); color: var(--text); border-color: rgba(255,255,255,0.18); }
-
-.btn-blue {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  color: #fff;
-  padding: 9px 16px;
-  font-size: 0.8rem;
-  box-shadow: 0 2px 12px rgba(59,130,246,0.3);
-}
-.btn-blue:hover { filter: brightness(1.1); box-shadow: 0 4px 18px rgba(59,130,246,0.45); }
-
-.btn-red {
-  background: rgba(239,68,68,0.12);
-  border: 1px solid rgba(239,68,68,0.25);
-  color: #f87171;
-  padding: 9px 13px;
-  font-size: 0.8rem;
-}
-.btn-red:hover { background: rgba(239,68,68,0.22); }
-
-.btn-print {
-  background: rgba(255,255,255,0.05);
-  border: 1.5px solid rgba(255,255,255,0.1);
-  color: #94a3b8;
-  padding: 13px 20px;
-  font-size: 0.875rem;
-  border-radius: 12px;
-  flex: 1;
-}
-.btn-print:hover { background: rgba(255,255,255,0.09); color: var(--text); }
-
-.btn-xl-green {
-  background: linear-gradient(135deg, #a8cc35 0%, #7a9420 100%);
-  color: #061200; font-weight: 900; font-size: 0.875rem; letter-spacing: 0.05em;
-  text-transform: uppercase; padding: 13px 20px; border-radius: 12px; flex: 1;
-  box-shadow: 0 4px 20px rgba(159,193,49,0.28);
-}
-.btn-xl-green:hover { filter: brightness(1.1); }
-
-/* HINT TEXT */
-.hint { font-size: 0.7rem; color: #334d66; line-height: 1.6; }
-.hint strong { color: #4a6a85; }
-
-/* FILLABLE OPTION BOX */
-.fill-option-box {
-  background: rgba(159,193,49,0.05);
-  border: 1px solid rgba(159,193,49,0.18);
-  border-radius: 12px;
-  padding: 14px 16px;
-}
-.fill-option-box .field-label { color: #7a9a40; }
+.wrap { max-width: 1360px; margin: 0 auto; padding: 12px 12px 120px; }
 
 /* DASHBOARD */
-.dashboard {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: clamp(8px,2.5vw,12px);
-  margin-bottom: 16px;
-}
-.kpi-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: clamp(12px,3vw,16px);
-  padding: clamp(12px,3.5vw,18px) clamp(12px,4vw,20px);
-  position: relative;
-  overflow: hidden;
-  min-width: 0;
-}
-.kpi-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--green), transparent);
-}
-.kpi-label { font-size: clamp(0.56rem,2.2vw,0.63rem); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; line-height: 1.3; }
-@media (min-width:480px){ .kpi-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.1em; } }
-.kpi-value { font-size: clamp(1.15rem,5.5vw,1.8rem); font-weight: 900; color: var(--text); line-height: 1; }
-.kpi-unit { font-size: 0.72rem; font-weight: 700; color: var(--green); margin-left: 3px; }
-.kpi-accent { color: var(--green); }
-@media (max-width:420px){ .dashboard{ gap:8px; } }
-
-.progress-track { height: 3px; background: rgba(100,116,139,0.15); border-radius: 99px; overflow: hidden; margin-top: 10px; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), #c6e84a); border-radius: 99px; transition: width 0.5s cubic-bezier(.4,0,.2,1); }
+.dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+@media (max-width: 768px){ .dashboard { grid-template-columns: repeat(2, 1fr); } }
+.kpi-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; position: relative; }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--green), transparent); }
+.kpi-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.kpi-value { font-size: 1.4rem; font-weight: 900; color: var(--text); line-height: 1; }
+.kpi-unit { font-size: 0.72rem; color: var(--green); margin-left: 2px; }
 
 /* TOOLBAR */
 #toolbar {
-  position: sticky; top: max(0px, env(safe-area-inset-top)); z-index: 50;
-  background: rgba(5,8,15,0.85);
-  backdrop-filter: blur(20px) saturate(1.5);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 10px 16px;
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  margin-bottom: 16px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
-  flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 40; background: rgba(17,24,39,0.94); backdrop-filter: blur(16px);
+  border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
-.toolbar-info { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; flex: 1 1 180px; }
-.toolbar-project { font-size: 0.875rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
-.toolbar-sep { color: #1e2a3a; }
-.toolbar-tech { font-size: 0.8rem; color: var(--muted); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
-.toolbar-badge {
-  font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--green); background: rgba(159,193,49,0.1); border: 1px solid rgba(159,193,49,0.2);
-  padding: 2px 8px; border-radius: 99px;
-  opacity: 0; transition: opacity 0.3s;
-  white-space: nowrap;
-}
-.toolbar-actions { display: flex; gap: 8px; flex-shrink: 0; }
-@media (max-width:560px){
-  #toolbar { padding: 10px 12px; }
-  .toolbar-tech { max-width: 110px; }
-  .toolbar-actions { width: 100%; }
-  .toolbar-actions .btn { flex: 1; }
-}
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700; cursor: pointer; border: none; border-radius: 8px; padding: 7px 11px; font-size: 0.75rem; transition: all 0.15s; min-height: 38px; }
+.btn-green { background: linear-gradient(135deg, #a8cc35, #7a9420); color: #061200; font-weight: 900; }
+.btn-blue  { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; }
+.btn-ghost { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; }
+.btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
-/* WR BLOCK */
-.wr-block {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  overflow: hidden;
-  margin-bottom: 12px;
-}
-.wr-head {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 14px clamp(14px,4vw,20px);
-  background: linear-gradient(135deg, rgba(159,193,49,0.07) 0%, transparent 60%);
-  border-bottom: 1px solid rgba(159,193,49,0.1);
-}
-.wr-num {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
-  background: var(--green); color: #061200;
-  padding: 3px 10px; border-radius: 6px;
-  text-transform: uppercase;
-}
-.wr-name { font-size: 0.875rem; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.06em; }
-.wr-meta { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+/* TABS */
+.wr-filter-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.wr-filter-bar::-webkit-scrollbar { display: none; }
+.wr-tab { flex: 0 0 auto; background: var(--panel); border: 1px solid var(--border); color: var(--muted); font-size: 0.72rem; font-weight: 700; border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.wr-tab.active { background: var(--green); color: #061200; border-color: var(--green); }
 
-.wr-gak-wrap { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
-.wr-gak-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-.wr-gak-inp {
-  width: 64px; background: rgba(5,8,15,0.8); border: 1.5px solid rgba(100,116,139,0.25);
-  border-radius: 7px; padding: 5px 8px; color: var(--text); min-height: 30px;
-  font-family: 'Inter', sans-serif; font-size: 0.78rem; text-align: center; outline: none;
-  transition: border-color 0.15s;
-}
-.wr-gak-inp:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(159,193,49,0.12); }
-.wr-gak-inp::placeholder { color: #2d3d52; }
-.wr-gak-print { display: none; }
-@media (max-width:700px){
-  .wr-gak-inp { font-size: 16px; min-height: 34px; }
-}
+/* TABLES */
+.wr-block { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 14px; }
+.wr-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; background: linear-gradient(135deg, rgba(159,193,49,0.08) 0%, transparent 60%); border-bottom: 1px solid rgba(159,193,49,0.15); flex-wrap: wrap; }
+.wr-num { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700; background: var(--green); color: #061200; padding: 2px 7px; border-radius: 5px; }
+.wr-kpis { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
 
-/* TABLE */
-.tbl-wrap { overflow-x: auto; }
-table.mt {
-  width: 100%;
-  border-collapse: collapse;
-}
-table.mt thead tr {
-  border-bottom: 1px solid rgba(159,193,49,0.12);
-}
-table.mt thead th {
-  padding: 10px 12px;
-  font-size: 0.62rem; font-weight: 700;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  color: #3d5a6e;
-  text-align: center;
-  white-space: nowrap;
-}
-table.mt thead th:first-child { text-align: left; padding-left: 20px; }
-table.mt tbody tr {
-  border-bottom: 1px solid rgba(255,255,255,0.035);
-  transition: background 0.1s;
-}
-table.mt tbody tr:nth-child(even) { background: rgba(255,255,255,0.018); }
-table.mt tbody tr:hover { background: rgba(159,193,49,0.04); }
-table.mt tbody tr.row-nein { opacity: 0.22; }
-table.mt tbody tr.mppt-div { border-top: 1px solid rgba(159,193,49,0.1); }
-table.mt td {
-  padding: 8px 12px;
-  vertical-align: middle;
-  text-align: center;
-  font-size: 0.82rem;
-}
-table.mt td:first-child { text-align: left; padding-left: 20px; }
+table.mt { width: 100%; border-collapse: collapse; }
+table.mt thead th { padding: 8px 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; color: #64748b; background: rgba(0,0,0,0.25); text-align: center; white-space: nowrap; }
+table.mt td { padding: 5px 6px; font-size: 0.78rem; border-bottom: 1px solid rgba(255,255,255,0.03); text-align: center; vertical-align: middle; }
+table.mt tbody tr:hover { background: rgba(159,193,49,0.03); }
+table.mt tbody tr.mppt-div { border-top: 1.5px solid rgba(159,193,49,0.18); }
+table.mt tbody tr.row-nein { opacity: 0.25; }
 
-.string-id {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.78rem; font-weight: 700;
-  color: var(--green);
-}
+.string-id { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--green); }
+.pwr-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--green); }
+.plan-badge { font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.05); color: #94a3b8; font-family: 'JetBrains Mono', monospace; }
+.plan-badge-green { background: rgba(159,193,49,0.12); color: #a8cc35; border: 1px solid rgba(159,193,49,0.25); }
 
-/* Toggle */
-.tog-wrap { display: inline-flex; background: rgba(5,8,15,0.8); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 2px; gap: 2px; }
-.tog {
-  padding: 3px 12px; border-radius: 6px; font-size: 0.68rem; font-weight: 800;
-  letter-spacing: 0.06em; cursor: pointer; border: none;
-  background: transparent; color: #2d3d52; transition: all 0.15s;
-  touch-action: manipulation;
-}
-@media (max-width:700px){ .tog { padding: 9px 16px; font-size: 0.72rem; } }
-.tog.ton-ja.on  { background: rgba(159,193,49,0.2); color: #a8cc35; }
-.tog.ton-nei.on { background: rgba(100,116,139,0.2); color: #64748b; }
+.sp-inp { background: rgba(5,8,15,0.8); border: 1px solid rgba(100,116,139,0.25); border-radius: 6px; padding: 4px 6px; color: var(--text); font-size: 0.8rem; text-align: center; outline: none; width: 100%; }
+.sp-inp:focus { border-color: var(--green); }
+.sp-inp-gak { color: #a8cc35; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
 
-/* Mod input */
-.mod-inp {
-  width: 64px; background: rgba(5,8,15,0.8); border: 1px solid rgba(100,116,139,0.2);
-  border-radius: 7px; padding: 5px 6px; color: var(--text); min-height: 36px;
-  font-family: 'Inter', sans-serif; font-size: 0.82rem; text-align: center; outline: none;
-  transition: border-color 0.15s;
-}
-.mod-inp:focus { border-color: var(--green); }
+.tog-wrap { display: inline-flex; background: rgba(0,0,0,0.4); border-radius: 6px; padding: 2px; }
+.tog { padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; border: none; cursor: pointer; background: transparent; color: #475569; }
+.tog.on-ja  { background: rgba(159,193,49,0.25); color: #a8cc35; }
+.tog.on-nei { background: rgba(100,116,139,0.25); color: #94a3b8; }
 
-/* Measurement input (Uoc, Isc, Riso) */
-.msr-inp {
-  width: 72px; background: rgba(5,8,15,0.8); border: 1px solid rgba(100,116,139,0.2);
-  border-radius: 7px; padding: 5px 6px; color: var(--text); min-height: 36px;
-  font-family: 'Inter', sans-serif; font-size: 0.82rem; text-align: center; outline: none;
-  transition: border-color 0.15s;
-}
-.msr-inp:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(159,193,49,0.12); }
-.msr-inp::placeholder { color: #2d3d52; font-size: 0.7rem; }
-@media (max-width:700px){
-  .mod-inp, .msr-inp { font-size: 16px; min-height: 40px; }
-  .note-inp { font-size: 16px; }
-}
+#toast { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%) translateY(120%); background: #0f172a; border: 1px solid var(--green); color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; transition: transform 0.3s; z-index: 9999; }
+#toast.show { transform: translateX(-50%) translateY(0); }
 
-/* Power cell */
-.pwr-cell { font-weight: 700; font-size: 0.8rem; color: #2d3d52; font-family: 'JetBrains Mono', monospace; }
-.pwr-cell.has-val { color: var(--green); }
-
-/* Note input */
-.note-inp {
-  width: 100%; min-width: 120px; background: transparent;
-  border: 1px solid rgba(255,255,255,0.04); border-radius: 6px; padding: 4px 8px;
-  color: #475569; font-family: 'Inter', sans-serif; font-size: 0.75rem; outline: none;
-  transition: border-color 0.15s, color 0.15s;
-}
-.note-inp:focus { border-color: rgba(100,116,139,0.3); color: #94a3b8; }
-.note-inp::placeholder { color: #1a2535; }
-
-/* ── RESPONSIVE TABLE → CARD LAYOUT (phones) ── */
-@media (max-width: 700px){
-  .tbl-wrap { overflow-x: visible; }
+/* MOBILE KACHEL LAYOUT */
+@media (max-width: 800px) {
   table.mt, table.mt tbody, table.mt tr, table.mt td { display: block; width: 100%; }
   table.mt thead { display: none; }
-  table.mt tfoot { display: block; width: 100%; }
-  table.mt tfoot tr { display: block; }
-  table.mt tbody tr {
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    margin: 10px;
-    background: rgba(255,255,255,0.02);
-    overflow: hidden;
-  }
-  table.mt tbody tr:nth-child(even) { background: rgba(255,255,255,0.035); }
-  table.mt tbody tr.mppt-div { border-top-color: rgba(159,193,49,0.35); margin-top: 18px; }
-  table.mt td {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    text-align: right; padding: 10px 14px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    font-size: 0.85rem;
-  }
-  table.mt td:last-child { border-bottom: none; }
-  table.mt td::before {
-    content: attr(data-label);
-    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--muted); text-align: left; flex-shrink: 0;
-  }
-  table.mt td:first-child {
-    text-align: left; padding-left: 14px;
-    background: rgba(159,193,49,0.05);
-    border-bottom: 1px solid rgba(159,193,49,0.12);
-  }
-  table.mt td:first-child::before { content: ''; }
-  table.mt td.col-mod, table.mt td.col-pwr, table.mt td.col-msr { justify-content: space-between; }
-  table.mt td .tog-wrap { margin-left: auto; }
-  table.mt td .mod-inp, table.mt td .msr-inp { width: 100px; margin-left: auto; }
-  table.mt td .note-inp { text-align: right; }
-  .wr-block { margin-bottom: 16px; border-radius: 16px; }
-  .wr-block .tbl-wrap { padding-bottom: 4px; }
+  table.mt tbody tr { border: 1px solid var(--border); border-radius: 10px; margin: 10px; background: rgba(255,255,255,0.02); overflow: hidden; width: calc(100% - 20px); }
+  table.mt tbody tr.mppt-div { border-top: 3px solid rgba(159,193,49,0.3); margin-top: 18px; }
+  table.mt td { display: flex; align-items: center; justify-content: space-between; text-align: right; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  table.mt td::before { content: attr(data-label); font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--muted); text-align: left; }
+  table.mt td:first-child { background: rgba(159,193,49,0.06); padding: 10px 12px; }
+  table.mt td:first-child::before { display: none; }
+  .sp-inp { max-width: 130px; text-align: right; }
+  td.col-note { flex-direction: column; align-items: flex-start; gap: 4px; }
+  td.col-note .sp-inp { max-width: 100%; text-align: left; }
 }
-
-/* TOAST */
-#toast {
-  position: fixed; bottom: 30px; left: 50%;
-  transform: translateX(-50%) translateY(110%);
-  z-index: 9999;
-  background: rgba(10,16,28,0.98);
-  border: 1px solid rgba(159,193,49,0.25);
-  color: var(--text);
-  padding: 11px 22px;
-  border-radius: 12px;
-  font-size: 0.85rem; font-weight: 600;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-  transition: transform 0.35s cubic-bezier(.34,1.56,.64,1), opacity 0.2s;
-  opacity: 0;
-  max-width: 92vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-@media (max-width:700px){
-  #toast { bottom: max(94px, calc(84px + env(safe-area-inset-bottom))); font-size: 0.8rem; padding: 10px 18px; }
-}
-
-.gak-export-bar {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
-  padding: 14px 18px; margin-top: 16px;
-}
-.gak-export-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.gak-export-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-@media (max-width:560px){
-  .gak-export-bar { flex-direction: column; align-items: stretch; padding: 14px 16px; }
-  .gak-export-actions { width: 100%; }
-  .gak-export-actions .btn { flex: 1; font-size: 0.78rem; }
-}
-
-/* BOTTOM BAR */
-.bottom-bar {
-  display: flex; gap: 10px;
-  padding-top: 16px; padding-bottom: 60px;
-}
-@media (max-width:700px){
-  .bottom-bar {
-    position: sticky; bottom: 0; width: 100%;
-    gap: 8px;
-    padding: 12px 4vw;
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
-    margin-top: 20px;
-    background: rgba(5,8,15,0.92);
-    backdrop-filter: blur(20px) saturate(1.5);
-    border-top: 1px solid var(--border);
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
-    z-index: 40;
-  }
-  .btn-print { font-size: 0.8rem; padding: 13px 12px; }
-  .btn-xl-green { font-size: 0.8rem; padding: 13px 12px; }
-}
-
-/* PRINT */
-.print-only { display: none !important; }
-.print-blank { display: none; }
-.screen-dash { display: inline; }
-.print-dash  { display: none; }
-
-@page { size: A4 landscape; margin: 10mm 13mm 17mm;
-  @bottom-center { content: "SOLPRO Pruefprotokoll  \00B7  Seite " counter(page) " von " counter(pages); font-family: 'Inter', Arial, sans-serif; font-size: 7pt; color: #94a3b8; } }
 
 @media print {
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  body { background: #fff !important; color: #111 !important; padding: 0 !important; font-size: 10pt; }
-  body::before, body::after { display: none !important; }
-  .no-print { display: none !important; }
-  .print-only { display: revert !important; }
-  thead .print-only { display: table-cell !important; }
-  tbody .print-only { display: table-cell !important; }
-  tfoot .print-only { display: table-cell !important; }
-  .wrap { max-width: none !important; margin: 0 !important; padding: 0 !important; }
-  #matrix-view { display: block !important; }
-
-  .pr-break { page-break-after: always !important; break-after: page !important; }
-  .pr-break:last-child { page-break-after: auto !important; break-after: auto !important; }
-
-  /* Print header */
-  #ph {
-    display: flex !important; align-items: flex-start; justify-content: space-between; gap: 24px;
-    padding-bottom: 8px; margin-bottom: 10px; border-bottom: 2.5px solid #9fc131;
-  }
-  .ph-title { font-size: 18pt; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; color: #111; line-height: 1; }
-  .ph-sub { font-size: 7pt; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: #9fc131; margin-top: 4px; }
-  .ph-grid { display: grid !important; grid-template-columns: 1fr 1fr; gap: 2px 28px; font-size: 8pt; min-width: 300px; }
-  .ph-grid .lbl { color: #64748b; font-weight: 600; }
-  .ph-grid strong { color: #111; font-weight: 800; }
-
-  #toolbar, #toast, .bottom-bar, .dashboard { display: none !important; }
-
-  .wr-block { background: #fff !important; border: none !important; border-radius: 0 !important; margin: 0 0 10px !important; padding: 0 !important; break-inside: avoid-page !important; box-shadow: none !important; }
-  .wr-head { background: #f1f5f9 !important; border: 1px solid #cbd5e1 !important; border-bottom: 2px solid #9fc131 !important; border-radius: 0 !important; padding: 5px 10px !important; }
-  .wr-num { background: #9fc131 !important; color: #061200 !important; font-size: 7pt !important; }
-  .wr-name { font-size: 9pt !important; color: #111 !important; }
-  .wr-meta { display: none !important; }
-  .wr-gak-print { font-size: 7.5pt !important; font-weight: 800 !important; letter-spacing: .05em !important; text-transform: uppercase !important; color: #3d5800 !important; background: #e4f0b0 !important; padding: 2px 8px !important; border-radius: 99px !important; margin-left: auto !important; }
-
-  table.mt { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
-  table.mt thead tr { border-bottom: none !important; }
-  table.mt thead th { background: #dde4ee !important; color: #1e293b !important; border: 1px solid #7e96ae !important; padding: 8px 5px !important; font-size: 8.5pt !important; font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: .04em !important; text-align: center !important; vertical-align: middle !important; line-height: 1.3 !important; }
-  table.mt thead th:first-child { text-align: left !important; padding-left: 10px !important; }
-  .col-id   { width: 10% !important; }
-  .col-stat { width: 9%  !important; }
-  .col-mod  { width: 9%  !important; }
-  .col-pwr  { width: 14% !important; }
-  .col-msr  { width: 10% !important; }
-  .col-note { width: auto !important; }
-  table.mt td { border: 1px solid #7e96ae !important; color: #111 !important; padding: 0 7px !important; font-size: 10pt !important; vertical-align: middle !important; text-align: center !important; height: 42px !important; }
-  table.mt td:first-child { text-align: left !important; padding-left: 10px !important; }
-  table.mt tbody tr:nth-child(even) td { background: #f4f7fb !important; }
-  table.mt tbody tr:nth-child(odd)  td { background: #fff !important; }
-  .string-id { font-family: ui-monospace, monospace !important; font-weight: 800 !important; color: #3d5800 !important; font-size: 9.5pt !important; }
-  .pwr-cell  { font-family: ui-monospace, monospace !important; font-weight: 700 !important; color: #3d5800 !important; font-size: 9.5pt !important; }
-  table.mt td.col-note { font-size: 9pt !important; color: #334155 !important; text-align: left !important; padding-left: 10px !important; }
+  body { background: #fff !important; color: #000 !important; font-size: 8pt; }
+  .no-print, .wr-filter-bar { display: none !important; }
+  .wr-block { border: 1px solid #cbd5e1 !important; break-inside: avoid; display: block !important; margin-bottom: 15px; }
+  table.mt { width: 100%; display: table !important; }
+  table.mt thead { display: table-header-group !important; }
+  table.mt tr { display: table-row !important; }
+  table.mt td, table.mt th { display: table-cell !important; padding: 5px; border: 1px solid #94a3b8; }
   table.mt tbody tr.row-nein { display: none !important; }
-  table.mt td.col-msr { border-bottom: 2px solid #475569 !important; }
-  table.mt tbody tr.mppt-div { border-top: 1.5px solid rgba(159,193,49,.45) !important; }
-
-  .tog-wrap  { display: none !important; }
-  .mod-inp   { display: none !important; }
-  .msr-inp   { display: none !important; }
-  .note-inp  { display: none !important; }
-  .screen-dash { display: none !important; }
-  .print-only  { display: revert !important; }
-  .print-cell  { display: inline !important; font-weight: 700 !important; }
-  .print-note  { display: inline !important; }
-  .print-blank { display: block !important; min-height: 28px !important; background: #fff !important; }
-  .row-nein .print-blank { display: none !important; }
-  .row-nein .print-dash  { display: inline !important; color: #94a3b8 !important; }
-
-  .tot-row td { background: #e4f0b0 !important; font-weight: 800 !important; font-size: 10pt !important; border-top: 2.5px solid #9fc131 !important; color: #1a2e00 !important; border: 1px solid #7e96ae !important; height: 38px !important; }
-
-  #pr-sig { display: flex !important; gap: 32px; margin-top: 18px; padding-top: 12px; border-top: 1px solid #cbd5e1; }
-  .sig-f { flex: 1; }
-  .sig-l { border-bottom: 2px solid #334155; height: 40px; margin-bottom: 6px; }
-  .sig-t { font-size: 7pt; color: #64748b; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-
-  .wr-block .tbl-wrap { overflow: visible !important; }
+  table.mt td::before { display: none !important; }
+  .sp-inp, .tog-wrap { display: none !important; }
+  .print-cell { display: inline !important; font-weight: bold; }
 }
+.print-cell { display: none; }
 </style>
 </head>
 <body>
 
 <div id="toast"></div>
 
-<!-- SETUP -->
-<div id="setup-screen">
-  <div class="setup-card">
-    <div class="setup-hero">
-      <img src="Logo_Solpro.jpg" alt="SOLPRO" class="logo-img" onerror="this.style.display='none'">
-      <div class="hero-title">SOLPRO</div>
-      <div class="hero-sub">PV &middot; Mess- &amp; Prüfprotokoll &middot; Offline</div>
+<div class="wrap">
+
+  <div class="dashboard no-print">
+    <div class="kpi-card">
+      <div class="kpi-label">Ist-Leistung</div>
+      <div class="kpi-value"><span id="d-pwr">0.00</span><span class="kpi-unit">kWp</span></div>
     </div>
-    <div class="setup-body">
-
-      <!-- Saved projects -->
-      <div class="project-box">
-        <label class="field-label">Gespeicherte Projekte</label>
-        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
-          <select id="project-list" class="sp-input" style="flex:1 1 140px;min-width:0;padding:9px 12px;border-radius:8px;"></select>
-          <button onclick="loadProject()" class="btn btn-ghost" style="flex:0 0 auto;">Laden</button>
-          <button onclick="deleteProject()" class="btn btn-red" style="flex:0 0 auto;">&#x2715;</button>
-        </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Ist-Module</div>
+      <div class="kpi-value" id="d-mods">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Aktiv &middot; Belegt</div>
+      <div class="kpi-value"><span id="d-act">0</span><span style="font-size:0.7rem;color:#64748b;" id="d-slots"> / 144</span></div>
+    </div>
+    <div class="kpi-card" id="cloud-info">
+      <div class="kpi-label">Cloud-Status</div>
+      <div class="kpi-value" style="font-size:1.1rem;margin-top:2px;">
+        <span style="font-size:0.75rem; color:#ef4444; font-weight:700;">Lokal / Offline</span>
       </div>
-
-      <!-- Fields -->
-      <div id="setup-form" style="display:flex;flex-direction:column;gap:14px;">
-        <div>
-          <label class="field-label" for="standort">Standort / Projektname</label>
-          <input id="standort" type="text" autocomplete="organization" placeholder="z.B. Mustergasse 12, Wien" class="sp-input">
-        </div>
-        <div>
-          <label class="field-label" for="pruefer">Prüfer / Techniker</label>
-          <input id="pruefer" type="text" autocomplete="name" placeholder="Vor- und Nachname" class="sp-input">
-        </div>
-        <div>
-          <label class="field-label" for="pruef-datum">Prüfdatum</label>
-          <input id="pruef-datum" type="date" class="sp-input" style="color-scheme:dark;">
-        </div>
-        <div class="input-row">
-          <div>
-            <label class="field-label" for="modul">Modulleistung (Wp)</label>
-            <input id="modul" type="number" min="1" placeholder="z.B. 440" class="sp-input">
-          </div>
-          <div>
-            <label class="field-label" for="mppt">MPPTs pro WR</label>
-            <input id="mppt" placeholder="z.B. 2,3" class="sp-input">
-          </div>
-        </div>
-        <p class="hint" style="margin-top:-4px;">Kommagetrennt &#8212; <strong>2,3</strong> = WR&nbsp;1 mit 2&nbsp;MPPTs, WR&nbsp;2 mit 3&nbsp;MPPTs. Jeder MPPT hat 2&nbsp;String-Eingänge.</p>
-
-        <!-- Messwerte ausfüllbar Toggle -->
-        <div class="fill-option-box">
-          <label class="field-label" style="margin-bottom:10px;">Messwerte digital ausfüllbar</label>
-          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;row-gap:10px;">
-            <div class="tog-wrap">
-              <button id="fill-ja"  class="tog ton-ja"      onclick="setFillMode(true)"  style="padding:7px 18px;font-size:0.72rem;">JA</button>
-              <button id="fill-nei" class="tog ton-nei on"  onclick="setFillMode(false)" style="padding:7px 18px;font-size:0.72rem;">NEIN</button>
-            </div>
-            <span style="font-size:0.7rem;color:#4a6a85;line-height:1.5;">Uoc&nbsp;(V) &middot; Isc&nbsp;(A) &middot; Riso&nbsp;(M&#8486;)<br><span style="color:#2d3d52;">Werte direkt am Gerät eingeben</span></span>
-          </div>
-        </div>
-
-        <button onclick="startApp()" class="btn btn-green" style="margin-top:4px;font-size:0.9rem;padding:14px;">
-          &#9889;&nbsp; Matrix laden
-        </button>
-      </div>
-
     </div>
   </div>
-</div>
 
-<!-- MATRIX VIEW -->
-<div id="matrix-view" style="display:none;">
-  <div class="wrap">
-
-    <!-- Print header (hidden on screen) -->
-    <div id="ph" style="display:none;">
-      <div>
-        <div class="ph-title">Prüfprotokoll</div>
-        <div class="ph-sub">PV-Generator &middot; Messprotokoll</div>
+  <div id="toolbar" class="no-print">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <div style="background:rgba(5,8,15,0.9); padding:6px 12px; border-radius:8px; border:1px solid #cbd5e1; font-weight:800; font-size:0.9rem;">
+        PV MAN P52 (Dachauer Str.)
       </div>
-      <div class="ph-grid">
-        <div><span class="lbl">Standort: </span><strong id="ph-loc"></strong></div>
-        <div><span class="lbl">Prüfdatum: </span><strong id="ph-date"></strong></div>
-        <div><span class="lbl">Prüfer: </span><strong id="ph-tech"></strong></div>
-        <div><span class="lbl">Modulleistung: </span><strong id="ph-mod"></strong></div>
-      </div>
+      <button onclick="toggleSunMode()" class="btn btn-ghost" id="btn-sun">☀️ Dach-Modus</button>
+      
+      <!-- DIE MAGISCHE RETTUNG: -->
+      <button onclick="factoryResetCloud()" class="btn" style="background:#dc2626;color:#fff;font-weight:900;" title="Zerstört den fehlerhaften DB-Eintrag & macht Plan-Neustart">🚨 PLAN-RESET</button>
     </div>
 
-    <!-- Dashboard -->
-    <div class="dashboard no-print">
-      <div class="kpi-card">
-        <div class="kpi-label">Gesamtleistung</div>
-        <div class="kpi-value"><span id="d-pwr">0.00</span><span class="kpi-unit">kWp</span></div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Module gesamt</div>
-        <div class="kpi-value" id="d-mods">0</div>
-        <div class="progress-track"><div class="progress-fill" id="d-prog" style="width:0%"></div></div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Aktive Strings</div>
-        <div class="kpi-value" id="d-str">0</div>
-      </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+      <button onclick="fetchCloudProject()" class="btn btn-ghost" style="border-color:#38bdf8;color:#38bdf8;">📥 Aus Cloud laden</button>
+      <button onclick="pushToCloud()" class="btn btn-blue" style="box-shadow:0 0 10px rgba(59,130,246,0.5);">☁️ In Cloud sichern</button>
+      <button onclick="printMontagePlan()" class="btn btn-ghost" style="border-color:#eab308;color:#eab308;" title="Speziell fürs Ausdrucken & Verkabeln auf Baustelle">📋 Druck-Montageplan</button>
+      <button onclick="exportSmartScriptExcel()" class="btn btn-green">🏷️ GAK-Pickerl (.xlsx)</button>
+      <button onclick="exportStringNumbersExcel()" class="btn btn-ghost" style="border-color:#a8cc35;color:#a8cc35;">🔢 Strings (.xlsx)</button>
+      <button onclick="doExcel()" class="btn btn-ghost">📊 Protokoll</button>
     </div>
-
-    <!-- Toolbar -->
-    <div id="toolbar" class="no-print">
-      <div class="toolbar-info">
-        <span style="font-size:0.75rem;color:#1e3a5f;">&#128205;</span>
-        <span class="toolbar-project" id="tb-loc"></span>
-        <span class="toolbar-sep">&middot;</span>
-        <span class="toolbar-tech" id="tb-tech"></span>
-        <span class="toolbar-badge" id="tb-badge">&#10003; Gespeichert</span>
-      </div>
-      <div class="toolbar-actions">
-        <button onclick="saveProject()" class="btn btn-blue" title="Strg+S">&#128190; Speichern</button>
-        <button onclick="goMenu()" class="btn btn-ghost">&#x2715; Menü</button>
-      </div>
-    </div>
-
-    <!-- WR Tables -->
-    <div id="tables"></div>
-
-    <!-- Grand total print row -->
-    <div id="grand-total" class="print-only" style="margin-top:10px;padding:8px 10px;background:#e4f0b0;border:2px solid #9fc131;border-radius:0;display:none;">
-      <table style="width:100%;border-collapse:collapse;">
-        <tr>
-          <td style="font-size:8.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1a2e00;padding:4px 8px;width:40%;">Gesamtanlage</td>
-          <td style="font-size:8.5pt;font-weight:700;color:#1a2e00;padding:4px 8px;width:20%;text-align:center;"><span id="gt-mod"></span></td>
-          <td style="font-size:8.5pt;font-weight:700;color:#1a2e00;padding:4px 8px;width:20%;text-align:center;"><span id="gt-pwr"></span></td>
-          <td style="font-size:8.5pt;color:#475569;padding:4px 8px;">Module gesamt &middot; kWp Gesamtleistung</td>
-        </tr>
-      </table>
-    </div>
-
-    <!-- GAK-Pickerl / SmartScript Export -->
-    <div class="gak-export-bar no-print">
-      <div class="gak-export-label">GAK-Pickerl &middot; nur aktive Strings</div>
-      <div class="gak-export-actions">
-        <button onclick="exportActiveStrings()" class="btn btn-ghost" title="Nur die IDs der aktiven Strings, eine pro Zeile">&#128203; Aktive Strings (Liste)</button>
-        <button onclick="exportGakPickerl()" class="btn btn-blue" title="CSV für SmartScript: BVH;String;GAK;Module;Leistung">&#127991;&#65039; GAK-Pickerl (CSV)</button>
-      </div>
-    </div>
-
-    <!-- Action buttons -->
-    <div class="bottom-bar no-print">
-      <button onclick="doPrint()" class="btn btn-print">
-        &#128196; Als PDF drucken <span style="font-size:0.7rem;color:#2d3d52;margin-left:6px;">(Strg+P)</span>
-      </button>
-      <button onclick="doExcel()" class="btn btn-xl-green">
-        &#128202; Excel exportieren
-      </button>
-    </div>
-
-    <!-- Print signature -->
-    <div id="pr-sig" style="display:none;">
-      <div class="sig-f"><div class="sig-l"></div><div class="sig-t">Datum &amp; Unterschrift Prüfer</div></div>
-      <div class="sig-f"><div class="sig-l"></div><div class="sig-t">Datum &amp; Unterschrift Auftraggeber</div></div>
-      <div class="sig-f"><div class="sig-l"></div><div class="sig-t">Stempel / Firmenstempel</div></div>
-    </div>
-
   </div>
+
+  <div class="wr-filter-bar no-print">
+    <button class="wr-tab active" onclick="filterInverter(0, this)">⚡ Alle WRs (1–6)</button>
+    <button class="wr-tab" onclick="filterInverter(1, this)">WR 1</button>
+    <button class="wr-tab" onclick="filterInverter(2, this)">WR 2</button>
+    <button class="wr-tab" onclick="filterInverter(3, this)">WR 3</button>
+    <button class="wr-tab" onclick="filterInverter(4, this)">WR 4</button>
+    <button class="wr-tab" onclick="filterInverter(5, this)">WR 5</button>
+    <button class="wr-tab" onclick="filterInverter(6, this)">WR 6</button>
+  </div>
+
+  <!-- HIER WIRD DIE MATRIX ERZEUGT -->
+  <div id="tables"></div>
+
 </div>
 
 <script>
-let cfg={}, toast_t=null, save_t=null;
-let fillable=false;
+// --- VERBINDUNG ZU SUPABASE ---
+const SB_URL = "https://rcuimtfmjkpxkazbsggj.supabase.co";
+const SB_KEY = "sb_publishable_pe8Ye20-e9az1D5MvNCB5A_8_ai7afc";
+let supabaseClient = window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null;
 
-/* ── Input helpers: allow only numbers (and decimal point/comma) ── */
-function filterNum(el){
-  const pos=el.selectionStart;
-  const old=el.value;
-  // allow digits, dot and comma as decimal separator
-  let v=old.replace(/[^0-9.,]/g,'');
-  // normalise comma to dot
-  v=v.replace(',','.');
-  // only one dot allowed
-  const parts=v.split('.');
-  if(parts.length>2) v=parts[0]+'.'+parts.slice(1).join('');
-  if(el.value!==v){ el.value=v; try{el.setSelectionRange(pos,pos);}catch(e){} }
-}
-function filterInt(el){
-  const pos=el.selectionStart;
-  const v=el.value.replace(/[^0-9]/g,'');
-  if(el.value!==v){ el.value=v; try{el.setSelectionRange(pos,pos);}catch(e){} }
+const g = id => document.getElementById(id);
+let toast_t = null;
+function toast(msg, ms=2600){
+  const t = g('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast_t); toast_t = setTimeout(() => t.classList.remove('show'), ms);
 }
 
-/* ── Fill mode toggle ── */
-function setFillMode(val){
-  fillable=val;
-  const ja=g('fill-ja'), nei=g('fill-nei');
-  if(ja&&nei){
-    if(val){ ja.classList.add('on'); nei.classList.remove('on'); }
-    else   { nei.classList.add('on'); ja.classList.remove('on'); }
-  }
-}
+// DAS STRENG VORGANGENE MODELL: ALLES ANDERE IST "NEIN/0" (Belegungsmatrix gem. Plan MAN)
+const SLD_PLAN = {
+  // WR 1 (12 MPPTs belegt)
+  "1.1.1": { planName: "STR 1", gak: "GAK 1.1", mod: 23, stat: "JA", note: "Fläche A" },
+  "1.2.1": { planName: "STR 2", gak: "GAK 1.1", mod: 23, stat: "JA", note: "Fläche A" },
+  "1.3.1": { planName: "STR 3", gak: "GAK 1.1", mod: 22, stat: "JA", note: "Fläche A" },
+  "1.4.1": { planName: "STR 4", gak: "GAK 1.1", mod: 22, stat: "JA", note: "Fläche A" },
+  "1.5.1": { planName: "STR 5", gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A" },
+  "1.6.1": { planName: "STR 6", gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A" },
+  "1.7.1": { planName: "STR 7", gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A" },
+  "1.8.1": { planName: "STR 8", gak: "GAK 1.1", mod: 21, stat: "JA", note: "Fläche A" },
+  "1.9.1": { planName: "STR 9", gak: "GAK 1.2", mod: 20, stat: "JA", note: "Fläche A" },
+  "1.10.1":{ planName: "STR 10", gak: "GAK 1.2", mod: 20, stat: "JA", note: "Fläche A" },
+  "1.11.1":{ planName: "STR 11", gak: "GAK 1.2", mod: 21, stat: "JA", note: "Fläche A" },
+  "1.12.1":{ planName: "STR 12", gak: "GAK 1.2", mod: 21, stat: "JA", note: "Fläche A" },
 
-/* ── Init ── */
-window.onload=()=>{
-  updateDD();
-  const s=JSON.parse(localStorage.getItem('sp_cfg')||'{}');
-  if(s.standort) g('standort').value=s.standort;
-  if(s.pruefer)  g('pruefer').value=s.pruefer;
-  if(s.modul)    g('modul').value=s.modul;
-  if(s.mppt)     g('mppt').value=s.mppt;
-  if(s.fillable) setFillMode(true); else setFillMode(false);
-  // default date to today
-  const td=new Date(); const pruef=g('pruef-datum');
-  if(pruef) pruef.value=td.toISOString().slice(0,10);
-  // restore saved date if present
-  const sc=JSON.parse(localStorage.getItem('sp_cfg')||'{}');
-  if(sc.datum) pruef.value=sc.datum;
-  g('setup-form').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();startApp();}});
-  document.addEventListener('keydown',e=>{
-    const inM=g('matrix-view').style.display!=='none';
-    if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();if(inM)saveProject();}
-    if((e.ctrlKey||e.metaKey)&&e.key==='p'){e.preventDefault();if(inM)doPrint();}
-  });
+  // WR 2 (14 MPPTs = MPPT 1..12 einzeln, MPPT 7 & 8 doppelt!)
+  "2.1.1": { planName: "STR 1", gak: "GAK 2.1", mod: 13, stat: "JA", note: "Fläche B" },
+  "2.2.1": { planName: "STR 2", gak: "GAK 2.1", mod: 13, stat: "JA", note: "Fläche B" },
+  "2.3.1": { planName: "STR 3", gak: "GAK 2.1", mod: 21, stat: "JA", note: "Fläche B" },
+  "2.4.1": { planName: "STR 4", gak: "GAK 2.1", mod: 21, stat: "JA", note: "Fläche B" },
+  "2.5.1": { planName: "STR 5", gak: "GAK 2.2", mod: 20, stat: "JA", note: "Fläche B" },
+  "2.6.1": { planName: "STR 6", gak: "GAK 2.2", mod: 20, stat: "JA", note: "Fläche B" },
+  "2.7.1": { planName: "STR 7", gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B (Doppel)" },
+  "2.7.2": { planName: "STR 11", gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B (Doppel)" },
+  "2.8.1": { planName: "STR 8", gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B (Doppel)" },
+  "2.8.2": { planName: "STR 12", gak: "GAK 2.2", mod: 21, stat: "JA", note: "Fläche B (Doppel)" },
+  "2.9.1": { planName: "STR 9", gak: "GAK 2.2", mod: 14, stat: "JA", note: "Fläche B (10 mm²)" },
+  "2.10.1":{ planName: "STR 10", gak: "GAK 2.2", mod: 14, stat: "JA", note: "Fläche B (10 mm²)" },
+  "2.11.1":{ planName: "STR 13", gak: "GAK 2.2", mod: 18, stat: "JA", note: "Fläche B (10 mm²)" },
+  "2.12.1":{ planName: "STR 14", gak: "GAK 2.2", mod: 18, stat: "JA", note: "Fläche B (10 mm²)" },
+
+  // WR 3 (18 Strings: MPPT 3-6 und 9-10 doppelt)
+  "3.1.1": { planName: "STR 1", gak: "GAK 3.1", mod: 13, stat: "JA", note: "Fläche C" },
+  "3.2.1": { planName: "STR 2", gak: "GAK 3.1", mod: 13, stat: "JA", note: "Fläche C" },
+  "3.3.1": { planName: "STR 3", gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
+  "3.3.2": { planName: "STR 7", gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
+  "3.4.1": { planName: "STR 4", gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
+  "3.4.2": { planName: "STR 8", gak: "GAK 3.1", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
+  "3.5.1": { planName: "STR 5", gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C (Doppel)" },
+  "3.5.2": { planName: "STR 9", gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C (Doppel)" },
+  "3.6.1": { planName: "STR 6", gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C (Doppel)" },
+  "3.6.2": { planName: "STR 10", gak: "GAK 3.1", mod: 23, stat: "JA", note: "Fläche C (Doppel)" },
+  "3.7.1": { planName: "STR 11", gak: "GAK 3.1", mod: 8,  stat: "JA", note: "Fläche C" },
+  "3.8.1": { planName: "STR 12", gak: "GAK 3.1", mod: 8,  stat: "JA", note: "Fläche C" },
+  "3.9.1": { planName: "STR 13", gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
+  "3.9.2": { planName: "STR 17", gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
+  "3.10.1":{ planName: "STR 14", gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
+  "3.10.2":{ planName: "STR 18", gak: "GAK 3.2", mod: 16, stat: "JA", note: "Fläche C (Doppel)" },
+  "3.11.1":{ planName: "STR 15", gak: "GAK 3.2", mod: 15, stat: "JA", note: "Fläche C" },
+  "3.12.1":{ planName: "STR 16", gak: "GAK 3.2", mod: 15, stat: "JA", note: "Fläche C" },
+
+  // WR 4 (16 Strings: MPPT 7-10 doppelt)
+  "4.1.1": { planName: "STR 1", gak: "GAK 4.1", mod: 16, stat: "JA", note: "Fläche D" },
+  "4.2.1": { planName: "STR 2", gak: "GAK 4.1", mod: 16, stat: "JA", note: "Fläche D" },
+  "4.3.1": { planName: "STR 3", gak: "GAK 4.1", mod: 23, stat: "JA", note: "Fläche D" },
+  "4.4.1": { planName: "STR 4", gak: "GAK 4.1", mod: 23, stat: "JA", note: "Fläche D" },
+  "4.5.1": { planName: "STR 5", gak: "GAK 4.1", mod: 8,  stat: "JA", note: "Fläche D" },
+  "4.6.1": { planName: "STR 6", gak: "GAK 4.1", mod: 8,  stat: "JA", note: "Fläche D" },
+  "4.7.1": { planName: "STR 7", gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D (Doppel)" },
+  "4.7.2": { planName: "STR 11", gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D (Doppel)" },
+  "4.8.1": { planName: "STR 8", gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D (Doppel)" },
+  "4.8.2": { planName: "STR 12", gak: "GAK 4.2", mod: 16, stat: "JA", note: "Fläche D (Doppel)" },
+  "4.9.1": { planName: "STR 9", gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)" },
+  "4.9.2": { planName: "STR 13", gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)" },
+  "4.10.1":{ planName: "STR 10", gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)" },
+  "4.10.2":{ planName: "STR 14", gak: "GAK 4.2", mod: 23, stat: "JA", note: "Fläche D (10 mm²)" },
+  "4.11.1":{ planName: "STR 15", gak: "GAK 4.2", mod: 20, stat: "JA", note: "Fläche D (10 mm²)" },
+  "4.12.1":{ planName: "STR 16", gak: "GAK 4.2", mod: 20, stat: "JA", note: "Fläche D (10 mm²)" },
+
+  // WR 5 (18 Strings: MPPT 1-2 & 7-10 doppelt)
+  "5.1.1": { planName: "STR 1", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E (Doppel)" },
+  "5.1.2": { planName: "STR 3", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E (Doppel)" },
+  "5.2.1": { planName: "STR 2", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E (Doppel)" },
+  "5.2.2": { planName: "STR 4", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E (Doppel)" },
+  "5.3.1": { planName: "STR 5", gak: "GAK 5.1", mod: 17, stat: "JA", note: "Fläche E" },
+  "5.4.1": { planName: "STR 6", gak: "GAK 5.1", mod: 17, stat: "JA", note: "Fläche E" },
+  "5.5.1": { planName: "STR 7", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E" },
+  "5.6.1": { planName: "STR 8", gak: "GAK 5.1", mod: 22, stat: "JA", note: "Fläche E" },
+  "5.7.1": { planName: "STR 9", gak: "GAK 5.1", mod: 13, stat: "JA", note: "Fläche E (Doppel)" },
+  "5.7.2": { planName: "STR 10", gak: "GAK 5.1", mod: 13, stat: "JA", note: "Fläche E (Doppel)" },
+  "5.8.1": { planName: "STR 11", gak: "GAK 5.1", mod: 18, stat: "JA", note: "Fläche E (Doppel)" },
+  "5.8.2": { planName: "STR 12", gak: "GAK 5.1", mod: 18, stat: "JA", note: "Fläche E (Doppel)" },
+  "5.9.1": { planName: "STR 13", gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (Doppel)" },
+  "5.9.2": { planName: "STR 15", gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (10 mm²)" },
+  "5.10.1":{ planName: "STR 14", gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (Doppel)" },
+  "5.10.2":{ planName: "STR 16", gak: "GAK 5.2", mod: 17, stat: "JA", note: "Fläche E (10 mm²)" },
+  "5.11.1":{ planName: "STR 17", gak: "GAK 5.2", mod: 13, stat: "JA", note: "Fläche E (10 mm²)" },
+  "5.12.1":{ planName: "STR 18", gak: "GAK 5.2", mod: 13, stat: "JA", note: "Fläche E (10 mm²)" },
+
+  // WR 6 (16 Strings: MPPT 1-2 & 11-12 doppelt)
+  "6.1.1": { planName: "STR 1", gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.1.2": { planName: "STR 3", gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.2.1": { planName: "STR 2", gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.2.2": { planName: "STR 4", gak: "GAK 6.1", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.3.1": { planName: "STR 5", gak: "GAK 6.2", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.4.1": { planName: "STR 6", gak: "GAK 6.2", mod: 23, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.5.1": { planName: "STR 7", gak: "GAK 6.2", mod: 20, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.6.1": { planName: "STR 8", gak: "GAK 6.2", mod: 20, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.7.1": { planName: "STR 9", gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.8.1": { planName: "STR 10", gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.9.1": { planName: "STR 11", gak: "GAK 6.2", mod: 17, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.10.1":{ planName: "STR 12", gak: "GAK 6.2", mod: 17, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.11.1":{ planName: "STR 13", gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.11.2":{ planName: "STR 15", gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.12.1":{ planName: "STR 14", gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" },
+  "6.12.2":{ planName: "STR 16", gak: "GAK 6.2", mod: 18, stat: "JA", note: "Fläche F (10 mm²)" }
 };
 
-const g=id=>document.getElementById(id);
+// FACTORY PROJEKT KONFIGURATION (LÄDT GENAU DAS GÜLTIGE ARRAY)
+function loadFreshMatrix(){
+  const pr = {
+    id: "PV_MAN_P52",
+    standort: "PV MAN P52",
+    pruefer: "Christoph Huber",
+    modulWp: 465,
+    mppts: [12,12,12,12,12,12]
+  };
 
-function toast(msg,ms=2800){
-  const t=g('toast'); t.textContent=msg; t.classList.add('show');
-  clearTimeout(toast_t); toast_t=setTimeout(()=>t.classList.remove('show'),ms);
-}
-
-function parseMPPT(raw){return raw.split(',').map(s=>s.trim()).filter(Boolean).map(Number).filter(n=>n>0&&Number.isInteger(n));}
-function safeName(n){return(n||'Projekt').replace(/[<>:"\/\\|?*\s]+/g,'_').replace(/_+/g,'_').slice(0,80);}
-
-function updateDD(){
-  const proj=JSON.parse(localStorage.getItem('sp_archive')||'{}');
-  const sel=g('project-list');
-  sel.innerHTML='<option value="">&#8212; Neues Projekt &#8212;</option>';
-  Object.keys(proj).sort((a,b)=>a.localeCompare(b,'de')).forEach(n=>{
-    const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o);
-  });
-}
-
-function setStatus(id,val){
-  g('stat-'+id).value=val;
-  const ja=g('tja-'+id), nei=g('tnei-'+id);
-  if(val==='JA'){ja.classList.add('on');nei.classList.remove('on');}
-  else{nei.classList.add('on');ja.classList.remove('on');}
-  processRow(id);
-}
-
-function processRow(id){
-  const stat=g('stat-'+id).value;
-  const mod=parseFloat(g('mod-'+id).value)||0;
-  const row=g('row-'+id);
-  const pw=g('pw-'+id);
-  const ps=g('ps-'+id);
-  const pm=g('pm-'+id);
-  if(stat==='NEIN'){
-    row.classList.add('row-nein');
-    pw.textContent='—'; pw.classList.remove('has-val');
-    if(ps){ps.textContent='NEIN'; ps.style.color='#94a3b8';}
-    if(pm) pm.textContent='—';
-  } else {
-    row.classList.remove('row-nein');
-    if(mod>0){pw.textContent=((mod*cfg.modul)/1000).toFixed(2)+' kWp'; pw.classList.add('has-val');}
-    else{pw.textContent='—'; pw.classList.remove('has-val');}
-    if(ps){ps.textContent='JA'; ps.style.color='#4d6b00';}
-    if(pm) pm.textContent=mod>0?String(mod):'—';
-  }
-  scheduleSave(); updateDash();
-}
-
-function collect(){
-  const d={};
-  document.querySelectorAll('[id^="mod-"],[id^="note-"],[id^="stat-"],[id^="uoc-"],[id^="isc-"],[id^="riso-"],[id^="gak-"]').forEach(el=>{ d[el.id]=el.value; });
-  return d;
-}
-function scheduleSave(){
-  clearTimeout(save_t);
-  save_t=setTimeout(()=>{
-    localStorage.setItem('sp_autosave',JSON.stringify(collect()));
-    const b=g('tb-badge'); if(b){b.style.opacity='1'; setTimeout(()=>b.style.opacity='0',2200);}
-  },400);
-}
-
-function updateDash(){
-  let pwr=0,mods=0,strs=0,filled=0;
-  document.querySelectorAll('[id^="stat-"]').forEach(s=>{
-    if(s.value!=='JA') return;
-    strs++;
-    const id=s.id.replace('stat-','');
-    const v=parseFloat((g('mod-'+id)||{}).value)||0;
-    mods+=v; pwr+=(v*cfg.modul)/1000;
-    if(v>0) filled++;
-  });
-  g('d-pwr').textContent=pwr.toFixed(2);
-  g('d-mods').textContent=mods;
-  g('d-str').textContent=strs;
-  g('d-prog').style.width=(strs>0?Math.round(filled/strs*100):0)+'%';
-  // print header
-  const pl=g('ph-loc'),pt=g('ph-tech'),pm=g('ph-mod');
-  if(pl) pl.textContent=cfg.standort||'—';
-  if(pt) pt.textContent=cfg.pruefer||'—';
-  if(pm) pm.textContent=cfg.modul+' Wp';
-}
-
-function saveProject(){
-  const name=(g('standort').value||'').trim();
-  if(!name) return toast('Bitte Standort eingeben');
-  const proj=JSON.parse(localStorage.getItem('sp_archive')||'{}');
-  proj[name]={cfg:{standort:name,pruefer:g('pruefer').value,modul:g('modul').value,mppt:g('mppt').value,fillable:cfg.fillable},data:collect(),ts:new Date().toISOString()};
-  localStorage.setItem('sp_archive',JSON.stringify(proj));
-  updateDD(); g('project-list').value=name;
-  toast('✓ "'+name+'" gespeichert');
-}
-function loadProject(){
-  const sel=g('project-list').value; if(!sel) return toast('Bitte Projekt auswählen');
-  const p=(JSON.parse(localStorage.getItem('sp_archive')||'{}')||{})[sel]; if(!p) return toast('Nicht gefunden');
-  g('standort').value=p.cfg.standort; g('pruefer').value=p.cfg.pruefer; g('modul').value=p.cfg.modul; g('mppt').value=p.cfg.mppt;
-  if(p.cfg.fillable) setFillMode(true); else setFillMode(false);
-  startApp({restore:true,data:p.data}); toast('📂 "'+sel+'" geladen');
-}
-function deleteProject(){
-  const sel=g('project-list').value; if(!sel) return;
-  if(!confirm('Projekt "'+sel+'" wirklich löschen?')) return;
-  const proj=JSON.parse(localStorage.getItem('sp_archive')||'{}'); delete proj[sel];
-  localStorage.setItem('sp_archive',JSON.stringify(proj)); updateDD(); toast('Gelöscht');
-}
-function goMenu(){if(confirm('Zurück zum Menü? Auto-Save bleibt erhalten.')) location.reload();}
-
-function updateTotalsNotes(){
-  let gtMods=0, gtPwr=0;
-  parseMPPT(cfg.mppt).forEach((cnt,wi)=>{
-    const wr=wi+1; let ms=0,pw=0;
-    for(let m=1;m<=cnt;m++) for(let s=1;s<=2;s++){
-      const id=`${wr}.${m}.${s}`;
-      const st=g('stat-'+id); if(!st||st.value!=='JA') continue;
-      const v=parseFloat((g('mod-'+id)||{}).value)||0; ms+=v; pw+=(v*cfg.modul)/1000;
-      const ne=g('note-'+id), pn=g('pn-'+id);
-      if(ne&&pn){pn.textContent=ne.value; pn.style.display=ne.value?'inline':'none';}
-      // sync measurement print cells
-      ['uoc','isc','riso'].forEach(f=>{
-        const inp=g(f+'-'+id), pc=g('p'+f+'-'+id);
-        if(inp&&pc){pc.textContent=inp.value; pc.style.display=inp.value?'inline':'none';}
-      });
-    }
-    gtMods+=ms; gtPwr+=pw;
-    const tm=g('tm-'+wr),tp=g('tp-'+wr);
-    if(tm) tm.textContent=ms>0?ms+' Stk.':'—';
-    if(tp) tp.textContent=pw>0?pw.toFixed(2)+' kWp':'—';
-    const gakEl=g('gak-'+wr), gakp=g('gakp-'+wr);
-    if(gakp){ const gv=(gakEl&&gakEl.value.trim())?gakEl.value.trim():''; gakp.textContent=gv?('GAK '+gv):''; gakp.style.display=gv?'inline':'none'; }
-  });
-  // grand total
-  const gt=g('grand-total');
-  if(gt){ gt.style.display='block'; g('gt-mod').textContent=gtMods+' Module gesamt'; g('gt-pwr').textContent=gtPwr.toFixed(2)+' kWp'; }
-}
-
-function doPrint(){
-  updateTotalsNotes();
-  const datumEl=g('pruef-datum');
-  if(datumEl&&datumEl.value){
-    const [y,mo,d]=datumEl.value.split('-');
-    const months=['Jänner','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-    g('ph-date').textContent=parseInt(d)+'. '+months[parseInt(mo)-1]+' '+y;
-  } else {
-    g('ph-date').textContent=new Date().toLocaleDateString('de-AT',{day:'numeric',month:'long',year:'numeric'});
-  }
-  let s=g('_plo'); if(!s){s=document.createElement('style');s.id='_plo';s.textContent='@media print{@page{size:A4 landscape!important;}}';document.head.appendChild(s);}
-  window.print();
-}
-
-function doExcel(){
-  const exDatum=cfg.datum?new Date(cfg.datum).toLocaleDateString('de-AT'):new Date().toLocaleDateString('de-AT');
-  const rows=[['SOLPRO MESS- UND PRUEFPROTOKOLL'],['Projekt:',cfg.standort,'','Pruefer:',cfg.pruefer],['Modulleistung:',cfg.modul+' Wp','','Pruefdatum:',exDatum],[],['String','Module','Leistung (kWp)','Uoc (V)','Isc (A)','Riso (MOhm)','Bemerkung']];
-  document.querySelectorAll('[id^="stat-"]').forEach(s=>{
-    if(s.value!=='JA') return;
-    const id=s.id.replace('stat-','');
-    rows.push([
-      {t:'s',v:id},
-      (g('mod-'+id)||{}).value,
-      (g('pw-'+id)||{}).textContent.replace(' kWp','').replace('—','').replace('—',''),
-      cfg.fillable ? ((g('uoc-'+id)||{}).value||'') : '',
-      cfg.fillable ? ((g('isc-'+id)||{}).value||'') : '',
-      cfg.fillable ? ((g('riso-'+id)||{}).value||'') : '',
-      (g('note-'+id)||{}).value
-    ]);
-  });
-  const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:13},{wch:9},{wch:14},{wch:10},{wch:10},{wch:12},{wch:32}];
-  XLSX.utils.book_append_sheet(wb,ws,'Protokoll');
-  XLSX.writeFile(wb,'SOLPRO_'+safeName(cfg.standort)+'.xlsx');
-  toast('Excel exportiert');
-}
-
-/* ── GAK-Pickerl / SmartScript Export ── */
-function downloadText(text,filename){
-  const blob=new Blob([text],{type:'text/plain;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download=filename;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
-}
-
-function exportActiveStrings(){
-  const ids=[];
-  document.querySelectorAll('[id^="stat-"]').forEach(s=>{ if(s.value==='JA') ids.push(s.id.replace('stat-','')); });
-  if(!ids.length) return toast('Keine aktiven Strings vorhanden');
-  downloadText(ids.join('\r\n'),'SOLPRO_Strings_'+safeName(cfg.standort)+'.txt');
-  toast(ids.length+' aktive Strings exportiert');
-}
-
-function exportGakPickerl(){
-  const rows=[['BVH','String','GAK','Module','Leistung']];
-  document.querySelectorAll('[id^="stat-"]').forEach(s=>{
-    if(s.value!=='JA') return;
-    const id=s.id.replace('stat-','');
-    const wr=id.split('.')[0];
-    const modVal=parseFloat((g('mod-'+id)||{}).value)||0;
-    if(modVal<=0) return;
-    const gakEl=g('gak-'+wr);
-    const gakVal=(gakEl&&gakEl.value.trim())?gakEl.value.trim():wr;
-    const pwrVal=((modVal*cfg.modul)/1000).toFixed(2).replace('.',',');
-    rows.push([cfg.standort, id, 'GAK '+gakVal, modVal+' Module', pwrVal+' kWp']);
-  });
-  if(rows.length<=1) return toast('Keine aktiven Strings mit Modulanzahl vorhanden — bitte Module eintragen');
-  const csv=rows.map(r=>r.join(';')).join('\r\n');
-  downloadText('\uFEFF'+csv,'SOLPRO_GAK-Pickerl_'+safeName(cfg.standort)+'.csv');
-  toast((rows.length-1)+' Pickerl-Zeilen exportiert');
-}
-
-
-function startApp(opts={}){
-  cfg.standort=(g('standort').value||'').trim();
-  cfg.pruefer =(g('pruefer').value ||'').trim();
-  cfg.modul   =parseFloat(g('modul').value)||0;
-  cfg.mppt    =(g('mppt').value||'').trim();
-  cfg.fillable=fillable;
-  if(!cfg.standort) return toast('Bitte Standort/Projektname eingeben');
-  if(!cfg.mppt)     return toast('Bitte MPPTs eingeben');
-  if(!cfg.modul)    return toast('Bitte Modulleistung (Wp) eingeben');
-  const mpptList=parseMPPT(cfg.mppt);
-  if(!mpptList.length) return toast('Ungueltige MPPT-Eingabe — z.B. 2,3');
-  cfg.mppt=mpptList.join(','); g('mppt').value=cfg.mppt;
-  cfg.datum=(g('pruef-datum')||{}).value||'';
-  localStorage.setItem('sp_cfg',JSON.stringify(cfg));
-  g('tb-loc').textContent=cfg.standort; g('tb-tech').textContent=cfg.pruefer;
-  document.title='SOLPRO | '+cfg.standort;
-
-  const cont=g('tables'); cont.innerHTML='';
-
-  mpptList.forEach((cnt,wi)=>{
-    const wr=wi+1;
-    const bl=document.createElement('div');
-    bl.className='wr-block pr-break';
-
-    // Build measurement column cells based on fillable mode
-    function msrCell(field, id, placeholder, label){
-      if(cfg.fillable){
-        return `<td class="col-msr" data-label="${label}">
-          <input type="text" inputmode="decimal" id="${field}-${id}" oninput="filterNum(this);scheduleSave()" class="msr-inp no-print" placeholder="${placeholder}" autocomplete="off">
-          <span class="print-only print-cell" id="p${field}-${id}"></span>
-          <div class="print-blank print-only"></div>
-        </td>`;
-      } else {
-        return `<td class="col-msr" data-label="${label}">
-          <span class="screen-dash" style="color:#1e2a3a;font-size:0.7rem;">&#8212;</span>
-          <div class="print-blank"></div>
-          <span class="print-dash">&#8212;</span>
-        </td>`;
+  pr.inverters = [1,2,3,4,5,6].map(wr => {
+    const arr = [];
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const fid = `${wr}.${m}.${s}`;
+        const template = SLD_PLAN[fid] || { planName: "", gak: `GAK ${wr}.${m <= 6 ? '1':'2'}`, mod: 0, stat: "NEIN", note: "" };
+        arr.push({
+          mppt: m,
+          in: s,
+          planName: template.planName,
+          planGak: template.gak,
+          planMod: template.mod,
+          planStat: template.stat,
+          planNote: template.note,
+          gak: template.gak,
+          mod: template.mod,  // <<< Dieser Parameter zwingt die exakten "Modul" Anzahlen rein
+          stat: template.stat, // <<< Erzwingt JA bei echten Strings, und "NEIN" bei freigelassenen .2 !
+          note: template.note,
+          uoc: "", isc: "", riso: ""
+        });
       }
     }
+    return { wr: wr, name: `SMA Sunny Tripower 125 (WR ${wr})`, strings: arr };
+  });
 
-    bl.innerHTML=`
+  return pr;
+}
+
+let PROJECT = loadFreshMatrix();
+
+// EXTREMER RESET (Überbügelt ALLES - lokal und Remote - mit den Basiswerten)
+async function factoryResetCloud(){
+  if(!confirm("Achtung: Dies setzt PV MAN P52 im kompletten Firmennetz (Büro und Cloud) sofort wieder in den Urzustand des THE CONSULTING-Montageplans zurück. Alle alten, verschobenen Cloud-Speicherstände verschwinden damit! Bist du dir sicher?")) return;
+  
+  localStorage.removeItem('sp_local_backup');
+  PROJECT = loadFreshMatrix(); // Reset App
+  renderTables();
+  
+  if(!supabaseClient) return toast('Lokaler Reset ok - Für Cloud-Reset bitte erst Verbindung herstellen');
+
+  try {
+    await supabaseClient.from('pv_projects').upsert({
+      id: "PV_MAN_P52",
+      name: "PV MAN P52",
+      pruefer: "Christoph Huber",
+      modul_wp: 465,
+      data: collectCurrentMeasurements(), // Collect den sauberen aktuellen Nullzustand!
+      updated_at: new Date().toISOString()
+    });
+    toast('✅ CLOUD-GHOSTS GETILGT! Ab jetzt arbeitet ihr 100% sauber.');
+  } catch(e) {}
+}
+
+
+// APP BERECHNUNGS LOGIK 
+function renderTables(){
+  const container = g('tables');
+  container.innerHTML = '';
+
+  PROJECT.inverters.forEach(inv => {
+    let wrap = document.createElement('div');
+    wrap.className = 'wr-block';
+    
+    let htmlTrs = '';
+    let currMPPT = -1;
+
+    inv.strings.forEach(s => {
+      let fID = `${inv.wr}.${s.mppt}.${s.in}`;
+      let divider = (currMPPT !== -1 && currMPPT !== s.mppt) ? "mppt-div" : "";
+      currMPPT = s.mppt;
+      
+      let rowGreyed = (s.stat === 'NEIN') ? 'row-nein' : '';
+      let activePwr = (s.stat === 'JA' && s.mod > 0) ? ((s.mod * PROJECT.modulWp)/1000).toFixed(2) : "0.00";
+      
+      let planPille = (s.planStat === "JA") 
+          ? `<span class="plan-badge plan-badge-green">${s.planName||'-'} &middot; ${s.planMod}M</span>` 
+          : `<span class="plan-badge">-- FREI --</span>`;
+
+      htmlTrs += `
+        <tr id="r_${fID}" class="${divider} ${rowGreyed}">
+          <td data-label="Klemme (Ist)" style="text-align:left;padding-left:14px;"><span class="string-id">${fID}</span> <span style="font-size:0.6rem;color:#64748b;">M${s.mppt}.${s.in}</span></td>
+          <td data-label="Planung (Soll)" class="no-print" style="text-align:left;">${planPille}</td>
+          <td data-label="GAK (Ist)">
+            <input type="text" id="g_${fID}" value="${s.gak}" class="sp-inp sp-inp-gak" style="width:70px;">
+          </td>
+          <td data-label="Aktiv" class="no-print">
+            <div class="tog-wrap">
+              <button id="tj_${fID}" class="tog ${s.stat==='JA'?'on-ja':''}" onclick="setBool('${fID}','JA')">JA</button>
+              <button id="tn_${fID}" class="tog ${s.stat==='NEIN'?'on-nei':''}" onclick="setBool('${fID}','NEIN')">NEIN</button>
+            </div>
+            <input type="hidden" id="st_${fID}" value="${s.stat}">
+          </td>
+          <td data-label="Module">
+            <input type="number" inputmode="numeric" id="m_${fID}" value="${s.mod>0 ? s.mod:''}" class="sp-inp" style="width:50px;" oninput="applyModuleSync('${fID}', this.value)">
+          </td>
+          <td data-label="Leistung kWp" style="font-weight:900;color:var(--green);font-family:monospace;" id="pw_${fID}">${s.stat==='JA' && s.mod>0 ? activePwr : '—'}</td>
+          <td data-label="Uoc (V)"><input type="text" inputmode="decimal" id="uo_${fID}" value="${s.uoc||''}" placeholder="V" class="sp-inp" style="width:58px;"></td>
+          <td data-label="Isc (A)"><input type="text" inputmode="decimal" id="is_${fID}" value="${s.isc||''}" placeholder="A" class="sp-inp" style="width:58px;"></td>
+          <td data-label="Riso (MΩ)"><input type="text" inputmode="decimal" id="ri_${fID}" value="${s.riso||''}" placeholder="MΩ" class="sp-inp" style="width:58px;"></td>
+          <td data-label="Info (Bemerk.)"><input type="text" id="no_${fID}" value="${s.note||''}" class="sp-inp" style="width:100%;text-align:left;"></td>
+        </tr>`;
+    });
+
+    wrap.innerHTML = `
       <div class="wr-head">
-        <span class="wr-num">WR ${wr}</span>
-        <span class="wr-name">Wechselrichter ${wr}</span>
-        <span class="wr-meta">&nbsp;&middot; ${cnt} MPPT &middot; ${cnt*2} Strings</span>
-        <span class="wr-gak-wrap no-print">
-          <label class="wr-gak-label" for="gak-${wr}">GAK</label>
-          <input type="text" id="gak-${wr}" class="wr-gak-inp" placeholder="Nr." oninput="scheduleSave()" autocomplete="off">
-        </span>
-        <span class="wr-gak-print" id="gakp-${wr}"></span>
+        <div><span class="wr-num">WR ${inv.wr}</span><span style="font-size:0.8rem;font-weight:700;color:#f0f4f8;text-transform:uppercase;margin-left:6px;">${inv.name}</span></div>
+        <div class="wr-kpis"><span id="wm_${inv.wr}">0</span> Module &middot; <span id="wp_${inv.wr}" style="color:var(--green);">0.00</span> kWp</div>
       </div>
-      <div class="tbl-wrap">
+      <div style="overflow-x:auto;">
       <table class="mt">
-        <thead><tr>
-          <th class="col-id" style="text-align:left;padding-left:20px;">Input</th>
-          <th class="no-print">Aktiv</th>
-          <th class="print-only col-stat">Status</th>
-          <th class="col-mod">Module</th>
-          <th class="col-pwr">Leistung</th>
-          <th class="col-msr">Uoc (V)</th>
-          <th class="col-msr">Isc (A)</th>
-          <th class="col-msr">Riso (M&#8486;)</th>
-          <th class="col-note no-print">Bemerkung</th>
-          <th class="col-note print-only">Bemerkung</th>
-        </tr></thead>
-        <tbody id="tb-${wr}"></tbody>
-        <tfoot>
-          <tr class="tot-row print-only">
-            <td colspan="2" style="text-align:left;padding-left:8px;font-size:7pt;text-transform:uppercase;letter-spacing:.05em;">Summe WR ${wr}</td>
-            <td></td>
-            <td id="tm-${wr}" style="text-align:center;"></td>
-            <td id="tp-${wr}" style="text-align:center;color:#4d6b00;"></td>
-            <td colspan="4"></td>
+        <thead>
+          <tr>
+            <th style="width:11%;text-align:left;padding-left:14px;">Ist Klemme</th>
+            <th class="no-print" style="width:12%;text-align:left;">Plan-Soll (Montage)</th>
+            <th style="width:8%;">GAK</th>
+            <th class="no-print" style="width:11%;">Sammelplatz</th>
+            <th style="width:6%;">Module</th>
+            <th style="width:10%;">Leistung (kWp)</th>
+            <th style="width:7%;">Uoc (V)</th>
+            <th style="width:7%;">Isc (A)</th>
+            <th style="width:8%;">Riso (MΩ)</th>
+            <th style="width:20%;text-align:left;">String INFO</th>
           </tr>
-        </tfoot>
+        </thead>
+        <tbody>${htmlTrs}</tbody>
       </table>
       </div>`;
-    cont.appendChild(bl);
-
-    const tbody=g('tb-'+wr);
-    for(let m=1;m<=cnt;m++) for(let s=1;s<=2;s++){
-      const id=`${wr}.${m}.${s}`;
-      const tr=document.createElement('tr');
-      tr.id='row-'+id;
-      if(s===1&&m>1) tr.classList.add('mppt-div');
-      tr.innerHTML=`
-        <td class="col-id"><span class="string-id">${id}</span></td>
-        <td class="no-print" data-label="Aktiv">
-          <div class="tog-wrap">
-            <button id="tja-${id}"  class="tog ton-ja on"  onclick="setStatus('${id}','JA')">JA</button>
-            <button id="tnei-${id}" class="tog ton-nei"    onclick="setStatus('${id}','NEIN')">NEIN</button>
-          </div>
-          <select id="stat-${id}" style="display:none;" onchange="processRow('${id}')">
-            <option value="JA">JA</option><option value="NEIN">NEIN</option>
-          </select>
-        </td>
-        <td class="print-only col-stat" id="ps-${id}" style="font-weight:700;color:#4d6b00;">JA</td>
-        <td class="col-mod" data-label="Module">
-          <input type="text" inputmode="numeric" id="mod-${id}" oninput="filterInt(this);processRow('${id}')" class="mod-inp" placeholder="&#8212;" autocomplete="off">
-          <span class="print-only print-cell" id="pm-${id}"></span>
-        </td>
-        <td class="col-pwr pwr-cell" id="pw-${id}" data-label="Leistung">&#8212;</td>
-        ${msrCell('uoc', id, 'V', 'Uoc (V)')}
-        ${msrCell('isc', id, 'A', 'Isc (A)')}
-        ${msrCell('riso', id, 'M\u03a9', 'Riso (M\u03a9)')}
-        <td class="col-note no-print" data-label="Bemerkung">
-          <input type="text" id="note-${id}" oninput="scheduleSave()" placeholder="Bemerkung&#8230;" class="note-inp">
-        </td>
-        <td class="col-note print-only">
-          <span id="pn-${id}" class="print-note" style="display:none;font-size:9pt;color:#334155;"></span>
-        </td>`;
-      tbody.appendChild(tr);
-    }
+    container.appendChild(wrap);
   });
-
-  g('setup-screen').style.display='none';
-  g('matrix-view').style.display='block';
-
-  if(opts.restore&&opts.data){
-    for(const k in opts.data){const el=g(k);if(el) el.value=opts.data[k];}
-    document.querySelectorAll('[id^="stat-"]').forEach(s=>setStatus(s.id.replace('stat-',''),s.value));
-  } else {
-    const saved=localStorage.getItem('sp_autosave');
-    if(saved){const d=JSON.parse(saved); for(const k in d){const el=g(k);if(el)el.value=d[k];}}
-    document.querySelectorAll('[id^="stat-"]').forEach(s=>setStatus(s.id.replace('stat-',''),s.value));
-  }
-  // update print-cell visibility for mod fields
-  document.querySelectorAll('[id^="mod-"]').forEach(el=>{
-    const id=el.id.replace('mod-',''); const pm=g('pm-'+id);
-    if(pm&&el.value){pm.textContent=el.value; pm.style.display='inline';}
-  });
-  updateDash();
+  
+  refreshGlobalKpis();
 }
+
+function setBool(id, choice){
+  g(`st_${id}`).value = choice;
+  if(choice === "JA"){ g(`tj_${id}`).classList.add("on-ja"); g(`tn_${id}`).classList.remove("on-nei"); g(`r_${id}`).classList.remove("row-nein"); }
+  else { g(`tj_${id}`).classList.remove("on-ja"); g(`tn_${id}`).classList.add("on-nei"); g(`r_${id}`).classList.add("row-nein"); }
+  refreshGlobalKpis();
+}
+
+function applyModuleSync(fID, amount){
+  // Ermittelt partner Klemme 5.12.1 <-> 5.12.2 (Gleiche MPPT logik!)
+  let ps = fID.split(".");
+  let partnerNum = (ps[2]==='1') ? '2' : '1';
+  let partnerId = `${ps[0]}.${ps[1]}.${partnerNum}`;
+
+  let stEl = g(`st_${partnerId}`);
+  let pEl = g(`m_${partnerId}`);
+  if(pEl && stEl && stEl.value==='JA'){
+    pEl.value = amount;
+  }
+  refreshGlobalKpis();
+}
+
+function refreshGlobalKpis(){
+  let globalM = 0; let globalP = 0; let sloti = 0;
+  
+  for(let w = 1; w<=6; w++){
+    let wm = 0; let wp = 0;
+    for(let mp = 1; mppt <= 12; mp++){
+       [1,2].forEach(ii => {
+         let fid = `${w}.${mp}.${ii}`;
+         let el_s = g(`st_${fid}`);
+         if(!el_s) return;
+         let val = parseFloat(g(`m_${fid}`).value)||0;
+         
+         let pt = 0;
+         if(el_s.value === "JA") {
+            if(val>0){ sloti++; pt=(val*PROJECT.modulWp)/1000; wm+=val; wp+=pt; globalM+=val; globalP+=pt;}
+            g(`pw_${fid}`).textContent = val>0 ? pt.toFixed(2): '—';
+         } else {
+            g(`pw_${fid}`).textContent = '—';
+         }
+       });
+    }
+    // Update local inverter head
+    let pR_M = g(`wm_${w}`); if(pR_M) pR_M.textContent = wm;
+    let pR_P = g(`wp_${w}`); if(pR_P) pR_P.textContent = wp.toFixed(2);
+  }
+  g("d-mods").textContent = globalM;
+  g("d-pwr").textContent = globalP.toFixed(2);
+  g("d-act").textContent = sloti;
+}
+
+// TOGGLE VIEWS
+function toggleSunMode(){
+  document.body.classList.toggle('sun-mode');
+  localStorage.setItem('solpro_sun_mode', document.body.classList.contains('sun-mode') ? '1' : '0');
+}
+function filterInverter(n, btn){
+  document.querySelectorAll('.wr-tab').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+  const dbs = document.querySelectorAll('.wr-block');
+  dbs.forEach((d,i)=>{ d.style.display = (n===0 || i+1===n) ? 'block' : 'none'; });
+}
+
+// ── MANUAL SYNC MIT DATENSAMMLER  ──
+function collectCurrentMeasurements(){
+  const obj = {};
+  for(let w=1; w<=6; w++){
+    for(let m=1; m<=12; m++){
+       for(let i=1; i<=2; i++){
+          let id = `${w}.${m}.${i}`;
+          let gSt = g(`st_${id}`);
+          if(gSt){
+             obj[id] = {
+               stat: gSt.value,
+               gak: g(`g_${id}`).value,
+               mod: g(`m_${id}`).value,
+               uoc: g(`uo_${id}`).value,
+               isc: g(`is_${id}`).value,
+               riso: g(`ri_${id}`).value,
+               note: g(`no_${id}`).value
+             }
+          }
+       }
+    }
+  }
+  return obj;
+}
+
+async function pushToCloud(){
+  if(!supabaseClient) return;
+  toast("☁️ Speichere im Projekt in Cloud...");
+  let pd = collectCurrentMeasurements();
+  localStorage.setItem("sp_pvm_backup", JSON.stringify(pd));
+  try {
+     const { error } = await supabaseClient.from('pv_projects').upsert({ id: "PV_MAN_P52", name: "PV MAN P52", pruefer: "Christoph Huber", data: pd, modul_wp: 465 });
+     if(error) throw "Net Error";
+     toast("✅ Plan & Werte online verriegelt.");
+     g("cloud-text").textContent = "Gespeichert!";
+     g("cloud-dot").className = "status-dot dot-green";
+  }catch(e){ toast("Keine Datenverbindung!"); }
+}
+
+async function fetchCloudProject(){
+  if(!supabaseClient) return;
+  toast("📥 Rufe Serverzustand...");
+  try {
+    let { data, error } = await supabaseClient.from("pv_projects").select("data").eq("id","PV_MAN_P52").single();
+    if(data && data.data) {
+        let xms = data.data;
+        Object.keys(xms).forEach(ik => {
+            let cx = xms[ik];
+            if(g(`st_${ik}`)){
+                g(`g_${ik}`).value = cx.gak || "";
+                g(`m_${ik}`).value = cx.mod || "";
+                g(`uo_${ik}`).value = cx.uoc || "";
+                g(`is_${ik}`).value = cx.isc || "";
+                g(`ri_${ik}`).value = cx.riso || "";
+                g(`no_${ik}`).value = cx.note || "";
+                setBool(ik, cx.stat||'JA');
+            }
+        });
+        toast("Download beendet - Display aktualisiert");
+    } else {
+        toast("DB Eintrag leer! Klicke 'Plan-Reset' zum Neustart.");
+    }
+  }catch(ex){ }
+}
+
+// ── COMPACT MONTAGEPLAN-PRINT. DIE WAFFE. ──
+function printMontagePlan(){
+  let doc = window.open('', '_blank');
+  let printRows = "";
+
+  PROJECT.inverters.forEach(w =>{
+    let hasActiv = w.strings.filter(e => e.planStat==="JA" || g(`st_${w.wr}.${e.mppt}.${e.in}`)?.value==="JA").length;
+    if(hasActiv===0) return;
+    printRows += `<tr><td colspan="3" style="font-weight:900; background:#334155; color:#fff; font-size:18pt; padding:15px; border-bottom:3px solid #111;">🔌 ${w.name} - ANSCHLÜSSE BELEGT:</td></tr>`;
+    w.strings.forEach(st => {
+      let ix = `${w.wr}.${st.mppt}.${st.in}`;
+      let cxIsOn = (g(`st_${ix}`).value==="JA");
+      if(st.planStat!=="JA" && !cxIsOn) return; 
+
+      // Fallback
+      let labelP = st.planName ? `Plan: ${st.planName}` : `FREMD / Nachgerüstet!`;
+      let gName = g(`g_${ix}`).value || st.planGak;
+      
+      printRows += `
+      <tr>
+         <td style="font-size:15pt;font-weight:800;padding:12px;border:2px solid #64748b;color:#1d4ed8;">${labelP} <br><span style="font-size:10pt;font-weight:400;color:#000;">-> in</span></td>
+         <td style="font-size:22pt;font-weight:900;font-family:monospace;border:2px solid #64748b;color:#166534;background:#f0fdf4;">${ix}</td>
+         <td style="font-size:16pt;font-weight:800;border:2px solid #64748b;">${gName} <br><span style="font-size:9pt;font-weight:500;">(${st.planMod} Mod)</span></td>
+      </tr>`;
+    });
+  });
+
+  doc.document.write(`
+   <html>
+    <head><title>Anschluss Plan & Montage MAN</title></head>
+    <body onload="window.print()" style="font-family:sans-serif; margin:15px; color:#111;">
+      <h1 style="font-size:32px;text-transform:uppercase;">MONTAGE UND ANSCHLUSS VOR ORT - WR.KLEMMEN:</h1>
+      <p style="font-size:14pt;">BvH PV MAN P52 - Bitte strikt an Wechselrichterbeschriftung (Eingang M1.1 bis M12.2) stecken.</p>
+      <table style="width:100%;text-align:center;border-collapse:collapse;">${printRows}</table>
+    </body>
+   </html>
+  `);
+  doc.document.close();
+}
+
+
+function doExcel(){
+  const rows = [[{t:'s', v:'Klemme ID (WR.M.I)'}, 'Zugehöriger GAK', 'Status Klemme', 'Soll Name/Bereich', 'Soll Modulanz.', 'Tats. Ist Module (Befüllt)', 'Riso in Ohm']];
+  
+  PROJECT.inverters.forEach(wx => {
+      wx.strings.forEach(ee =>{
+         let xI = `${wx.wr}.${ee.mppt}.${ee.in}`;
+         let el_stat = g(`st_${xI}`).value;
+         let amnt_mod = g(`m_${xI}`).value || "0";
+         rows.push([
+            {t:'s',v: xI}, g(`g_${xI}`).value||ee.planGak, el_stat, ee.planName||'-', ee.planMod||'-', amnt_mod, g(`ri_${xI}`).value||'' 
+         ]);
+      });
+  });
+
+  let sht = XLSX.utils.aoa_to_sheet(rows);
+  let nbook = XLSX.utils.book_new();
+  sht['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 25 }, { wch: 12 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(nbook, sht, "Abgleich Excel");
+  XLSX.writeFile(nbook, "ZUSTAND.xlsx");
+}
+function exportSmartScriptExcel(){
+    let etks = [["Etikett"]];
+    PROJECT.inverters.forEach(x => {
+        x.strings.forEach(p =>{
+            let dx = `${x.wr}.${p.mppt}.${p.in}`;
+            if(g(`st_${dx}`).value==="JA" && parseFloat(g(`m_${dx}`).value)>0){
+                etks.push([{t:'s',v:`BVH P52\r\n${dx}\r\n${g('g_'+dx).value}\r\n${g('m_'+dx).value} Mod`}]);
+            }
+        });
+    });
+    const wx = XLSX.utils.aoa_to_sheet(etks); wx['!cols']=[{wch:25}]; const bf = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(bf,wx,"SS"); XLSX.writeFile(bf,"Pick.xlsx");
+}
+function exportStringNumbersExcel(){
+    let etks = [["String ID Text"]];
+    PROJECT.inverters.forEach(x => x.strings.forEach(p => { let dx=`${x.wr}.${p.mppt}.${p.in}`; if(g(`st_${dx}`).value==="JA") etks.push([{t:'s',v:dx}]); }));
+    const wx = XLSX.utils.aoa_to_sheet(etks); wx['!cols']=[{wch:12}]; const bf = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(bf,wx,"Z"); XLSX.writeFile(bf,"Zahlen.xlsx");
+}
+
+window.onload = () => {
+  renderTables();
+  let db_back = localStorage.getItem("sp_pvm_backup");
+  if(window.supabase){ supabaseClient = window.supabase.createClient(SB_URL, SB_KEY); }
+  
+  if(db_back) {
+      try { 
+         let z_obj = JSON.parse(db_back);
+         Object.keys(z_obj).forEach(dk =>{
+              let bNode = g(`st_${dk}`); if(bNode) { g(`g_${dk}`).value = z_obj[dk].gak||""; g(`m_${dk}`).value=z_obj[dk].mod; g(`uo_${dk}`).value=z_obj[dk].uoc; g(`ri_${dk}`).value=z_obj[dk].riso; setBool(dk, z_obj[dk].stat); }
+         });
+         toast("Aus dem Cache geladen.");
+      }catch(r){}
+  }
+};
 </script>
 </body>
 </html>

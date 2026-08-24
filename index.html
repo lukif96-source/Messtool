@@ -1087,12 +1087,16 @@ body {
         <div style="background: var(--bg-tertiary); padding: 0.5rem 1rem; border-radius: var(--radius-sm); font-weight: 700; font-size: 0.875rem; border: 1px solid var(--border);">
           <span id="project-name-display">PV MAN P52</span> (<span id="project-wp-display">465</span> Wp)
         </div>
+        <button class="btn btn-secondary" onclick="restoreP52Original()" title="P52 Original wiederherstellen">🔄 P52</button>
         <button class="btn btn-secondary" onclick="openModal('config-modal')">⚙️ Konfiguration</button>
         <button class="btn btn-danger" onclick="factoryReset()" title="Plan zurücksetzen">🔄 Reset</button>
       </div>
       
       <div class="action-bar-right">
-        <button class="btn btn-secondary" onclick="loadFromCloud()">📥 Laden</button>
+        <button class="btn btn-secondary" onclick="openAreaCalculator()">📐 Flächen-Belegung</button>
+        <button class="btn btn-secondary" onclick="autoDistributeStrings()">🤖 Auto-Verteilung</button>
+        <button class="btn btn-secondary" onclick="importPVSOL()">📥 PV*SOL Import</button>
+        <button class="btn btn-secondary" onclick="loadFromCloud()">☁️ Cloud Laden</button>
         <button class="btn btn-primary" onclick="saveToCloud()">☁️ Speichern</button>
         <button class="btn btn-secondary" onclick="printMontagePlan()">📋 Plan</button>
         <button class="btn btn-success" onclick="exportGakExcel()">🏷️ GAK</button>
@@ -1183,22 +1187,45 @@ CREATE TABLE IF NOT EXISTS pv_projects (
 );
 
 -- Index für bessere Performance
-CREATE INDEX IF NOT EXISTS idx_pv_projects_updated_at ON pv_projects(updated_at DESC);
-
--- Row Level Security (optional)
-ALTER TABLE pv_projects ENABLE ROW LEVEL SECURITY;
-
--- Policy für Lesezugriff
-CREATE POLICY "Enable read access for all users" 
-ON pv_projects FOR SELECT USING (true);
-
--- Policy für Schreibzugriff
-CREATE POLICY "Enable insert for all users" 
-ON pv_projects FOR INSERT WITH CHECK (true);
-
--- Policy für Updates
-CREATE POLICY "Enable update for all users" 
-ON pv_projects FOR UPDATE USING (true);</pre>
+CREATE INDEX IF NOT EXISTS idx_pv_projects_updated_at ON pv_projects(updated_at DESC);</pre>
+          </div>
+        </div>
+        
+        <div class="config-section">
+          <div class="config-section-title">PVFree Database (Öffentlich)</div>
+          <div style="background:var(--bg-tertiary);padding:1rem;border-radius:var(--radius-sm);margin-bottom:1rem;">
+            <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:0.5rem;">
+              <strong>✓ Kostenlos & Öffentlich</strong> - 1.742 Wechselrichter und tausende Module
+            </p>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+              <button class="btn btn-secondary" onclick="searchPVFreeInverters()">🔍 WR suchen</button>
+              <button class="btn btn-secondary" onclick="searchPVFreeModules()">🔍 Module suchen</button>
+            </div>
+          </div>
+          
+          <div id="pvfree-results" style="display:none;">
+            <div class="config-row">
+              <select id="pvfree-category" class="input config-select" style="max-width:150px;" onchange="updatePVFreeSearch()">
+                <option value="inverter">Wechselrichter</option>
+                <option value="module">Module</option>
+              </select>
+              <select id="pvfree-manufacturer" class="input config-select" style="max-width:150px;" onchange="updatePVFreeSearch()">
+                <option value="">Alle Hersteller</option>
+                <option value="SMA">SMA</option>
+                <option value="Huawei">Huawei</option>
+                <option value="SIgenergy">SIgenergy</option>
+                <option value="Fronius">Fronius</option>
+                <option value="SolarEdge">SolarEdge</option>
+                <option value="Enphase">Enphase</option>
+                <option value="ABB">ABB</option>
+                <option value="Kostal">Kostal</option>
+                <option value="Growatt">Growatt</option>
+              </select>
+              <input type="text" id="pvfree-search" class="input config-select" placeholder="Suchbegriff (z.B. Modellname)" style="max-width:200px;">
+              <button class="btn btn-primary" onclick="executePVFreeSearch()">🔍 Suchen</button>
+            </div>
+            <div id="pvfree-results-stats" style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.5rem;"></div>
+            <div id="pvfree-results-list" style="max-height:300px;overflow-y:auto;"></div>
           </div>
         </div>
       </div>
@@ -1332,6 +1359,129 @@ ON pv_projects FOR UPDATE USING (true);</pre>
   
 </main>
 
+<!-- AREA CALCULATOR MODAL -->
+<div class="modal-overlay" id="area-calculator-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Flächen-Belegungsrechner</h2>
+      <button class="modal-close" onclick="closeModal('area-calculator-modal')">&times;</button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="config-section">
+        <div class="config-section-title">Flächen definieren</div>
+        <div class="config-row">
+          <span class="config-label">Fläche 1 (m²):</span>
+          <input type="number" id="area-1" class="input input-compact" placeholder="z.B. 50">
+          <span class="config-label">Neigung (°):</span>
+          <input type="number" id="tilt-1" class="input input-compact" value="30" placeholder="30">
+          <span class="config-label">Ausrichtung (°):</span>
+          <input type="number" id="azimuth-1" class="input input-compact" value="180" placeholder="180">
+        </div>
+        <div class="config-row">
+          <span class="config-label">Fläche 2 (m²):</span>
+          <input type="number" id="area-2" class="input input-compact" placeholder="z.B. 40">
+          <span class="config-label">Neigung (°):</span>
+          <input type="number" id="tilt-2" class="input input-compact" value="30" placeholder="30">
+          <span class="config-label">Ausrichtung (°):</span>
+          <input type="number" id="azimuth-2" class="input input-compact" value="180" placeholder="180">
+        </div>
+        <div class="config-row">
+          <span class="config-label">Fläche 3 (m²):</span>
+          <input type="number" id="area-3" class="input input-compact" placeholder="z.B. 35">
+          <span class="config-label">Neigung (°):</span>
+          <input type="number" id="tilt-3" class="input input-compact" value="30" placeholder="30">
+          <span class="config-label">Ausrichtung (°):</span>
+          <input type="number" id="azimuth-3" class="input input-compact" value="180" placeholder="180">
+        </div>
+        <div class="config-row">
+          <button class="btn btn-secondary" onclick="addMoreAreas()">+ Weitere Flächen</button>
+        </div>
+      </div>
+      
+      <div class="config-section">
+        <div class="config-section-title">Modul-Spezifikationen</div>
+        <div class="config-row">
+          <span class="config-label">Modul-Wp:</span>
+          <input type="number" id="module-wp" class="input input-compact" value="465">
+          <span class="config-label">Modul-Abstand (m):</span>
+          <input type="number" id="module-spacing" class="input input-compact" value="0.1" step="0.01">
+        </div>
+        <div class="config-row">
+          <span class="config-label">Modulmaße (m):</span>
+          <input type="number" id="module-width" class="input input-compact" value="1.7" step="0.1" placeholder="Breite">
+          <span class="config-label">×</span>
+          <input type="number" id="module-height" class="input input-compact" value="1.1" step="0.1" placeholder="Höhe">
+        </div>
+      </div>
+      
+      <div class="config-section">
+        <div class="config-section-title">Belegungsvorschlag</div>
+        <button class="btn btn-primary" onclick="calculateOptimalLayout()">📊 Optimale Belegung berechnen</button>
+        <div id="layout-results" style="margin-top:1rem;display:none;"></div>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('area-calculator-modal')">Abbrechen</button>
+      <button class="btn btn-success" onclick="applyLayoutProposal()">✓ Vorschlag übernehmen</button>
+    </div>
+  </div>
+</div>
+
+<!-- PV*SOL IMPORT MODAL -->
+<div class="modal-overlay" id="pvsol-import-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">PV*SOL JSON Import</h2>
+      <button class="modal-close" onclick="closeModal('pvsol-import-modal')">&times;</button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="config-section">
+        <div class="config-section-title">PV*SOL String-Belegung importieren</div>
+        <div style="background:var(--bg-tertiary);padding:1rem;border-radius:var(--radius-sm);margin-bottom:1rem;">
+          <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:0.5rem;">
+            Lade die PV*SOL JSON-Exportdatei hoch, um die String-Belegung automatisch zu übertragen.
+          </p>
+          <div style="font-size:0.75rem;color:var(--text-muted);">
+            Unterstützte Formate: PV*SOL JSON Export (*.json)
+          </div>
+        </div>
+        
+        <div class="config-row">
+          <input type="file" id="pvsol-file-input" accept=".json" class="input config-select" style="max-width:300px;">
+          <button class="btn btn-primary" onclick="processPVSOLImport()">Importieren</button>
+        </div>
+        
+        <div id="pvsol-import-status" style="margin-top:1rem;padding:0.75rem;background:var(--bg-tertiary);border-radius:var(--radius-sm);display:none;">
+          <div style="font-size:0.875rem;color:var(--text-secondary);" id="pvsol-import-message"></div>
+        </div>
+      </div>
+      
+      <div class="config-section">
+        <div class="config-section-title">Import-Optionen</div>
+        <div class="config-row">
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;color:var(--text-secondary);">
+            <input type="checkbox" id="pvsol-overwrite-config" checked>
+            WR-Konfiguration überschreiben
+          </label>
+        </div>
+        <div class="config-row">
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;color:var(--text-secondary);">
+            <input type="checkbox" id="pvsol-keep-existing" checked>
+            Vorhandene Daten behalten
+          </label>
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('pvsol-import-modal')">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <!-- NEW PROJECT MODAL -->
 <div class="modal-overlay" id="new-project-modal">
   <div class="modal">
@@ -1427,11 +1577,27 @@ ON pv_projects FOR UPDATE USING (true);</pre>
             <div class="config-row">
               <select id="cfg-preset-type" class="input config-select" style="max-width:250px;">
                 <option value="">-- Typ auswählen --</option>
+                <option value="" disabled>-- SMA --</option>
                 <option value="SMA_STP125">SMA STP125 (12 MPPT, 2 Inputs)</option>
                 <option value="SMA_STP100">SMA STP100 (10 MPPT, 2 Inputs)</option>
                 <option value="SMA_STP80">SMA STP80 (8 MPPT, 2 Inputs)</option>
+                <option value="" disabled>-- Huawei --</option>
                 <option value="HUAWEI_2000_100KTL">Huawei 100KTL (10 MPPT, 2 Inputs)</option>
                 <option value="HUAWEI_2000_50KTL">Huawei 50KTL (4 MPPT, 2 Inputs)</option>
+                <option value="" disabled>-- SIgenergy --</option>
+                <option value="SIGENERGY_3K">SIgenergy 3K (2 MPPT, 1 Input)</option>
+                <option value="SIGENERGY_4K">SIgenergy 4K (2 MPPT, 1 Input)</option>
+                <option value="SIGENERGY_5K">SIgenergy 5K (2 MPPT, 1 Input)</option>
+                <option value="SIGENERGY_6K">SIgenergy 6K (2 MPPT, 1 Input)</option>
+                <option value="SIGENERGY_8K">SIgenergy 8K (2 MPPT, 1 Input)</option>
+                <option value="SIGENERGY_10K">SIgenergy 10K (3 MPPT, 1 Input)</option>
+                <option value="SIGENERGY_12K">SIgenergy 12K (3 MPPT, 1 Input)</option>
+                <option value="SIGENERGY_15K">SIgenergy 15K (3 MPPT, 1 Input)</option>
+                <option value="SIGENERGY_17K">SIgenergy 17K (3 MPPT, 1 Input)</option>
+                <option value="SIGENERGY_20K">SIgenergy 20K (3 MPPT, 1 Input)</option>
+                <option value="SIGENERGY_25K">SIgenergy 25K (3 MPPT, 1 Input)</option>
+                <option value="SIGENERGY_30K">SIgenergy 30K (3 MPPT, 1 Input)</option>
+                <option value="" disabled>-- Fronius --</option>
                 <option value="FRONIUS_SYMO">Fronius Symo (6 MPPT, 2 Inputs)</option>
               </select>
               <button class="btn btn-secondary" onclick="addPresetInverter()">Übernehmen</button>
@@ -1577,6 +1743,103 @@ const INVERTER_CONFIGS = {
     defaultWp: 465,
     description: "6 MPPTs, 2 Inputs pro MPPT"
   },
+  // SIgenergy Modelle
+  "SIGENERGY_3K": {
+    name: "SIgenergy 3K",
+    manufacturer: "SIgenergy",
+    mppts: 2,
+    inputsPerMppt: 1,
+    defaultWp: 465,
+    description: "2 MPPTs, 1 Input pro MPPT (bis 8 kW)"
+  },
+  "SIGENERGY_4K": {
+    name: "SIgenergy 4K",
+    manufacturer: "SIgenergy",
+    mppts: 2,
+    inputsPerMppt: 1,
+    defaultWp: 465,
+    description: "2 MPPTs, 1 Input pro MPPT (bis 8 kW)"
+  },
+  "SIGENERGY_5K": {
+    name: "SIgenergy 5K",
+    manufacturer: "SIgenergy",
+    mppts: 2,
+    inputsPerMppt: 1,
+    defaultWp: 465,
+    description: "2 MPPTs, 1 Input pro MPPT (bis 8 kW)"
+  },
+  "SIGENERGY_6K": {
+    name: "SIgenergy 6K",
+    manufacturer: "SIgenergy",
+    mppts: 2,
+    inputsPerMppt: 1,
+    defaultWp: 465,
+    description: "2 MPPTs, 1 Input pro MPPT (bis 8 kW)"
+  },
+  "SIGENERGY_8K": {
+    name: "SIgenergy 8K",
+    manufacturer: "SIgenergy",
+    mppts: 2,
+    inputsPerMppt: 1,
+    defaultWp: 465,
+    description: "2 MPPTs, 1 Input pro MPPT (bis 8 kW)"
+  },
+  "SIGENERGY_10K": {
+    name: "SIgenergy 10K",
+    manufacturer: "SIgenergy",
+    mppts: 3,
+    inputsPerMppt: 1,
+    defaultWp: 465,
+    description: "3 MPPTs, 1 Input pro MPPT (10-15 kW)"
+  },
+  "SIGENERGY_12K": {
+    name: "SIgenergy 12K",
+    manufacturer: "SIgenergy",
+    mppts: 3,
+    inputsPerMppt: 1,
+    defaultWp: 465,
+    description: "3 MPPTs, 1 Input pro MPPT (10-15 kW)"
+  },
+  "SIGENERGY_15K": {
+    name: "SIgenergy 15K",
+    manufacturer: "SIgenergy",
+    mppts: 3,
+    inputsPerMppt: 1,
+    defaultWp: 465,
+    description: "3 MPPTs, 1 Input pro MPPT (10-15 kW)"
+  },
+  "SIGENERGY_17K": {
+    name: "SIgenergy 17K",
+    manufacturer: "SIgenergy",
+    mppts: 3,
+    inputsPerMppt: 1,
+    defaultWp: 465,
+    description: "3 MPPTs, 1 Input pro MPPT (17-30 kW)"
+  },
+  "SIGENERGY_20K": {
+    name: "SIgenergy 20K",
+    manufacturer: "SIgenergy",
+    mppts: 3,
+    inputsPerMppt: 1,
+    defaultWp: 465,
+    description: "3 MPPTs, 1 Input pro MPPT (17-30 kW)"
+  },
+  "SIGENERGY_25K": {
+    name: "SIgenergy 25K",
+    manufacturer: "SIgenergy",
+    mppts: 3,
+    inputsPerMppt: 1,
+    defaultWp: 465,
+    description: "3 MPPTs, 1 Input pro MPPT (17-30 kW)"
+  },
+  "SIGENERGY_30K": {
+    name: "SIgenergy 30K",
+    manufacturer: "SIgenergy",
+    mppts: 3,
+    inputsPerMppt: 1,
+    defaultWp: 465,
+    description: "3 MPPTs, 1 Input pro MPPT (17-30 kW)"
+  },
   "CUSTOM": {
     name: "Benutzerdefiniert",
     manufacturer: "Custom",
@@ -1641,6 +1904,170 @@ const PLAUSIBILITY_RULES = {
   maxVoltage: 1000,
   maxCurrent: 15
 };
+
+// ORIGINAL P52 STRICT CHRONO PLAN
+const P52_STRICT_PLAN = {
+  1: [
+    { p: 1,  m: 23, g: 1, n: "Fläche A" },
+    { p: 2,  m: 23, g: 1, n: "Fläche A" },
+    { p: 3,  m: 22, g: 1, n: "Fläche A" },
+    { p: 4,  m: 22, g: 1, n: "Fläche A" },
+    { p: 5,  m: 21, g: 1, n: "Fläche A" },
+    { p: 6,  m: 21, g: 1, n: "Fläche A" },
+    { p: 7,  m: 21, g: 1, n: "Fläche A" },
+    { p: 8,  m: 21, g: 1, n: "Fläche A" },
+    { p: 9,  m: 20, g: 2, n: "Fläche A" },
+    { p: 10, m: 20, g: 2, n: "Fläche A" },
+    { p: 11, m: 21, g: 2, n: "Fläche A" },
+    { p: 12, m: 21, g: 2, n: "Fläche A" }
+  ],
+  2: [
+    { p: 1,  m: 13, g: 1, n: "Fläche B" },
+    { p: 2,  m: 13, g: 1, n: "Fläche B" },
+    { p: 3,  m: 21, g: 1, n: "Fläche B" },
+    { p: 4,  m: 21, g: 1, n: "Fläche B" },
+    { p: 5,  m: 20, g: 2, n: "Fläche B" },
+    { p: 6,  m: 20, g: 2, n: "Fläche B" },
+    { p: 7,  m: 21, g: 2, n: "Fläche B" },
+    { p: 8,  m: 21, g: 2, n: "Fläche B" },
+    { p: 9,  m: 21, g: 2, n: "Fläche B" },
+    { p: 10, m: 21, g: 2, n: "Fläche B" },
+    { p: 11, m: 14, g: 2, n: "Fläche B (10 mm²)" },
+    { p: 12, m: 14, g: 2, n: "Fläche B (10 mm²)" },
+    { p: 13, m: 18, g: 2, n: "Fläche B (10 mm²)" },
+    { p: 14, m: 18, g: 2, n: "Fläche B (10 mm²)" }
+  ],
+  3: [
+    { p: 1,  m: 13, g: 1, n: "Fläche C" },
+    { p: 2,  m: 13, g: 1, n: "Fläche C" },
+    { p: 3,  m: 16, g: 1, n: "Fläche C" },
+    { p: 4,  m: 16, g: 1, n: "Fläche C" },
+    { p: 5,  m: 16, g: 1, n: "Fläche C" },
+    { p: 6,  m: 16, g: 1, n: "Fläche C" },
+    { p: 7,  m: 23, g: 1, n: "Fläche C" },
+    { p: 8,  m: 23, g: 1, n: "Fläche C" },
+    { p: 9,  m: 23, g: 1, n: "Fläche C" },
+    { p: 10, m: 23, g: 1, n: "Fläche C" },
+    { p: 11, m: 8,  g: 1, n: "Fläche C" },
+    { p: 12, m: 8,  g: 1, n: "Fläche C" },
+    { p: 13, m: 16, g: 2, n: "Fläche C" },
+    { p: 14, m: 16, g: 2, n: "Fläche C" },
+    { p: 15, m: 16, g: 2, n: "Fläche C" },
+    { p: 16, m: 16, g: 2, n: "Fläche C" },
+    { p: 17, m: 15, g: 2, n: "Fläche C" },
+    { p: 18, m: 15, g: 2, n: "Fläche C" }
+  ],
+  4: [
+    { p: 1,  m: 16, g: 1, n: "Fläche D" },
+    { p: 2,  m: 16, g: 1, n: "Fläche D" },
+    { p: 3,  m: 23, g: 1, n: "Fläche D" },
+    { p: 4,  m: 23, g: 1, n: "Fläche D" },
+    { p: 5,  m: 8,  g: 1, n: "Fläche D" },
+    { p: 6,  m: 8,  g: 1, n: "Fläche D" },
+    { p: 7,  m: 16, g: 2, n: "Fläche D" },
+    { p: 8,  m: 16, g: 2, n: "Fläche D" },
+    { p: 9,  m: 16, g: 2, n: "Fläche D" },
+    { p: 10, m: 16, g: 2, n: "Fläche D" },
+    { p: 11, m: 23, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 12, m: 23, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 13, m: 23, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 14, m: 23, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 15, m: 20, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 16, m: 20, g: 2, n: "Fläche D (10 mm²)" }
+  ],
+  5: [
+    { p: 1,  m: 22, g: 1, n: "Fläche E" },
+    { p: 2,  m: 22, g: 1, n: "Fläche E" },
+    { p: 3,  m: 22, g: 1, n: "Fläche E" },
+    { p: 4,  m: 22, g: 1, n: "Fläche E" },
+    { p: 5,  m: 17, g: 1, n: "Fläche E" },
+    { p: 6,  m: 17, g: 1, n: "Fläche E" },
+    { p: 7,  m: 22, g: 1, n: "Fläche E" },
+    { p: 8,  m: 22, g: 1, n: "Fläche E" },
+    { p: 9,  m: 13, g: 1, n: "Fläche E" },
+    { p: 10, m: 13, g: 1, n: "Fläche E" },
+    { p: 11, m: 18, g: 1, n: "Fläche E" },
+    { p: 12, m: 18, g: 1, n: "Fläche E" },
+    { p: 13, m: 17, g: 2, n: "Fläche E" },
+    { p: 14, m: 17, g: 2, n: "Fläche E" },
+    { p: 15, m: 17, g: 2, n: "Fläche E (10 mm²)" },
+    { p: 16, m: 17, g: 2, n: "Fläche E (10 mm²)" },
+    { p: 17, m: 13, g: 2, n: "Fläche E (10 mm²)" },
+    { p: 18, m: 13, g: 2, n: "Fläche E (10 mm²)" }
+  ],
+  6: [
+    { p: 1,  m: 23, g: 1, n: "Fläche F (10 mm²)" },
+    { p: 2,  m: 23, g: 1, n: "Fläche F (10 mm²)" },
+    { p: 3,  m: 23, g: 1, n: "Fläche F (10 mm²)" },
+    { p: 4,  m: 23, g: 1, n: "Fläche F (10 mm²)" },
+    { p: 5,  m: 23, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 6,  m: 23, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 7,  m: 20, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 8,  m: 20, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 9,  m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 10, m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 11, m: 17, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 12, m: 17, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 13, m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 14, m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 15, m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 16, m: 18, g: 2, n: "Fläche F (10 mm²)" }
+  ]
+};
+
+function generateP52State() {
+  const result = {};
+  [1, 2, 3, 4, 5, 6].forEach(wr => {
+    const list = P52_STRICT_PLAN[wr];
+    if(!list) return;
+    
+    const group1 = list.filter(item => item.g === 1);
+    const group2 = list.filter(item => item.g === 2);
+    
+    let ptr1 = 0, ptr2 = 0;
+    
+    for(let m = 1; m <= 12; m++){
+      if(ptr1 < group1.length){
+        const s1 = group1[ptr1++];
+        result[`${wr}.${m}.1`] = { 
+          planName: `STR ${s1.p}`, 
+          gak: `GAK ${wr}.${s1.g}`, 
+          mod: s1.m, 
+          stat: "JA", 
+          note: s1.n || "" 
+        };
+      } else {
+        result[`${wr}.${m}.1`] = { 
+          planName: "", 
+          gak: `GAK ${wr}.1`, 
+          mod: 0, 
+          stat: "NEIN", 
+          note: "" 
+        };
+      }
+      
+      if(ptr2 < group2.length){
+        const s2 = group2[ptr2++];
+        result[`${wr}.${m}.2`] = { 
+          planName: `STR ${s2.p}`, 
+          gak: `GAK ${wr}.${s2.g}`, 
+          mod: s2.m, 
+          stat: "JA", 
+          note: s2.n || "" 
+        };
+      } else {
+        result[`${wr}.${m}.2`] = { 
+          planName: "", 
+          gak: `GAK ${wr}.2`, 
+          mod: 0, 
+          stat: "NEIN", 
+          note: "" 
+        };
+      }
+    }
+  });
+  return result;
+}
 
 // STATE
 let projectConfig = {
@@ -2743,6 +3170,192 @@ function factoryReset() {
   toast('Plan zurückgesetzt');
 }
 
+// PVFREE API FUNCTIONS
+const PVFREE_API_BASE = "https://pvfree.azurewebsites.net/api/v1";
+
+function searchPVFreeInverters() {
+  g('pvfree-results').style.display = 'block';
+  g('pvfree-search').placeholder = 'Wechselrichter suchen (z.B. SMA, Huawei)...';
+  g('pvfree-search').value = '';
+  g('pvfree-results-list').innerHTML = '<p style="color:var(--text-muted);font-size:0.875rem;">Bitte Suchbegriff eingeben und "Suchen" klicken</p>';
+}
+
+function searchPVFreeModules() {
+  g('pvfree-results').style.display = 'block';
+  g('pvfree-search').placeholder = 'Module suchen (z.B. JA Solar, Trina)...';
+  g('pvfree-search').value = '';
+  g('pvfree-results-list').innerHTML = '<p style="color:var(--text-muted);font-size:0.875rem;">Bitte Suchbegriff eingeben und "Suchen" klicken</p>';
+}
+
+async function executePVFreeSearch() {
+  const searchTerm = g('pvfree-search').value.trim();
+  const category = g('pvfree-category').value;
+  const manufacturer = g('pvfree-manufacturer').value;
+  
+  if(!searchTerm && !manufacturer) {
+    toast('Bitte einen Suchbegriff oder Hersteller eingeben');
+    return;
+  }
+  
+  const resultsList = g('pvfree-results-list');
+  const statsDiv = g('pvfree-results-stats');
+  resultsList.innerHTML = '<p style="color:var(--text-muted);font-size:0.875rem;">🔍 Suche läuft...</p>';
+  statsDiv.textContent = '';
+  
+  try {
+    const endpoint = category === 'inverter' ? '/pvinverter/' : '/pvmodule/';
+    
+    const response = await fetch(`${PVFREE_API_BASE}${endpoint}?limit=100&format=json`);
+    const data = await response.json();
+    
+    // Filtern nach Suchbegriff und Hersteller
+    const filtered = data.objects.filter(item => {
+      const searchFields = Object.values(item).join(' ').toLowerCase();
+      const matchesSearch = !searchTerm || searchFields.includes(searchTerm.toLowerCase());
+      const matchesManufacturer = !manufacturer || searchFields.includes(manufacturer.toLowerCase());
+      return matchesSearch && matchesManufacturer;
+    });
+    
+    if(filtered.length === 0) {
+      resultsList.innerHTML = '<p style="color:var(--text-muted);font-size:0.875rem;">Keine Ergebnisse gefunden</p>';
+      statsDiv.textContent = '0 von ' + data.meta.total_count + ' Einträgen';
+      return;
+    }
+    
+    // Sortieren nach Leistung (höchste zuerst)
+    filtered.sort((a, b) => {
+      const powerA = category === 'inverter' ? (a.Paco || 0) : (a.Pmp || 0);
+      const powerB = category === 'inverter' ? (b.Paco || 0) : (b.Pmp || 0);
+      return powerB - powerA;
+    });
+    
+    resultsList.innerHTML = '';
+    statsDiv.textContent = `${filtered.length} von ${data.meta.total_count} Einträgen`;
+    
+    filtered.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'config-item';
+      
+      if(category === 'inverter') {
+        const power = item.Paco ? `${(item.Paco / 1000).toFixed(1)}kW` : 'N/A';
+        const mpptInfo = item.Mppt_low && item.Mppt_high ? `MPPT: ${item.Mppt_low}-${item.Mppt_high}V` : 'MPPT: N/A';
+        const maxEfficiency = item.Efficiency ? `${(item.Efficiency * 100).toFixed(1)}%` : 'N/A';
+        
+        div.innerHTML = `
+          <span class="config-item-name">${power}</span>
+          <span class="config-item-info">${item.Model || 'Unbekannt'} - ${mpptInfo} - ${maxEfficiency}</span>
+          <button class="btn btn-success" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="usePVFreeInverter('${JSON.stringify(item).replace(/'/g, "\\'")}')">Übernehmen</button>
+        `;
+      } else {
+        const power = item.Pmp ? `${(item.Pmp / 1000).toFixed(2)}kW` : 'N/A';
+        const efficiency = item.Efficiency ? `${(item.Efficiency * 100).toFixed(1)}%` : 'N/A';
+        const cells = item.Cells || '?';
+        
+        div.innerHTML = `
+          <span class="config-item-name">${power}</span>
+          <span class="config-item-info">${item.Model || 'Unbekannt'} - ${cells} Zellen - ${efficiency}</span>
+          <button class="btn btn-success" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="usePVFreeModule('${JSON.stringify(item).replace(/'/g, "\\'")}')">Übernehmen</button>
+        `;
+      }
+      
+      resultsList.appendChild(div);
+    });
+    
+    toast(`${filtered.length} Ergebnisse gefunden`);
+    
+  } catch(error) {
+    resultsList.innerHTML = `<p style="color:var(--danger);font-size:0.875rem;">Fehler: ${error.message}</p>`;
+    statsDiv.textContent = 'Fehler bei der Suche';
+    toast('Suche fehlgeschlagen');
+  }
+}
+
+function updatePVFreeSearch() {
+  const category = g('pvfree-category').value;
+  const manufacturer = g('pvfree-manufacturer').value;
+  
+  if(category === 'inverter') {
+    g('pvfree-search').placeholder = manufacturer ? `${manufacturer} WR suchen...` : 'Wechselrichter suchen (z.B. SMA, Huawei)...';
+  } else {
+    g('pvfree-search').placeholder = manufacturer ? `${manufacturer} Module suchen...` : 'Module suchen (z.B. JA Solar, Trina)...';
+  }
+  
+  // Automatische Suche wenn Hersteller ausgewählt
+  if(manufacturer) {
+    executePVFreeSearch();
+  }
+}
+
+function usePVFreeInverter(inverterJson) {
+  try {
+    const inverter = JSON.parse(inverterJson);
+    
+    // Extrahiere MPPT-Anzahl aus Spannungsbereich (schätzung)
+    let estimatedMppts = 12; // Default
+    if(inverter.Mppt_low && inverter.Mppt_high) {
+      // Einfache Schätzung basierend auf Leistung
+      const powerKW = (inverter.Paco || 0) / 1000;
+      if(powerKW <= 8) estimatedMppts = 2;
+      else if(powerKW <= 15) estimatedMppts = 3;
+      else if(powerKW <= 30) estimatedMppts = 4;
+      else estimatedMppts = Math.min(12, Math.ceil(powerKW / 3));
+    }
+    
+    // Füge als benutzerdefinierten WR hinzu
+    const newId = projectConfig.inverters.length + 1;
+    const newInv = {
+      id: newId,
+      type: "CUSTOM",
+      name: `WR ${newId}`,
+      customMppts: estimatedMppts,
+      customInputs: 2,
+      pvfreeData: inverter
+    };
+    
+    projectConfig.inverters.push(newInv);
+    
+    // Aktualisiere Modul-Wp wenn möglich
+    if(inverter.Paco) {
+      // Grobe Schätzung für Modul-Wp basierend auf WR-Leistung
+      // Normalerweise 450-550Wp Module
+      projectConfig.modelWp = 465; // Standard
+      g('project-wp-display').textContent = projectConfig.modelWp;
+    }
+    
+    renderInverterList();
+    closeModal('config-modal');
+    
+    toast(`${inverter.Model || 'PVFree WR'} übernommen (${estimatedMppts} MPPTs)`);
+    
+    // Matrix neu generieren
+    APP_STATE = generateDynamicState();
+    renderMatrix(null);
+    generateFilterTabs();
+    updateKpis();
+    
+  } catch(error) {
+    toast('Fehler beim Übernehmen der Daten: ' + error.message);
+  }
+}
+
+function usePVFreeModule(moduleJson) {
+  try {
+    const module = JSON.parse(moduleJson);
+    
+    // Extrahiere Modul-Leistung
+    if(module.Pmp) {
+      projectConfig.modelWp = Math.round(module.Pmp);
+      g('project-wp-display').textContent = projectConfig.modelWp;
+    }
+    
+    closeModal('config-modal');
+    toast(`${module.Model || 'PVFree Modul'} übernommen (${projectConfig.modelWp}Wp)`);
+    
+  } catch(error) {
+    toast('Fehler beim Übernehmen der Daten: ' + error.message);
+  }
+}
+
 // SETUP PAGE FUNCTIONS
 function updateSetupPageStats() {
   // Update local projects count
@@ -2902,6 +3515,381 @@ switchPage = function(pageId) {
   setTimeout(updatePageContent, 100);
 };
 
+// PV*SOL IMPORT FUNCTIONS
+function importPVSOL() {
+  g('pvsol-file-input').value = '';
+  g('pvsol-import-status').style.display = 'none';
+  openModal('pvsol-import-modal');
+}
+
+function processPVSOLImport() {
+  const fileInput = g('pvsol-file-input');
+  const file = fileInput.files[0];
+  
+  if(!file) {
+    toast('Bitte eine Datei auswählen');
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const pvsolData = JSON.parse(e.target.result);
+      
+      // Zeige Import-Status
+      const statusDiv = g('pvsol-import-status');
+      const messageDiv = g('pvsol-import-message');
+      statusDiv.style.display = 'block';
+      messageDiv.textContent = 'Verarbeite PV*SOL Daten...';
+      
+      // Extrahiere Projektinformationen
+      if(pvsolData.ProjectOverview?.ProjectData?.ProjectName) {
+        projectConfig.name = pvsolData.ProjectOverview.ProjectData.ProjectName;
+        g('project-name-display').textContent = projectConfig.name;
+      }
+      
+      // Extrahiere Moduldaten
+      let totalModules = 0;
+      let totalPower = 0;
+      let moduleAreas = [];
+      
+      if(pvsolData.ProjectOverview?.ThreeDDesign?.ModuleAreas) {
+        moduleAreas = pvsolData.ProjectOverview.ThreeDDesign.ModuleAreas;
+        
+        moduleAreas.forEach(area => {
+          const modules = area.NumberOfPvModules?.Value || 0;
+          const power = area.PvGeneratorOutput?.Value || 0;
+          totalModules += modules;
+          totalPower += power;
+        });
+      }
+      
+      // Extrahiere Modul-Wp
+      if(moduleAreas.length > 0 && moduleAreas[0].ModuleData) {
+        const moduleData = moduleAreas[0].ModuleData;
+        // Extrahiere WP aus Modulbezeichnung (z.B. "JAM54D40-460/LB" -> 460)
+        const wpMatch = moduleData.match(/(\d{3,4})/);
+        if(wpMatch) {
+          projectConfig.modelWp = parseInt(wpMatch[1]);
+          g('project-wp-display').textContent = projectConfig.modelWp;
+        }
+      }
+      
+      messageDiv.innerHTML = `
+        <strong>Projekt:</strong> ${projectConfig.name}<br>
+        <strong>Modulflächen:</strong> ${moduleAreas.length}<br>
+        <strong>Gesamtmodule:</strong> ${totalModules}<br>
+        <strong>Leistung:</strong> ${totalPower.toFixed(2)} kWp<br>
+        <strong>Modul-Wp:</strong> ${projectConfig.modelWp}W
+      `;
+      
+      toast('PV*SOL Daten erfolgreich importiert');
+      
+      // Speichere Modulflächen für Auto-Verteilung
+      localStorage.setItem('sp_pvsol_module_areas', JSON.stringify(moduleAreas));
+      
+      // Automatische MPPT-Verteilung anbieten
+      if(moduleAreas.length > 0) {
+        setTimeout(() => {
+          if(confirm('Soll ich die Modulflächen automatisch auf die MPPTs verteilen?')) {
+            autoDistributeFromPVSOL(moduleAreas);
+          }
+        }, 500);
+      }
+      
+    } catch(error) {
+      toast('Fehler beim Verarbeiten der JSON-Datei: ' + error.message);
+      g('pvsol-import-status').style.display = 'block';
+      g('pvsol-import-message').textContent = 'Fehler: ' + error.message;
+    }
+  };
+  
+  reader.readAsText(file);
+}
+
+// AREA CALCULATOR FUNCTIONS
+let areaCounter = 3;
+
+function openAreaCalculator() {
+  areaCounter = 3;
+  g('area-calculator-modal').classList.add('active');
+  g('layout-results').style.display = 'none';
+}
+
+function addMoreAreas() {
+  areaCounter++;
+  const newAreaDiv = document.createElement('div');
+  newAreaDiv.className = 'config-row';
+  newAreaDiv.id = `area-row-${areaCounter}`;
+  newAreaDiv.innerHTML = `
+    <span class="config-label">Fläche ${areaCounter} (m²):</span>
+    <input type="number" id="area-${areaCounter}" class="input input-compact" placeholder="m²">
+    <span class="config-label">Neigung (°):</span>
+    <input type="number" id="tilt-${areaCounter}" class="input input-compact" value="30">
+    <span class="config-label">Ausrichtung (°):</span>
+    <input type="number" id="azimuth-${areaCounter}" class="input input-compact" value="180">
+    <button class="btn btn-danger" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="removeArea(${areaCounter})">✕</button>
+  `;
+  
+  // Vor dem Button einfügen
+  const addButton = event.target;
+  addButton.parentElement.insertBefore(newAreaDiv, addButton);
+}
+
+function removeArea(areaId) {
+  const areaRow = g(`area-row-${areaId}`);
+  if(areaRow) {
+    areaRow.remove();
+  }
+}
+
+function calculateOptimalLayout() {
+  const moduleWp = parseFloat(g('module-wp').value) || 465;
+  const moduleWidth = parseFloat(g('module-width').value) || 1.7;
+  const moduleHeight = parseFloat(g('module-height').value) || 1.1;
+  const moduleSpacing = parseFloat(g('module-spacing').value) || 0.1;
+  
+  // Sammle alle Flächen
+  const areas = [];
+  for(let i = 1; i <= areaCounter; i++) {
+    const areaInput = g(`area-${i}`);
+    if(areaInput && areaInput.value) {
+      const areaSize = parseFloat(areaInput.value);
+      const tilt = parseFloat(g(`tilt-${i}`).value) || 30;
+      const azimuth = parseFloat(g(`azimuth-${i}`).value) || 180;
+      
+      if(areaSize > 0) {
+        areas.push({
+          id: i,
+          size: areaSize,
+          tilt: tilt,
+          azimuth: azimuth
+        });
+      }
+    }
+  }
+  
+  if(areas.length === 0) {
+    toast('Bitte mindestens eine Fläche definieren');
+    return;
+  }
+  
+  // Berechne Modul pro Fläche
+  const moduleArea = (moduleWidth + moduleSpacing) * (moduleHeight + moduleSpacing);
+  const results = areas.map(area => {
+    const maxModules = Math.floor(area.size / moduleArea);
+    const power = maxModules * moduleWp;
+    const performanceFactor = calculatePerformanceFactor(area.tilt, area.azimuth);
+    const effectivePower = power * performanceFactor;
+    
+    return {
+      area: area,
+      maxModules: maxModules,
+      power: power,
+      performanceFactor: performanceFactor,
+      effectivePower: effectivePower
+    };
+  });
+  
+  // Zeige Ergebnisse
+  const resultsDiv = g('layout-results');
+  resultsDiv.style.display = 'block';
+  
+  let html = '<div style="background:var(--bg-tertiary);padding:1rem;border-radius:var(--radius-sm);">';
+  html += '<h4 style="font-size:0.875rem;font-weight:700;margin-bottom:0.75rem;">Belegungsvorschlag:</h4>';
+  
+  results.forEach((result, index) => {
+    html += `
+      <div style="padding:0.75rem;background:var(--bg-secondary);border-radius:var(--radius-sm);margin-bottom:0.5rem;">
+        <div style="font-weight:600;font-size:0.875rem;margin-bottom:0.25rem;">
+          Fläche ${result.area.id}: ${result.area.size}m² (${result.area.tilt}° Neigung, ${result.area.azimuth}° Ausrichtung)
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-secondary);">
+          Max. ${result.maxModules} Module → ${result.power.toFixed(1)}Wp<br>
+          Wirkungsgrad: ${(result.performanceFactor * 100).toFixed(1)}% → Effektiv: ${result.effectivePower.toFixed(1)}Wp
+        </div>
+      </div>
+    `;
+  });
+  
+  const totalModules = results.reduce((sum, r) => sum + r.maxModules, 0);
+  const totalPower = results.reduce((sum, r) => sum + r.effectivePower, 0);
+  
+  html += `
+    <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border);">
+      <strong>Gesamt:</strong> ${totalModules} Module → ${totalPower.toFixed(1)}Wp
+    </div>
+  </div>`;
+  
+  resultsDiv.innerHTML = html;
+  
+  // Speichere Ergebnisse für spätere Übernahme
+  localStorage.setItem('sp_layout_results', JSON.stringify(results));
+  
+  toast(`Berechnung abgeschlossen: ${totalModules} Module, ${totalPower.toFixed(1)}Wp`);
+}
+
+function calculatePerformanceFactor(tilt, azimuth) {
+  // Vereinfachte Performance-Faktor Berechnung
+  // Optimale Ausrichtung in Mitteleuropa: 30-35° Neigung, 180° (Süd)
+  
+  const optimalTilt = 35;
+  const optimalAzimuth = 180;
+  
+  // Tilt-Faktor (vereinfacht)
+  const tiltDiff = Math.abs(tilt - optimalTilt);
+  const tiltFactor = 1 - (tiltDiff / 180) * 0.2; // Max 20% Verlust bei extremen Neigungen
+  
+  // Azimuth-Faktor (vereinfacht)
+  const azimDiff = Math.abs(azimuth - optimalAzimuth);
+  const azimFactor = 1 - (azimDiff / 180) * 0.15; // Max 15% Verlust bei Nord-Ausrichtung
+  
+  return Math.max(0.6, tiltFactor * azimFactor); // Min 60% Effizienz
+}
+
+function applyLayoutProposal() {
+  const layoutResults = localStorage.getItem('sp_layout_results');
+  if(!layoutResults) {
+    toast('Keine Berechnungsergebnisse gefunden');
+    return;
+  }
+  
+  const results = JSON.parse(layoutResults);
+  
+  // Erstelle Modulflächen-Struktur für Auto-Verteilung
+  const moduleAreas = results.map((result, index) => ({
+    ModuleArea: `Fläche ${result.area.id} (${result.area.tilt}°/${result.area.azimuth}°)`,
+    NumberOfPvModules: { Value: result.maxModules },
+    PvGeneratorOutput: { Value: (result.effectivePower / 1000).toFixed(2) }
+  }));
+  
+  closeModal('area-calculator-modal');
+  
+  // Nutze die Auto-Verteilungsfunktion
+  autoDistributeFromPVSOL(moduleAreas);
+}
+
+// AUTOMATISCHE MPPT-VERTEILUNG
+function autoDistributeStrings() {
+  const moduleAreasData = localStorage.getItem('sp_pvsol_module_areas');
+  let moduleAreas = [];
+  
+  if(moduleAreasData) {
+    try {
+      moduleAreas = JSON.parse(moduleAreasData);
+    } catch(e) {
+      console.error('Fehler beim Laden der Modulflächen:', e);
+    }
+  }
+  
+  if(moduleAreas.length === 0) {
+    // Manuelles Eingabe wenn keine PV*SOL Daten
+    const totalModules = prompt('Gesamtzahl der Module:', '250');
+    const numAreas = prompt('Anzahl der Modulflächen:', '4');
+    
+    if(totalModules && numAreas) {
+      const modulesPerArea = Math.floor(parseInt(totalModules) / parseInt(numAreas));
+      for(let i = 0; i < parseInt(numAreas); i++) {
+        moduleAreas.push({
+          ModuleArea: `Fläche ${i + 1}`,
+          NumberOfPvModules: { Value: modulesPerArea },
+          PvGeneratorOutput: { Value: (modulesPerArea * projectConfig.modelWp / 1000).toFixed(2) }
+        });
+      }
+    }
+  }
+  
+  if(moduleAreas.length > 0) {
+    autoDistributeFromPVSOL(moduleAreas);
+  } else {
+    toast('Keine Modulflächen zur Verteilung verfügbar');
+  }
+}
+
+function autoDistributeFromPVSOL(moduleAreas) {
+  // Berechne verfügbare MPPT-Kapazität
+  let totalMppts = 0;
+  let totalInputs = 0;
+  
+  projectConfig.inverters.forEach(inv => {
+    const config = INVERTER_CONFIGS[inv.type] || { mppts: inv.customMppts || 12, inputsPerMppt: inv.customInputs || 2 };
+    totalMppts += config.mppts;
+    totalInputs += config.mppts * config.inputsPerMppt;
+  });
+  
+  // Berechne Gesamtnetzkapazität
+  const totalModules = moduleAreas.reduce((sum, area) => sum + (area.NumberOfPvModules?.Value || 0), 0);
+  const avgModulesPerInput = Math.floor(totalModules / totalInputs);
+  
+  // Verteilungsstrategie: Gruppiere ähnliche Flächen zusammen
+  let inputIndex = 0;
+  let areaIndex = 0;
+  
+  // Initialisiere APP_STATE mit neuen Daten
+  projectConfig.inverters.forEach((inv, wrIndex) => {
+    const wr = wrIndex + 1;
+    const config = INVERTER_CONFIGS[inv.type] || { mppts: inv.customMppts || 12, inputsPerMppt: inv.customInputs || 2 };
+    const isHuawei = config.huaweiMapping || false;
+    
+    for(let m = 1; m <= config.mppts; m++){
+      for(let s = 1; s <= config.inputsPerMppt; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        
+        if(areaIndex < moduleAreas.length) {
+          const area = moduleAreas[areaIndex];
+          const modules = area.NumberOfPvModules?.Value || 0;
+          
+          // Wenn die Fläche mehr Module hat als durchschnittlich pro Input, teilen
+          let modulesForThisInput = modules;
+          if(modules > avgModulesPerInput * 1.5 && s === 1) {
+            // Aufteilen auf beide Inputs dieses MPPT
+            modulesForThisInput = Math.ceil(modules / 2);
+          }
+          
+          APP_STATE[fullId] = {
+            planName: `STR ${areaIndex + 1}`,
+            gak: isHuawei ? `GAK ${wr}.${m}` : `GAK ${wr}.${s}`,
+            mod: modulesForThisInput,
+            stat: "JA",
+            note: area.ModuleArea || `Fläche ${areaIndex + 1}`
+          };
+          
+          // Wenn wir aufgeteilt haben, nächster Input bekommt den Rest
+          if(modules > avgModulesPerInput * 1.5 && s === 1) {
+            const nextFullId = `${wr}.${m}.2`;
+            APP_STATE[nextFullId] = {
+              planName: `STR ${areaIndex + 1}`,
+              gak: isHuawei ? `GAK ${wr}.${m}` : `GAK ${wr}.2`,
+              mod: modules - modulesForThisInput,
+              stat: "JA",
+              note: area.ModuleArea || `Fläche ${areaIndex + 1}`
+            };
+            s++; // Skip nächsten Input da wir ihn schon gefüllt haben
+          }
+          
+          areaIndex++;
+        } else {
+          APP_STATE[fullId] = {
+            planName: "",
+            gak: isHuawei ? `GAK ${wr}.${m}` : `GAK ${wr}.${s}`,
+            mod: 0,
+            stat: "NEIN",
+            note: ""
+          };
+        }
+      }
+    }
+  });
+  
+  // Aktualisiere die UI
+  renderMatrix(null);
+  updateKpis();
+  
+  toast(`✅ ${totalModules} Module auf ${totalInputs} Inputs verteilt (${avgModulesPerInput} Module/Input im Durchschnitt)`);
+  
+  closeModal('pvsol-import-modal');
+}
+
 // INITIALIZATION
 function init() {
   // Load Supabase config from localStorage if available
@@ -2926,6 +3914,39 @@ function init() {
     projectConfig = localCache.config;
     g('project-name-display').textContent = projectConfig.name;
     g('project-wp-display').textContent = projectConfig.modelWp;
+  } else {
+    // Standard-Konfiguration wenn nichts gespeichert ist
+    projectConfig = {
+      name: "PV MAN P52",
+      modelWp: 465,
+      inverters: [
+        { id: 1, type: "SMA_STP125", name: "WR 1" },
+        { id: 2, type: "SMA_STP125", name: "WR 2" },
+        { id: 3, type: "SMA_STP125", name: "WR 3" },
+        { id: 4, type: "SMA_STP125", name: "WR 4" },
+        { id: 5, type: "SMA_STP125", name: "WR 5" },
+        { id: 6, type: "SMA_STP125", name: "WR 6" }
+      ],
+      customMppts: 12,
+      customInputs: 2
+    };
+    g('project-name-display').textContent = projectConfig.name;
+    g('project-wp-display').textContent = projectConfig.modelWp;
+  }
+  
+  // Prüfe ob es P52-spezifische Daten gibt
+  const p52Cache = localStorage.getItem('sp_p52_original');
+  if(p52Cache && !localCache.config) {
+    try {
+      const p52Data = JSON.parse(p52Cache);
+      if(p52Data.config) {
+        projectConfig = p52Data.config;
+        g('project-name-display').textContent = projectConfig.name;
+        g('project-wp-display').textContent = projectConfig.modelWp;
+      }
+    } catch(e) {
+      console.error('Fehler beim Laden P52 Daten:', e);
+    }
   }
   
   APP_STATE = generateDynamicState();
@@ -2941,6 +3962,42 @@ function init() {
   
   // Initial setup page stats
   updateSetupPageStats();
+}
+
+// P52 ORIGINAL RESTORE
+function restoreP52Original() {
+  const p52Config = {
+    name: "PV MAN P52",
+    modelWp: 465,
+    inverters: [
+      { id: 1, type: "SMA_STP125", name: "WR 1" },
+      { id: 2, type: "SMA_STP125", name: "WR 2" },
+      { id: 3, type: "SMA_STP125", name: "WR 3" },
+      { id: 4, type: "SMA_STP125", name: "WR 4" },
+      { id: 5, type: "SMA_STP125", name: "WR 5" },
+      { id: 6, type: "SMA_STP125", name: "WR 6" }
+    ],
+    customMppts: 12,
+    customInputs: 2
+  };
+  
+  if(confirm('P52 Original-Konfiguration wiederherstellen? Aktuelle Änderungen gehen verloren.')) {
+    projectConfig = p52Config;
+    g('project-name-display').textContent = projectConfig.name;
+    g('project-wp-display').textContent = projectConfig.modelWp;
+    
+    // Speichere als Original
+    localStorage.setItem('sp_p52_original', JSON.stringify({ config: p52Config }));
+    
+    // Generiere die ursprüngliche String-Belegung
+    APP_STATE = generateP52State();
+    renderMatrix(null);
+    generateFilterTabs();
+    updateKpis();
+    saveLocal();
+    
+    toast('P52 Original-Konfiguration wiederhergestellt');
+  }
 }
 
 // Start

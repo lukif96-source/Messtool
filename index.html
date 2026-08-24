@@ -2,1631 +2,2621 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=0">
-<meta name="theme-color" content="#ffffff">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#2E2521">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="format-detection" content="telephone=no">
-<title>SOLPRO | PV Planungssystem</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<meta name="apple-mobile-web-app-title" content="SOLPRO">
+<meta name="description" content="SOLPRO Operations Suite — Solar & Resource Scheduling im Ayocin-Design">
+<title>SOLPRO · Operations Suite</title>
+
+<!-- Google Fonts: Outfit (Systemia-ähnlich) + Roboto Fallback -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Supabase Lib -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- SUPABASE DATEN -->
+<script>
+  window.SUPABASE_URL = 'https://iuxklqcpexoziqxrohwa.supabase.co';
+  window.SUPABASE_KEY = 'sb_publishable_VteOTQ6g28z9Dvo-QUG8jw_hehaZpWu';
+</script>
+
 <style>
+/* ═══════════════════════════════════════════════════════════════
+   1. 1:1 AYOCIN LUXURY DESIGN TOKENS
+   ═══════════════════════════════════════════════════════════════ */
 :root {
-  --bg-primary: #f8fafc;
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #f1f5f9;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --border: #e2e8f0;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-lg: 16px;
+  /* Ayocin 1:1 Palette (ayocin.com / Obys) */
+  --ayocin-cream: #FCF6EC;
+  --ayocin-surface: #EFE9DF;
+  --ayocin-sand: #CEC1B2;
+  --ayocin-sand-subtle: #EFE9DF;
+  --ayocin-sand-dark: #B2A28B;
+  --ayocin-bronze: #8C7358;
+  --ayocin-deep-bronze: #2E2521;
+  --ayocin-dark: #2E2521;
+  --ayocin-dark-surface: #2C2722;
+  --ayocin-border: rgba(46, 37, 33, 0.14);
+  --ayocin-border-strong: rgba(46, 37, 33, 0.28);
+  --ink-primary: #2E2521;
+  --ink-secondary: rgba(46, 37, 33, 0.62);
+  --ink-muted: rgba(46, 37, 33, 0.42);
+  --bg-sand-subtle: #EFE9DF;
+  --accent-glow-yellow: rgba(255, 231, 143, 0.4);
+  --accent-glow-coral: rgba(255, 125, 94, 0.35);
+
+  /* Status — warme Erdtöne statt kühle SaaS-Farben */
+  --status-dc: #6B5A48;
+  --status-ac: #B85834;
+  --status-done: #5A6B52;
+  --status-danger: #A84848;
+  --status-danger-bg: rgba(168, 72, 72, 0.08);
+
+  --radius-card: 20px;
+  --radius-sm: 10px;
+  --radius-pill: 9999px;
+  --font-display: 'Outfit', 'Roboto', -apple-system, sans-serif;
+  --font-body: 'Outfit', 'Roboto', -apple-system, sans-serif;
+  --font-mono: 'Outfit', 'Roboto', sans-serif;
+  --ease-ayocin: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --project-sidebar-w: 300px;
 }
 
-.dark-mode {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #64748b;
-  --border: #334155;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  min-height: 100vh;
-  min-height: 100dvh;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
-}
-
-/* --- NEU: SPLIT LAYOUT SIDEBAR --- */
-.home-layout {
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
-}
-
-.left-sidebar {
-  width: 280px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  position: sticky;
-  top: 5.5rem; 
-}
-
-.sidebar-group {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.25rem;
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.sidebar-group h3 {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  font-weight: 700;
-  margin-bottom: 0.25rem;
-}
-
-.sidebar-btn {
-  width: 100%;
-  justify-content: flex-start; 
-  text-align: left;
-}
-
-.main-panel {
-  flex: 1;
-  min-width: 0; 
-}
-
-@media (max-width: 1024px) {
-  .home-layout {
-    flex-direction: column;
-  }
-  .left-sidebar {
-    width: 100%;
-    position: static;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: flex-start;
-  }
-  .sidebar-group {
-    flex: 1;
-    min-width: 240px;
-  }
-}
-
-/* NAVIGATION */
-.nav-container {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-}
-
-.navbar {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 1rem 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2rem;
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-weight: 800;
-  font-size: 1.25rem;
-  color: var(--text-primary);
-  text-decoration: none;
-}
-
-.nav-brand-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.25rem;
-}
-
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: 1;
-}
-
-.nav-link {
-  padding: 0.625rem 1rem;
-  border-radius: var(--radius-sm);
-  font-weight: 500;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  text-decoration: none;
-  transition: all 0.2s ease;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.nav-link:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-
-.nav-link.active {
-  background: var(--bg-tertiary);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-/* MAIN CONTENT */
-.main-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem;
-}
-
-.page-header {
-  margin-bottom: 2rem;
-}
-
-.page-title {
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
-  letter-spacing: -0.025em;
-}
-
-.page-subtitle {
-  font-size: 1rem;
-  color: var(--text-secondary);
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;height:100dvh;width:100%;overflow:hidden}
+body{
+  font-family: var(--font-body);
   font-weight: 400;
+  font-size: 12px;
+  line-height: 1.3;
+  background: var(--ayocin-cream);
+  color: var(--ink-primary);
+  display: flex;
+  flex-direction: row;
+  user-select: none;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 12% 8%, var(--accent-glow-yellow) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 45% at 88% 92%, var(--accent-glow-coral) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(178, 162, 139, 0.08) 0%, transparent 70%);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
+button{font-family:inherit;cursor:pointer;font-weight:500}
+input,select,textarea{font-family:inherit;font-size:12px;font-weight:400}
+:focus-visible{outline:1.5px solid var(--ayocin-dark);outline-offset:2px;border-radius:6px}
 
-/* DASHBOARD */
-.dashboard {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  margin-bottom: 2rem;
+/* Ayocin: atmosphärische Tiefe statt Schatten */
+.grain-overlay{
+  position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:.045;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-
-.stat-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.5rem;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.2s ease;
+.grid-overlay{
+  position:fixed;inset:0;pointer-events:none;z-index:0;opacity:1;
+  background-image:linear-gradient(rgba(178,162,139,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(178,162,139,0.07) 1px, transparent 1px);
+  background-size:48px 48px;
 }
+.ambient-glow{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(120px);opacity:.5}
+.glow-top{width:480px;height:320px;background:var(--accent-glow-yellow);top:-80px;left:10%}
+.glow-bottom{width:420px;height:320px;background:var(--accent-glow-coral);bottom:-60px;right:8%}
 
-.stat-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 0.5rem;
-}
-
-.stat-value {
-  font-size: 1.75rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  line-height: 1.1;
-}
-
-.stat-unit {
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  margin-left: 0.25rem;
-}
-
-/* BUTTONS */
-.btn {
+/* ═══════════════════════════════════════════════════════════════
+   2. AYOCIN BUTTONS (MIT PFEIL-KAPSEL)
+   ═══════════════════════════════════════════════════════════════ */
+.btn-ayocin {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1rem;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 0.875rem;
-  border: none;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  border: 1px solid var(--ayocin-dark);
+  background: var(--ayocin-surface);
+  color: var(--ayocin-dark);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.35s var(--ease-ayocin), transform 0.35s var(--ease-ayocin), border-color 0.35s var(--ease-ayocin);
   white-space: nowrap;
+  min-height: 38px;
+  text-decoration: none;
 }
-.btn-primary { background: var(--accent); color: white; }
-.btn-primary:hover { background: var(--accent-hover); }
-.btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); }
-.btn-secondary:hover { background: var(--border); }
-.btn-success { background: var(--success); color: white; }
-.btn-success:hover { background: #059669; }
-.btn-danger { background: var(--danger); color: white; }
-.btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
-.btn-ghost:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.btn-ayocin:hover {
+  transform: translateY(-1px);
+  background: var(--ayocin-cream);
+  border-color: var(--ayocin-dark);
+}
+.btn-ayocin:active { transform: translateY(0); }
 
-/* FILTER TABS */
-.filter-tabs {
-  display: flex; gap: 0.5rem; overflow-x: auto; padding: 0.5rem 0; margin-bottom: 1.5rem;
+.btn-icon-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(46, 37, 33, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.35s var(--ease-ayocin);
+  flex-shrink: 0;
 }
-.filter-tab {
-  padding: 0.75rem 1.25rem; background: var(--bg-secondary); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); font-weight: 600; font-size: 0.875rem; color: var(--text-secondary); cursor: pointer;
+.btn-ayocin:hover .btn-icon-circle {
+  background: var(--ayocin-dark);
+  color: var(--ayocin-cream);
+  transform: translateX(2px);
 }
-.filter-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
 
-/* INVERTER CARDS */
-.inverter-section { margin-bottom: 1.5rem; }
-.inverter-card {
-  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
+.btn-ayocin.primary {
+  background: var(--ayocin-dark);
+  color: var(--ayocin-cream);
+  border-color: var(--ayocin-dark);
 }
-.inverter-header {
-  display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%);
-  border-bottom: 1px solid var(--border);
+.btn-ayocin.primary .btn-icon-circle {
+  background: rgba(252, 246, 236, 0.18);
+  color: var(--ayocin-cream);
 }
-.inverter-badge {
-  background: var(--accent); color: white; padding: 0.375rem 0.75rem; border-radius: var(--radius-sm);
-  font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700;
+.btn-ayocin.primary:hover {
+  background: var(--ayocin-dark-surface);
 }
-.inverter-name { font-weight: 700; font-size: 1rem; color: var(--text-primary); }
-.inverter-stats { display: flex; gap: 1.5rem; font-size: 0.875rem; color: var(--text-secondary); font-weight: 500; }
-.inverter-stats span { color: var(--text-primary); font-weight: 600; }
+.btn-ayocin.primary:hover .btn-icon-circle {
+  background: var(--ayocin-sand);
+  color: var(--ayocin-dark);
+  transform: translateX(2px);
+}
 
-/* TABLE */
-.table-container { overflow-x: auto; }
-.data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-.data-table thead { background: var(--bg-tertiary); }
-.data-table th { padding: 0.75rem 1rem; text-align: left; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
-.data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
-.data-table tbody tr.inactive { opacity: 0.4; }
-.string-id { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--accent); font-size: 0.875rem; }
-.power-value { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--success); }
-
-/* INPUTS */
-.input {
-  width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm);
-  font-size: 0.875rem; font-family: inherit; background: var(--bg-secondary); color: var(--text-primary);
+.btn-ayocin.danger {
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
+  border-color: rgba(168, 72, 72, 0.3);
 }
-.input:focus { outline: none; border-color: var(--accent); }
-.input.error { border-color: var(--danger); background: rgba(239, 68, 68, 0.05); color: var(--danger); font-weight: 600; }
-.input-compact { width: 60px; text-align: center; }
 
-/* MODALS */
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px);
-  z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1rem;
+.btn-ayocin.btn-lock { font-weight: 500; }
+.btn-ayocin.btn-lock.locked { background: var(--ayocin-surface); color: var(--ink-secondary); }
+.btn-ayocin.btn-lock.unlocked {
+  background: var(--ayocin-dark);
+  color: var(--ayocin-sand);
+  border-color: var(--ayocin-dark);
+  outline: 2px solid var(--ayocin-sand-dark);
+  outline-offset: 0;
 }
-.modal-overlay.active { display: flex; }
-.modal {
-  background: var(--bg-secondary); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
-  max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;
+
+/* ═══════════════════════════════════════════════════════════════
+   3. LOGIN SCREEN
+   ═══════════════════════════════════════════════════════════════ */
+#loginScreen {
+  position: fixed; inset: 0; z-index: 999999;
+  background: var(--ayocin-dark);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
 }
-.modal-header { display: flex; justify-content: space-between; padding: 1.5rem; border-bottom: 1px solid var(--border); }
-.modal-body { padding: 1.5rem; }
-.modal-footer { display: flex; gap: 0.75rem; justify-content: flex-end; padding: 1rem 1.5rem; border-top: 1px solid var(--border); }
-
-.config-section { margin-bottom: 1.5rem; }
-.config-row { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
-
-.toast {
-  position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px);
-  background: var(--text-primary); color: var(--bg-secondary); padding: 0.75rem 1.5rem;
-  border-radius: var(--radius); font-weight: 600; opacity: 0; transition: all 0.3s; z-index: 2000;
+#loginScreen::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 30%, var(--accent-glow-yellow) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 80% 70%, var(--accent-glow-coral) 0%, transparent 50%);
+  opacity: 0.55;
 }
-.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-
-/* DARK MODE TOGGLE */
-.dark-mode-toggle {
-  position: fixed; bottom: 2rem; right: 2rem; width: 48px; height: 48px; border-radius: 50%;
-  background: var(--bg-secondary); border: 1px solid var(--border); display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 100;
+.login-card {
+  position: relative; z-index: 1;
+  background: var(--ayocin-cream); padding: 48px 40px; border-radius: var(--radius-card);
+  border: 1px solid rgba(252, 246, 236, 0.12);
+  width: 400px; max-width: 92vw; text-align: center;
+  animation: loginIn 0.8s var(--ease-ayocin) both;
 }
-.dark-mode-toggle svg { width: 24px; height: 24px; color: var(--text-primary); }
+@keyframes loginIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.login-tag {
+  display: inline-block; font-family: var(--font-body); font-size: 11px; font-weight: 500;
+  background: transparent; color: var(--ink-muted); padding: 0;
+  letter-spacing: 0.08em; margin-bottom: 20px; text-transform: uppercase;
+}
+.login-headline {
+  font-family: var(--font-display); font-size: 32px; font-weight: 500;
+  line-height: 1; letter-spacing: -0.02em; color: var(--ayocin-dark); margin-bottom: 8px;
+}
+.login-sub {
+  font-size: 12px; color: var(--ink-secondary); margin-bottom: 32px; font-weight: 400; line-height: 1.5;
+}
 
+#loader{position:fixed;inset:0;z-index:99999;background:var(--ayocin-dark);display:none;align-items:center;justify-content:center;flex-direction:column;gap:20px}
+#loader.show{display:flex}
+.spinner{width:40px;height:40px;border:2px solid rgba(252,246,236,.12);border-top-color:var(--ayocin-sand);border-radius:50%;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-text{font-family:var(--font-body);font-size:11px;color:rgba(252,246,236,.65);letter-spacing:0.12em;text-transform:uppercase;font-weight:500}
+
+/* ═══════════════════════════════════════════════════════════════
+   4. ADRESS-TOOLTIP (INTERAKTIV)
+   ═══════════════════════════════════════════════════════════════ */
+#hoverTooltip {
+  position: fixed; background: var(--ayocin-cream); color: var(--ayocin-dark); padding: 14px 16px; border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 400; pointer-events: auto; z-index: 100000; opacity: 0;
+  transition: opacity 0.35s var(--ease-ayocin), transform 0.35s var(--ease-ayocin); transform: translate(-50%, -100%) scale(0.98);
+  margin-top: -10px; text-align: left; max-width: 330px;
+  line-height: 1.45; border: 1px solid var(--ayocin-border-strong); display: none;
+}
+#hoverTooltip::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border-width: 6px; border-style: solid; border-color: var(--ayocin-cream) transparent transparent transparent;
+}
+#hoverTooltip.show { opacity: 1; transform: translate(-50%, -100%) scale(1); display: block; }
+.tooltip-title{ font-family: var(--font-display); font-weight: 700; font-size: 13.5px; color: var(--ayocin-dark); margin-bottom: 2px; }
+.tooltip-sub{ font-size: 10.5px; color: var(--ink-secondary); margin-bottom: 6px; }
+.tooltip-notes{ background: var(--ayocin-sand); padding: 6px 9px; border-radius: 6px; font-size: 10.5px; margin-top: 6px; max-height: 110px; overflow-y: auto; white-space: pre-line; border: 1px solid var(--ayocin-border); }
+.tooltip-maps-btn{
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 10.5px; font-weight: 700;
+  color: #fff; background: var(--ayocin-dark); padding: 5px 12px; border-radius: var(--radius-pill); text-decoration: none;
+  transition: all 0.2s;
+}
+.tooltip-maps-btn:hover{ background: var(--ayocin-bronze); color: var(--ayocin-dark); }
+
+/* ═══════════════════════════════════════════════════════════════
+   5. PROJEKT-SEITENLEISTE (MIT ZU PLANEN / EINGETEILT TABS)
+   ═══════════════════════════════════════════════════════════════ */
+.project-sidebar{
+  width: var(--project-sidebar-w); min-width: 240px; max-width: 580px;
+  background: var(--ayocin-surface); border-right: 1px solid var(--ayocin-border);
+  display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 250; height: 100%;
+}
+.project-sidebar-head{ padding: 20px 16px 10px; display: flex; align-items: center; justify-content: space-between; }
+.project-sidebar-title{
+  font-family: var(--font-display); font-size: 11px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-muted);
+}
+
+/* REITER: [ 📁 ZU PLANEN ] vs [ ✅ EINGETEILT ] */
+.pool-segment-wrap {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+  background: var(--ayocin-cream); padding: 2px; border-radius: var(--radius-pill);
+  border: 1px solid var(--ayocin-border); margin: 0 14px 12px;
+}
+.pool-segment-btn {
+  padding: 7px 10px; border: none; border-radius: var(--radius-pill);
+  font-family: var(--font-body); font-size: 11px; font-weight: 500;
+  background: transparent; color: var(--ink-secondary); cursor: pointer;
+  transition: all 0.3s var(--ease-ayocin); text-align: center; white-space: nowrap;
+}
+.pool-segment-btn.active {
+  background: var(--ayocin-dark); color: var(--ayocin-cream);
+}
+
+.project-sidebar-body{ padding: 0 12px 12px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.project-sidebar-body .list-search, .project-sidebar-body select {
+  width: 100%; padding: 8px 12px; border: 1px solid var(--ayocin-border); border-radius: var(--radius-pill);
+  background: var(--ayocin-cream); font-size: 12px; outline: none; transition: all 0.2s; color: var(--ayocin-dark);
+}
+.project-sidebar-body .list-search:focus, .project-sidebar-body select:focus { border-color: var(--ayocin-dark); }
+.project-list{ flex: 1; min-height: 0; overflow-y: auto; padding: 4px 10px 16px; display: flex; flex-direction: column; gap: 6px; }
+.project-list::-webkit-scrollbar{width:5px}
+.project-list::-webkit-scrollbar-thumb{background:var(--ayocin-border-strong);border-radius:10px}
+
+/* Chips */
+.pal-chip{
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  padding: 8px 12px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 500;
+  cursor: pointer; background: var(--ayocin-cream); border: 1px solid var(--ayocin-border);
+  transition: transform .2s var(--ease-ayocin), border-color .2s, background .2s;
+}
+.pal-chip:hover{ transform: translateY(-1px); background: var(--ayocin-surface); border-color: var(--ayocin-border-strong); }
+.pal-chip.active{ border-color: var(--ayocin-dark); background: var(--ayocin-cream); outline: 1px solid var(--ayocin-dark); }
+.pal-chip.is-confirmed{ border-color: var(--status-done) !important; }
+.pal-chip-title{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.pal-chip-actions{ display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+
+.phase-pill-wrap {
+  display: inline-flex; align-items: center; gap: 2px;
+  background: rgba(29, 25, 22, 0.22); padding: 2px 4px; border-radius: var(--radius-pill);
+  cursor: pointer; transition: transform 0.15s var(--ease-ayocin);
+}
+.phase-pill-wrap:hover{ transform: scale(1.08); }
+.phase-pip {
+  font-size: 8px; font-weight: 800; font-family: var(--font-mono);
+  padding: 1px 4px; border-radius: 4px; color: rgba(255,255,255,0.45);
+  background: transparent; transition: all 0.15s;
+}
+.phase-pip.is-active-dc { background: var(--status-dc); color: #fff; }
+.phase-pip.is-active-ac { background: var(--status-ac); color: #fff; }
+
+.pal-chip .cnt{ font-size: 9px; font-family: var(--font-mono); padding: 2px 5px; background: rgba(29, 25, 22, 0.18); border-radius: var(--radius-pill); color: #fff; }
+.chip-btn{ background: transparent; border: none; font-size: 13px; cursor: pointer; opacity: 0.55; padding: 2px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.15s; line-height: 1; }
+.chip-btn:hover{ opacity: 1; transform: scale(1.25); }
+.chip-btn.btn-confirm{ color: var(--status-done); font-weight: 900; }
+.chip-btn.btn-restore:hover{ color: var(--status-dc); }
+.chip-btn.btn-del:hover{ color: var(--status-danger); }
+.ac-warn{ background: var(--status-danger); color: #fff; font-size: 8px; font-weight: 800; padding: 2px 5px; border-radius: var(--radius-pill); white-space: nowrap; letter-spacing: 0.3px; text-transform: uppercase; }
+
+.project-sidebar-resizer{ position: absolute; top: 0; right: -3px; width: 6px; height: 100%; cursor: col-resize; z-index: 260; touch-action: none; }
+.project-sidebar-resizer::after{ content: ''; position: absolute; top: 0; right: 2px; width: 2px; height: 100%; background: transparent; transition: background 0.15s; }
+.project-sidebar-resizer:hover::after, .project-sidebar-resizer.dragging::after{ background: var(--ayocin-bronze); }
+
+/* ═══════════════════════════════════════════════════════════════
+   6. TOPBAR & TABS
+   ═══════════════════════════════════════════════════════════════ */
+.main-wrapper{ flex: 1; display: flex; flex-direction: column; height: 100%; min-width: 0; position: relative; z-index: 1; }
+.topbar{
+  position: relative; z-index: 200; flex-shrink: 0; min-height: 64px;
+  background: var(--ayocin-cream); border-bottom: 1px solid var(--ayocin-border);
+  display: flex; align-items: center; padding: 0 24px; gap: 16px;
+}
+.logo{
+  font-family: var(--font-display); font-size: 20px; font-weight: 500;
+  letter-spacing: -0.02em; color: var(--ayocin-dark); display: flex; align-items: center; gap: 10px;
+}
+.logo span{ color: var(--ayocin-bronze); font-weight: 500; }
+.logo-badge {
+  font-family: var(--font-body); font-size: 10px; background: var(--ayocin-dark); color: var(--ayocin-cream);
+  padding: 3px 10px; border-radius: var(--radius-pill); letter-spacing: 0.06em;
+  white-space: nowrap; font-weight: 500; text-transform: uppercase;
+}
+.topbar-hint {
+  font-size: 11px; color: var(--ink-secondary); font-weight: 400; line-height: 1.4;
+}
+.topbar-hint b { font-weight: 500; color: var(--ink-primary); }
+
+.tab-nav{
+  position: relative; z-index: 190; flex-shrink: 0; display: flex;
+  background: var(--ayocin-surface); border-bottom: 1px solid var(--ayocin-border);
+  overflow-x: auto; padding: 8px 16px; gap: 4px; -webkit-overflow-scrolling: touch;
+}
+.tab{
+  padding: 8px 18px; font-size: 12px; font-weight: 500; cursor: pointer;
+  color: var(--ink-secondary); border-radius: var(--radius-pill); letter-spacing: 0;
+  white-space: nowrap; display: flex; align-items: center; gap: 6px;
+  transition: all 0.3s var(--ease-ayocin); border: 1px solid transparent; min-height: 36px;
+}
+.tab:hover{ background: var(--ayocin-cream); color: var(--ink-primary); }
+.tab.active{
+  color: var(--ayocin-dark); background: var(--ayocin-cream); border-color: var(--ayocin-border-strong);
+  font-weight: 500;
+}
+
+.app-main{ flex: 1; position: relative; overflow: hidden; }
+.view{ position: absolute; inset: 0; display: none; overflow: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
+.view.active{ display: block; }
+
+/* TOOLBAR & BUTTONS */
+.planner-header{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.kpi-row{ display: flex; gap: 6px; flex-wrap: wrap; }
+.kpi-pill{
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 8px 16px; border-radius: var(--radius-pill); background: var(--ayocin-surface);
+  border: 1px solid var(--ayocin-border); min-width: 88px;
+}
+.kpi-lbl{ font-size: 10px; font-weight: 500; letter-spacing: 0.04em; color: var(--ink-muted); text-transform: uppercase; }
+.kpi-val{ font-family: var(--font-display); font-size: 18px; font-weight: 500; margin-top: 2px; color: var(--ayocin-dark); line-height: 1; }
+
+.planner-toolbar{ display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+
+.seg{
+  display: flex; gap: 2px; background: var(--ayocin-sand-subtle);
+  border: 1px solid var(--ayocin-border); border-radius: var(--radius-pill); padding: 2px;
+}
+.seg .btn-seg{ border: none; background: transparent; padding: 6px 16px; min-height: 32px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 500; color: var(--ink-secondary); cursor: pointer; }
+.seg .btn-seg.active{ background: var(--ayocin-cream); color: var(--ayocin-dark); font-weight: 500; border: 1px solid var(--ayocin-border); }
+
+.planner-grid-wrap{
+  overflow: auto; background: var(--ayocin-cream); border-radius: var(--radius-card);
+  border: 1px solid var(--ayocin-border); max-height: calc(100vh - 230px);
+  -webkit-overflow-scrolling: touch;
+}
+table{ border-collapse: collapse; table-layout: fixed; width: max-content; min-width: 100%; }
+th, td{ border: 1px solid rgba(178, 162, 139, 0.35); text-align: center; font-size: 11px; vertical-align: top; }
+
+#gridHead tr:nth-child(1) th{
+  position: sticky; top: 0; z-index: 100; height: 28px; font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  background: var(--ayocin-dark); color: var(--ayocin-cream);
+}
+#gridHead tr:nth-child(2) th{
+  position: sticky; top: 28px; z-index: 99; height: 42px; background: var(--ayocin-surface); color: var(--ayocin-dark);
+}
+
+th.is-today-head { background: #E6DFD1 !important; color: var(--status-danger) !important; border-bottom: 3px solid var(--status-danger) !important; }
+td.is-today-col { border-left: 2px solid rgba(179, 57, 57, 0.35) !important; border-right: 2px solid rgba(179, 57, 57, 0.35) !important; }
+
+td:first-child{
+  position: sticky; left: 0; z-index: 80; background: var(--ayocin-cream) !important;
+  width: 140px !important; text-align: left; padding: 6px 10px; font-weight: 500; border-right: 2px solid var(--ayocin-dark);
+}
+.fixed-corner{ position: sticky; left: 0; top: 0; z-index: 110 !important; background: var(--ayocin-dark) !important; width: 140px !important; }
+
+.monday-start{ border-left: 3px solid var(--ayocin-bronze) !important; }
+.day-num{ font-family: var(--font-mono); font-size: 13px; font-weight: 800; }
+.day-short{ font-size: 8px; font-weight: 700; text-transform: uppercase; color: var(--ink-muted); margin-top: 1px; }
+
+/* DIE ZELLE & INTELLIGENTER STACK */
+.project-cell{
+  height: 52px; cursor: crosshair; padding: 2px;
+  position: relative; transition: background-color 0.1s;
+}
+.project-cell:hover{ outline: 2px solid var(--ayocin-dark); outline-offset: -2px; z-index: 10; }
+.selecting{ background-color: rgba(176, 149, 117, 0.22) !important; outline: 2px dashed var(--ayocin-bronze) !important; }
+
+.cell-stack{
+  display: flex; flex-direction: column; gap: 2px; width: 100%; height: 100%;
+}
+
+/* WENN NUR 1 TERMIN VORHANDEN IST: GROSS, FETT & VOLLE HÖHE */
+.cell-stack.count-1 {
+  height: 100%;
+}
+.cell-stack.count-1 .cell-item-card {
+  flex: 1; min-height: 44px; font-size: 11.5px; font-weight: 800;
+  padding: 5px 6px; border-radius: 6px; display: flex; flex-direction: column;
+  justify-content: center; gap: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+.cell-stack.count-1 .cell-item-name {
+  font-size: 11.5px; font-weight: 800; letter-spacing: -0.2px;
+}
+.cell-stack.count-1 .ibn-badge {
+  font-size: 8.5px; padding: 2px 4px;
+}
+
+/* WENN 2 TERMINE VORHANDEN SIND: DYNAMISCH HALBIERT */
+.cell-stack.count-2 .cell-item-card {
+  flex: 1; min-height: 22px; font-size: 9.5px; font-weight: 700;
+  padding: 2px 5px; border-radius: 4px; display: flex; align-items: center;
+}
+.cell-stack.count-2 .cell-item-name {
+  font-size: 9.5px; font-weight: 700;
+}
+
+/* WENN 3+ TERMINE VORHANDEN SIND: KOMPAKT */
+.cell-stack.count-3 .cell-item-card,
+.cell-stack.count-many .cell-item-card {
+  flex: 1; min-height: 14px; font-size: 8px; font-weight: 700;
+  padding: 1px 4px; border-radius: 3px; display: flex; align-items: center;
+}
+.cell-stack.count-3 .cell-item-name {
+  font-size: 8px;
+}
+
+.cell-item-card{
+  color: #fff; text-align: left; position: relative; overflow: hidden; line-height: 1.15;
+}
+.cell-item-card.is-highlighted{
+  outline: 2px solid var(--ayocin-cream) !important;
+}
+.cell-item-name{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.cell-item-del{
+  background: rgba(0,0,0,0.25); border: none; color: #fff; font-size: 10px;
+  width: 14px; height: 14px; border-radius: 3px; display: flex; align-items: center;
+  justify-content: center; cursor: pointer; opacity: 0; transition: opacity 0.15s; margin-left: 3px; flex-shrink: 0;
+}
+.cell-item-card:hover .cell-item-del{ opacity: 1; }
+
+.ibn-badge {
+  background: var(--ayocin-dark); color: var(--ayocin-sand-dark); font-family: var(--font-mono);
+  font-size: 7px; font-weight: 800; padding: 1px 3px; border-radius: 2px; margin-right: 2px; flex-shrink: 0;
+}
+
+.cell-phone-link {
+  display: none; font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  color: #FFFFFF; background: rgba(29, 25, 22, 0.4); text-decoration: none;
+  padding: 1px 4px; border-radius: 3px; margin-top: 2px; width: fit-content;
+}
+body.view-W .cell-phone-link { display: inline-flex; }
+
+/* URLAUB & KRANK */
+.grid-block-vacation{
+  background: repeating-linear-gradient(45deg, #FAF7F0, #FAF7F0 4px, #F5E9D3 4px, #F5E9D3 8px) !important;
+  color: #8C6A30 !important; font-weight: 800 !important; border-radius: 6px; padding: 6px; font-size: 11px;
+}
+.grid-block-sick{
+  background: repeating-linear-gradient(45deg, #FAF7F0, #FAF7F0 4px, #F7DCDA 4px, #F7DCDA 8px) !important;
+  color: var(--status-danger) !important; font-weight: 800 !important; border-radius: 6px; padding: 6px; font-size: 11px;
+}
+
+table tr.team-divider td{
+  border: none; text-align: left !important; font-family: var(--font-mono); font-size: 9.5px;
+  font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; padding: 7px 12px !important;
+  position: static !important; width: auto !important; background: var(--ayocin-sand-subtle); border-top: 2px solid var(--ayocin-border-strong);
+}
+
+body.view-W table th:not(:first-child), body.view-W .project-cell { width: 140px !important; min-width: 140px !important; max-width: 140px !important; }
+body.view-M table th:not(:first-child), body.view-M .project-cell { width: 66px !important; min-width: 66px !important; max-width: 66px !important; }
+body.view-J table th:not(:first-child), body.view-J .project-cell { width: 26px !important; min-width: 26px !important; max-width: 26px !important; font-size: 0 !important; }
+body.view-J .cell-item-name, body.view-J .cell-item-del, body.view-J .cell-phone-link { display: none !important; }
+body.view-J .cell-item-card { height: 10px; padding: 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   8. MONTEUR WOCHENANSICHT
+   ═══════════════════════════════════════════════════════════════ */
+.monteur-shell{ max-width: 760px; margin: 0 auto; }
+.monteur-day-card{
+  background: var(--ayocin-cream); border-radius: var(--radius-card); padding: 16px 18px; margin-bottom: 14px;
+  border: 1px solid var(--ayocin-border);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.monteur-day-title{ font-family: var(--font-display); font-size: 18px; font-weight: 500; color: var(--ayocin-dark); line-height: 1.1; }
+.monteur-day-date{ font-family: var(--font-body); font-size: 12px; color: var(--ink-muted); font-weight: 400; }
+
+.monteur-job-item{
+  background: var(--ayocin-surface); border: 1px solid var(--ayocin-border); border-radius: var(--radius-sm);
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
+}
+.monteur-day-header{
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid var(--ayocin-border); padding-bottom: 8px;
+}
+.monteur-job-head{ display: flex; justify-content: space-between; align-items: center; }
+.monteur-job-name{ font-family: var(--font-display); font-size: 15px; font-weight: 500; color: var(--ayocin-dark); }
+
+/* ═══════════════════════════════════════════════════════════════
+   9. RESPONSIVE
+   ═══════════════════════════════════════════════════════════════ */
+body.role-monteur .admin-only { display: none !important; }
+body.role-monteur .project-sidebar { display: none !important; }
+
+@media (max-width: 768px) {
+  body { flex-direction: column; }
+  .project-sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; z-index: 500;
+    width: 86vw !important; max-width: 340px;
+    transform: translateX(-100%); transition: transform 0.25s var(--ease-ayocin);
+    border-right: 1px solid var(--ayocin-border-strong);
+  }
+  .project-sidebar.mobile-open { transform: translateX(0); }
+  .project-sidebar-resizer { display: none; }
+  .topbar { padding: 0 14px; min-height: 56px; }
+  .logo { font-size: 16px; }
+  .logo-badge { display: none; }
+  .view { padding: 12px 10px; }
+  .tab-nav { padding: 4px 6px; }
+  .tab { padding: 6px 12px; font-size: 10px; min-height: 32px; }
+  .planner-toolbar { gap: 4px; }
+}
+
+/* EXPLORER MODAL & PDF PRINT */
+.explorer-card {
+  background: var(--bg-sand-subtle); border: 1px solid var(--ayocin-border); border-radius: var(--radius-card);
+  padding: 16px; margin-top: 12px;
+}
+.explorer-meta-tag {
+  display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono);
+  font-size: 10px; font-weight: 800; background: var(--ayocin-dark); color: var(--ayocin-sand-dark);
+  padding: 3px 8px; border-radius: var(--radius-pill); letter-spacing: 0.5px;
+}
+.explorer-day-card {
+  background: var(--ayocin-cream); border: 1px solid var(--ayocin-border); border-radius: 10px;
+  padding: 10px 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px;
+}
+.explorer-day-head {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; font-weight: 800; border-bottom: 1px solid var(--ayocin-sand-subtle); padding-bottom: 4px;
+}
+
+#printSheet { display: none; }
 @media print {
-  .left-sidebar, .nav-container, .modal-overlay, .admin-only { display: none !important; }
+  body * { visibility: hidden; }
+  #printSheet, #printSheet * { visibility: visible; }
+  #printSheet {
+    display: block !important; position: absolute; left: 0; top: 0; width: 100%;
+    background: #FCF6EC; color: #2E2521; padding: 24px; font-family: 'Outfit', 'Roboto', sans-serif;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .print-header-explorer {
+    border-bottom: 2px solid #2E2521; padding-bottom: 12px; margin-bottom: 16px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .print-tag { background: #2E2521; color: #CEC1B2; font-family: 'Outfit', sans-serif; font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 500; }
+  .print-banner { background: #EFE9DF; border-left: 4px solid #2E2521; padding: 10px 14px; margin-bottom: 16px; border-radius: 4px; font-size: 13px; }
+  .print-table { width: 100%; border-collapse: collapse; margin-top: 12px; background: #fff; }
+  .print-table th, .print-table td { border: 1px solid #c4bcac; padding: 10px; text-align: left; font-size: 12px; vertical-align: top; }
+  .print-table th { background: #FCF6EC; font-weight: 500; }
 }
+
+.task-shell{ max-width: 720px; margin: 0 auto; }
+.task-shell h2{ font-family: var(--font-display); font-size: 28px; font-weight: 500; line-height: 1; margin-bottom: 6px; letter-spacing: -0.02em; }
+.task-sub{ font-size: 11px; color: var(--ink-muted); letter-spacing: 0.06em; margin-bottom: 20px; text-transform: uppercase; font-weight: 500; }
+.task-monitor{ display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+.task-stat{ background: var(--ayocin-surface); border: 1px solid var(--ayocin-border); border-radius: var(--radius-card); padding: 16px 10px; text-align: center; }
+.task-stat-num{ font-family: var(--font-display); font-size: 28px; font-weight: 500; color: var(--ayocin-dark); line-height: 1; }
+.task-stat-lbl{ font-size: 10px; letter-spacing:.04em; color: var(--ink-muted); margin-top: 6px; font-weight: 500; text-transform: uppercase; }
+.task-stat.today{ border-color: var(--ayocin-bronze); background: rgba(176, 149, 117, 0.12); }
+.task-stat.today .task-stat-num{ color: var(--ayocin-deep-bronze); }
+.task-stat.overdue{ border-color: var(--status-danger); background: var(--status-danger-bg); }
+.task-stat.overdue .task-stat-num{ color: var(--status-danger); }
+.task-input-row{ display: flex; gap: 0; margin-bottom: 16px; border-radius: var(--radius-pill); border: 1px solid var(--ayocin-border); background: var(--ayocin-cream); overflow: hidden; }
+.task-input-row input{ flex: 1; padding: 10px 16px; border: none; background: transparent; font-size: 13px; outline: none; }
+.task-list{ display: flex; flex-direction: column; gap: 6px; }
+.task-item{ display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--ayocin-cream); border: 1px solid var(--ayocin-border); border-radius: var(--radius-card); }
+.task-item.done{ opacity: .45; }
+.task-item.done .task-text{ text-decoration: line-through; }
+
+.admin-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media(max-width:900px){ .admin-grid{ grid-template-columns: 1fr; } }
+.admin-card{ background: var(--ayocin-cream); border: 1px solid var(--ayocin-border); border-radius: var(--radius-card); padding: 22px; }
+.admin-list{ max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding-right: 6px; }
+.admin-item{ display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--bg-sand-subtle); border: 1px solid var(--ayocin-border); border-radius: var(--radius-card); }
+
+.import-box{ background: var(--ayocin-cream); border: 2px dashed var(--ayocin-border-strong); border-radius: var(--radius-card); padding: 35px 20px; text-align: center; cursor: pointer; transition: 0.2s; }
+.import-box:hover{ border-color: var(--ayocin-bronze); background: rgba(176, 149, 117, 0.1); }
+
+.preview-table-wrap{ max-height: 280px; overflow-y: auto; border: 1px solid var(--ayocin-border); border-radius: 8px; margin: 12px 0; }
+.preview-table{ width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
+.preview-table th{ position: sticky; top: 0; background: var(--ayocin-dark); color: var(--ayocin-sand-dark); padding: 8px 10px; font-weight: 700; z-index: 10; }
+.preview-table td{ padding: 6px 10px; border-bottom: 1px solid var(--ayocin-border); vertical-align: middle; }
+.preview-table tr:hover td{ background: rgba(176, 149, 117, 0.08); }
+.preview-scope-select{ padding: 4px 6px; border: 1px solid var(--ayocin-border-strong); border-radius: 4px; font-size: 11px; font-weight: 700; background: #fff; }
+
+.overlay{ position: fixed; inset: 0; background: rgba(46, 37, 33, 0.55); z-index: 5000; display: none; }
+.modal{
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  background: var(--ayocin-cream); border: 1px solid var(--ayocin-border-strong);
+  border-radius: var(--radius-card); padding: 28px; display: none; z-index: 5001;
+  width: 440px; max-width: 94vw;
+  animation: modalIn 0.45s var(--ease-ayocin) both;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translate(-50%, -48%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+.modal.show{ display: block; }
+.modal h2{ font-family: var(--font-display); font-size: 22px; font-weight: 500; line-height: 1.1; margin-bottom: 16px; letter-spacing: -0.02em; }
+.form-field label{ display: block; font-size: 10px; font-weight: 500; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+.form-field input, .form-field select, .form-field textarea{
+  width: 100%; padding: 10px 12px; border: 1px solid var(--ayocin-border-strong); border-radius: var(--radius-sm);
+  background: transparent; font-size: 12px; outline: none; color: var(--ink-primary);
+}
+.form-field{ margin-bottom: 14px; }
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus{ border-color: var(--ayocin-dark); }
+.m-btns{ display: flex; gap: 8px; margin-top: 18px; }
+.m-btn{ flex: 1; padding: 10px; border-radius: var(--radius-pill); font-weight: 700; font-size: 12px; border: 1px solid var(--ayocin-border); background: transparent; }
+.m-save{ background: var(--ayocin-dark); color: var(--ayocin-sand); border-color: var(--ayocin-dark); }
+
+.toast-stack{ position: fixed; bottom: 18px; right: 18px; z-index: 9999; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.toast{ display: flex; align-items: center; gap: 9px; background: var(--ayocin-dark); color: var(--ayocin-cream); border-radius: var(--radius-pill); padding: 10px 18px; font-size: 12px; font-weight: 500; opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .35s; border: 1px solid rgba(252,246,236,0.12); }
+.toast.show{ opacity: 1; transform: translateY(0); }
+.toast .dot{ width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--ayocin-sand-dark); }
+.toast.t-error .dot{ background: var(--status-danger); }
+.toast.t-warn .dot{ background: var(--ayocin-bronze); }
 </style>
 </head>
-<body>
+<body id="appBody" class="view-M">
 
-<!-- SIMPLE LOGIN OVERLAY -->
-<div id="simple-login-modal" style="position:fixed; inset:0; z-index:9999; background:var(--bg-tertiary); display:flex; flex-direction:column; justify-content:center; align-items:center;">
-  <div style="background:var(--bg-secondary); padding:2.5rem; border-radius:var(--radius); box-shadow:var(--shadow-lg); width:100%; max-width:400px; text-align:center;">
-    <div style="width:48px; height:48px; background:linear-gradient(135deg, var(--accent), var(--accent-hover)); border-radius:8px; display:inline-flex; align-items:center; justify-content:center; color:white; font-size:24px; margin-bottom:1rem;">⚡</div>
-    <h2 style="font-size:1.5rem; font-weight:800; margin-bottom:1.5rem;">SOLPRO Start</h2>
-    <input type="email" id="user-email-input" class="input" placeholder="E-Mail eingeben (z.B. admin@...)" style="margin-bottom:1rem; text-align:center; padding: 0.75rem; font-size:1rem;">
-    <button class="btn btn-primary" style="width:100%; justify-content:center; font-size:1rem; padding: 0.75rem;" onclick="performSoftLogin()">System betreten</button>
+<div class="grid-overlay"></div>
+<div class="grain-overlay"></div>
+<div class="ambient-glow glow-top"></div>
+<div class="ambient-glow glow-bottom"></div>
+
+<!-- 1. LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-tag">Operations Suite</div>
+    <div class="login-headline">SOLPRO</div>
+    <div class="login-sub">Solar &amp; Resource Scheduling<br>Where operations meet clarity.</div>
+    <div class="form-field" style="text-align:left">
+      <label>Passwort</label>
+      <input type="password" id="loginPassword" placeholder="Passwort eingeben…">
+    </div>
+    <button class="btn-ayocin primary" style="width:100%;margin-top:16px;justify-content:center" onclick="tryLogin()">
+      <span>System öffnen</span>
+      <div class="btn-icon-circle"><svg width="10" height="9" viewBox="0 0 10 9" fill="none"><path d="M1 4.5h7.5M5.5 1.5L8.5 4.5 5.5 7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </button>
   </div>
 </div>
 
-<!-- NAVIGATION -->
-<nav class="nav-container">
-  <div class="navbar">
-    <a href="#" class="nav-brand">
-      <div class="nav-brand-icon">⚡</div><span>SOLPRO</span>
-    </a>
-    
-    <div class="nav-links">
-      <button class="nav-link active" onclick="switchPage('home')">Home</button>
-      <button class="nav-link admin-only" onclick="switchPage('setup')">Setup</button>
-      <button class="nav-link admin-only" onclick="switchPage('plans')">Plans</button>
-      <button class="nav-link admin-only" onclick="switchPage('about')">About</button>
-      <button class="nav-link admin-only" onclick="switchPage('faq')">FAQ</button>
+<div id="loader"><div class="spinner"></div><div class="loader-text" id="loaderText">Lade Suite…</div></div>
+
+<!-- DER INTERAKTIVE TOOLTIP -->
+<div id="hoverTooltip"></div>
+
+<!-- 2. PROJEKT-SEITENLEISTE (ADMIN ONLY) -->
+<div class="project-sidebar admin-only" id="projectSidebar">
+  <div class="project-sidebar-head">
+    <span class="project-sidebar-title">Projekt-Pool</span>
+  </div>
+
+  <!-- DIE ZWEI GROSSEN REITER -->
+  <div class="pool-segment-wrap">
+    <button class="pool-segment-btn active" id="btnPoolOpen" onclick="setPoolTab('open')">Zu Planen (<span id="countOpen">0</span>)</button>
+    <button class="pool-segment-btn" id="btnPoolDone" onclick="setPoolTab('done')">Eingeteilt (<span id="countDone">0</span>)</button>
+  </div>
+
+  <div class="project-sidebar-body">
+    <input type="text" class="list-search" id="plannerSearch" placeholder="Nachname / Baustelle…" onkeyup="renderPalette()">
+    <select id="plannerStatus" onchange="renderPalette()">
+      <option value="">Alle Gewerke</option>
+      <option value="scope_both">Nur Komplettaufträge (DC+AC)</option>
+      <option value="scope_dc">Nur reine Montage (Nur DC)</option>
+      <option value="scope_ac">Nur reine Elektrik (Nur AC)</option>
+    </select>
+  </div>
+  <div class="project-list" id="paletteUI"></div>
+  <div class="project-sidebar-resizer" id="sidebarResizer" title="Ziehen zum Vergrößern/Verkleinern"></div>
+</div>
+
+<!-- 3. HAUPTBEREICH -->
+<div class="main-wrapper">
+
+  <div class="topbar">
+    <div class="logo">SOL<span>PRO</span> <span class="logo-badge" id="roleBadge">Suite</span></div>
+    <div class="topbar-hint admin-only">
+      Multi-Termine: Klick auf Zelle stapelt Termine · Klick auf <b>[DC|AC]</b> schaltet Gewerk um
     </div>
-    
-    <div style="display:flex; align-items:center; gap: 0.75rem;">
-        <div id="current-user-display" style="font-size:0.875rem; font-weight:700; color:var(--text-secondary);">?</div>
-        <button class="btn btn-ghost" style="padding: 0.35rem 0.5rem;" onclick="softLogout()" title="Ausloggen">🚪</button>
-        <div style="width:1px; height:24px; background:var(--border);" class="admin-only"></div>
-        <button class="btn btn-secondary admin-only" onclick="openModal('config-modal')">⚙️ Config</button>
-        <button class="btn btn-primary admin-only" onclick="createNewProject()">+ Neues Projekt</button>
+    <div style="margin-left:auto">
+      <button class="btn-ayocin" onclick="logout()" title="Abmelden">Abmelden</button>
     </div>
   </div>
-</nav>
 
-<main class="main-container">
-  
-  <!-- HOME PAGE -->
-  <div id="page-home">
-    <header class="page-header">
-      <h1 class="page-title">PV Planungssystem</h1>
-      <p class="page-subtitle">Modulare Stringplanung & Anlagen Management</p>
-    </header>
-    
-    <!-- SPLIT-LAYOUT: SIDEBAR LINKS | MAIN-PANEL RECHTS -->
-    <div class="home-layout">
+  <div class="tab-nav" id="tabNav">
+    <div class="tab active admin-only" data-tab="planner">Planer</div>
+    <div class="tab" data-tab="monteur">Monteur-Wochenplan</div>
+    <div class="tab admin-only" data-tab="tasks">Aufgaben</div>
+    <div class="tab admin-only" data-tab="import">Taifun Import</div>
+    <div class="tab admin-only" data-tab="admin">Verwaltung</div>
+  </div>
+
+  <div class="app-main">
+
+    <!-- PLANER VIEW -->
+    <div id="view-planner" class="view active admin-only">
+      <div class="planner-header">
+        <div class="kpi-row" id="kpiRow"></div>
+      </div>
       
-      <!-- ===== LINKSTE SIDEBAR (Menu-Block) ===== -->
-      <aside class="left-sidebar">
-        <!-- Das gewählte Projekt (immer zu sehen) -->
-        <div class="sidebar-group">
-          <h3>Aktives Projekt</h3>
-          <div style="background:var(--bg-tertiary); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border); text-align:center;">
-            <strong style="font-size:0.9rem;" id="project-name-display">Neues Projekt</strong><br>
-            <span style="font-size: 0.75rem; color:var(--text-muted);">(<span id="project-wp-display">465</span> Wp Module)</span>
+      <div class="planner-toolbar">
+        <div class="seg" id="viewModeSegment">
+          <button class="btn-seg" data-view="W" onclick="switchViewMode('W')">Woche</button>
+          <button class="btn-seg active" data-view="M" onclick="switchViewMode('M')">Monat</button>
+          <button class="btn-seg" data-view="J" onclick="switchViewMode('J')">Jahr</button>
+        </div>
+
+        <button class="btn-ayocin" onclick="scrollToToday()">
+          <span>Heute</span>
+        </button>
+        <button class="btn-ayocin btn-lock locked" id="btnLock" onclick="togglePlannerLock()">Gesperrt</button>
+        <button class="btn-ayocin" id="btnUndo" onclick="undoPaint()">Rückgängig</button>
+        <button class="btn-ayocin primary" onclick="openBusExportModal()">
+          <span>Bus-Wochenzettel</span>
+          <div class="btn-icon-circle"><svg width="10" height="9" viewBox="0 0 10 9" fill="currentColor"><path d="M1 4.5h7.5M5.5 1.5L8.5 4.5 5.5 7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </button>
+      </div>
+
+      <div class="planner-grid-wrap" id="gridWrap">
+        <table id="theTable">
+          <thead id="gridHead"></thead>
+          <tbody id="gridBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MONTEUR WOCHENANSICHT -->
+    <div id="view-monteur" class="view">
+      <div class="monteur-shell">
+        <h2>Monteur-Wochenplan</h2>
+        <div class="task-sub">Einsatzplan für die gesamte Arbeitswoche (Montag bis Freitag)</div>
+
+        <div style="background:var(--ayocin-cream);padding:16px;border-radius:var(--radius-card);border:1px solid var(--ayocin-border);margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:180px">
+            <label style="font-size:10px;font-weight:700;color:var(--ink-muted);text-transform:uppercase;display:block;margin-bottom:4px">Dein Bus / Partie:</label>
+            <select id="monteurBusSelect" onchange="saveMonteurBusPref(); renderMonteurView()" style="padding:8px 12px;border-radius:var(--radius-pill);border:1px solid var(--ayocin-border);width:100%;font-weight:700;background:#fff"></select>
           </div>
-          <button class="btn btn-secondary sidebar-btn admin-only" onclick="openModal('config-modal')">⚙️ Projekt editieren</button>
+          <div style="min-width:160px">
+            <label style="font-size:10px;font-weight:700;color:var(--ink-muted);text-transform:uppercase;display:block;margin-bottom:4px">Kalenderwoche:</label>
+            <select id="monteurKwSelect" onchange="renderMonteurView()" style="padding:8px 12px;border-radius:var(--radius-pill);border:1px solid var(--ayocin-border);width:100%;font-weight:700;background:#fff"></select>
+          </div>
         </div>
 
-        <!-- CLOUD LADEN / SYNCEN -->
-        <div class="sidebar-group">
-          <h3>Auftrags Sync</h3>
-          <button class="btn btn-secondary sidebar-btn" style="border:1px solid var(--accent); color:var(--accent);" onclick="loadFromCloudList()">📥 Aus Cloud Abrufen</button>
-          <button class="btn btn-success sidebar-btn admin-only" onclick="saveToCloud()">☁️ (Admin) Senden</button>
+        <div id="monteurWeekContainer"></div>
+      </div>
+    </div>
+
+    <!-- AUFGABEN VIEW -->
+    <div id="view-tasks" class="view admin-only">
+      <div class="task-shell">
+        <h2>Meine Aufgaben</h2>
+        <div class="task-sub" id="taskCount">0 offen</div>
+        <div class="task-monitor">
+          <div class="task-stat overdue">
+            <div class="task-stat-num" id="tmOverdue">0</div>
+            <div class="task-stat-lbl">Überfällig</div>
+          </div>
+          <div class="task-stat today">
+            <div class="task-stat-num" id="tmToday">0</div>
+            <div class="task-stat-lbl">Heute</div>
+          </div>
+          <div class="task-stat">
+            <div class="task-stat-num" id="tmToPlan">0</div>
+            <div class="task-stat-lbl">Offen</div>
+          </div>
+        </div>
+        <div class="task-input-row">
+          <input type="text" id="taskInput" placeholder="Neue Aufgabe eingeben (Enter)...">
+          <input type="date" id="taskDueDate" style="width:140px;border-left:1px solid var(--ayocin-border);border-radius:0">
+          <button class="btn-ayocin primary" id="btnAddTask" onclick="addTask()" style="border-radius:0;border:none;min-height:auto;padding:0 20px">
+            <span>+</span>
+          </button>
+        </div>
+        <div class="task-list" id="taskList"></div>
+      </div>
+    </div>
+
+    <!-- IMPORT VIEW -->
+    <div id="view-import" class="view admin-only">
+      <div class="task-shell">
+        <h2>Taifun Import</h2>
+        <div class="task-sub" style="margin-bottom:20px;text-transform:none">
+          Lade deine Taifun HTML-Datei hoch. Du kannst in der Tabelle vor dem Speichern für jedes Projekt genau auswählen, ob es <b>DC+AC</b>, <b>Nur DC</b> oder <b>Nur AC</b> ist!
         </div>
 
-        <!-- MAPPING & MODULE ZUORDNEN (Für alle / Bauleitung & Admin) -->
-        <div class="sidebar-group">
-          <h3>Zuweisung (Mapping)</h3>
-          <button class="btn btn-secondary sidebar-btn" onclick="importPVSOL()">📥 PV*SOL .json Laden</button>
-          <button class="btn btn-primary sidebar-btn" onclick="openMappingModal()">🔗 PV*SOL Flächen verknüpfen</button>
-          <button class="btn btn-secondary sidebar-btn" onclick="openAreaCalculator()">📐 Flächen-Calculator</button>
-        </div>
-
-        <!-- DOKUMENTATION EXPORTE (NUR ADMIN) -->
-        <div class="sidebar-group admin-only">
-          <h3>Anlagen Dokumentation</h3>
-          <button class="btn btn-success sidebar-btn" onclick="exportGakExcel()">🏷️ GAK Aufkleber Excel</button>
-          <button class="btn btn-secondary sidebar-btn" onclick="exportProtocol()">📊 Prüfprotokoll</button>
-          <button class="btn btn-secondary sidebar-btn" onclick="exportCSV()">📄 Rohdaten CSV</button>
-          <div style="height:1px; background:var(--border); margin:0.25rem 0;"></div>
-          <button class="btn btn-secondary sidebar-btn" onclick="showValidation()">✓ Validierung checken</button>
-          <button class="btn btn-secondary sidebar-btn" onclick="printMontagePlan()">🖨️ PDF Montageplan</button>
-        </div>
-      </aside>
-      
-      <!-- ===== RECHTES HAUPTPANEL ===== -->
-      <div class="main-panel">
-
-        <!-- Ansicht 1: Grußkarte für Techniker vor Ort -->
-        <div id="sven-greeting" style="display:none; text-align:center; padding: 4rem 1rem; border:2px dashed var(--border); border-radius:var(--radius-lg); margin-top:0;">
-            <h2 style="font-size:2.5rem; margin-bottom:1rem;">Willkommen im System! 👷‍♂️</h2>
-            <p style="color:var(--text-secondary); max-width:600px; margin: 0 auto; font-size:1.1rem; line-height:1.6;">
-              Wähle links im Menü zuerst <b>"📥 Aus Cloud Abrufen"</b>, um dein zugewiesenes Projekt automatisch zu synchronisieren.<br><br>
-              Anschließend lädst du die PVSol Datei hoch und klickst auf <b>"🔗 Flächen verknüpfen"</b>. So erzeugst du ohne Excel sofort alle Pläne und Daten!
-            </p>
-        </div>
-
-        <!-- Ansicht 2: Das Riesen Dashboard & Matrix Panel für Admin -->
-        <div id="admin-workspace" class="admin-only">
+        <div style="background:var(--ayocin-cream);padding:16px;border-radius:var(--radius-card);border:1px solid var(--ayocin-border);margin-bottom:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <label style="font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px">
+                <span>Import ab Datum:</span>
+                <input type="date" id="importStartDate" value="2026-08-24" onchange="reFilterImport()" style="padding:4px 10px;border:1px solid var(--ayocin-border);border-radius:var(--radius-pill);font-size:12px">
+              </label>
+            </div>
             
-            <div class="dashboard">
-              <div class="stat-card"><div class="stat-label">Leistung</div><div class="stat-value"><span id="d-pwr">0.00</span><span class="stat-unit">kWp</span></div></div>
-              <div class="stat-card"><div class="stat-label">Module Gesamt</div><div class="stat-value" id="d-mods">0</div></div>
-              <div class="stat-card"><div class="stat-label">Aktive Strings</div><div class="stat-value"><span id="d-act">0</span><span class="stat-unit">/</span><span id="d-total">0</span></div></div>
-              <div class="stat-card"><div class="stat-label">Wechselrichter</div><div class="stat-value" id="d-wr-count">0</div></div>
-            </div>
-
-            <!-- TABS & INVERTERS MATRIX -->
-            <div class="filter-tabs" id="filter-tabs">
-              <button class="filter-tab active" onclick="filterInverter(0, this)">⚡ Alle WRs</button>
-            </div>
-            <div id="inverter-cards"></div>
-            
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- LEERGELEGTE EXTRAS, UM CODE LAUFFÄHIG ZU HALTEN (Setups, About, Plans...) -->
-  <div id="page-setup" style="display: none;"><header class="page-header"><h1 class="page-title">Setup / Sync Status</h1></header></div>
-  <div id="page-plans" style="display: none;"><header class="page-header"><h1 class="page-title">Templates</h1></header></div>
-  <div id="page-about" style="display: none;"><header class="page-header"><h1 class="page-title">About</h1></header></div>
-  <div id="page-faq" style="display: none;"><header class="page-header"><h1 class="page-title">FAQ</h1></header></div>
-  
-</main>
-<!-- ========================================== -->
-<!-- MODALS -->
-<!-- ========================================== -->
-
-<!-- FLÄCHEN MAPPING (PV*SOL) MODAL -->
-<div class="modal-overlay" id="pvsol-mapping-modal">
-  <div class="modal" style="max-width:800px;">
-    <div class="modal-header">
-      <h2 class="modal-title">PV*SOL Modulflächen zuweisen</h2>
-      <button class="modal-close" onclick="closeModal('pvsol-mapping-modal')">&times;</button>
-    </div>
-    
-    <div class="modal-body">
-      <div style="background:var(--bg-tertiary); padding: 0.75rem 1rem; border-radius:var(--radius-sm); margin-bottom:1rem; border:1px solid var(--border); font-size:0.875rem; color:var(--text-secondary);">
-         💡 <b>Schritt:</b> Wähle für jede importierte Fläche den passenden Wechselrichter-Eingang aus. Die Modulanzahl und die Bezeichnung werden automatisch in die Prüfmatrix übernommen.
-      </div>
-      <div id="mapping-container" style="display:flex; flex-direction:column; gap:0.75rem; max-height:400px; overflow-y:auto; padding-right:0.25rem;">
-         <!-- Wird dynamisch durch JavaScript befüllt -->
-      </div>
-    </div>
-    
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('pvsol-mapping-modal')">Abbrechen</button>
-      <button class="btn btn-primary" onclick="applyPvsolMapping()">✓ Matrix aktualisieren & Speichern</button>
-    </div>
-  </div>
-</div>
-
-<!-- PV*SOL IMPORT MODAL -->
-<div class="modal-overlay" id="pvsol-import-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 class="modal-title">PV*SOL JSON Import</h2>
-      <button class="modal-close" onclick="closeModal('pvsol-import-modal')">&times;</button>
-    </div>
-    
-    <div class="modal-body">
-      <div class="config-section">
-        <div class="config-section-title">PV*SOL Exportdatei laden</div>
-        <div style="background:var(--bg-tertiary); padding:1rem; border-radius:var(--radius-sm); margin-bottom:1rem;">
-          <p style="font-size:0.875rem; color:var(--text-secondary); margin-bottom:0.5rem;">
-            Wähle die aus PV*SOL exportierte JSON-Datei aus. Die erkannten Modulflächen stehen danach sofort für die Zuweisung bereit.
-          </p>
-        </div>
-        
-        <div class="config-row">
-          <input type="file" id="pvsol-file-input" accept=".json" class="input config-select" style="max-width:300px;">
-          <button class="btn btn-primary" onclick="processPVSOLImport()">Einlesen</button>
-        </div>
-        
-        <div id="pvsol-import-status" style="margin-top:1rem; padding:0.75rem; background:var(--bg-tertiary); border-radius:var(--radius-sm); display:none;">
-          <div style="font-size:0.875rem; color:var(--text-secondary);" id="pvsol-import-message"></div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('pvsol-import-modal')">Schließen</button>
-    </div>
-  </div>
-</div>
-
-<!-- AREA CALCULATOR MODAL -->
-<div class="modal-overlay" id="area-calculator-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 class="modal-title">Flächen-Belegungsrechner</h2>
-      <button class="modal-close" onclick="closeModal('area-calculator-modal')">&times;</button>
-    </div>
-    
-    <div class="modal-body">
-      <div class="config-section">
-        <div class="config-section-title">Flächen definieren</div>
-        <div class="config-row">
-          <span class="config-label">Fläche 1 (m²):</span>
-          <input type="number" id="area-1" class="input input-compact" placeholder="z.B. 50">
-          <span class="config-label">Neigung (°):</span>
-          <input type="number" id="tilt-1" class="input input-compact" value="30">
-          <span class="config-label">Ausrichtung (°):</span>
-          <input type="number" id="azimuth-1" class="input input-compact" value="180">
-        </div>
-        <div class="config-row">
-          <span class="config-label">Fläche 2 (m²):</span>
-          <input type="number" id="area-2" class="input input-compact" placeholder="z.B. 40">
-          <span class="config-label">Neigung (°):</span>
-          <input type="number" id="tilt-2" class="input input-compact" value="30">
-          <span class="config-label">Ausrichtung (°):</span>
-          <input type="number" id="azimuth-2" class="input input-compact" value="180">
-        </div>
-        <div class="config-row">
-          <button class="btn btn-secondary" onclick="addMoreAreas()">+ Weitere Fläche</button>
-        </div>
-      </div>
-      
-      <div class="config-section">
-        <div class="config-section-title">Modul-Spezifikationen</div>
-        <div class="config-row">
-          <span class="config-label">Modul-Wp:</span>
-          <input type="number" id="module-wp" class="input input-compact" value="465">
-          <span class="config-label">Abstand (m):</span>
-          <input type="number" id="module-spacing" class="input input-compact" value="0.1" step="0.01">
-        </div>
-        <div class="config-row">
-          <span class="config-label">Maße (m):</span>
-          <input type="number" id="module-width" class="input input-compact" value="1.7" step="0.1" placeholder="B">
-          <span>×</span>
-          <input type="number" id="module-height" class="input input-compact" value="1.1" step="0.1" placeholder="H">
-        </div>
-      </div>
-      
-      <div class="config-section">
-        <button class="btn btn-primary" onclick="calculateOptimalLayout()">📊 Belegung berechnen</button>
-        <div id="layout-results" style="margin-top:1rem; display:none;"></div>
-      </div>
-    </div>
-    
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('area-calculator-modal')">Abbrechen</button>
-      <button class="btn btn-success" onclick="applyLayoutProposal()">✓ Für Mapping übernehmen</button>
-    </div>
-  </div>
-</div>
-
-<!-- NEW PROJECT MODAL -->
-<div class="modal-overlay" id="new-project-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 class="modal-title">Neues Projekt anlegen</h2>
-      <button class="modal-close" onclick="closeModal('new-project-modal')">&times;</button>
-    </div>
-    
-    <div class="modal-body">
-      <div class="config-section">
-        <div class="config-section-title">Projekt-Informationen</div>
-        <div class="config-row">
-          <span class="config-label">Projekt-Name:</span>
-          <input type="text" id="new-project-name" class="input config-select" placeholder="z.B. PV Dachstraße 123" style="max-width: 300px;">
-        </div>
-        <div class="config-row">
-          <span class="config-label">Template:</span>
-          <select id="new-project-template" class="input config-select" style="max-width: 300px;">
-            <option value="">-- Standard (1x WR) --</option>
-            <option value="sma_standard">SMA Standard (6x STP125)</option>
-            <option value="huawei_mix">Huawei Mix (2x 100KTL + 2x 50KTL)</option>
-            <option value="small_system">Kleinanlage (2x STP80)</option>
-          </select>
-        </div>
-        <div class="config-row">
-          <span class="config-label">Modul-Wp:</span>
-          <input type="number" id="new-project-wp" class="input input-compact" value="465">
-        </div>
-      </div>
-    </div>
-    
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('new-project-modal')">Abbrechen</button>
-      <button class="btn btn-primary" onclick="confirmNewProject()">✓ Anlegen</button>
-    </div>
-  </div>
-</div>
-
-<!-- CONFIG MODAL -->
-<div class="modal-overlay" id="config-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 class="modal-title">Projekt-Konfiguration</h2>
-      <button class="modal-close" onclick="closeModal('config-modal')">&times;</button>
-    </div>
-    
-    <div class="modal-body">
-      <div class="filter-tabs" style="margin-bottom: 1.5rem;">
-        <button class="filter-tab active" onclick="showConfigTab('basic')">Basis</button>
-        <button class="filter-tab" onclick="showConfigTab('projects')">Projekte</button>
-      </div>
-      
-      <!-- Basic Tab -->
-      <div id="config-tab-basic" class="config-tab-content">
-        <div class="config-section">
-          <div class="config-section-title">Projekt-Stammdaten</div>
-          <div class="config-row">
-            <span class="config-label">Projekt-Name:</span>
-            <input type="text" id="cfg-project-name" class="input config-select" value="PV MAN P52">
-          </div>
-          <div class="config-row">
-            <span class="config-label">Modul-Wp:</span>
-            <input type="number" id="cfg-model-wp" class="input input-compact" value="465">
-          </div>
-          
-          <!-- ZUWEISUNG AN NUTZER -->
-          <div class="config-row" style="background:rgba(245, 158, 11, 0.08); padding: 0.75rem; border-radius:var(--radius-sm); border:1px dashed var(--warning); margin-top:0.5rem;">
-            <span class="config-label" style="font-weight:700; color:var(--warning);">👤 Freigabe-E-Mail:</span>
-            <input type="email" id="cfg-assigned-email" class="input config-select" placeholder="z.B. sven@bau.de">
-            <div style="font-size:0.75rem; width:100%; color:var(--text-muted); margin-left: 120px;">
-              Nur dieser Bauleiter sieht dieses Projekt nach dem Login im System.
-            </div>
+            <button class="btn-ayocin danger" onclick="deleteAllProjects()">🧨 Alle alten Projekte löschen (Reset)</button>
           </div>
         </div>
         
-        <div class="config-section">
-          <div class="config-section-title">Wechselrichter hinzufügen</div>
-          <div class="config-row">
-            <span class="config-label">MPPTs:</span>
-            <input type="number" id="cfg-mppts" class="input input-compact" value="12" min="1" max="48">
-            <span class="config-label">Inputs / MPPT:</span>
-            <input type="number" id="cfg-inputs" class="input input-compact" value="2" min="1" max="4">
-            <button class="btn btn-success" onclick="addCustomInverter()">+ WR Hinzufügen</button>
-          </div>
-          
-          <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--border);">
-            <div class="config-row">
-              <span class="config-label">Oder Preset:</span>
-              <select id="cfg-preset-type" class="input config-select" style="max-width:200px;">
-                <option value="">-- Typ wählen --</option>
-                <option value="SMA_STP125">SMA STP 125 (12 MPPT)</option>
-                <option value="SMA_STP100">SMA STP 100 (10 MPPT)</option>
-                <option value="SMA_STP80">SMA STP 80 (8 MPPT)</option>
-                <option value="HUAWEI_2000_100KTL">Huawei 100KTL (10 MPPT)</option>
-                <option value="HUAWEI_2000_50KTL">Huawei 50KTL (4 MPPT)</option>
-                <option value="FRONIUS_SYMO">Fronius Symo (6 MPPT)</option>
-              </select>
-              <button class="btn btn-secondary" onclick="addPresetInverter()">Preset anwenden</button>
-            </div>
-          </div>
+        <input type="file" id="fileInput" accept=".html" style="display:none" onchange="handleFileUpload(event)">
+        <div class="import-box" onclick="document.getElementById('fileInput').click()">
+          <div style="font-size:32px;margin-bottom:12px">📄</div>
+          <div style="font-weight:700;font-size:15px;color:var(--ayocin-dark)">Klicken oder HTML-Datei hier ablegen</div>
+          <div style="font-size:11px;color:var(--ink-muted);margin-top:4px">Liest nur Termine ab dem Startdatum ein</div>
         </div>
+
+        <div id="importResult" style="display:none;margin-top:20px;background:var(--ayocin-cream);padding:20px;border-radius:var(--radius-card);border:1px solid var(--ayocin-border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <h3 style="font-size:14px;font-weight:800">Gefundene Projekte (<b id="impProjCount" style="color:var(--ayocin-dark)">0</b>):</h3>
+            <span style="font-size:10px;color:var(--ink-muted)">Gewerke-Umfang bei Bedarf auswählen:</span>
+          </div>
+
+          <div class="preview-table-wrap">
+            <table class="preview-table">
+              <thead>
+                <tr>
+                  <th style="width:5%">Nr.</th>
+                  <th style="width:14%">Datum</th>
+                  <th style="width:24%">Gewerke-Umfang (Auswählen!)</th>
+                  <th style="width:13%">Projekt-ID</th>
+                  <th style="width:24%">Name / Baustelle</th>
+                  <th style="width:20%">Material / Notizen</th>
+                </tr>
+              </thead>
+              <tbody id="previewTableBody"></tbody>
+            </table>
+          </div>
+
+          <button class="btn-ayocin primary" style="width:100%;margin-top:10px" onclick="saveImportToDB()">
+            <span>Diese Projekte jetzt speichern</span>
+            <div class="btn-icon-circle"><svg width="10" height="9" viewBox="0 0 10 9" fill="currentColor"><path d="M1 4.5h7.5M5.5 1.5L8.5 4.5 5.5 7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VERWALTUNG VIEW (ADMIN) -->
+    <div id="view-admin" class="view admin-only">
+      <div class="task-shell" style="max-width:1000px">
+        <h2>⚙️ Verwaltung</h2>
+        <div class="task-sub" style="margin-bottom:20px">Busse anlegen & Projekte / Baustellen anpassen</div>
         
-        <div class="config-section">
-          <div class="config-section-title">Konfigurierte Wechselrichter</div>
-          <div class="config-item-list" id="wr-list"></div>
-        </div>
-      </div>
-      
-      <!-- Projects Tab -->
-      <div id="config-tab-projects" class="config-tab-content" style="display: none;">
-        <div class="config-section">
-          <div class="config-section-title">Gespeicherte lokale Projekte</div>
-          <div class="config-item-list" id="projects-list"></div>
+        <div class="admin-grid">
+          <div class="admin-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <h3 style="font-size:14px;font-weight:800">Projekte & Kunden</h3>
+              <div style="display:flex;gap:6px">
+                <button class="btn-ayocin danger" style="font-size:9px;padding:3px 10px;min-height:auto" onclick="deleteAllProjects()">🧨 Alle löschen</button>
+                <button class="btn-ayocin primary" style="padding:4px 12px;min-height:auto" onclick="openAdminProjectModal()">+ Neu</button>
+              </div>
+            </div>
+            <input type="text" id="adminProjSearch" placeholder="Suchen..." style="width:100%;padding:8px 12px;font-size:12px;border:1px solid var(--ayocin-border);border-radius:var(--radius-pill)" onkeyup="renderAdminProjects()">
+            <div class="admin-list" id="adminProjectList"></div>
+          </div>
+
+          <div class="admin-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <h3 style="font-size:14px;font-weight:800">Busse & Teams</h3>
+              <button class="btn-ayocin primary" style="padding:4px 12px;min-height:auto" onclick="openAdminBusModal()">+ Neuer Bus</button>
+            </div>
+            <div class="admin-list" id="adminBusList"></div>
+          </div>
         </div>
       </div>
     </div>
-    
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('config-modal')">Abbrechen</button>
-      <button class="btn btn-primary" onclick="applyConfig()">✓ Konfiguration anwenden</button>
-    </div>
+
   </div>
 </div>
 
-<!-- TOAST NOTIFICATION -->
-<div class="toast" id="toast"></div>
+<!-- AYOCIN WOCHENPLAN MODAL -->
+<div class="modal" id="busExportModal" style="width:520px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div class="explorer-meta-tag">AYOCIN // EXPORT</div>
+    <div style="font-size:11px;color:var(--ink-muted);font-weight:600">Druckfertig</div>
+  </div>
+  <h2 style="margin-bottom:4px">Partie-Wochenzettel drucken</h2>
+  <div style="font-size:11px;color:var(--ink-muted);margin-bottom:16px">Erstellt einen druckfertigen Wochen-Einsatzplan für das ausgewählte Team.</div>
 
-<!-- DARK MODE TOGGLE -->
-<button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Dark Mode umschalten">
-  <svg id="dark-mode-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-  </svg>
-</button>
+  <div class="form-field">
+    <label>Bus / Partie</label>
+    <select id="exportBusSelect" onchange="renderExportPreview()"></select>
+  </div>
 
-<!-- ========================================== -->
-<!-- JAVASCRIPT LOGIK                           -->
-<!-- ========================================== -->
+  <div class="form-field">
+    <label>Kalenderwoche (KW)</label>
+    <select id="exportKwSelect" onchange="renderExportPreview()"></select>
+  </div>
+
+  <div class="form-field">
+    <label>Zusätzliche Bemerkungen (z.B. Auswärtsmontage):</label>
+    <textarea id="exportRemarks" rows="2" placeholder="z.B. Auswärtsmontage Seekirchen · Hotel gebucht · 40m Gerüst vor Ort..." oninput="renderExportPreview()"></textarea>
+  </div>
+
+  <div class="explorer-card">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Live-Vorschau:</div>
+    <div id="exportPreviewList" style="max-height:180px;overflow-y:auto"></div>
+  </div>
+
+  <div class="m-btns">
+    <button class="btn-ayocin primary m-save" style="width:100%" onclick="executeBusPrint()">
+      <span>📄 Jetzt als PDF drucken</span>
+      <div class="btn-icon-circle"><svg width="10" height="9" viewBox="0 0 10 9" fill="currentColor"><path d="M1 4.5h7.5M5.5 1.5L8.5 4.5 5.5 7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </button>
+    <button class="btn-ayocin" onclick="closeModal()">Schließen</button>
+  </div>
+</div>
+
+<!-- DRUCKBLATT FÜR PDF (@MEDIA PRINT) -->
+<div id="printSheet">
+  <div class="print-header-explorer">
+    <div>
+      <span class="print-tag" id="printSheetTag">SOLPRO // KW 35</span>
+      <h1 style="margin:6px 0 2px;font-size:22px;font-weight:800" id="printSheetTitle">Einsatzplan Partie Hager</h1>
+      <div style="font-size:12px;color:#555" id="printSheetSub">Woche 35 · Zeitraum</div>
+    </div>
+    <div style="text-align:right;font-size:11px;color:#777">
+      Erstellt am: <span id="printSheetDate"></span>
+    </div>
+  </div>
+
+  <div class="print-banner" id="printSheetBanner" style="display:none">
+    <b>📢 WICHTIGE HINWEISE / BEMERKUNGEN:</b><br>
+    <span id="printSheetBannerText"></span>
+  </div>
+
+  <table class="print-table">
+    <thead>
+      <tr>
+        <th style="width:18%">Wochentag</th>
+        <th style="width:25%">Kunde & Baustelle</th>
+        <th style="width:25%">Adresse (Navigation)</th>
+        <th style="width:32%">Arbeitsauftrag & Material</th>
+      </tr>
+    </thead>
+    <tbody id="printSheetBody"></tbody>
+  </table>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="closeModal()"></div>
+
+<!-- MODAL: PROJEKT BEARBEITEN (ADMIN) -->
+<div class="modal" id="adminProjectModal">
+  <h2 id="pmTitle">Projekt bearbeiten</h2>
+  <input type="hidden" id="pmId">
+  <div class="form-field"><label>Anzeigename (z.B. Nachname oder Firma)</label><input type="text" id="pmName"></div>
+  <div class="form-field">
+    <label>Gewerke-Umfang (Welche Arbeiten fallen an?)</label>
+    <select id="pmScope">
+      <option value="both">🔧+⚡ DC + AC (Komplettauftrag)</option>
+      <option value="dc">🔧 Nur DC (Reine Montage)</option>
+      <option value="ac">⚡ Nur AC (Reine Elektrik / Speicher / IBN)</option>
+    </select>
+  </div>
+  <div class="form-field"><label>Adresse (Hover Info)</label><input type="text" id="pmAddress"></div>
+  <div class="form-field"><label>kWp (Leistung)</label><input type="number" id="pmKwp" step="0.1"></div>
+  <div class="form-field"><label>Notizen / Material / IBN Infos</label><textarea id="pmNotes" rows="3"></textarea></div>
+  <div class="form-field">
+    <label>Status</label>
+    <select id="pmStatus">
+      <option value="auftrag">Auftrag (Neu)</option>
+      <option value="eingeteilt">Eingeteilt (Bestätigt)</option>
+      <option value="im_einsatz">Im Einsatz</option>
+      <option value="abgeschlossen">Abgeschlossen</option>
+    </select>
+  </div>
+  <div class="m-btns">
+    <button class="btn-ayocin primary m-save" onclick="saveAdminProject()">Speichern</button>
+    <button class="btn-ayocin" onclick="closeModal()">Abbrechen</button>
+  </div>
+  <button class="btn-ayocin danger" id="pmDelBtn" style="width:100%;margin-top:12px;justify-content:center" onclick="deleteAdminProject()">🗑 Komplett Löschen</button>
+</div>
+
+<!-- MODAL: BUS BEARBEITEN -->
+<div class="modal" id="adminBusModal">
+  <h2 id="bmTitle">Bus bearbeiten</h2>
+  <input type="hidden" id="bmId">
+  <div class="form-field"><label>Bezeichnung (z.B. GM-SOL2, GM-SOL4)</label><input type="text" id="bmLabel"></div>
+  <div class="form-field">
+    <label>Gewerk (Wichtig für Gruppierung)</label>
+    <select id="bmTeam">
+      <option value="montage">Montage (DC)</option>
+      <option value="bauleitung">Bauleitung</option>
+      <option value="elektriker">Elektriker (AC)</option>
+    </select>
+  </div>
+  <div class="m-btns">
+    <button class="btn-ayocin primary m-save" onclick="saveAdminBus()">Speichern</button>
+    <button class="btn-ayocin" onclick="closeModal()">Abbrechen</button>
+  </div>
+  <button class="btn-ayocin danger" id="bmDelBtn" style="width:100%;margin-top:12px;justify-content:center" onclick="deleteAdminBus()">🗑 Bus Löschen</button>
+</div>
+
+<!-- MODAL: KALENDER ENTSPERREN -->
+<div class="modal" id="unlockPlannerModal">
+  <h2>Planer entsperren</h2>
+  <div style="font-size:12px;color:var(--ink-muted);margin-bottom:16px">Bitte gib das Passwort ein, um Termine im Planer eintragen oder ändern zu können.</div>
+  <div class="form-field">
+    <label>Passwort</label>
+    <input type="password" id="plannerUnlockPassword" placeholder="Passwort..." style="text-align:center;font-size:16px;letter-spacing:2px">
+  </div>
+  <div class="m-btns">
+    <button class="btn-ayocin primary m-save" onclick="submitPlannerUnlock()">Entsperren</button>
+    <button class="btn-ayocin" onclick="closeModal()">Abbrechen</button>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JAVASCRIPT LOGIK
+     ═══════════════════════════════════════════════════════════════ -->
 <script>
-// ADMIN E-MAIL HIER FESTLEGEN (Diese E-Mail erhält vollen Zugriff)
-const MASTER_ADMIN_EMAIL = "admin@deinefirma.de";
+'use strict';
 
-// SUPABASE KONFIGURATION
-const SB_URL = "https://rcuimtfmjkpxkazbsggj.supabase.co";
-const SB_KEY = "sb_publishable_pe8Ye20-e9az1D5MvNCB5A_8_ai7afc";
-const PROJECT_ID = "PV_MAN_P52";
+const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-const INVERTER_CONFIGS = {
-  "SMA_STP125": { name: "SMA Sunny Tripower 125", manufacturer: "SMA", mppts: 12, inputsPerMppt: 2, defaultWp: 465 },
-  "SMA_STP100": { name: "SMA Sunny Tripower 100", manufacturer: "SMA", mppts: 10, inputsPerMppt: 2, defaultWp: 465 },
-  "SMA_STP80": { name: "SMA Sunny Tripower 80", manufacturer: "SMA", mppts: 8, inputsPerMppt: 2, defaultWp: 465 },
-  "HUAWEI_2000_100KTL": { name: "Huawei SUN2000-100KTL", manufacturer: "Huawei", mppts: 10, inputsPerMppt: 2, defaultWp: 465 },
-  "HUAWEI_2000_50KTL": { name: "Huawei SUN2000-50KTL", manufacturer: "Huawei", mppts: 4, inputsPerMppt: 2, defaultWp: 465 },
-  "FRONIUS_SYMO": { name: "Fronius Symo", manufacturer: "Fronius", mppts: 6, inputsPerMppt: 2, defaultWp: 465 },
-  "CUSTOM": { name: "Benutzerdefiniert", manufacturer: "Custom", mppts: 12, inputsPerMppt: 2, defaultWp: 465 }
+const RANGE = { start: '2026-08-17', end: '2026-12-31' };
+const COLORS = ['#6B5A48','#5A6B52','#8C6A30','#B85834','#5C6B5E','#A8654B','#7A6B55','#9E8354','#6D597A','#5A534C'];
+function getAutoColor() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }
+
+function naturalSort(a, b) {
+  return (a.label || '').localeCompare((b.label || ''), 'de', { numeric: true, sensitivity: 'base' });
+}
+
+function extractPhone(text) {
+  if (!text) return null;
+  const match = text.match(/(?:\+43|0)\s*(?:[0-9]\s*){6,14}/);
+  return match ? match[0].trim() : null;
+}
+
+// ─── GEWERKE-UMFANG HELPER ───
+function getProjectScope(p) {
+  if (!p) return 'both';
+  const text = (p.order_id || '') + ' ' + (p.status || '');
+  if (text.includes('[DC]') || text.includes('scope_dc')) return 'dc';
+  if (text.includes('[AC]') || text.includes('scope_ac')) return 'ac';
+  return 'both';
+}
+
+function encodeScopeInNotes(scope, rawNotes) {
+  let clean = (rawNotes || '').replace(/^\[(DC|AC|DC\+AC)\]\s*/i, '').trim();
+  if (scope === 'dc') return `[DC] ${clean}`;
+  if (scope === 'ac') return `[AC] ${clean}`;
+  return `[DC+AC] ${clean}`;
+}
+
+function extractShortName(rawName, subProject) {
+  if (!rawName) return '';
+  let name = rawName.trim();
+  name = name.replace(/^z\.?H\.?d?\.?\s+[^\n,]+/i, '').trim();
+
+  const isCompany = /(gmbh|ag|kg|se|og|co\.?\s*kg|gemeinde|tischlerei|werks|gbr|mbh|solpro|efabrik|megawatt|umwelt)/i.test(name);
+
+  if (isCompany) {
+    let clean = name.replace(/\s+(gmbh|gmbh\s*&\s*co\.?\s*kg|ag|se|kg|og|e\.?u\.?)\b.*$/i, '').trim();
+    clean = clean.replace(/^(Bergschuhfabrikation|Dipl\.Ing\.|Ing\.)\s+/i, '').trim();
+    if (subProject) return `${clean} (${subProject})`;
+    return clean;
+  }
+
+  name = name.replace(/^(Dipl\.?\s*Ing\.?|DI|Dr\.?\s*(med\.?)?|Mag\.?|Ing\.?|BSc|MSc)\s*/i, '').trim();
+
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length > 0) {
+    const lastName = words[words.length - 1];
+    if (subProject) return `${lastName} (${subProject})`;
+    return lastName;
+  }
+
+  return subProject ? `${name} (${subProject})` : name;
+}
+
+function getKW(d) {
+  const x = new Date(d);
+  x.setHours(0,0,0,0);
+  x.setDate(x.getDate() + 4 - (x.getDay()||7));
+  return Math.ceil((((x - new Date(x.getFullYear(), 0, 1)) / 86400000) + 1) / 7);
+}
+
+let state = {
+  projects: [], buses: [],
+  grid: {}, 
+  todos: [],
+  activeProjId: null, isDrawing: false, selectedCells: [],
+  undoStack: [],
+  importBuffer: [], lastUploadedHtml: null, isLocked: true, userRole: null,
+  poolTab: 'open' // 'open' = Zu Planen | 'done' = Eingeteilt
 };
 
-const PLAUSIBILITY_RULES = { maxModulesPerString: 30, maxPowerPerMppt: 15, minVoltage: 200, maxVoltage: 1000, maxCurrent: 15 };
-
-let projectConfig = {
-  name: "PV MAN P52",
-  modelWp: 465,
-  assignedEmail: "",
-  inverters: [
-    { id: 1, type: "SMA_STP125", name: "WR 1" },
-    { id: 2, type: "SMA_STP125", name: "WR 2" },
-    { id: 3, type: "SMA_STP125", name: "WR 3" },
-    { id: 4, type: "SMA_STP125", name: "WR 4" },
-    { id: 5, type: "SMA_STP125", name: "WR 5" },
-    { id: 6, type: "SMA_STP125", name: "WR 6" }
-  ],
-  customMppts: 12,
-  customInputs: 2
-};
-
-let APP_STATE = {};
-let projectsList = {};
-let currentProjectId = PROJECT_ID;
-let supabaseClient = null;
-let currentUserEmail = "";
-
-const g = id => document.getElementById(id);
-
-function toast(msg, duration = 3000) {
-  const t = g('toast');
-  if(!t) return;
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), duration);
+function loader(show, txt='Lade...') { $('loaderText').textContent=txt; $('loader').classList.toggle('show', show); }
+function closeModal() { document.querySelectorAll('.modal').forEach(m => m.classList.remove('show')); $('overlay').style.display='none'; }
+function openModal(id) { closeModal(); $(id).classList.add('show'); $('overlay').style.display='block'; }
+function showToast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast t-${type}`;
+  t.innerHTML = `<span class="dot"></span><span>${esc(msg)}</span>`;
+  $('toastStack').appendChild(t);
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3500);
 }
 
-function switchPage(pageId) {
-  document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active'));
-  if(event && event.target) event.target.classList.add('active');
-  document.querySelectorAll('[id^="page-"]').forEach(page => page.style.display = 'none');
-  const targetPage = g(`page-${pageId}`);
-  if(targetPage) targetPage.style.display = 'block';
-}
-
-function openModal(modalId) {
-  const m = g(modalId);
-  if(m) m.classList.add('active');
-  if(modalId === 'config-modal') updateConfigUI();
-}
-
-function closeModal(modalId) {
-  const m = g(modalId);
-  if(m) m.classList.remove('active');
-}
-
-function toggleDarkMode() {
-  document.body.classList.toggle('dark-mode');
-}
-
-// ==========================================
-// AUTH & ROLLEN-MANAGEMENT (ADMIN VS BAU)
-// ==========================================
-
-function checkUserAccess() {
-  const mail = localStorage.getItem('sp_logged_in_user');
-  if(!mail) {
-    g('simple-login-modal').style.display = 'flex';
-    return;
-  }
-  
-  currentUserEmail = mail.toLowerCase();
-  g('simple-login-modal').style.display = 'none';
-  g('current-user-display').textContent = currentUserEmail;
-
-  setRole(currentUserEmail === MASTER_ADMIN_EMAIL.toLowerCase() ? 'admin' : 'sven');
-}
-
-function performSoftLogin() {
-  const val = g('user-email-input').value.trim();
-  if(!val) return alert("Bitte eine gültige E-Mail-Adresse eingeben!");
-  
-  localStorage.setItem('sp_logged_in_user', val);
-  checkUserAccess();
-
-  // Nicht-Admins laden automatisch ihre freigegebenen Projekte
-  if(val.toLowerCase() !== MASTER_ADMIN_EMAIL.toLowerCase()) {
-    setTimeout(loadFromCloudList, 800);
-  }
-}
-
-function softLogout() {
-  localStorage.removeItem('sp_logged_in_user');
-  window.location.reload();
-}
-
-function setRole(roleName) {
-  const adminEls = document.querySelectorAll('.admin-only');
-  const greeting = g('sven-greeting');
-
-  if(roleName === 'sven') {
-    adminEls.forEach(el => el.style.display = 'none');
-    if(greeting) greeting.style.display = 'block';
-    toast("Bauleiter-Ansicht aktiv: Nur zugewiesene Pläne.");
+// ─── LOGIN ───
+function checkAuth() {
+  const savedRole = localStorage.getItem('solpro_role');
+  if (savedRole === 'admin' || savedRole === 'monteur') {
+    applyRole(savedRole);
+    $('loginScreen').style.display = 'none';
+    loadData();
+    initRealtime();
   } else {
-    adminEls.forEach(el => el.style.display = '');
-    if(greeting) greeting.style.display = 'none';
-    toast("Admin-Modus aktiv: Voller Zugriff.");
+    $('loginScreen').style.display = 'flex';
+    setTimeout(() => $('loginPassword').focus(), 100);
   }
 }
 
-// ==========================================
-// STATE & MATRIX RENDERING
-// ==========================================
+function tryLogin() {
+  const pwd = $('loginPassword').value.trim();
+  if (pwd === 'solpro') {
+    applyRole('admin');
+    $('loginScreen').style.display = 'none';
+    showToast('Willkommen im Büro-Vollzugriff!');
+    loadData();
+    initRealtime();
+  } else if (pwd === 'monteur') {
+    applyRole('monteur');
+    $('loginScreen').style.display = 'none';
+    showToast('Willkommen im Monteur-Wochenplan!');
+    loadData();
+    initRealtime();
+  } else {
+    showToast('Falsches Passwort!', 'error');
+    $('loginPassword').value = '';
+    $('loginPassword').focus();
+  }
+}
+$('loginPassword').addEventListener('keypress', e => { if (e.key === 'Enter') tryLogin(); });
 
-function generateDynamicState() {
-  const result = {};
-  projectConfig.inverters.forEach((inv, wrIndex) => {
-    const wr = wrIndex + 1;
-    const config = INVERTER_CONFIGS[inv.type] || { mppts: inv.customMppts || 12, inputsPerMppt: inv.customInputs || 2 };
-    for(let m = 1; m <= config.mppts; m++){
-      for(let s = 1; s <= config.inputsPerMppt; s++){
-        const fullId = `${wr}.${m}.${s}`;
-        result[fullId] = { planName: "", gak: `GAK ${wr}.${s}`, mod: 0, stat: "NEIN", uoc: "", isc: "", riso: "", note: "" };
-      }
-    }
-  });
-  return result;
+function applyRole(role) {
+  state.userRole = role;
+  localStorage.setItem('solpro_role', role);
+  document.body.classList.toggle('role-monteur', role === 'monteur');
+  
+  if (role === 'monteur') {
+    $('roleBadge').textContent = '👷 MONTEUR-MODUS';
+    switchTab('monteur');
+  } else {
+    $('roleBadge').textContent = 'PRO SUITE';
+  }
 }
 
-function renderMatrix(remoteOverride) {
-  if(remoteOverride){
-    Object.keys(remoteOverride).forEach(k => {
-      if(APP_STATE[k]){
-        APP_STATE[k].gak = remoteOverride[k].gak !== undefined ? remoteOverride[k].gak : APP_STATE[k].gak;
-        APP_STATE[k].mod = remoteOverride[k].mod !== undefined ? remoteOverride[k].mod : APP_STATE[k].mod;
-        APP_STATE[k].stat = remoteOverride[k].stat || APP_STATE[k].stat;
-        APP_STATE[k].uoc = remoteOverride[k].uoc || "";
-        APP_STATE[k].isc = remoteOverride[k].isc || "";
-        APP_STATE[k].riso = remoteOverride[k].riso || "";
-        APP_STATE[k].note = remoteOverride[k].note || APP_STATE[k].note;
-        APP_STATE[k].planName = remoteOverride[k].planName || APP_STATE[k].planName;
+function logout() {
+  localStorage.removeItem('solpro_role');
+  state.userRole = null;
+  $('loginPassword').value = '';
+  $('loginScreen').style.display = 'flex';
+  $('loginPassword').focus();
+  showToast('Abgemeldet');
+}
+
+// ─── REALTIME ───
+function initRealtime() {
+  try {
+    sb.channel('realtime_solpro')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'grid_assignments' }, () => reloadGridSilently())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => reloadProjectsSilently())
+      .subscribe();
+  } catch(e) {}
+}
+
+async function reloadGridSilently() {
+  const { data } = await sb.from('grid_assignments').select('*');
+  if(data) {
+    state.grid = {};
+    data.forEach(r => {
+      const slug = state.buses.find(b => b.id === r.bus_id)?.slug;
+      if(slug) {
+        const key = `CELL_${slug}_${r.work_date}`;
+        if (!state.grid[key]) state.grid[key] = [];
+        state.grid[key].push({ id: r.id, project_id: r.project_id, kind: r.kind || 'project' });
       }
     });
+    repaint();
+    if (state.userRole === 'monteur') renderMonteurView();
   }
+}
 
-  const container = g('inverter-cards');
-  if(!container) return;
-  container.innerHTML = '';
+async function reloadProjectsSilently() {
+  const { data } = await sb.from('projects').select('*').order('name');
+  if(data) {
+    state.projects = data;
+    renderPalette();
+    repaint();
+  }
+}
 
-  projectConfig.inverters.forEach((inv, wrIndex) => {
-    const wr = wrIndex + 1;
-    const config = INVERTER_CONFIGS[inv.type] || { name: "Custom", mppts: inv.customMppts || 12, inputsPerMppt: inv.customInputs || 2 };
-    const card = document.createElement('div');
-    card.className = 'inverter-section';
+// ─── SPERRE ───
+function togglePlannerLock() {
+  if (state.userRole === 'monteur') {
+    showToast('Im Monteur-Modus ist der Planer schreibgeschützt', 'warn');
+    return;
+  }
+  if (!state.isLocked) {
+    state.isLocked = true;
+    updateLockUI();
+    showToast('Planer gesperrt 🔒');
+  } else {
+    $('plannerUnlockPassword').value = '';
+    openModal('unlockPlannerModal');
+    setTimeout(() => $('plannerUnlockPassword').focus(), 100);
+  }
+}
 
-    let rowsHtml = '';
-    for(let m = 1; m <= config.mppts; m++){
-      for(let s = 1; s <= config.inputsPerMppt; s++){
-        const fullId = `${wr}.${m}.${s}`;
-        const item = APP_STATE[fullId] || { stat: "NEIN", mod: 0, gak: "", note: "", planName: "" };
-        const isMpptDiv = (s === 1 && m > 1);
-        const isNein = (item.stat === 'NEIN');
-        const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * projectConfig.modelWp)/1000).toFixed(2) + ' kWp' : '—';
-        
-        const isErrorMod = item.mod > PLAUSIBILITY_RULES.maxModulesPerString ? 'error' : '';
-        const isErrorVolt = parseFloat(item.uoc||0) > PLAUSIBILITY_RULES.maxVoltage ? 'error' : '';
+function submitPlannerUnlock() {
+  const pwd = $('plannerUnlockPassword').value.trim();
+  if (pwd === 'solpro') {
+    state.isLocked = false;
+    updateLockUI();
+    closeModal();
+    showToast('Planer freigegeben! 🔓', 'success');
+  } else {
+    showToast('Falsches Passwort!', 'error');
+    $('plannerUnlockPassword').value = '';
+    $('plannerUnlockPassword').focus();
+  }
+}
+$('plannerUnlockPassword').addEventListener('keypress', e => { if (e.key === 'Enter') submitPlannerUnlock(); });
 
-        const planBadge = item.planName 
-          ? `<span class="plan-badge active"><b>${item.planName}</b></span>` 
-          : `<span class="plan-badge">Frei</span>`;
+function updateLockUI() {
+  const btn = $('btnLock');
+  if (state.isLocked) {
+    btn.className = 'btn-ayocin btn-lock locked';
+    btn.innerHTML = '🔒 Gesperrt';
+  } else {
+    btn.className = 'btn-ayocin btn-lock unlocked';
+    btn.innerHTML = '🔓 Planen';
+  }
+}
 
-        rowsHtml += `
-          <tr id="row-${fullId}" class="${isMpptDiv ? 'mppt-divider' : ''} ${isNein ? 'inactive' : ''}">
-            <td data-label="Klemme"><span class="string-id">${fullId}</span></td>
-            <td data-label="Plan" class="no-print">${planBadge}</td>
-            <td data-label="GAK"><input type="text" id="gak-${fullId}" value="${item.gak}" class="input input-gak" oninput="saveLocal()"></td>
-            <td data-label="Aktiv" class="no-print">
-              <div class="toggle-wrapper">
-                <button id="tja-${fullId}" class="toggle-btn ${item.stat==='JA'?'active-yes':''}" onclick="setStatus('${fullId}','JA')">JA</button>
-                <button id="tnei-${fullId}" class="toggle-btn ${item.stat==='NEIN'?'active-no':''}" onclick="setStatus('${fullId}','NEIN')">NEIN</button>
-              </div>
-              <input type="hidden" id="stat-${fullId}" value="${item.stat}">
-            </td>
-            <td data-label="Module"><input type="number" id="mod-${fullId}" value="${item.mod > 0 ? item.mod : ''}" class="input input-compact ${isErrorMod}" oninput="onModInput('${fullId}')"></td>
-            <td data-label="Leistung" class="power-value" id="pw-${fullId}">${pwr}</td>
-            <td data-label="Uoc (V)"><input type="text" id="uoc-${fullId}" value="${item.uoc||''}" class="input input-compact ${isErrorVolt}" placeholder="V" oninput="onModInput('${fullId}')"></td>
-            <td data-label="Isc (A)"><input type="text" id="isc-${fullId}" value="${item.isc||''}" class="input input-compact" placeholder="A" oninput="saveLocal()"></td>
-            <td data-label="Riso (MΩ)"><input type="text" id="riso-${fullId}" value="${item.riso||''}" class="input input-compact" placeholder="MΩ" oninput="saveLocal()"></td>
-            <td data-label="Bemerkung"><input type="text" id="note-${fullId}" value="${item.note||''}" class="input" style="width:100%;" oninput="saveLocal()"></td>
-          </tr>`;
+// ─── WOCHE / MONAT / JAHR ───
+function switchViewMode(view) {
+  document.body.classList.remove('view-W', 'view-M', 'view-J');
+  document.body.classList.add('view-' + view);
+  document.querySelectorAll('#viewModeSegment .btn-seg').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === view);
+  });
+}
+
+// ─── TABS ───
+function switchTab(tabName) {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+  const tabEl = document.querySelector(`.tab[data-tab="${tabName}"]`);
+  if (tabEl) tabEl.classList.add('active');
+  const viewEl = document.getElementById('view-' + tabName);
+  if (viewEl) viewEl.classList.add('active');
+  
+  if (state.userRole !== 'monteur') {
+    $('projectSidebar').style.display = tabName === 'planner' ? 'flex' : 'none';
+  }
+  if(tabName === 'admin') { renderAdminProjects(); renderAdminBuses(); }
+  if(tabName === 'tasks') renderTodos();
+  if(tabName === 'monteur') renderMonteurView();
+}
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => switchTab(t.dataset.tab);
+});
+
+// ─── POOL TABS ───
+function setPoolTab(mode) {
+  state.poolTab = mode;
+  $('btnPoolOpen').classList.toggle('active', mode === 'open');
+  $('btnPoolDone').classList.toggle('active', mode === 'done');
+  renderPalette();
+}
+
+// ─── INTERAKTIVER HOVER TOOLTIP ───
+let tooltipTimeout, hideTimeout;
+const tooltip = $('hoverTooltip');
+
+document.addEventListener('mouseover', e => {
+  const target = e.target.closest('[data-proj-id]');
+  if (target && target.dataset.projId) {
+    clearTimeout(hideTimeout);
+    const p = state.projects.find(x => x.id === target.dataset.projId);
+    if (!p) return;
+
+    tooltipTimeout = setTimeout(() => {
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.address || p.name)}`;
+      const phone = extractPhone(p.order_id);
+      const scope = getProjectScope(p);
+      const scopeLabel = scope === 'dc' ? '🔧 Nur DC (Montage)' : scope === 'ac' ? '⚡ Nur AC (Elektrik)' : '🔧+⚡ DC+AC (Komplett)';
+
+      tooltip.innerHTML = `
+        <div class="tooltip-title">${esc(p.name)}</div>
+        <div class="tooltip-sub">📍 ${esc(p.address || 'Keine Adresse')} · ⚡ ${p.kwp || 0} kWp</div>
+        <div style="font-size:10px;font-weight:700;color:var(--ayocin-bronze);margin-bottom:4px">Umfang: ${scopeLabel}</div>
+        ${phone ? `<div style="margin:4px 0"><a href="tel:${cleanPhone(phone)}" style="color:var(--status-dc);font-weight:700;font-family:var(--font-mono);font-size:11px;text-decoration:none">📞 ${phone}</a></div>` : ''}
+        ${p.order_id ? `<div class="tooltip-notes">📦 <b>Details & Notizen:</b>\n${esc(p.order_id)}</div>` : ''}
+        <a href="${mapsUrl}" target="_blank" class="tooltip-maps-btn">🗺️ In Google Maps navigieren ↗</a>
+      `;
+      const rect = target.getBoundingClientRect();
+      tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+      tooltip.style.top = (rect.top - 8) + 'px';
+      tooltip.classList.add('show');
+    }, 500);
+  }
+});
+
+document.addEventListener('mouseout', e => {
+  const target = e.target.closest('[data-proj-id]');
+  if (target) {
+    clearTimeout(tooltipTimeout);
+    hideTimeout = setTimeout(() => {
+      if (!tooltip.matches(':hover')) {
+        tooltip.classList.remove('show');
       }
-    }
+    }, 300);
+  }
+});
 
-    card.innerHTML = `
-      <div class="inverter-card">
-        <div class="inverter-header">
-          <div class="inverter-info"><span class="inverter-badge">${inv.name}</span><div class="inverter-name">${config.name}</div></div>
-          <div class="inverter-stats"><span><span id="wr-mod-${wr}">0</span> Module</span><span>·</span><span><span id="wr-pwr-${wr}">0.00</span> kWp</span></div>
-        </div>
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width:10%;">Klemme</th>
-                <th style="width:12%;">Plan-Name</th>
-                <th style="width:10%;">GAK</th>
-                <th style="width:8%;">Aktiv</th>
-                <th style="width:8%;">Module</th>
-                <th style="width:10%;">Leistung</th>
-                <th style="width:8%;">Uoc (V)</th>
-                <th style="width:8%;">Isc (A)</th>
-                <th style="width:8%;">Riso</th>
-                <th>Bemerkung</th>
-              </tr>
-            </thead>
-            <tbody>${rowsHtml}</tbody>
-          </table>
-        </div>
-      </div>`;
-    container.appendChild(card);
+tooltip.addEventListener('mouseleave', () => {
+  tooltip.classList.remove('show');
+});
+
+function cleanPhone(p) {
+  return p ? p.replace(/[^0-9+]/g, '') : '';
+}
+
+// ─── HEUTE SCROLL ───
+function scrollToToday() {
+  const today = new Date().toISOString().split('T')[0];
+  const headEl = document.getElementById(`th-${today}`);
+  if (headEl) {
+    headEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    showToast('Auf heute zentriert! 🎯');
+  } else {
+    showToast('Heutiges Datum liegt außerhalb des Planer-Zeitraums', 'warn');
+  }
+}
+
+// ─── SIDEBAR SLIDER ───
+(function initSidebarResizer() {
+  const handle = $('sidebarResizer');
+  const panel = $('projectSidebar');
+  let dragging = false, startX = 0, startW = 0;
+
+  const onMove = e => {
+    if (!dragging) return;
+    let w = startW + (e.clientX - startX);
+    w = Math.max(240, Math.min(580, w));
+    document.documentElement.style.setProperty('--project-sidebar-w', w + 'px');
+  };
+  const onUp = () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    panel.classList.remove('resizing');
+    document.body.style.cursor = '';
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  };
+  handle.addEventListener('mousedown', e => {
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    panel.classList.add('resizing');
+    document.body.style.cursor = 'col-resize';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    e.preventDefault();
   });
-  updateKpis();
-}
+})();
 
-function generateFilterTabs() {
-  const bar = g('filter-tabs');
-  if(!bar) return;
-  bar.innerHTML = `<button class="filter-tab active" onclick="filterInverter(0, this)">⚡ Alle WRs</button>`;
-  projectConfig.inverters.forEach((inv, index) => {
-    bar.innerHTML += `<button class="filter-tab" onclick="filterInverter(${index + 1}, this)">${inv.name}</button>`;
-  });
-}
-
-function filterInverter(n, btn) {
-  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  document.querySelectorAll('.inverter-section').forEach((d,i) => {
-    d.style.display = (n === 0 || i + 1 === n) ? 'block' : 'none';
-  });
-}
-
-function onModInput(id) {
-  recalcRow(id);
-  saveLocal();
-}
-
-function setStatus(id, st) {
-  const statEl = g('stat-'+id);
-  if(!statEl) return;
-  statEl.value = st;
-  const ja = g('tja-'+id), nei = g('tnei-'+id);
-  if(st === 'JA'){ if(ja) ja.className = 'toggle-btn active-yes'; if(nei) nei.className = 'toggle-btn'; }
-  else { if(nei) nei.className = 'toggle-btn active-no'; if(ja) ja.className = 'toggle-btn'; }
-  recalcRow(id);
-  saveLocal();
-}
-
-function recalcRow(id) {
-  const st = (g('stat-'+id)||{}).value || "NEIN";
-  const modInput = g('mod-'+id);
-  const uocInput = g('uoc-'+id);
-  const mod = parseFloat(modInput ? modInput.value : 0) || 0;
-  const uoc = parseFloat(uocInput ? uocInput.value : 0) || 0;
-  const row = g('row-'+id);
-  const pw = g('pw-'+id);
-
-  if(modInput) {
-    if(mod > PLAUSIBILITY_RULES.maxModulesPerString) modInput.classList.add('error');
-    else modInput.classList.remove('error');
-  }
-
-  if(uocInput) {
-    if(uoc > PLAUSIBILITY_RULES.maxVoltage) uocInput.classList.add('error');
-    else uocInput.classList.remove('error');
-  }
-
-  if(row && pw) {
-    if(st === 'NEIN'){
-      row.classList.add('inactive');
-      pw.textContent = '—';
-    } else {
-      row.classList.remove('inactive');
-      pw.textContent = mod > 0 ? ((mod * projectConfig.modelWp)/1000).toFixed(2) + ' kWp' : '—';
-    }
-  }
-  
-  if(APP_STATE[id]) {
-    APP_STATE[id].mod = mod;
-    APP_STATE[id].stat = st;
-    APP_STATE[id].uoc = uocInput ? uocInput.value : "";
-  }
-  
-  updateKpis();
-}
-
-function updateKpis() {
-  let totMods = 0, totPwr = 0, totActive = 0, totStrings = 0;
-  
-  projectConfig.inverters.forEach((inv, wrIndex) => {
-    const wr = wrIndex + 1;
-    const config = INVERTER_CONFIGS[inv.type] || { mppts: inv.customMppts || 12, inputsPerMppt: inv.customInputs || 2 };
-    let wrM = 0, wrP = 0;
+// ─── DATEN LADEN ───
+async function loadData() {
+  loader(true, 'Verbinde Datenbank...');
+  try {
+    const [resP, resB, resG, resT] = await Promise.all([
+      sb.from('projects').select('*').order('name'),
+      sb.from('buses').select('*'),
+      sb.from('grid_assignments').select('*'),
+      sb.from('todos').select('*').order('created_at', {ascending: false})
+    ]);
     
-    for(let m = 1; m <= config.mppts; m++){
-      for(let s = 1; s <= config.inputsPerMppt; s++){
-        const fullId = `${wr}.${m}.${s}`;
-        totStrings++;
-        const st = g('stat-'+fullId);
-        if(st && st.value === 'JA'){
-          const mod = parseFloat((g('mod-'+fullId)||{}).value) || 0;
-          const pwr = (mod * projectConfig.modelWp) / 1000;
-          wrM += mod; wrP += pwr;
-          totMods += mod; totPwr += pwr;
-          if(mod > 0) totActive++;
-        }
-      }
-    }
-    if(g(`wr-mod-${wr}`)) g(`wr-mod-${wr}`).textContent = wrM;
-    if(g(`wr-pwr-${wr}`)) g(`wr-pwr-${wr}`).textContent = wrP.toFixed(2);
-  });
-  
-  if(g('d-mods')) g('d-mods').textContent = totMods;
-  if(g('d-pwr')) g('d-pwr').textContent = totPwr.toFixed(2);
-  if(g('d-act')) g('d-act').textContent = totActive;
-  if(g('d-total')) g('d-total').textContent = totStrings;
-  if(g('d-wr-count')) g('d-wr-count').textContent = projectConfig.inverters.length;
-}
-
-function collectData() {
-  const payload = {};
-  projectConfig.inverters.forEach((inv, wrIndex) => {
-    const wr = wrIndex + 1;
-    const config = INVERTER_CONFIGS[inv.type] || { mppts: inv.customMppts || 12, inputsPerMppt: inv.customInputs || 2 };
+    state.projects = resP.data || [];
+    state.buses = resB.data || [];
+    state.todos = resT.data || [];
     
-    for(let m = 1; m <= config.mppts; m++){
-      for(let s = 1; s <= config.inputsPerMppt; s++){
-        const fullId = `${wr}.${m}.${s}`;
-        const item = APP_STATE[fullId] || {};
-        payload[fullId] = {
-          planName: item.planName || "",
-          gak: (g('gak-'+fullId)||{}).value || item.gak || "",
-          stat: (g('stat-'+fullId)||{}).value || item.stat || "NEIN",
-          mod: parseFloat((g('mod-'+fullId)||{}).value) || item.mod || 0,
-          uoc: (g('uoc-'+fullId)||{}).value || item.uoc || "",
-          isc: (g('isc-'+fullId)||{}).value || item.isc || "",
-          riso: (g('riso-'+fullId)||{}).value || item.riso || "",
-          note: (g('note-'+fullId)||{}).value || item.note || ""
-        };
+    state.grid = {};
+    (resG.data || []).forEach(r => {
+      const slug = state.buses.find(b => b.id === r.bus_id)?.slug;
+      if(slug) {
+        const key = `CELL_${slug}_${r.work_date}`;
+        if (!state.grid[key]) state.grid[key] = [];
+        state.grid[key].push({ id: r.id, project_id: r.project_id, kind: r.kind || 'project' });
       }
-    }
-  });
-  return payload;
+    });
+
+    updateLockUI();
+    renderAll();
+  } catch(e) { showToast('Fehler beim Laden: ' + e.message, 'error'); }
+  loader(false);
 }
 
-function saveLocal() {
-  const payload = collectData();
-  payload.config = projectConfig;
-  try { localStorage.setItem('sp_local_backup', JSON.stringify(payload)); } catch(e){}
+function renderAll() {
+  buildGrid();
+  renderPalette();
+  renderAdminProjects();
+  renderAdminBuses();
+  renderTodos();
+  populateMonteurSelects();
+  populateExportSelects();
 }
 
-// ==========================================
-// PV*SOL MAPPING FUNKTIONALITÄT
-// ==========================================
-
-function importPVSOL() {
-  g('pvsol-file-input').value = '';
-  g('pvsol-import-status').style.display = 'none';
-  openModal('pvsol-import-modal');
-}
-
-function processPVSOLImport() {
-  const fileInput = g('pvsol-file-input');
-  const file = fileInput.files[0];
-  
-  if(!file) return toast('Bitte eine Datei auswählen!');
-  
+// ─── TAIFUN IMPORT ───
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if(!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const pvsolData = JSON.parse(e.target.result);
-      
-      if(pvsolData.ProjectOverview?.ProjectData?.ProjectName) {
-        projectConfig.name = pvsolData.ProjectOverview.ProjectData.ProjectName;
-        g('project-name-display').textContent = projectConfig.name;
-      }
-      
-      let moduleAreas = [];
-      if(pvsolData.ProjectOverview?.ThreeDDesign?.ModuleAreas) {
-        moduleAreas = pvsolData.ProjectOverview.ThreeDDesign.ModuleAreas;
-      }
-      
-      if(moduleAreas.length > 0 && moduleAreas[0].ModuleData) {
-        const wpMatch = moduleAreas[0].ModuleData.match(/(\d{3,4})/);
-        if(wpMatch) {
-          projectConfig.modelWp = parseInt(wpMatch[1]);
-          g('project-wp-display').textContent = projectConfig.modelWp;
-        }
-      }
-      
-      localStorage.setItem('sp_pvsol_module_areas', JSON.stringify(moduleAreas));
-      closeModal('pvsol-import-modal');
-      toast(`✅ ${moduleAreas.length} Modulflächen erkannt! Öffne Zuweisung...`);
-      
-      setTimeout(openMappingModal, 300);
-      
-    } catch(err) {
-      toast('Fehler beim Einlesen der JSON-Datei: ' + err.message);
-    }
+  reader.onload = ev => {
+    state.lastUploadedHtml = ev.target.result;
+    parseTaifun(state.lastUploadedHtml);
   };
   reader.readAsText(file);
 }
 
-function openMappingModal() {
-  const areasRaw = localStorage.getItem('sp_pvsol_module_areas');
-  if(!areasRaw || areasRaw === "[]") {
-    return toast("Keine importierten PV*SOL Flächen vorhanden. Bitte zuerst JSON laden.");
-  }
-  
-  const areas = JSON.parse(areasRaw);
+function reFilterImport() {
+  if (state.lastUploadedHtml) parseTaifun(state.lastUploadedHtml);
+}
 
-  let terminalOptions = `<option value="">-- Nicht zugewiesen / Überspringen --</option>`;
-  projectConfig.inverters.forEach((inv, wrIndex) => {
-    const config = INVERTER_CONFIGS[inv.type] || { mppts: inv.customMppts || 12, inputsPerMppt: inv.customInputs || 2 };
-    for(let m = 1; m <= config.mppts; m++){
-      for(let s = 1; s <= config.inputsPerMppt; s++){
-        const fullId = `${wrIndex+1}.${m}.${s}`;
-        terminalOptions += `<option value="${fullId}">${inv.name} · MPPT ${m} · In ${s} (${fullId})</option>`;
+function parseTaifun(htmlContent) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+  const extracted = new Map();
+  const filterStartDate = $('importStartDate').value || '2026-08-24';
+
+  let currentRowDate = null;
+
+  doc.querySelectorAll('tr').forEach(tr => {
+    const firstCell = tr.querySelector('td');
+    if (firstCell) {
+      const match = firstCell.textContent.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+      if (match) {
+        currentRowDate = `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`;
       }
     }
-  });
 
-  let html = '';
-  areas.forEach((area, i) => {
-    const anzahlModule = area.NumberOfPvModules?.Value || 0;
-    const flaechenName = area.ModuleArea || `Fläche ${i+1}`;
-    const outputKw = area.PvGeneratorOutput?.Value ? `${area.PvGeneratorOutput.Value} kWp` : '';
-    
-    html += `
-      <div style="background:var(--bg-secondary); padding:1rem; border-radius:var(--radius-sm); border:1px solid var(--border); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem;">
-        <div style="flex:1; min-width:200px;">
-          <strong style="font-size:0.95rem; color:var(--text-primary);">🏢 ${flaechenName}</strong>
-          <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;">
-            <b>${anzahlModule} Module</b> ${outputKw ? `· ${outputKw}` : ''}
-          </div>
-        </div>
-        <div style="flex:1; min-width:250px;">
-          <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Ziel-Klemme am WR:</label>
-          <select class="input" id="map-select-${i}">
-            ${terminalOptions}
-          </select>
-        </div>
-      </div>`;
-  });
-  
-  g('mapping-container').innerHTML = html;
-  openModal('pvsol-mapping-modal');
-}
+    if (filterStartDate && currentRowDate && currentRowDate < filterStartDate) return;
 
-function applyPvsolMapping() {
-  const areasRaw = localStorage.getItem('sp_pvsol_module_areas');
-  if(!areasRaw) return closeModal('pvsol-mapping-modal');
-  const areas = JSON.parse(areasRaw);
+    tr.querySelectorAll('td').forEach(td => {
+      const text = td.textContent;
+      if (text.includes('Projekt: P')) {
+        const lines = Array.from(td.querySelectorAll('div')).map(div => div.textContent.trim()).filter(t => t.length > 0);
+        if (lines.length >= 4) {
+          const rawName = lines[0];
+          const address = `${lines[1]}, ${lines[2]}`;
+          const projMatch = text.match(/Projekt:\s*(P\d+)/);
+          const orderMatch = text.match(/Auftrag:\s*(AB\d+)/);
+          const projectId = projMatch ? projMatch[1] : '';
+          const orderId = orderMatch ? orderMatch[1] : '';
 
-  let assignedCount = 0;
-  areas.forEach((area, i) => {
-    const sel = g('map-select-'+i);
-    if(!sel) return;
-    const val = sel.value;
-    if(val && APP_STATE[val]) {
-      APP_STATE[val].stat = 'JA';
-      APP_STATE[val].mod = area.NumberOfPvModules?.Value || 0;
-      APP_STATE[val].note = area.ModuleArea || `Fläche ${i+1}`;
-      APP_STATE[val].planName = `STR_${i+1}`;
-      assignedCount++;
-    }
-  });
+          let subProject = '';
+          let noteLines = [];
+          const projectLineIdx = lines.findIndex(l => l.includes('Projekt: P'));
+          
+          if (projectLineIdx !== -1) {
+            for (let i = projectLineIdx + 1; i < lines.length; i++) {
+              const l = lines[i];
+              if (!subProject && !l.toLowerCase().includes('montage') && !l.toLowerCase().includes('material')) {
+                subProject = l;
+              } else {
+                noteLines.push(l);
+              }
+            }
+          }
 
-  renderMatrix(null);
-  updateKpis();
-  saveLocal();
-  closeModal('pvsol-mapping-modal');
-  toast(`✓ ${assignedCount} Flächen erfolgreich auf Wechselrichter übertragen!`);
-}
+          const displayName = extractShortName(rawName, subProject);
+          const fullNotes = noteLines.join('\n');
 
-// ==========================================
-// CLOUD OPERATIONS (SUPABASE)
-// ==========================================
+          let initialScope = 'both';
+          const fullTextLower = text.toLowerCase();
+          if (fullTextLower.includes('speichererweiterung') || fullTextLower.includes('ac-montage') || fullTextLower.includes('ibn mit netz')) {
+            initialScope = 'ac';
+          } else if (fullTextLower.includes('dc-montage') && !fullTextLower.includes('ac')) {
+            initialScope = 'dc';
+          }
 
-function initSupabase() {
-  if(window.supabase) {
-    supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
-  }
-}
-
-async function saveToCloud() {
-  if(!supabaseClient) return toast('Keine Cloud-Verbindung konfiguriert');
-  toast('☁️ Lade Projekt in die Cloud hoch...');
-  
-  try {
-    const { error } = await supabaseClient.from('pv_projects').upsert({
-      id: currentProjectId,
-      name: projectConfig.name,
-      assigned_email: (projectConfig.assignedEmail || "").toLowerCase(),
-      pruefer: currentUserEmail || "Admin",
-      modul_wp: projectConfig.modelWp,
-      mppts: projectConfig.inverters.map(inv => (INVERTER_CONFIGS[inv.type]?.mppts || 12)).join(','),
-      data: collectData(),
-      config: projectConfig,
-      updated_at: new Date().toISOString()
+          if (projectId && !extracted.has(projectId)) {
+            extracted.set(projectId, { 
+              rawName, displayName, address, projectId, orderId,
+              notes: fullNotes, kwp: 0, scope: initialScope,
+              taifunDate: currentRowDate || '24.08.2026'
+            });
+          }
+        }
+      }
     });
-    
-    if(!error){
-      saveLocal();
-      toast('✅ Erfolgreich in Supabase gespeichert!');
+  });
+
+  state.importBuffer = Array.from(extracted.values());
+  $('impProjCount').textContent = state.importBuffer.length;
+  
+  const tb = $('previewTableBody');
+  tb.innerHTML = state.importBuffer.map((p, idx) => `
+    <tr>
+      <td>${idx + 1}</td>
+      <td style="font-family:var(--font-mono);font-weight:700">${esc(p.taifunDate)}</td>
+      <td>
+        <select class="preview-scope-select" onchange="updateImportScope(${idx}, this.value)">
+          <option value="both" ${p.scope === 'both' ? 'selected' : ''}>🔧+⚡ DC + AC</option>
+          <option value="dc" ${p.scope === 'dc' ? 'selected' : ''}>🔧 Nur DC (Montage)</option>
+          <option value="ac" ${p.scope === 'ac' ? 'selected' : ''}>⚡ Nur AC (Elektro)</option>
+        </select>
+      </td>
+      <td><b style="font-family:var(--font-mono)">${esc(p.projectId)}</b></td>
+      <td><b>${esc(p.displayName)}</b> <span style="font-size:9px;color:var(--ink-muted)">(${esc(p.rawName)})</span></td>
+      <td><div style="max-height:40px;overflow-y:auto;font-size:10px;color:var(--ink-secondary)">${esc(p.notes || 'Keine Notizen')}</div></td>
+    </tr>
+  `).join('');
+
+  $('importResult').style.display = 'block';
+}
+
+function updateImportScope(idx, newScope) {
+  if (state.importBuffer[idx]) {
+    state.importBuffer[idx].scope = newScope;
+  }
+}
+
+async function saveImportToDB() {
+  if(!state.importBuffer.length) return;
+  loader(true, 'Speichere Projekte in Supabase...');
+  
+  for (const proj of state.importBuffer) {
+    const { data: existing } = await sb.from('projects').select('id').eq('project_id', proj.projectId).maybeSingle();
+    const cleanNotes = proj.notes ? `${proj.orderId} · ${proj.notes}` : proj.orderId;
+    const scopedNotes = encodeScopeInNotes(proj.scope, cleanNotes);
+
+    if (existing) {
+      await sb.from('projects').update({ 
+        name: proj.displayName, address: proj.address, order_id: scopedNotes
+      }).eq('id', existing.id);
     } else {
-      toast('Fehler beim Speichern: ' + error.message);
-    }
-  } catch(e) {
-    toast('Verbindungsfehler zur Cloud');
-  }
-}
-
-async function loadFromCloudList() {
-  if(!supabaseClient) return toast('Keine Cloud-Verbindung');
-  toast("Suche zugewiesene Projekte...");
-
-  try {
-    let query = supabaseClient.from('pv_projects').select('*').order('updated_at', { ascending: false });
-
-    // Wenn nicht Admin: Filtere strikt nach der E-Mail des angemeldeten Benutzers
-    if(currentUserEmail !== MASTER_ADMIN_EMAIL.toLowerCase()) {
-      query = query.eq('assigned_email', currentUserEmail.toLowerCase());
-    }
-
-    const { data, error } = await query;
-    if(error) return toast("Fehler beim Laden: " + error.message);
-
-    if(data && data.length > 0) {
-      const project = data[0];
-      if(project.config) {
-        projectConfig = project.config;
-        currentProjectId = project.id;
-        g('project-name-display').textContent = projectConfig.name;
-        g('project-wp-display').textContent = projectConfig.modelWp;
-      }
-      APP_STATE = generateDynamicState();
-      renderMatrix(project.data);
-      generateFilterTabs();
-      saveLocal();
-      toast(`✅ Projekt "${project.name}" erfolgreich synchronisiert!`);
-    } else {
-      toast(`Keine Projekte für "${currentUserEmail}" gefunden.`);
-    }
-  } catch(err) {
-    toast("Sync-Problem mit Supabase");
-  }
-}
-
-// ==========================================
-// CONFIGURATION MODAL LOGIK
-// ==========================================
-
-function showConfigTab(tabName) {
-  document.querySelectorAll('.config-tab-content').forEach(el => el.style.display = 'none');
-  document.querySelectorAll('#config-modal .filter-tab').forEach(el => el.classList.remove('active'));
-  if(g(`config-tab-${tabName}`)) g(`config-tab-${tabName}`).style.display = 'block';
-  if(event && event.target) event.target.classList.add('active');
-  if(tabName === 'projects') renderProjectsList();
-}
-
-function updateConfigUI() {
-  g('cfg-project-name').value = projectConfig.name;
-  g('cfg-model-wp').value = projectConfig.modelWp;
-  g('cfg-assigned-email').value = projectConfig.assignedEmail || "";
-  renderInverterList();
-}
-
-function renderInverterList() {
-  const list = g('wr-list');
-  if(!list) return;
-  list.innerHTML = '';
-  
-  projectConfig.inverters.forEach((inv, index) => {
-    const config = INVERTER_CONFIGS[inv.type] || { name: inv.name, mppts: inv.customMppts || 12, inputsPerMppt: inv.customInputs || 2 };
-    const item = document.createElement('div');
-    item.className = 'config-item';
-    item.innerHTML = `
-      <span class="config-item-name">${inv.name}</span>
-      <span class="config-item-info">${config.name} (${config.mppts} MPPTs, ${config.inputsPerMppt} In/MPPT)</span>
-      <button class="btn btn-danger" style="padding:0.35rem 0.6rem; font-size:0.75rem;" onclick="removeInverter(${index})">✕</button>
-    `;
-    list.appendChild(item);
-  });
-}
-
-function addCustomInverter() {
-  const mppts = parseInt(g('cfg-mppts').value) || 12;
-  const inputs = parseInt(g('cfg-inputs').value) || 2;
-  const newId = projectConfig.inverters.length + 1;
-  
-  projectConfig.inverters.push({
-    id: newId,
-    type: "CUSTOM",
-    name: `WR ${newId}`,
-    customMppts: mppts,
-    customInputs: inputs
-  });
-  renderInverterList();
-  toast(`WR ${newId} hinzugefügt`);
-}
-
-function addPresetInverter() {
-  const type = g('cfg-preset-type').value;
-  if(!type || !INVERTER_CONFIGS[type]) return toast('Bitte einen gültigen Typ wählen');
-  
-  const newId = projectConfig.inverters.length + 1;
-  projectConfig.inverters.push({
-    id: newId,
-    type: type,
-    name: `WR ${newId}`
-  });
-  renderInverterList();
-  g('cfg-preset-type').value = '';
-}
-
-function removeInverter(index) {
-  projectConfig.inverters.splice(index, 1);
-  projectConfig.inverters.forEach((inv, i) => {
-    inv.id = i + 1;
-    inv.name = `WR ${i + 1}`;
-  });
-  renderInverterList();
-}
-
-function applyConfig() {
-  projectConfig.name = g('cfg-project-name').value.trim() || "PV Projekt";
-  projectConfig.modelWp = parseInt(g('cfg-model-wp').value) || 465;
-  projectConfig.assignedEmail = g('cfg-assigned-email').value.trim();
-  
-  g('project-name-display').textContent = projectConfig.name;
-  g('project-wp-display').textContent = projectConfig.modelWp;
-  
-  APP_STATE = generateDynamicState();
-  renderMatrix(null);
-  generateFilterTabs();
-  updateKpis();
-  saveLocal();
-  closeModal('config-modal');
-  toast('Konfiguration übernommen');
-}
-
-// ==========================================
-// EXPORTE & DRUCKANSICHT
-// ==========================================
-
-function exportGakExcel() {
-  const rows = [['Etikett']];
-  let cnt = 0;
-
-  projectConfig.inverters.forEach((inv, wrIndex) => {
-    const wr = wrIndex + 1;
-    const config = INVERTER_CONFIGS[inv.type] || { mppts: inv.customMppts || 12, inputsPerMppt: inv.customInputs || 2 };
-    
-    for(let m = 1; m <= config.mppts; m++){
-      for(let s = 1; s <= config.inputsPerMppt; s++){
-        const fullId = `${wr}.${m}.${s}`;
-        const item = APP_STATE[fullId] || {};
-        if(item.stat !== 'JA' || (item.mod || 0) <= 0) continue;
-
-        const pwr = ((item.mod * projectConfig.modelWp)/1000).toFixed(2).replace('.', ',');
-        const labelText = [
-          `BVH ${projectConfig.name}`,
-          `Klemme: ${fullId}`,
-          item.gak || `GAK ${wr}.${s}`,
-          `${item.mod} Module (${pwr} kWp)`,
-          item.note || ''
-        ].filter(Boolean).join('\r\n');
-
-        rows.push([{ t: 's', v: labelText }]);
-        cnt++;
-      }
-    }
-  });
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 35 }];
-  XLSX.utils.book_append_sheet(wb, ws, 'GAK_Etiketten');
-  XLSX.writeFile(wb, `GAK_${projectConfig.name}.xlsx`);
-  toast(`${cnt} GAK-Etiketten exportiert`);
-}
-
-function exportProtocol() {
-  const rows = [
-    ['Klemme', 'Plan-Name', 'GAK', 'Status', 'Module', 'Leistung (kWp)', 'Uoc (V)', 'Isc (A)', 'Riso (MOhm)', 'Bemerkung']
-  ];
-
-  projectConfig.inverters.forEach((inv, wrIndex) => {
-    const wr = wrIndex + 1;
-    const config = INVERTER_CONFIGS[inv.type] || { mppts: inv.customMppts || 12, inputsPerMppt: inv.customInputs || 2 };
-    
-    for(let m = 1; m <= config.mppts; m++){
-      for(let s = 1; s <= config.inputsPerMppt; s++){
-        const fullId = `${wr}.${m}.${s}`;
-        const item = APP_STATE[fullId] || {};
-        const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * projectConfig.modelWp)/1000).toFixed(2) : '0';
-
-        rows.push([
-          fullId,
-          item.planName || '—',
-          item.gak || '',
-          item.stat || 'NEIN',
-          item.mod || 0,
-          pwr,
-          item.uoc || '',
-          item.isc || '',
-          item.riso || '',
-          item.note || ''
-        ]);
-      }
-    }
-  });
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb, ws, 'Prüfprotokoll');
-  XLSX.writeFile(wb, `Prüfprotokoll_${projectConfig.name}.xlsx`);
-  toast('Prüfprotokoll exportiert');
-}
-
-function exportCSV() {
-  const rows = [['Klemme', 'Plan-Name', 'GAK', 'Status', 'Module', 'Leistung (kWp)', 'Uoc (V)', 'Isc (A)', 'Riso (MOhm)', 'Bemerkung']];
-  
-  projectConfig.inverters.forEach((inv, wrIndex) => {
-    const wr = wrIndex + 1;
-    const config = INVERTER_CONFIGS[inv.type] || { mppts: inv.customMppts || 12, inputsPerMppt: inv.customInputs || 2 };
-    for(let m = 1; m <= config.mppts; m++){
-      for(let s = 1; s <= config.inputsPerMppt; s++){
-        const fullId = `${wr}.${m}.${s}`;
-        const item = APP_STATE[fullId] || {};
-        const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * projectConfig.modelWp)/1000).toFixed(2) : '0';
-        rows.push([fullId, item.planName||'', item.gak||'', item.stat||'NEIN', item.mod||0, pwr, item.uoc||'', item.isc||'', item.riso||'', item.note||'']);
-      }
-    }
-  });
-
-  const csvContent = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `Export_${projectConfig.name}.csv`;
-  link.click();
-  toast('CSV exportiert');
-}
-
-function printMontagePlan() {
-  window.print();
-}
-
-function showValidation() {
-  const errors = [];
-  const warnings = [];
-  
-  Object.keys(APP_STATE).forEach(k => {
-    const item = APP_STATE[k];
-    if(item.stat === 'JA') {
-      if(item.mod > PLAUSIBILITY_RULES.maxModulesPerString) errors.push(`${k}: ${item.mod} Module (> ${PLAUSIBILITY_RULES.maxModulesPerString})`);
-      if(parseFloat(item.uoc||0) > PLAUSIBILITY_RULES.maxVoltage) errors.push(`${k}: ${item.uoc}V Spannung (> ${PLAUSIBILITY_RULES.maxVoltage}V)`);
-    }
-  });
-
-  if(errors.length === 0 && warnings.length === 0) {
-    alert("✅ Keine Plausibilitätsprobleme in der Anlage gefunden!");
-  } else {
-    alert("⚠️ Validierungsmeldungen:\n\n" + errors.join('\n'));
-  }
-}
-
-// ==========================================
-// FLÄCHEN-BERECHNER OPTIONAL
-// ==========================================
-
-let areaCounter = 2;
-function addMoreAreas() {
-  areaCounter++;
-  const div = document.createElement('div');
-  div.className = 'config-row';
-  div.innerHTML = `
-    <span class="config-label">Fläche ${areaCounter} (m²):</span>
-    <input type="number" id="area-${areaCounter}" class="input input-compact" placeholder="m²">
-    <span class="config-label">Neigung:</span>
-    <input type="number" id="tilt-${areaCounter}" class="input input-compact" value="30">
-    <span class="config-label">Azimut:</span>
-    <input type="number" id="azimuth-${areaCounter}" class="input input-compact" value="180">
-  `;
-  event.target.parentElement.before(div);
-}
-
-function calculateOptimalLayout() {
-  const wp = parseFloat(g('module-wp').value) || 465;
-  const w = parseFloat(g('module-width').value) || 1.7;
-  const h = parseFloat(g('module-height').value) || 1.1;
-  const sp = parseFloat(g('module-spacing').value) || 0.1;
-  const modArea = (w + sp) * (h + sp);
-
-  const areas = [];
-  for(let i = 1; i <= areaCounter; i++) {
-    const aInput = g(`area-${i}`);
-    if(aInput && parseFloat(aInput.value) > 0) {
-      const count = Math.floor(parseFloat(aInput.value) / modArea);
-      areas.push({
-        ModuleArea: `Berechnete Fläche ${i}`,
-        NumberOfPvModules: { Value: count },
-        PvGeneratorOutput: { Value: ((count * wp)/1000).toFixed(2) }
+      await sb.from('projects').insert({
+        name: proj.displayName, address: proj.address, kwp: 0, status: 'auftrag',
+        color: getAutoColor(), project_id: proj.projectId, order_id: scopedNotes
       });
     }
   }
-
-  localStorage.setItem('sp_pvsol_module_areas', JSON.stringify(areas));
-  const resDiv = g('layout-results');
-  resDiv.style.display = 'block';
-  resDiv.innerHTML = `<b>Ergebnis:</b> ${areas.map(a => `<br>• ${a.ModuleArea}: ${a.NumberOfPvModules.Value} Module (${a.PvGeneratorOutput.Value} kWp)`).join('')}`;
+  
+  showToast(`${state.importBuffer.length} Projekte synchronisiert!`);
+  state.importBuffer = [];
+  $('importResult').style.display = 'none';
+  $('fileInput').value = '';
+  await loadData();
 }
 
-function applyLayoutProposal() {
-  closeModal('area-calculator-modal');
-  openMappingModal();
+async function deleteAllProjects() {
+  if (!confirm("⚠️ ACHTUNG: Möchtest du wirklich ALLE Projekte und Kalender-Zuweisungen löschen?\n(Deine Busse & Teams bleiben erhalten!)")) return;
+  if (!confirm("Bist du 100% sicher? Dieser Vorgang kann nicht rückgängig gemacht werden!")) return;
+
+  loader(true, "Lösche alle Projekte...");
+  try {
+    await sb.from('grid_assignments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await sb.from('projects').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    
+    state.projects = [];
+    state.grid = {};
+    repaint();
+    renderPalette();
+    renderAdminProjects();
+    showToast("Alle Projekte wurden gelöscht!", "success");
+  } catch(e) {
+    showToast("Fehler beim Löschen: " + e.message, "error");
+  }
+  loader(false);
 }
 
-// ==========================================
-// INITIALISIERUNG BEIM LADEN
-// ==========================================
+// ─── SMARTE AC/DC ANALYSE ───
+function analyzeProjectsStatus() {
+  const result = {};
 
-function init() {
-  initSupabase();
-  
-  let localCache = null;
-  try { localCache = JSON.parse(localStorage.getItem('sp_local_backup') || '{}'); } catch(e){}
-  if(localCache && localCache.config){ projectConfig = localCache.config; }
-  
-  g('project-name-display').textContent = projectConfig.name;
-  g('project-wp-display').textContent = projectConfig.modelWp;
-  
-  APP_STATE = generateDynamicState();
-  renderMatrix(localCache && Object.keys(localCache).length > 5 ? localCache : null);
-  generateFilterTabs();
-  
-  setTimeout(checkUserAccess, 300);
+  Object.keys(state.grid).forEach(k => {
+    const list = state.grid[k] || [];
+    const parts = k.split('_');
+    const dateStr = parts.pop();
+    const busSlug = parts[1];
+    const bus = state.buses.find(b => b.slug === busSlug);
+    if (!bus) return;
+
+    list.forEach(item => {
+      const val = item.project_id;
+      if (!val) return;
+
+      if (!result[val]) result[val] = { hasDC: false, hasAC: false, dcDates: [], acDates: [] };
+      const cellDateMs = new Date(dateStr).getTime();
+
+      if (bus.team === 'elektriker') {
+        result[val].hasAC = true;
+        result[val].acDates.push(cellDateMs);
+      } else {
+        result[val].hasDC = true;
+        result[val].dcDates.push(cellDateMs);
+      }
+    });
+  });
+
+  return result;
 }
 
-window.onload = init;
+function getProjectWarnings() {
+  const warnings = {};
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const analysis = analyzeProjectsStatus();
+
+  Object.keys(analysis).forEach(projId => {
+    const data = analysis[projId];
+    const p = state.projects.find(x => x.id === projId);
+    if (!p) return;
+
+    const scope = getProjectScope(p);
+    if (scope === 'both' && data.dcDates.length > 0) {
+      const lastDC = Math.max(...data.dcDates);
+      const firstAC = data.acDates.length > 0 ? Math.min(...data.acDates) : null;
+      
+      const kwp = p.kwp || 0;
+      const limitDays = kwp > 100 ? 42 : 14;
+      const limitMs = limitDays * msPerDay;
+
+      if (firstAC === null) {
+        warnings[projId] = 'missing_ac';
+      } else if (firstAC - lastDC > limitMs) {
+        warnings[projId] = 'late_ac';
+      }
+    }
+  });
+  
+  return warnings;
+}
+
+// ─── PROJEKT-POOL (ZU PLANEN vs EINGETEILT) ───
+function renderPalette() {
+  const c = $('paletteUI');
+  c.innerHTML = '';
+  const search = $('plannerSearch').value.toLowerCase();
+  const scopeFilter = $('plannerStatus').value;
+  
+  const statusData = analyzeProjectsStatus();
+  const warnings = getProjectWarnings();
+
+  let countOpen = 0, countDone = 0;
+  state.projects.forEach(p => {
+    if (p.status === 'abgeschlossen' || p.status === 'eingeteilt' || p.status === 'bestaetigt') countDone++;
+    else countOpen++;
+  });
+  $('countOpen').textContent = countOpen;
+  $('countDone').textContent = countDone;
+
+  let filtered = state.projects.filter(p => {
+    const isDone = (p.status === 'abgeschlossen' || p.status === 'eingeteilt' || p.status === 'bestaetigt');
+    if (state.poolTab === 'open') return !isDone;
+    return isDone;
+  });
+
+  if (scopeFilter === 'scope_both') {
+    filtered = filtered.filter(p => getProjectScope(p) === 'both');
+  } else if (scopeFilter === 'scope_dc') {
+    filtered = filtered.filter(p => getProjectScope(p) === 'dc');
+  } else if (scopeFilter === 'scope_ac') {
+    filtered = filtered.filter(p => getProjectScope(p) === 'ac');
+  }
+
+  if (search) filtered = filtered.filter(p => p.name.toLowerCase().includes(search));
+
+  filtered.forEach(p => {
+    let cnt = 0;
+    Object.values(state.grid).forEach(list => {
+      cnt += (list || []).filter(item => item.project_id === p.id).length;
+    });
+
+    const el = document.createElement('div');
+    const scope = getProjectScope(p);
+    const info = statusData[p.id] || { hasDC: false, hasAC: false };
+    const isConfirmed = (p.status === 'eingeteilt' || p.status === 'bestaetigt' || p.status === 'abgeschlossen');
+
+    el.className = 'pal-chip' + (state.activeProjId === p.id ? ' active' : '') + (isConfirmed ? ' is-confirmed' : '');
+    el.style.background = p.color; 
+    el.style.color = '#fff';
+    el.dataset.projId = p.id;
+
+    let pipsHtml = '';
+    if (scope === 'dc') {
+      pipsHtml = `<span class="phase-pip ${info.hasDC ? 'is-active-dc' : ''}">Nur DC</span>`;
+    } else if (scope === 'ac') {
+      pipsHtml = `<span class="phase-pip ${info.hasAC ? 'is-active-ac' : ''}">Nur AC</span>`;
+    } else {
+      pipsHtml = `
+        <span class="phase-pip ${info.hasDC ? 'is-active-dc' : ''}">DC</span>
+        <span class="phase-pip ${info.hasAC ? 'is-active-ac' : ''}">AC</span>
+      `;
+    }
+
+    let badge = warnings[p.id] && !isConfirmed ? `<span class="ac-warn">⚠️ AC fehlt</span>` : '';
+
+    let actionButtons = '';
+    if (state.poolTab === 'open') {
+      actionButtons = `
+        <button class="chip-btn btn-confirm" title="Einteilung bestätigen (In 'Eingeteilt' verschieben)" onclick="event.stopPropagation(); confirmAndMoveToDone('${p.id}')">✓</button>
+      `;
+    } else {
+      actionButtons = `
+        <button class="chip-btn btn-restore" title="Zurück in 'Zu Planen' holen" onclick="event.stopPropagation(); restoreToOpen('${p.id}')">↩</button>
+      `;
+    }
+
+    el.innerHTML = `
+      <span class="pal-chip-title">${esc(p.name)}</span>
+      <div class="pal-chip-actions">
+        ${badge}
+        <div class="phase-pill-wrap" title="Klicken um Gewerk umzuschalten" onclick="event.stopPropagation(); cycleProjectScope('${p.id}')">
+          ${pipsHtml}
+        </div>
+        <span class="cnt">${cnt}T</span>
+        ${actionButtons}
+        <button class="chip-btn btn-del" title="Projekt komplett löschen" onclick="event.stopPropagation(); deleteProjectFast('${p.id}', '${esc(p.name)}')">🗑</button>
+      </div>
+    `;
+    el.onclick = () => { 
+      state.activeProjId = (state.activeProjId === p.id) ? null : p.id; 
+      renderPalette(); 
+      repaint();
+    };
+    c.appendChild(el);
+  });
+  
+  // Werkzeuge
+  [
+    { id: 'ERASER', text: '🧹 Löschen', color: '#1D1916' },
+    { id: 'vacation', text: '🌴 Urlaub', color: '#8c6a30' },
+    { id: 'sick', text: '🤒 Krank', color: '#b33939' }
+  ].forEach(x => {
+    const el = document.createElement('div');
+    el.className = 'pal-chip' + (state.activeProjId === x.id ? ' active' : '');
+    el.style.background = x.color; el.style.color = '#fff';
+    el.innerHTML = `<span>${x.text}</span>`;
+    el.onclick = () => { state.activeProjId = x.id; renderPalette(); repaint(); };
+    c.appendChild(el);
+  });
+}
+
+async function confirmAndMoveToDone(id) {
+  const p = state.projects.find(x => x.id === id);
+  if(!p) return;
+
+  p.status = 'eingeteilt';
+  renderPalette();
+  repaint();
+  showToast(`„${p.name}“ eingeteilt & bestätigt! ✅`);
+
+  await sb.from('projects').update({ status: 'eingeteilt' }).eq('id', id);
+}
+
+async function restoreToOpen(id) {
+  const p = state.projects.find(x => x.id === id);
+  if(!p) return;
+
+  p.status = 'auftrag';
+  renderPalette();
+  repaint();
+  showToast(`„${p.name}“ zurück in offenen Pool geholt! ↩`);
+
+  await sb.from('projects').update({ status: 'auftrag' }).eq('id', id);
+}
+
+async function cycleProjectScope(id) {
+  const p = state.projects.find(x => x.id === id);
+  if (!p) return;
+
+  const current = getProjectScope(p);
+  const next = current === 'both' ? 'dc' : current === 'dc' ? 'ac' : 'both';
+  
+  p.order_id = encodeScopeInNotes(next, p.order_id);
+  renderPalette();
+  repaint();
+  
+  const labels = { both: '🔧+⚡ DC+AC (Komplett)', dc: '🔧 Nur DC (Montage)', ac: '⚡ Nur AC (Elektrik)' };
+  showToast(`Gewerk: ${labels[next]}`);
+  
+  await sb.from('projects').update({ order_id: p.order_id }).eq('id', id);
+}
+
+async function deleteProjectFast(id, name) {
+  if(!confirm(`Möchtest du "${name}" und alle Kalendereinträge wirklich komplett löschen?`)) return;
+  
+  state.projects = state.projects.filter(p => p.id !== id);
+  Object.keys(state.grid).forEach(k => {
+    if (state.grid[k]) {
+      state.grid[k] = state.grid[k].filter(item => item.project_id !== id);
+      if (state.grid[k].length === 0) delete state.grid[k];
+    }
+  });
+  
+  repaint();
+  renderPalette();
+  showToast(`Projekt "${name}" gelöscht!`);
+  
+  await sb.from('grid_assignments').delete().eq('project_id', id);
+  await sb.from('projects').delete().eq('id', id);
+}
+
+// ─── KALENDER GRID ───
+function buildGrid() {
+  const dates = [];
+  let d = new Date(RANGE.start);
+  const end = new Date(RANGE.end);
+  while(d <= end) {
+    if(d.getDay() !== 0 && d.getDay() !== 6) dates.push(new Date(d));
+    d.setDate(d.getDate() + 1);
+  }
+
+  const thead = $('gridHead'), tbody = $('gridBody');
+  const todayIso = new Date().toISOString().split('T')[0];
+  
+  let trM = `<tr><th rowspan="2" class="fixed-corner">BUS / TEAM</th>`;
+  let trD = `<tr>`;
+  let lastM = -1, monthSpan = 0;
+  
+  dates.forEach((date, i) => {
+    const iso = date.toISOString().split('T')[0];
+    const isToday = (iso === todayIso);
+    const m = date.getMonth();
+    
+    if (m !== lastM) {
+      if(lastM !== -1) trM = trM.replace(`__SPAN_${lastM}__`, monthSpan);
+      monthSpan = 1; lastM = m;
+      const mName = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'][m];
+      trM += `<th colspan="__SPAN_${m}__">${mName} ${date.getFullYear()}</th>`;
+    } else { monthSpan++; }
+    
+    trD += `
+      <th id="th-${iso}" class="${date.getDay()===1?'monday-start':''} ${isToday?'is-today-head':''}">
+        <div class="day-num">${date.getDate()}</div>
+        <div class="day-short">${['So','Mo','Di','Mi','Do','Fr','Sa'][date.getDay()]}</div>
+      </th>
+    `;
+    if(i === dates.length - 1) trM = trM.replace(`__SPAN_${lastM}__`, monthSpan);
+  });
+  
+  thead.innerHTML = trM + `</tr>` + trD + `</tr>`;
+  tbody.innerHTML = '';
+
+  const groups = { 'montage': '🔧 Montage', 'bauleitung': '👷 Bauleitung', 'elektriker': '⚡ Elektriker' };
+  
+  Object.keys(groups).forEach(team => {
+    const teamBuses = state.buses.filter(b => b.team === team).sort(naturalSort);
+    if(teamBuses.length === 0) return;
+    
+    tbody.insertAdjacentHTML('beforeend', `<tr class="team-divider"><td colspan="${dates.length + 1}">${groups[team]}</td></tr>`);
+    
+    teamBuses.forEach(bus => {
+      let row = `
+        <tr>
+          <td>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-weight:700;font-size:11px">${esc(bus.label)}</span>
+              <button class="btn-ayocin" style="padding:2px 7px;font-size:8px;min-height:auto" onclick="openBusExportModal('${bus.slug}')" title="Wochenzettel drucken">📄 Zettel</button>
+            </div>
+          </td>
+      `;
+      dates.forEach(date => {
+        const iso = date.toISOString().split('T')[0];
+        const isToday = (iso === todayIso);
+        row += `<td id="CELL_${bus.slug}_${iso}" class="project-cell ${date.getDay()===1?'monday-start':''} ${isToday?'is-today-col':''}" data-bus="${bus.slug}" data-date="${iso}"></td>`;
+      });
+      row += `</tr>`;
+      tbody.insertAdjacentHTML('beforeend', row);
+    });
+  });
+
+  setupGridPaint();
+  repaint();
+}
+
+// ─── REPAINT: 1 TERMIN = GROSS | 2+ TERMINE = GESTAPELT ───
+function repaint() {
+  document.querySelectorAll('.project-cell').forEach(c => { 
+    c.innerHTML = '';
+  });
+  
+  let workCount = 0;
+
+  Object.keys(state.grid).forEach(k => {
+    const cell = $(k); if(!cell) return;
+    const list = state.grid[k] || [];
+    if (list.length === 0) return;
+
+    const stack = document.createElement('div');
+    const countClass = list.length === 1 ? 'count-1' : (list.length === 2 ? 'count-2' : 'count-3');
+    stack.className = `cell-stack ${countClass}`;
+
+    list.forEach(item => {
+      if (item.kind === 'vacation') {
+        stack.innerHTML += `
+          <div class="cell-item-card grid-block-vacation" style="display:flex;justify-content:space-between;align-items:center">
+            <span>🌴 URLAUB</span>
+            <button class="cell-item-del" onclick="deleteSpecificAssign(event, '${item.id}', '${k}')">×</button>
+          </div>
+        `;
+      } else if (item.kind === 'sick') {
+        stack.innerHTML += `
+          <div class="cell-item-card grid-block-sick" style="display:flex;justify-content:space-between;align-items:center">
+            <span>🤒 KRANK</span>
+            <button class="cell-item-del" onclick="deleteSpecificAssign(event, '${item.id}', '${k}')">×</button>
+          </div>
+        `;
+      } else if (item.project_id) {
+        const p = state.projects.find(x => x.id === item.project_id);
+        if (p) {
+          workCount++;
+          const isHighlighted = (state.activeProjId === p.id);
+          
+          let ibnBadge = '';
+          if (p.order_id && p.order_id.toLowerCase().includes('ibn')) {
+            const timeMatch = p.order_id.match(/\b([01]?[0-9]|2[0-3]):[0-5][0-9]\b/);
+            if (timeMatch) ibnBadge = `<span class="ibn-badge">⚡${timeMatch[0]}</span>`;
+          }
+
+          const phone = extractPhone(p.order_id);
+          const phoneHtml = phone ? `<a href="tel:${cleanPhone(phone)}" class="cell-phone-link" onclick="event.stopPropagation()">📞${phone}</a>` : '';
+
+          const card = document.createElement('div');
+          card.className = `cell-item-card ${isHighlighted ? 'is-highlighted' : ''}`;
+          card.style.background = p.color;
+          card.dataset.projId = p.id;
+          card.dataset.assignId = item.id;
+          
+          // Wenn nur 1 Termin: Voller Name | Wenn 2+ Termine: Kürzen
+          const displayName = list.length === 1 ? esc(p.name) : esc(p.name.substring(0, 9));
+
+          card.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;width:100%;min-width:0">
+              <div style="display:flex;align-items:center;gap:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">
+                ${ibnBadge}
+                <span class="cell-item-name">${displayName}</span>
+              </div>
+              <button class="cell-item-del" title="Diesen Auftrag löschen" onclick="deleteSpecificAssign(event, '${item.id}', '${k}')">×</button>
+            </div>
+            ${list.length === 1 ? phoneHtml : ''}
+          `;
+          stack.appendChild(card);
+        }
+      }
+    });
+
+    cell.appendChild(stack);
+  });
+
+  $('kpiRow').innerHTML = `<div class="kpi-pill"><span class="kpi-lbl">Geplante Aufträge</span><span class="kpi-val">${workCount}</span></div>`;
+}
+
+// ─── EINZELNEN TERMIN LÖSCHEN ───
+async function deleteSpecificAssign(e, assignId, cellKey) {
+  if (e) e.stopPropagation();
+  if (state.isLocked) {
+    showToast('Planer ist gesperrt! Bitte oben entsperren.', 'warn');
+    return;
+  }
+
+  if (state.grid[cellKey]) {
+    const item = state.grid[cellKey].find(x => x.id === assignId);
+    state.undoStack.push({ action: 'delete_one', cellKey, item });
+
+    state.grid[cellKey] = state.grid[cellKey].filter(x => x.id !== assignId);
+    if (state.grid[cellKey].length === 0) delete state.grid[cellKey];
+
+    repaint();
+    renderPalette();
+    showToast('Auftrag gelöscht!');
+
+    await sb.from('grid_assignments').delete().eq('id', assignId);
+  }
+}
+
+document.addEventListener('contextmenu', e => {
+  const card = e.target.closest('.cell-item-card');
+  const cell = e.target.closest('.project-cell');
+
+  if (card && card.dataset.assignId) {
+    e.preventDefault();
+    deleteSpecificAssign(e, card.dataset.assignId, cell.id);
+  } else if (cell && state.grid[cell.id] && state.grid[cell.id].length > 0) {
+    e.preventDefault();
+    const lastItem = state.grid[cell.id][state.grid[cell.id].length - 1];
+    deleteSpecificAssign(e, lastItem.id, cell.id);
+  }
+});
+
+// ─── PLANER ZEICHNEN ───
+function setupGridPaint() {
+  document.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    if (!e.target.closest('.project-cell')) return;
+    if (e.target.closest('.cell-item-del') || e.target.closest('.cell-phone-link')) return;
+
+    if (state.isLocked) {
+      showToast('Planer ist gesperrt! Bitte oben entsperren.', 'warn');
+      return;
+    }
+
+    if (!state.activeProjId) { showToast('Wähle links ein Projekt oder Werkzeug aus', 'error'); return; }
+    
+    const cell = e.target.closest('.project-cell');
+    state.isDrawing = true; state.selectedCells = [cell.id];
+    cell.classList.add('selecting');
+  });
+
+  document.addEventListener('mouseover', e => {
+    if (!state.isDrawing) return;
+    const cell = e.target.closest('.project-cell');
+    if (cell && !state.selectedCells.includes(cell.id)) {
+      state.selectedCells.push(cell.id);
+      cell.classList.add('selecting');
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if(!state.isDrawing) return;
+    state.isDrawing = false;
+    executePaint(state.selectedCells, state.activeProjId);
+  });
+}
+
+async function executePaint(cells, value) {
+  document.querySelectorAll('.selecting').forEach(n => n.classList.remove('selecting'));
+  if(!cells.length) return;
+  
+  const undoBatch = [];
+  
+  for(const cid of cells) {
+    const el = $(cid);
+    const busSlug = el.dataset.bus;
+    const date = el.dataset.date;
+    const bus = state.buses.find(b => b.slug === busSlug);
+    if(!bus) continue;
+
+    if (value === 'ERASER') {
+      if (state.grid[cid]) {
+        state.grid[cid].forEach(it => undoBatch.push({ cellKey: cid, item: it, wasCleared: true }));
+        delete state.grid[cid];
+        await sb.from('grid_assignments').delete().match({ bus_id: bus.id, work_date: date });
+      }
+    } else {
+      const isSpecial = (value === 'vacation' || value === 'sick');
+      const dbVal = isSpecial ? null : value;
+      const kind = isSpecial ? value : 'project';
+      
+      if (!state.grid[cid]) state.grid[cid] = [];
+
+      const alreadyIn = state.grid[cid].some(it => it.project_id === value || it.kind === value);
+      if (!alreadyIn) {
+        const { data } = await sb.from('grid_assignments').insert({
+          bus_id: bus.id, work_date: date, project_id: dbVal, kind: kind
+        }).select().single();
+
+        if (data) {
+          const newItem = { id: data.id, project_id: dbVal, kind: kind };
+          state.grid[cid].push(newItem);
+          undoBatch.push({ cellKey: cid, item: newItem, wasAdded: true });
+        }
+      }
+    }
+  }
+
+  if (undoBatch.length > 0) {
+    state.undoStack.push({ action: 'batch', items: undoBatch });
+  }
+
+  repaint();
+  renderPalette();
+  state.selectedCells = [];
+}
+
+// ─── SICHERES UNDO ───
+async function undoPaint() {
+  if (state.isLocked) {
+    showToast('Planer ist gesperrt! Bitte oben entsperren.', 'warn');
+    return;
+  }
+  if(!state.undoStack.length) { showToast('Nichts zum Rückgängig machen', 'error'); return; }
+  
+  const last = state.undoStack.pop();
+
+  if (last.action === 'delete_one') {
+    const { data } = await sb.from('grid_assignments').insert({
+      id: last.item.id,
+      bus_id: state.buses.find(b => b.slug === last.cellKey.split('_')[1])?.id,
+      work_date: last.cellKey.split('_')[2],
+      project_id: last.item.project_id,
+      kind: last.item.kind
+    }).select().single();
+
+    if (!state.grid[last.cellKey]) state.grid[last.cellKey] = [];
+    state.grid[last.cellKey].push(last.item);
+  } else if (last.action === 'batch') {
+    for (const b of last.items) {
+      if (b.wasAdded) {
+        state.grid[b.cellKey] = (state.grid[b.cellKey] || []).filter(x => x.id !== b.item.id);
+        if (state.grid[b.cellKey].length === 0) delete state.grid[b.cellKey];
+        await sb.from('grid_assignments').delete().eq('id', b.item.id);
+      }
+    }
+  }
+
+  repaint();
+  renderPalette();
+  showToast('Letzter Schritt rückgängig gemacht! ↶');
+}
+
+// ─── WOCHENZETTEL EXPORT ───
+function populateExportSelects() {
+  const busSel = $('exportBusSelect');
+  busSel.innerHTML = state.buses.map(b => `<option value="${b.slug}">${esc(b.label)} (${b.team})</option>`).join('');
+
+  const kwSel = $('exportKwSelect');
+  const kwMap = new Map();
+  let d = new Date(RANGE.start);
+  const end = new Date(RANGE.end);
+  
+  while(d <= end) {
+    const kw = getKW(d);
+    if (!kwMap.has(kw)) {
+      const mon = new Date(d); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
+      const fri = new Date(mon); fri.setDate(fri.getDate() + 4);
+      const label = `KW ${kw} (${mon.getDate()}.${mon.getMonth()+1}. - ${fri.getDate()}.${fri.getMonth()+1}.${fri.getFullYear()})`;
+      kwMap.set(kw, { label, monIso: mon.toISOString().split('T')[0] });
+    }
+    d.setDate(d.getDate() + 7);
+  }
+
+  kwSel.innerHTML = Array.from(kwMap.entries()).map(([kw, data]) => `<option value="${kw}" data-mon="${data.monIso}">${data.label}</option>`).join('');
+}
+
+function openBusExportModal(preSelectedBusSlug = null) {
+  populateExportSelects();
+  if (preSelectedBusSlug) $('exportBusSelect').value = preSelectedBusSlug;
+  renderExportPreview();
+  openModal('busExportModal');
+}
+
+function renderExportPreview() {
+  const busSlug = $('exportBusSelect').value;
+  const kwOpt = $('exportKwSelect').selectedOptions[0];
+  const monIso = kwOpt?.dataset?.mon || '2026-08-24';
+
+  const container = $('exportPreviewList');
+  const days = [];
+  let d = new Date(monIso);
+  for (let i = 0; i < 5; i++) {
+    days.push(new Date(d));
+    d.setDate(d.getDate() + 1);
+  }
+
+  container.innerHTML = days.map(date => {
+    const iso = date.toISOString().split('T')[0];
+    const dayName = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'][date.getDay()];
+    const cellKey = `CELL_${busSlug}_${iso}`;
+    const list = state.grid[cellKey] || [];
+
+    let contentHtml = '<span style="color:#888;font-size:11px">Kein Einsatz</span>';
+    if (list.length > 0) {
+      contentHtml = list.map(item => {
+        if (item.kind === 'vacation') return '<div style="color:#8C6A30;font-weight:700">🌴 URLAUB</div>';
+        if (item.kind === 'sick') return '<div style="color:var(--status-danger);font-weight:700">🤒 KRANK</div>';
+        const p = state.projects.find(x => x.id === item.project_id);
+        if (p) return `<div style="font-weight:700;color:var(--ayocin-dark);margin-bottom:2px">• ${esc(p.name)} (${p.kwp||0} kWp)</div>`;
+        return '';
+      }).join('');
+    }
+
+    return `
+      <div class="explorer-day-card">
+        <div class="explorer-day-head">
+          <span>${dayName}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-muted)">${date.getDate()}.${date.getMonth()+1}.${date.getFullYear()}</span>
+        </div>
+        <div>${contentHtml}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function executeBusPrint() {
+  const busSlug = $('exportBusSelect').value;
+  const kw = $('exportKwSelect').value;
+  const remarks = $('exportRemarks').value.trim();
+  const kwOpt = $('exportKwSelect').selectedOptions[0];
+  const monIso = kwOpt?.dataset?.mon || '2026-08-24';
+
+  const bus = state.buses.find(b => b.slug === busSlug);
+  if (!bus) return;
+
+  const mon = new Date(monIso);
+  const fri = new Date(mon); fri.setDate(fri.getDate() + 4);
+
+  $('printSheetTag').textContent = `SOLPRO // KW ${kw}`;
+  $('printSheetTitle').textContent = `Einsatzplan: ${bus.label} (${bus.team.toUpperCase()})`;
+  $('printSheetSub').textContent = `Woche ${kw} · Zeitraum: ${mon.getDate()}.${mon.getMonth()+1}.${mon.getFullYear()} - ${fri.getDate()}.${fri.getMonth()+1}.${fri.getFullYear()}`;
+  $('printSheetDate').textContent = new Date().toLocaleDateString('de-DE');
+
+  if (remarks) {
+    $('printSheetBanner').style.display = 'block';
+    $('printSheetBannerText').textContent = remarks;
+  } else {
+    $('printSheetBanner').style.display = 'none';
+  }
+
+  const days = [];
+  let d = new Date(monIso);
+  for (let i = 0; i < 5; i++) {
+    days.push(new Date(d));
+    d.setDate(d.getDate() + 1);
+  }
+
+  const tbody = $('printSheetBody');
+  tbody.innerHTML = days.map(date => {
+    const iso = date.toISOString().split('T')[0];
+    const dayName = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'][date.getDay()];
+    const cellKey = `CELL_${busSlug}_${iso}`;
+    const list = state.grid[cellKey] || [];
+
+    if (list.length === 0) {
+      return `<tr><td><b>${dayName}</b><br><span style="font-family:monospace;font-size:11px">${date.getDate()}.${date.getMonth()+1}.</span></td><td colspan="3" style="color:#999">Kein Einsatz eingetragen</td></tr>`;
+    }
+
+    return list.map((item, idx) => {
+      if (item.kind === 'vacation') {
+        return `<tr><td>${idx===0?`<b>${dayName}</b><br><span style="font-family:monospace">${date.getDate()}.${date.getMonth()+1}.</span>`:''}</td><td colspan="3" style="background:#F5E9D3;color:#8C6A30;font-weight:700">🌴 URLAUB</td></tr>`;
+      }
+      if (item.kind === 'sick') {
+        return `<tr><td>${idx===0?`<b>${dayName}</b><br><span style="font-family:monospace">${date.getDate()}.${date.getMonth()+1}.</span>`:''}</td><td colspan="3" style="background:#F7DCDA;color:var(--status-danger);font-weight:700">🤒 KRANK</td></tr>`;
+      }
+      const p = state.projects.find(x => x.id === item.project_id);
+      if (!p) return '';
+
+      return `
+        <tr>
+          <td>${idx===0?`<b>${dayName}</b><br><span style="font-family:monospace;font-size:11px">${date.getDate()}.${date.getMonth()+1}.</span>`:''}</td>
+          <td><b>${esc(p.name)}</b><br><span style="font-size:10px;color:#666">P-ID: ${esc(p.project_id || '-')} · ⚡ ${p.kwp || 0} kWp</span></td>
+          <td>📍 ${esc(p.address || 'Keine Adresse')}</td>
+          <td><div style="font-size:11px;white-space:pre-line">${esc(p.order_id || 'Keine Notizen')}</div></td>
+        </tr>
+      `;
+    }).join('');
+  }).join('');
+
+  window.print();
+}
+
+// ─── MONTEUR WOCHENANSICHT (MO - FR KARTEN) ───
+function populateMonteurSelects() {
+  const sel = $('monteurBusSelect');
+  sel.innerHTML = state.buses.map(b => `<option value="${b.slug}">${esc(b.label)} (${b.team})</option>`).join('');
+
+  const kwSel = $('monteurKwSelect');
+  const kwMap = new Map();
+  let d = new Date(RANGE.start);
+  const end = new Date(RANGE.end);
+  
+  while(d <= end) {
+    const kw = getKW(d);
+    if (!kwMap.has(kw)) {
+      const mon = new Date(d); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
+      const fri = new Date(mon); fri.setDate(fri.getDate() + 4);
+      const label = `KW ${kw} (${mon.getDate()}.${mon.getMonth()+1}. - ${fri.getDate()}.${fri.getMonth()+1}.)`;
+      kwMap.set(kw, { label, monIso: mon.toISOString().split('T')[0] });
+    }
+    d.setDate(d.getDate() + 7);
+  }
+
+  kwSel.innerHTML = Array.from(kwMap.entries()).map(([kw, data]) => `<option value="${kw}" data-mon="${data.monIso}">${data.label}</option>`).join('');
+
+  const currentKW = getKW(new Date());
+  if (kwMap.has(currentKW)) kwSel.value = currentKW;
+
+  const savedBus = localStorage.getItem('solpro_monteur_bus');
+  if (savedBus && state.buses.some(b => b.slug === savedBus)) {
+    sel.value = savedBus;
+  }
+}
+
+function saveMonteurBusPref() {
+  localStorage.setItem('solpro_monteur_bus', $('monteurBusSelect').value);
+}
+
+function renderMonteurView() {
+  const busSlug = $('monteurBusSelect').value;
+  const kwOpt = $('monteurKwSelect').selectedOptions[0];
+  const monIso = kwOpt?.dataset?.mon || '2026-08-24';
+  const container = $('monteurWeekContainer');
+  
+  if (!busSlug) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-muted)">Bitte Partie / Bus auswählen</div>';
+    return;
+  }
+
+  const days = [];
+  let d = new Date(monIso);
+  for (let i = 0; i < 5; i++) {
+    days.push(new Date(d));
+    d.setDate(d.getDate() + 1);
+  }
+
+  container.innerHTML = days.map(date => {
+    const iso = date.toISOString().split('T')[0];
+    const dayName = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'][date.getDay()];
+    const cellKey = `CELL_${busSlug}_${iso}`;
+    const list = state.grid[cellKey] || [];
+
+    let jobsHtml = '<div style="color:var(--ink-muted);font-size:12px;padding:8px 0">Kein Einsatz für diesen Tag eingetragen</div>';
+
+    if (list.length > 0) {
+      jobsHtml = list.map(item => {
+        if (item.kind === 'vacation') return `<div style="background:#F5E9D3;color:#8C6A30;font-weight:800;padding:8px 12px;border-radius:8px;font-size:13px">🌴 URLAUB</div>`;
+        if (item.kind === 'sick') return `<div style="background:#F7DCDA;color:var(--status-danger);font-weight:800;padding:8px 12px;border-radius:8px;font-size:13px">🤒 KRANK</div>`;
+
+        const p = state.projects.find(x => x.id === item.project_id);
+        if (!p) return '';
+
+        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.address || p.name)}`;
+        const phone = extractPhone(p.order_id);
+
+        let ibnBadge = '';
+        if (p.order_id && p.order_id.toLowerCase().includes('ibn')) {
+          const timeMatch = p.order_id.match(/\b([01]?[0-9]|2[0-3]):[0-5][0-9]\b/);
+          if (timeMatch) ibnBadge = `<span style="background:var(--ayocin-dark);color:var(--ayocin-sand-dark);font-family:var(--font-mono);font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px">⚡ IBN ${timeMatch[0]} Uhr</span>`;
+        }
+
+        return `
+          <div class="monteur-job-item">
+            <div class="monteur-job-head">
+              <span class="monteur-job-name">${esc(p.name)}</span>
+              ${ibnBadge}
+            </div>
+
+            <div class="monteur-job-meta">
+              <span>📍 <b>${esc(p.address || 'Keine Adresse')}</b></span>
+              <span>·</span>
+              <span>⚡ <b>${p.kwp || 0} kWp</b></span>
+            </div>
+
+            ${phone ? `<div style="margin-top:2px"><a href="tel:${cleanPhone(phone)}" style="color:var(--status-dc);font-weight:700;font-size:12px;text-decoration:none">📞 Anrufen: ${phone}</a></div>` : ''}
+
+            <a href="${mapsUrl}" target="_blank" class="btn-ayocin primary" style="width:fit-content;margin-top:4px">
+              <span>🗺️ In Google Maps navigieren</span>
+              <div class="btn-icon-circle"><svg width="10" height="9" viewBox="0 0 10 9" fill="currentColor"><path d="M1 4.5h7.5M5.5 1.5L8.5 4.5 5.5 7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            </a>
+
+            ${p.order_id ? `
+              <div style="background:var(--ayocin-sand);padding:8px 10px;border-radius:6px;font-size:11px;margin-top:4px;border:1px solid var(--ayocin-border)">
+                <b>📦 Details & Material:</b>
+                <div style="white-space:pre-line;margin-top:2px">${esc(p.order_id)}</div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    return `
+      <div class="monteur-day-card">
+        <div class="monteur-day-header">
+          <span class="monteur-day-title">${dayName}</span>
+          <span class="monteur-day-date">${date.getDate()}.${date.getMonth()+1}.${date.getFullYear()}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">${jobsHtml}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ─── TODOS ───
+function renderTodos() {
+  const today = new Date().toISOString().split('T')[0];
+  let overdue = 0, dueToday = 0, open = 0;
+  
+  $('taskList').innerHTML = state.todos.map(t => {
+    if(!t.done) {
+      open++;
+      if(t.due_date && t.due_date < today) overdue++;
+      if(t.due_date === today) dueToday++;
+    }
+    return `
+    <div class="task-item ${t.done ? 'done' : ''}">
+      <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodo('${t.id}', this.checked)" style="width:18px;height:18px;accent-color:var(--status-dc)">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${esc(t.text)}</div>
+        ${t.due_date ? `<div style="font-size:10px;color:var(--ink-muted);margin-top:2px">📅 ${t.due_date}</div>` : ''}
+      </div>
+      <button class="btn-ayocin danger" style="padding:4px 8px;font-size:10px;min-height:auto" onclick="deleteTodo('${t.id}')">✕</button>
+    </div>
+  `}).join('');
+  
+  $('taskCount').textContent = `${open} offen`;
+  $('tmOverdue').textContent = overdue;
+  $('tmToday').textContent = dueToday;
+  $('tmToPlan').textContent = open;
+}
+
+async function addTask() {
+  const text = $('taskInput').value.trim();
+  const date = $('taskDueDate').value || null;
+  if(!text) return;
+  
+  const { data } = await sb.from('todos').insert({ text: text, due_date: date }).select().single();
+  if(data) {
+    state.todos.unshift(data);
+    $('taskInput').value = '';
+    $('taskDueDate').value = '';
+    renderTodos();
+  }
+}
+$('taskInput').addEventListener('keypress', function(e) { if(e.key === 'Enter') addTask(); });
+
+async function toggleTodo(id, done) {
+  const t = state.todos.find(x => x.id === id); if(t) t.done = done;
+  renderTodos();
+  await sb.from('todos').update({ done: done }).eq('id', id);
+}
+
+async function deleteTodo(id) {
+  state.todos = state.todos.filter(t => t.id !== id);
+  renderTodos();
+  await sb.from('todos').delete().eq('id', id);
+}
+
+// ─── ADMIN: PROJEKTE ───
+function renderAdminProjects() {
+  const search = $('adminProjSearch').value.toLowerCase();
+  const list = state.projects.filter(p => p.name.toLowerCase().includes(search));
+  
+  $('adminProjectList').innerHTML = list.map(p => `
+    <div class="admin-item">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--ayocin-dark);margin-bottom:2px">${esc(p.name)}</div>
+        <div style="font-size:11px;color:var(--ink-muted)">📍 ${esc(p.address)} · ⚡ ${p.kwp || 0} kWp</div>
+      </div>
+      <button class="btn-ayocin" style="padding:4px 12px;min-height:auto" onclick="editAdminProject('${p.id}')">Bearbeiten</button>
+    </div>
+  `).join('');
+}
+
+function openAdminProjectModal() {
+  $('pmTitle').textContent = 'Neues Projekt';
+  $('pmId').value = ''; $('pmName').value = ''; $('pmAddress').value = ''; $('pmKwp').value = ''; $('pmNotes').value = ''; $('pmStatus').value = 'auftrag'; $('pmScope').value = 'both';
+  $('pmDelBtn').style.display = 'none';
+  openModal('adminProjectModal');
+}
+
+function editAdminProject(id) {
+  const p = state.projects.find(x => x.id === id); if(!p) return;
+  $('pmTitle').textContent = 'Projekt bearbeiten';
+  $('pmId').value = p.id; $('pmName').value = p.name; $('pmAddress').value = p.address; $('pmKwp').value = p.kwp; $('pmNotes').value = p.order_id || ''; $('pmStatus').value = p.status;
+  $('pmScope').value = getProjectScope(p);
+  $('pmDelBtn').style.display = 'block';
+  openModal('adminProjectModal');
+}
+
+async function saveAdminProject() {
+  const id = $('pmId').value;
+  const scope = $('pmScope').value;
+  const rawNotes = $('pmNotes').value.trim();
+  const scopedNotes = encodeScopeInNotes(scope, rawNotes);
+
+  const data = {
+    name: $('pmName').value.trim(), 
+    address: $('pmAddress').value.trim(),
+    order_id: scopedNotes,
+    kwp: parseFloat($('pmKwp').value) || 0,
+    status: $('pmStatus').value
+  };
+  
+  if(id) await sb.from('projects').update(data).eq('id', id);
+  else { data.color = getAutoColor(); await sb.from('projects').insert(data); }
+  
+  closeModal(); showToast('Projekt gespeichert!'); await loadData();
+}
+
+async function deleteAdminProject() {
+  const id = $('pmId').value;
+  if(confirm('Wirklich löschen? Alle Kalender-Einträge dazu verschwinden ebenfalls.')) {
+    await sb.from('grid_assignments').delete().eq('project_id', id);
+    await sb.from('projects').delete().eq('id', id);
+    closeModal(); showToast('Projekt gelöscht!'); await loadData();
+  }
+}
+
+// ─── ADMIN: BUSSE ───
+function renderAdminBuses() {
+  const teams = { 'montage': '🔧 Montage', 'bauleitung': '👷 Bauleitung', 'elektriker': '⚡ Elektriker' };
+  const sortedBuses = [...state.buses].sort(naturalSort);
+  
+  $('adminBusList').innerHTML = sortedBuses.map(b => `
+    <div class="admin-item">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--ayocin-dark);margin-bottom:2px">${esc(b.label)}</div>
+        <div style="font-size:11px;color:var(--ink-muted)">Team: ${teams[b.team] || b.team}</div>
+      </div>
+      <button class="btn-ayocin" style="padding:4px 12px;min-height:auto" onclick="editAdminBus('${b.id}')">Bearbeiten</button>
+    </div>
+  `).join('');
+}
+
+function openAdminBusModal() {
+  $('bmTitle').textContent = 'Neuer Bus';
+  $('bmId').value = ''; $('bmLabel').value = ''; $('bmTeam').value = 'montage';
+  $('bmDelBtn').style.display = 'none';
+  openModal('adminBusModal');
+}
+
+function editAdminBus(id) {
+  const b = state.buses.find(x => x.id === id); if(!b) return;
+  $('bmTitle').textContent = 'Bus bearbeiten';
+  $('bmId').value = b.id; $('bmLabel').value = b.label; $('bmTeam').value = b.team;
+  $('bmDelBtn').style.display = 'block';
+  openModal('adminBusModal');
+}
+
+async function saveAdminBus() {
+  const id = $('bmId').value;
+  const label = $('bmLabel').value.trim();
+  const slug = label.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  const data = { label: label, slug: slug, team: $('bmTeam').value };
+  
+  if(id) await sb.from('buses').update(data).eq('id', id);
+  else await sb.from('buses').insert(data);
+  
+  closeModal(); showToast('Bus gespeichert!'); await loadData();
+}
+
+async function deleteAdminBus() {
+  const id = $('bmId').value;
+  if(confirm('Wirklich löschen? Alle Kalender-Einträge für diesen Bus verschwinden.')) {
+    await sb.from('grid_assignments').delete().eq('bus_id', id);
+    await sb.from('buses').delete().eq('id', id);
+    closeModal(); showToast('Bus gelöscht!'); await loadData();
+  }
+}
+
+// ─── STARTEN MIT AUTH-CHECK ───
+checkAuth();
+
 </script>
 </body>
 </html>

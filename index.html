@@ -2,1663 +2,1211 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=0">
-<title>SOLPRO V3 // BRUTAL</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05080f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOLPRO">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="SOLPRO PV Mess- und Prüfprotokoll &middot; Offline-Tool für Photovoltaik-Anlagen">
+<link rel="apple-touch-icon" href="Logo_Solpro.jpg">
+<title>SOLPRO | Prüfprotokoll</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>tailwind.config={theme:{extend:{colors:{sp:{green:'#9fc131',dark:'#7a9420',glow:'#c6e84a'}}}}}</script>
 <style>
-/* ============================================================
-   SOLPRO V3 — BRUTALIST EDITION
-   ============================================================ */
-:root{
-  --bg:#fff;--fg:#000;--paper:#f4f4ee;--paper2:#e8e8e0;
-  --muted:#666;--line:#000;--red:#ff2e00;--green:#00a651;
-  --yellow:#f5a623;--blue:#0050ff;
-}
-*{margin:0;padding:0;box-sizing:border-box;font-family:'JetBrains Mono','Courier New',monospace;}
-html,body{height:100%;}
-body{background:var(--bg);color:var(--fg);font-size:13px;line-height:1.4;-webkit-font-smoothing:none;}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
-/* ==== LOGIN ==== */
-#login{
-  position:fixed;inset:0;background:var(--fg);color:var(--bg);
-  display:flex;align-items:center;justify-content:center;z-index:9999;
-}
-.login-box{
-  width:100%;max-width:420px;border:4px solid var(--bg);background:var(--fg);
-}
-.login-head{padding:20px;border-bottom:4px solid var(--bg);display:flex;align-items:center;gap:12px;}
-.login-mark{width:36px;height:36px;background:var(--red);color:#fff;display:grid;place-items:center;font-weight:900;font-size:20px;}
-.login-title{font-weight:900;font-size:18px;letter-spacing:0.1em;}
-.login-body{padding:24px 20px;}
-.login-row{margin-bottom:14px;}
-.login-row label{display:block;font-size:11px;font-weight:700;letter-spacing:0.1em;margin-bottom:6px;color:var(--muted);}
-.login-row input{
-  width:100%;padding:10px 12px;background:transparent;color:var(--bg);
-  border:2px solid var(--bg);font-family:inherit;font-size:14px;font-weight:700;
-}
-.login-row input:focus{outline:none;background:var(--red);border-color:var(--red);}
-.login-error{color:var(--red);font-size:12px;margin-bottom:12px;font-weight:700;}
-.login-hint{padding:12px 20px;background:var(--bg);color:var(--fg);font-size:11px;border-top:2px solid var(--bg);}
-.login-hint b{color:var(--red);}
-
-/* ==== APP LAYOUT ==== */
-#app{display:grid;grid-template-columns:220px 1fr;min-height:100vh;}
-
-/* ==== TABBAR ==== */
-#tabbar{
-  background:var(--fg);color:var(--bg);
-  display:flex;flex-direction:column;
-  position:sticky;top:0;height:100vh;overflow-y:auto;
-}
-.tb-head{padding:18px 16px;border-bottom:4px solid var(--bg);display:flex;align-items:center;gap:10px;}
-.tb-mark{width:32px;height:32px;background:var(--red);color:#fff;display:grid;place-items:center;font-weight:900;font-size:18px;}
-.tb-brand{font-weight:900;font-size:16px;letter-spacing:0.1em;}
-.tb-section{padding:14px 16px 6px;font-size:10px;letter-spacing:0.15em;color:var(--muted);font-weight:700;border-top:2px solid #333;}
-.tb-section:first-of-type{border-top:none;}
-.tb-item{
-  display:flex;align-items:center;gap:10px;padding:11px 16px;
-  background:transparent;border:none;border-bottom:1px solid #222;
-  color:var(--bg);font-family:inherit;font-size:12px;font-weight:700;
-  letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;text-align:left;width:100%;
-}
-.tb-item:hover{background:#111;color:var(--red);}
-.tb-item.active{background:var(--red);color:#fff;}
-.tb-icon{width:18px;text-align:center;font-weight:900;}
-.tb-foot{margin-top:auto;padding:12px 16px;border-top:2px solid #333;font-size:10px;color:var(--muted);}
-.tb-user{color:var(--bg);font-weight:700;margin-bottom:4px;}
-.tb-role{color:var(--red);font-weight:700;letter-spacing:0.1em;}
-
-/* ==== MAIN ==== */
-#content{padding:24px;overflow-x:hidden;}
-.page{display:none;}
-.page.active{display:block;}
-
-.h-row{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap;}
-.h-title{font-size:28px;font-weight:900;letter-spacing:-0.02em;text-transform:uppercase;}
-.h-sub{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:4px;}
-.h-actions{display:flex;gap:0;}
-
-/* ==== STATS ==== */
-.stats{
-  display:grid;grid-template-columns:repeat(4,1fr);
-  border:3px solid var(--line);margin-bottom:24px;background:var(--bg);
-}
-.stat{padding:18px;border-right:1px solid var(--line);}
-.stat:last-child{border-right:none;}
-.stat-l{font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
-.stat-v{font-size:24px;font-weight:900;line-height:1;}
-.stat-u{font-size:12px;color:var(--muted);margin-left:3px;}
-
-/* ==== BUTTONS ==== */
-.btn{
-  padding:9px 14px;background:var(--bg);color:var(--fg);
-  border:none;border-right:2px solid var(--line);
-  font-family:inherit;font-size:11px;font-weight:700;letter-spacing:0.05em;
-  text-transform:uppercase;cursor:pointer;display:inline-flex;
-  align-items:center;gap:6px;white-space:nowrap;
-}
-.btn:hover{background:var(--fg);color:var(--bg);}
-.btn-primary{background:var(--red);color:#fff;}
-.btn-primary:hover{background:var(--fg);color:var(--red);}
-.btn-ok{background:var(--green);color:#fff;}
-.btn-ok:hover{background:var(--fg);color:var(--green);}
-.btn-danger:hover{background:var(--red);color:#fff;}
-.btn-sm{padding:6px 10px;font-size:10px;}
-.btn-block{width:100%;justify-content:center;border-right:none;border-bottom:2px solid var(--line);}
-.btn-block:last-child{border-bottom:none;}
-
-/* ==== TABS ==== */
-.tabs{
-  display:flex;border:3px solid var(--line);margin-bottom:20px;
-  background:var(--bg);overflow-x:auto;
-}
-.tab{
-  padding:10px 18px;background:var(--bg);border:none;
-  border-right:2px solid var(--line);font-family:inherit;
-  font-size:11px;font-weight:700;letter-spacing:0.05em;
-  text-transform:uppercase;cursor:pointer;white-space:nowrap;
-}
-.tab:last-child{border-right:none;}
-.tab:hover{background:var(--paper);}
-.tab.active{background:var(--fg);color:var(--bg);}
-
-/* ==== WR CARD ==== */
-.wr-card{border:3px solid var(--line);margin-bottom:20px;background:var(--bg);}
-.wr-head{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 18px;background:var(--fg);color:var(--bg);
-  flex-wrap:wrap;gap:12px;
-}
-.wr-id{background:var(--red);color:#fff;padding:3px 9px;font-weight:900;font-size:11px;letter-spacing:0.1em;}
-.wr-name{font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:0.02em;}
-.wr-meta{font-size:10px;opacity:0.7;letter-spacing:0.05em;text-transform:uppercase;}
-.wr-stats{display:flex;gap:20px;font-size:12px;}
-.wr-stats b{font-size:14px;}
-.wr-stats .ok{color:var(--green);}
-
-/* ==== TABLE ==== */
-.tbl-wrap{overflow-x:auto;}
-.tbl{width:100%;border-collapse:collapse;font-size:12px;}
-.tbl th{
-  background:var(--paper);padding:9px 10px;text-align:left;
-  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;
-  border-bottom:2px solid var(--line);border-right:1px solid var(--line);white-space:nowrap;
-}
-.tbl th:last-child,.tbl td:last-child{border-right:none;}
-.tbl td{
-  padding:6px 8px;border-bottom:1px solid var(--line);
-  border-right:1px solid var(--line);vertical-align:middle;
-}
-.tbl tr.mppt{border-top:2px solid var(--line);}
-.tbl tr.off{opacity:0.35;}
-.tbl tbody tr:hover:not(.off){background:var(--paper);}
-.klemme{font-weight:900;color:var(--red);}
-.power{color:var(--green);font-weight:700;}
-
-/* ==== INPUTS ==== */
-input.in,select.in{
-  width:100%;padding:5px 7px;background:var(--bg);color:var(--fg);
-  border:2px solid var(--line);font-family:inherit;font-size:12px;font-weight:600;
-}
-input.in:focus,select.in:focus{outline:none;background:var(--red);color:#fff;border-color:var(--fg);}
-input.in.gak{text-align:center;color:var(--red);font-weight:700;}
-input.in.compact{width:60px;text-align:center;}
-input.in[readonly]{background:var(--paper);color:var(--muted);cursor:not-allowed;}
-input.in[readonly]:focus{background:var(--paper);color:var(--muted);}
-
-/* ==== TOGGLE ==== */
-.toggle{display:inline-flex;border:2px solid var(--line);}
-.tg{
-  padding:4px 10px;background:var(--bg);color:var(--fg);
-  border:none;font-family:inherit;font-size:11px;font-weight:900;
-  cursor:pointer;text-transform:uppercase;
-}
-.tg.on-yes{background:var(--green);color:#fff;}
-.tg.on-no{background:var(--fg);color:var(--bg);}
-
-/* ==== PLAN BADGE ==== */
-.plan{display:inline-block;padding:2px 7px;background:var(--paper);border:1px solid var(--line);font-size:10px;font-weight:700;letter-spacing:0.03em;}
-.plan.on{background:var(--green);color:#fff;border-color:var(--green);}
-
-/* ==== MODAL ==== */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;}
-.overlay.open{display:flex;}
-.modal{background:var(--bg);border:4px solid var(--line);width:100%;max-width:680px;max-height:calc(100vh - 80px);display:flex;flex-direction:column;}
-.modal.big{max-width:1100px;}
-.modal-head{padding:14px 18px;background:var(--fg);color:var(--bg);display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--line);}
-.modal-title{font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;}
-.modal-close{background:var(--red);color:#fff;border:none;width:30px;height:30px;font-size:16px;font-weight:900;cursor:pointer;line-height:1;}
-.modal-body{padding:20px;overflow-y:auto;flex:1;}
-.modal-foot{padding:12px 18px;border-top:3px solid var(--line);display:flex;justify-content:flex-end;background:var(--paper);}
-.modal-foot .btn{border-right:none;border-left:2px solid var(--line);}
-
-/* ==== CONFIG ==== */
-.cfg-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
-.cfg-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;min-width:130px;}
-.cfg-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--paper);border:2px solid var(--line);margin-bottom:6px;}
-.cfg-item .nm{font-weight:900;min-width:80px;font-size:12px;}
-.cfg-item .if{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;flex:1;}
-
-/* ==== PROJECT LIST ==== */
-.proj-list{display:flex;flex-direction:column;gap:0;border:3px solid var(--line);}
-.proj-item{
-  display:grid;grid-template-columns:1fr auto auto auto;gap:12px;
-  align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);
-}
-.proj-item:last-child{border-bottom:none;}
-.proj-item:hover{background:var(--paper);}
-.proj-name{font-weight:900;text-transform:uppercase;}
-.proj-meta{font-size:10px;color:var(--muted);letter-spacing:0.05em;text-transform:uppercase;}
-.proj-status{padding:3px 8px;font-size:10px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;border:2px solid var(--line);}
-.s-draft{background:var(--paper);}
-.s-assigned{background:var(--yellow);color:#000;}
-.s-progress{background:var(--blue);color:#fff;}
-.s-done{background:var(--green);color:#fff;}
-
-/* ==== TOAST ==== */
-.toast{
-  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);
-  background:var(--fg);color:var(--bg);padding:11px 22px;
-  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
-  border:3px solid var(--red);z-index:2000;opacity:0;transition:all 0.2s;
-  max-width:calc(100% - 32px);text-align:center;
-}
-.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
-.toast.err{border-color:var(--red);background:var(--red);color:#fff;}
-
-/* ==== CANVAS ==== */
-.canvas-wrap{
-  border:3px solid var(--line);background:var(--bg);position:relative;overflow:hidden;
-}
-.canvas-toolbar{
-  display:flex;align-items:center;gap:0;border-bottom:3px solid var(--line);
-  background:var(--paper);flex-wrap:wrap;
-}
-.canvas-toolbar .btn{border-right:2px solid var(--line);}
-.canvas-toolbar .btn.active{background:var(--red);color:#fff;}
-.canvas-info{
-  margin-left:auto;padding:8px 14px;font-size:10px;color:var(--muted);
-  letter-spacing:0.05em;text-transform:uppercase;border-left:2px solid var(--line);
-}
-#cv{width:100%;height:600px;display:block;background:var(--paper);cursor:crosshair;}
-.canvas-readonly{position:absolute;inset:0;background:rgba(255,255,255,0.4);display:none;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;pointer-events:none;}
-.canvas-readonly.show{display:flex;}
-.canvas-status{
-  position:absolute;top:8px;right:8px;background:var(--fg);color:var(--bg);
-  padding:4px 10px;font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
+:root {
+  --bg:       #05080f;
+  --surface:  #0c1220;
+  --panel:    #111827;
+  --border:   rgba(255,255,255,0.07);
+  --green:    #9fc131;
+  --green-d:  #7a9420;
+  --green-g:  rgba(159,193,49,0.15);
+  --text:     #f0f4f8;
+  --muted:    #64748b;
+  --dim:      #1e2a3a;
 }
 
-/* ==== ROLE BADGE ==== */
-.role-tag{
-  display:inline-block;padding:2px 8px;font-size:10px;font-weight:900;
-  letter-spacing:0.1em;text-transform:uppercase;margin-left:8px;
-}
-.role-planer{background:var(--red);color:#fff;}
-.role-bauleitung{background:var(--yellow);color:#000;}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-/* ==== RESPONSIVE ==== */
-@media(max-width:1024px){
-  .stats{grid-template-columns:repeat(2,1fr);}
-  .stat:nth-child(2){border-right:none;}
-  .stat:nth-child(1),.stat:nth-child(2){border-bottom:1px solid var(--line);}
-}
-@media(max-width:768px){
-  #app{grid-template-columns:64px 1fr;}
-  .tb-head{padding:14px 8px;justify-content:center;}
-  .tb-brand,.tb-section,.tb-item span:not(.tb-icon),.tb-foot{display:none;}
-  .tb-item{justify-content:center;padding:14px 8px;}
-  .tb-section{height:2px;padding:0;}
-  #content{padding:16px;}
-  .h-title{font-size:20px;}
-  .h-actions{flex-wrap:wrap;width:100%;}
-  .h-actions .btn{border-right:none;border-bottom:2px solid var(--line);flex:1;}
-  .stats{grid-template-columns:1fr 1fr;}
-  /* mobile table -> cards */
-  .tbl thead{display:none;}
-  .tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%;}
-  .tbl tr{border:2px solid var(--line);margin-bottom:8px;padding:6px;}
-  .tbl td{display:flex;justify-content:space-between;align-items:center;border:none;border-bottom:1px solid var(--paper);padding:7px 4px;min-height:36px;}
-  .tbl td::before{content:attr(data-l);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
-  .tbl td:last-child{border-bottom:none;}
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ==== PRINT ==== */
-@media print{
-  body{font-size:10px;}
-  #tabbar,.canvas-toolbar,.overlay,.toast,.h-actions{display:none!important;}
-  .wr-card{break-inside:avoid;border:2px solid #000;}
-  .tbl thead{display:table-header-group;}
-  .tbl tr.off{display:none;}
-  .tbl input.in,.toggle{display:none;}
+/* Keyboard-focus visibility (a11y) */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* BACKGROUND GRID */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(159,193,49,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(159,193,49,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  top: -200px; left: 50%;
+  transform: translateX(-50%);
+  width: 800px; height: 500px;
+  background: radial-gradient(ellipse, rgba(159,193,49,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: clamp(14px,4vw,24px) clamp(10px,3vw,20px) 100px; }
+
+/* SETUP SCREEN */
+#setup-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px,4vw,24px);
+  padding-top: max(clamp(12px,4vw,24px), env(safe-area-inset-top));
+  padding-bottom: max(clamp(12px,4vw,24px), env(safe-area-inset-bottom));
+}
+
+.setup-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: clamp(16px,4vw,24px);
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(159,193,49,0.08);
+}
+
+.setup-hero {
+  padding: clamp(28px,6vw,40px) clamp(20px,6vw,36px) clamp(22px,5vw,32px);
+  background: linear-gradient(160deg, rgba(159,193,49,0.1) 0%, var(--panel) 50%);
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  position: relative;
+}
+.setup-hero::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 60%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+}
+
+.logo-img { height: clamp(40px,10vw,52px); margin: 0 auto 20px; display: block; object-fit: contain; }
+.logo-placeholder { display: none; }
+
+.hero-title {
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--green);
+  line-height: 1;
+}
+.hero-sub {
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.setup-body { padding: clamp(20px,5vw,28px) clamp(18px,5vw,28px) clamp(24px,6vw,32px); display: flex; flex-direction: column; gap: 20px; }
+
+/* PROJECT SELECTOR */
+.project-box {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.field-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* INPUTS */
+.sp-input {
+  width: 100%;
+  background: rgba(5,8,15,0.8);
+  border: 1.5px solid rgba(100,116,139,0.25);
+  border-radius: 10px;
+  padding: 13px 14px;
+  min-height: 46px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+@media (min-width:641px){ .sp-input { font-size: 0.875rem; } }
+.sp-input::placeholder { color: #2d3d52; }
+.sp-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(159,193,49,0.1); }
+.sp-input:hover:not(:focus) { border-color: rgba(100,116,139,0.4); }
+
+.input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width:380px){ .input-row { grid-template-columns: 1fr; } }
+
+/* BUTTONS */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  font-family: 'Inter', sans-serif; font-weight: 700; cursor: pointer; border: none;
+  border-radius: 10px; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.01em;
+  min-height: 44px; touch-action: manipulation;
+}
+.btn-green {
+  background: linear-gradient(135deg, #a8cc35 0%, #7a9420 100%);
+  color: #061200;
+  padding: 13px 22px;
+  font-size: 0.875rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(159,193,49,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+  width: 100%;
+}
+.btn-green:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(159,193,49,0.4); }
+.btn-green:active { transform: translateY(0); }
+
+.btn-ghost {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #94a3b8;
+  padding: 9px 16px;
+  font-size: 0.8rem;
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.09); color: var(--text); border-color: rgba(255,255,255,0.18); }
+
+.btn-blue {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  padding: 9px 16px;
+  font-size: 0.8rem;
+  box-shadow: 0 2px 12px rgba(59,130,246,0.3);
+}
+.btn-blue:hover { filter: brightness(1.1); box-shadow: 0 4px 18px rgba(59,130,246,0.45); }
+
+.btn-red {
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: #f87171;
+  padding: 9px 13px;
+  font-size: 0.8rem;
+}
+.btn-red:hover { background: rgba(239,68,68,0.22); }
+
+.btn-print {
+  background: rgba(255,255,255,0.05);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  color: #94a3b8;
+  padding: 13px 20px;
+  font-size: 0.875rem;
+  border-radius: 12px;
+  flex: 1;
+}
+.btn-print:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+
+.btn-xl-green {
+  background: linear-gradient(135deg, #a8cc35 0%, #7a9420 100%);
+  color: #061200; font-weight: 900; font-size: 0.875rem; letter-spacing: 0.05em;
+  text-transform: uppercase; padding: 13px 20px; border-radius: 12px; flex: 1;
+  box-shadow: 0 4px 20px rgba(159,193,49,0.28);
+}
+.btn-xl-green:hover { filter: brightness(1.1); }
+
+/* HINT TEXT */
+.hint { font-size: 0.7rem; color: #334d66; line-height: 1.6; }
+.hint strong { color: #4a6a85; }
+
+/* FILLABLE OPTION BOX */
+.fill-option-box {
+  background: rgba(159,193,49,0.05);
+  border: 1px solid rgba(159,193,49,0.18);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.fill-option-box .field-label { color: #7a9a40; }
+
+/* DASHBOARD */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(8px,2.5vw,12px);
+  margin-bottom: 16px;
+}
+.kpi-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: clamp(12px,3vw,16px);
+  padding: clamp(12px,3.5vw,18px) clamp(12px,4vw,20px);
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+}
+.kpi-label { font-size: clamp(0.56rem,2.2vw,0.63rem); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; line-height: 1.3; }
+@media (min-width:480px){ .kpi-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.1em; } }
+.kpi-value { font-size: clamp(1.15rem,5.5vw,1.8rem); font-weight: 900; color: var(--text); line-height: 1; }
+.kpi-unit { font-size: 0.72rem; font-weight: 700; color: var(--green); margin-left: 3px; }
+.kpi-accent { color: var(--green); }
+@media (max-width:420px){ .dashboard{ gap:8px; } }
+
+.progress-track { height: 3px; background: rgba(100,116,139,0.15); border-radius: 99px; overflow: hidden; margin-top: 10px; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), #c6e84a); border-radius: 99px; transition: width 0.5s cubic-bezier(.4,0,.2,1); }
+
+/* TOOLBAR */
+#toolbar {
+  position: sticky; top: max(0px, env(safe-area-inset-top)); z-index: 50;
+  background: rgba(5,8,15,0.85);
+  backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  flex-wrap: wrap;
+}
+.toolbar-info { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; flex: 1 1 180px; }
+.toolbar-project { font-size: 0.875rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.toolbar-sep { color: #1e2a3a; }
+.toolbar-tech { font-size: 0.8rem; color: var(--muted); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.toolbar-badge {
+  font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--green); background: rgba(159,193,49,0.1); border: 1px solid rgba(159,193,49,0.2);
+  padding: 2px 8px; border-radius: 99px;
+  opacity: 0; transition: opacity 0.3s;
+  white-space: nowrap;
+}
+.toolbar-actions { display: flex; gap: 8px; flex-shrink: 0; }
+@media (max-width:560px){
+  #toolbar { padding: 10px 12px; }
+  .toolbar-tech { max-width: 110px; }
+  .toolbar-actions { width: 100%; }
+  .toolbar-actions .btn { flex: 1; }
+}
+
+/* WR BLOCK */
+.wr-block {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.wr-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 14px clamp(14px,4vw,20px);
+  background: linear-gradient(135deg, rgba(159,193,49,0.07) 0%, transparent 60%);
+  border-bottom: 1px solid rgba(159,193,49,0.1);
+}
+.wr-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+  background: var(--green); color: #061200;
+  padding: 3px 10px; border-radius: 6px;
+  text-transform: uppercase;
+}
+.wr-name { font-size: 0.875rem; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.06em; }
+.wr-meta { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+
+.wr-gak-wrap { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.wr-gak-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.wr-gak-inp {
+  width: 64px; background: rgba(5,8,15,0.8); border: 1.5px solid rgba(100,116,139,0.25);
+  border-radius: 7px; padding: 5px 8px; color: var(--text); min-height: 30px;
+  font-family: 'Inter', sans-serif; font-size: 0.78rem; text-align: center; outline: none;
+  transition: border-color 0.15s;
+}
+.wr-gak-inp:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(159,193,49,0.12); }
+.wr-gak-inp::placeholder { color: #2d3d52; }
+.wr-gak-print { display: none; }
+@media (max-width:700px){
+  .wr-gak-inp { font-size: 16px; min-height: 34px; }
+}
+
+/* TABLE */
+.tbl-wrap { overflow-x: auto; }
+table.mt {
+  width: 100%;
+  border-collapse: collapse;
+}
+table.mt thead tr {
+  border-bottom: 1px solid rgba(159,193,49,0.12);
+}
+table.mt thead th {
+  padding: 10px 12px;
+  font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: #3d5a6e;
+  text-align: center;
+  white-space: nowrap;
+}
+table.mt thead th:first-child { text-align: left; padding-left: 20px; }
+table.mt tbody tr {
+  border-bottom: 1px solid rgba(255,255,255,0.035);
+  transition: background 0.1s;
+}
+table.mt tbody tr:nth-child(even) { background: rgba(255,255,255,0.018); }
+table.mt tbody tr:hover { background: rgba(159,193,49,0.04); }
+table.mt tbody tr.row-nein { opacity: 0.22; }
+table.mt tbody tr.mppt-div { border-top: 1px solid rgba(159,193,49,0.1); }
+table.mt td {
+  padding: 8px 12px;
+  vertical-align: middle;
+  text-align: center;
+  font-size: 0.82rem;
+}
+table.mt td:first-child { text-align: left; padding-left: 20px; }
+
+.string-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem; font-weight: 700;
+  color: var(--green);
+}
+
+/* Toggle */
+.tog-wrap { display: inline-flex; background: rgba(5,8,15,0.8); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 2px; gap: 2px; }
+.tog {
+  padding: 3px 12px; border-radius: 6px; font-size: 0.68rem; font-weight: 800;
+  letter-spacing: 0.06em; cursor: pointer; border: none;
+  background: transparent; color: #2d3d52; transition: all 0.15s;
+  touch-action: manipulation;
+}
+@media (max-width:700px){ .tog { padding: 9px 16px; font-size: 0.72rem; } }
+.tog.ton-ja.on  { background: rgba(159,193,49,0.2); color: #a8cc35; }
+.tog.ton-nei.on { background: rgba(100,116,139,0.2); color: #64748b; }
+
+/* Mod input */
+.mod-inp {
+  width: 64px; background: rgba(5,8,15,0.8); border: 1px solid rgba(100,116,139,0.2);
+  border-radius: 7px; padding: 5px 6px; color: var(--text); min-height: 36px;
+  font-family: 'Inter', sans-serif; font-size: 0.82rem; text-align: center; outline: none;
+  transition: border-color 0.15s;
+}
+.mod-inp:focus { border-color: var(--green); }
+
+/* Measurement input (Uoc, Isc, Riso) */
+.msr-inp {
+  width: 72px; background: rgba(5,8,15,0.8); border: 1px solid rgba(100,116,139,0.2);
+  border-radius: 7px; padding: 5px 6px; color: var(--text); min-height: 36px;
+  font-family: 'Inter', sans-serif; font-size: 0.82rem; text-align: center; outline: none;
+  transition: border-color 0.15s;
+}
+.msr-inp:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(159,193,49,0.12); }
+.msr-inp::placeholder { color: #2d3d52; font-size: 0.7rem; }
+@media (max-width:700px){
+  .mod-inp, .msr-inp { font-size: 16px; min-height: 40px; }
+  .note-inp { font-size: 16px; }
+}
+
+/* Power cell */
+.pwr-cell { font-weight: 700; font-size: 0.8rem; color: #2d3d52; font-family: 'JetBrains Mono', monospace; }
+.pwr-cell.has-val { color: var(--green); }
+
+/* Note input */
+.note-inp {
+  width: 100%; min-width: 120px; background: transparent;
+  border: 1px solid rgba(255,255,255,0.04); border-radius: 6px; padding: 4px 8px;
+  color: #475569; font-family: 'Inter', sans-serif; font-size: 0.75rem; outline: none;
+  transition: border-color 0.15s, color 0.15s;
+}
+.note-inp:focus { border-color: rgba(100,116,139,0.3); color: #94a3b8; }
+.note-inp::placeholder { color: #1a2535; }
+
+/* ── RESPONSIVE TABLE → CARD LAYOUT (phones) ── */
+@media (max-width: 700px){
+  .tbl-wrap { overflow-x: visible; }
+  table.mt, table.mt tbody, table.mt tr, table.mt td { display: block; width: 100%; }
+  table.mt thead { display: none; }
+  table.mt tfoot { display: block; width: 100%; }
+  table.mt tfoot tr { display: block; }
+  table.mt tbody tr {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin: 10px;
+    background: rgba(255,255,255,0.02);
+    overflow: hidden;
+  }
+  table.mt tbody tr:nth-child(even) { background: rgba(255,255,255,0.035); }
+  table.mt tbody tr.mppt-div { border-top-color: rgba(159,193,49,0.35); margin-top: 18px; }
+  table.mt td {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    text-align: right; padding: 10px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.85rem;
+  }
+  table.mt td:last-child { border-bottom: none; }
+  table.mt td::before {
+    content: attr(data-label);
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); text-align: left; flex-shrink: 0;
+  }
+  table.mt td:first-child {
+    text-align: left; padding-left: 14px;
+    background: rgba(159,193,49,0.05);
+    border-bottom: 1px solid rgba(159,193,49,0.12);
+  }
+  table.mt td:first-child::before { content: ''; }
+  table.mt td.col-mod, table.mt td.col-pwr, table.mt td.col-msr { justify-content: space-between; }
+  table.mt td .tog-wrap { margin-left: auto; }
+  table.mt td .mod-inp, table.mt td .msr-inp { width: 100px; margin-left: auto; }
+  table.mt td .note-inp { text-align: right; }
+  .wr-block { margin-bottom: 16px; border-radius: 16px; }
+  .wr-block .tbl-wrap { padding-bottom: 4px; }
+}
+
+/* TOAST */
+#toast {
+  position: fixed; bottom: 30px; left: 50%;
+  transform: translateX(-50%) translateY(110%);
+  z-index: 9999;
+  background: rgba(10,16,28,0.98);
+  border: 1px solid rgba(159,193,49,0.25);
+  color: var(--text);
+  padding: 11px 22px;
+  border-radius: 12px;
+  font-size: 0.85rem; font-weight: 600;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  transition: transform 0.35s cubic-bezier(.34,1.56,.64,1), opacity 0.2s;
+  opacity: 0;
+  max-width: 92vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+@media (max-width:700px){
+  #toast { bottom: max(94px, calc(84px + env(safe-area-inset-bottom))); font-size: 0.8rem; padding: 10px 18px; }
+}
+
+.gak-export-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  padding: 14px 18px; margin-top: 16px;
+}
+.gak-export-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.gak-export-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width:560px){
+  .gak-export-bar { flex-direction: column; align-items: stretch; padding: 14px 16px; }
+  .gak-export-actions { width: 100%; }
+  .gak-export-actions .btn { flex: 1; font-size: 0.78rem; }
+}
+
+/* BOTTOM BAR */
+.bottom-bar {
+  display: flex; gap: 10px;
+  padding-top: 16px; padding-bottom: 60px;
+}
+@media (max-width:700px){
+  .bottom-bar {
+    position: sticky; bottom: 0; width: 100%;
+    gap: 8px;
+    padding: 12px 4vw;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    margin-top: 20px;
+    background: rgba(5,8,15,0.92);
+    backdrop-filter: blur(20px) saturate(1.5);
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
+    z-index: 40;
+  }
+  .btn-print { font-size: 0.8rem; padding: 13px 12px; }
+  .btn-xl-green { font-size: 0.8rem; padding: 13px 12px; }
+}
+
+/* PRINT */
+.print-only { display: none !important; }
+.print-blank { display: none; }
+.screen-dash { display: inline; }
+.print-dash  { display: none; }
+
+@page { size: A4 landscape; margin: 10mm 13mm 17mm;
+  @bottom-center { content: "SOLPRO Pruefprotokoll  \00B7  Seite " counter(page) " von " counter(pages); font-family: 'Inter', Arial, sans-serif; font-size: 7pt; color: #94a3b8; } }
+
+@media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body { background: #fff !important; color: #111 !important; padding: 0 !important; font-size: 10pt; }
+  body::before, body::after { display: none !important; }
+  .no-print { display: none !important; }
+  .print-only { display: revert !important; }
+  thead .print-only { display: table-cell !important; }
+  tbody .print-only { display: table-cell !important; }
+  tfoot .print-only { display: table-cell !important; }
+  .wrap { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+  #matrix-view { display: block !important; }
+
+  .pr-break { page-break-after: always !important; break-after: page !important; }
+  .pr-break:last-child { page-break-after: auto !important; break-after: auto !important; }
+
+  /* Print header */
+  #ph {
+    display: flex !important; align-items: flex-start; justify-content: space-between; gap: 24px;
+    padding-bottom: 8px; margin-bottom: 10px; border-bottom: 2.5px solid #9fc131;
+  }
+  .ph-title { font-size: 18pt; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; color: #111; line-height: 1; }
+  .ph-sub { font-size: 7pt; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: #9fc131; margin-top: 4px; }
+  .ph-grid { display: grid !important; grid-template-columns: 1fr 1fr; gap: 2px 28px; font-size: 8pt; min-width: 300px; }
+  .ph-grid .lbl { color: #64748b; font-weight: 600; }
+  .ph-grid strong { color: #111; font-weight: 800; }
+
+  #toolbar, #toast, .bottom-bar, .dashboard { display: none !important; }
+
+  .wr-block { background: #fff !important; border: none !important; border-radius: 0 !important; margin: 0 0 10px !important; padding: 0 !important; break-inside: avoid-page !important; box-shadow: none !important; }
+  .wr-head { background: #f1f5f9 !important; border: 1px solid #cbd5e1 !important; border-bottom: 2px solid #9fc131 !important; border-radius: 0 !important; padding: 5px 10px !important; }
+  .wr-num { background: #9fc131 !important; color: #061200 !important; font-size: 7pt !important; }
+  .wr-name { font-size: 9pt !important; color: #111 !important; }
+  .wr-meta { display: none !important; }
+  .wr-gak-print { font-size: 7.5pt !important; font-weight: 800 !important; letter-spacing: .05em !important; text-transform: uppercase !important; color: #3d5800 !important; background: #e4f0b0 !important; padding: 2px 8px !important; border-radius: 99px !important; margin-left: auto !important; }
+
+  table.mt { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
+  table.mt thead tr { border-bottom: none !important; }
+  table.mt thead th { background: #dde4ee !important; color: #1e293b !important; border: 1px solid #7e96ae !important; padding: 8px 5px !important; font-size: 8.5pt !important; font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: .04em !important; text-align: center !important; vertical-align: middle !important; line-height: 1.3 !important; }
+  table.mt thead th:first-child { text-align: left !important; padding-left: 10px !important; }
+  .col-id   { width: 10% !important; }
+  .col-stat { width: 9%  !important; }
+  .col-mod  { width: 9%  !important; }
+  .col-pwr  { width: 14% !important; }
+  .col-msr  { width: 10% !important; }
+  .col-note { width: auto !important; }
+  table.mt td { border: 1px solid #7e96ae !important; color: #111 !important; padding: 0 7px !important; font-size: 10pt !important; vertical-align: middle !important; text-align: center !important; height: 42px !important; }
+  table.mt td:first-child { text-align: left !important; padding-left: 10px !important; }
+  table.mt tbody tr:nth-child(even) td { background: #f4f7fb !important; }
+  table.mt tbody tr:nth-child(odd)  td { background: #fff !important; }
+  .string-id { font-family: ui-monospace, monospace !important; font-weight: 800 !important; color: #3d5800 !important; font-size: 9.5pt !important; }
+  .pwr-cell  { font-family: ui-monospace, monospace !important; font-weight: 700 !important; color: #3d5800 !important; font-size: 9.5pt !important; }
+  table.mt td.col-note { font-size: 9pt !important; color: #334155 !important; text-align: left !important; padding-left: 10px !important; }
+  table.mt tbody tr.row-nein { display: none !important; }
+  table.mt td.col-msr { border-bottom: 2px solid #475569 !important; }
+  table.mt tbody tr.mppt-div { border-top: 1.5px solid rgba(159,193,49,.45) !important; }
+
+  .tog-wrap  { display: none !important; }
+  .mod-inp   { display: none !important; }
+  .msr-inp   { display: none !important; }
+  .note-inp  { display: none !important; }
+  .screen-dash { display: none !important; }
+  .print-only  { display: revert !important; }
+  .print-cell  { display: inline !important; font-weight: 700 !important; }
+  .print-note  { display: inline !important; }
+  .print-blank { display: block !important; min-height: 28px !important; background: #fff !important; }
+  .row-nein .print-blank { display: none !important; }
+  .row-nein .print-dash  { display: inline !important; color: #94a3b8 !important; }
+
+  .tot-row td { background: #e4f0b0 !important; font-weight: 800 !important; font-size: 10pt !important; border-top: 2.5px solid #9fc131 !important; color: #1a2e00 !important; border: 1px solid #7e96ae !important; height: 38px !important; }
+
+  #pr-sig { display: flex !important; gap: 32px; margin-top: 18px; padding-top: 12px; border-top: 1px solid #cbd5e1; }
+  .sig-f { flex: 1; }
+  .sig-l { border-bottom: 2px solid #334155; height: 40px; margin-bottom: 6px; }
+  .sig-t { font-size: 7pt; color: #64748b; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+
+  .wr-block .tbl-wrap { overflow: visible !important; }
 }
 </style>
 </head>
 <body>
 
-<!-- ============================================================
-     LOGIN
-     ============================================================ -->
-<div id="login">
-  <div class="login-box">
-    <div class="login-head">
-      <div class="login-mark">⚡</div>
-      <div class="login-title">SOLPRO V3</div>
+<div id="toast"></div>
+
+<!-- SETUP -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <div class="setup-hero">
+      <img src="Logo_Solpro.jpg" alt="SOLPRO" class="logo-img" onerror="this.style.display='none'">
+      <div class="hero-title">SOLPRO</div>
+      <div class="hero-sub">PV &middot; Mess- &amp; Prüfprotokoll &middot; Offline</div>
     </div>
-    <div class="login-body">
-      <div id="loginErr" class="login-error" style="display:none;"></div>
-      <div class="login-row">
-        <label>USER</label>
-        <input type="text" id="loginUser" autocomplete="off" autofocus>
+    <div class="setup-body">
+
+      <!-- Saved projects -->
+      <div class="project-box">
+        <label class="field-label">Gespeicherte Projekte</label>
+        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
+          <select id="project-list" class="sp-input" style="flex:1 1 140px;min-width:0;padding:9px 12px;border-radius:8px;"></select>
+          <button onclick="loadProject()" class="btn btn-ghost" style="flex:0 0 auto;">Laden</button>
+          <button onclick="deleteProject()" class="btn btn-red" style="flex:0 0 auto;">&#x2715;</button>
+        </div>
       </div>
-      <div class="login-row">
-        <label>PASSWORT</label>
-        <input type="password" id="loginPass">
-      </div>
-      <button class="btn btn-primary" style="width:100%;padding:14px;justify-content:center;border-right:none;" id="btnLogin">▶ ANMELDEN</button>
-    </div>
-    <div class="login-hint">
-      DEMO: <b>planer</b> / planer &nbsp;·&nbsp; <b>bauleiter</b> / bauleiter
-    </div>
-  </div>
-</div>
 
-<!-- ============================================================
-     APP
-     ============================================================ -->
-<div id="app" style="display:none;">
-
-  <!-- LEFT TABBAR -->
-  <aside id="tabbar">
-    <div class="tb-head">
-      <div class="tb-mark">⚡</div>
-      <div class="tb-brand">SOLPRO</div>
-    </div>
-
-    <div class="tb-section">HAUPT</div>
-    <button class="tb-item active" data-page="home"><span class="tb-icon">▦</span><span>ÜBERSICHT</span></button>
-    <button class="tb-item" data-page="projects"><span class="tb-icon">▤</span><span>PROJEKTE</span></button>
-
-    <div class="tb-section">ARBEIT</div>
-    <button class="tb-item" data-page="draw"><span class="tb-icon">▣</span><span>ZEICHNEN</span></button>
-    <button class="tb-item" data-page="strings"><span class="tb-icon">▥</span><span>STRINGS</span></button>
-
-    <div class="tb-section">SYSTEM</div>
-    <button class="tb-item planer-only" data-page="config"><span class="tb-icon">⚙</span><span>KONFIG</span></button>
-    <button class="tb-item" data-page="setup"><span class="tb-icon">☁</span><span>SETUP</span></button>
-    <button class="tb-item" data-page="about"><span class="tb-icon">?</span><span>ABOUT</span></button>
-
-    <div class="tb-foot">
-      <div class="tb-user" id="tbUser">—</div>
-      <div class="tb-role" id="tbRole">—</div>
-    </div>
-  </aside>
-
-  <!-- CONTENT -->
-  <main id="content">
-
-    <!-- HOME / ÜBERSICHT -->
-    <div class="page active" id="page-home">
-      <div class="h-row">
+      <!-- Fields -->
+      <div id="setup-form" style="display:flex;flex-direction:column;gap:14px;">
         <div>
-          <div class="h-title">ÜBERSICHT</div>
-          <div class="h-sub" id="homeSub">WILLKOMMEN</div>
+          <label class="field-label" for="standort">Standort / Projektname</label>
+          <input id="standort" type="text" autocomplete="organization" placeholder="z.B. Mustergasse 12, Wien" class="sp-input">
         </div>
-        <div class="h-actions">
-          <button class="btn btn-primary" id="btnNewProj">+ NEUES PROJEKT</button>
-        </div>
-      </div>
-
-      <div class="stats">
-        <div class="stat"><div class="stat-l">PROJEKTE</div><div class="stat-v" id="homeProj">0</div></div>
-        <div class="stat"><div class="stat-l">AKTIV</div><div class="stat-v" id="homeActive">0</div></div>
-        <div class="stat"><div class="stat-l">ZUR FREIGABE</div><div class="stat-v" id="homePending">0</div></div>
-        <div class="stat"><div class="stat-l">ABGESCHLOSSEN</div><div class="stat-v" id="homeDone">0</div></div>
-      </div>
-
-      <div class="h-row" style="margin-top:8px;">
-        <div class="h-title" style="font-size:18px;">AKTUELLES PROJEKT</div>
-      </div>
-      <div id="homeCurrent"></div>
-    </div>
-
-    <!-- PROJEKTE -->
-    <div class="page" id="page-projects">
-      <div class="h-row">
         <div>
-          <div class="h-title">PROJEKTE</div>
-          <div class="h-sub">VERWALTUNG & FREIGABE</div>
+          <label class="field-label" for="pruefer">Prüfer / Techniker</label>
+          <input id="pruefer" type="text" autocomplete="name" placeholder="Vor- und Nachname" class="sp-input">
         </div>
-        <div class="h-actions">
-          <button class="btn btn-primary planer-only" id="btnNewProj2">+ NEUES PROJEKT</button>
-        </div>
-      </div>
-      <div class="proj-list" id="projList"></div>
-    </div>
-
-    <!-- ZEICHNEN -->
-    <div class="page" id="page-draw">
-      <div class="h-row">
         <div>
-          <div class="h-title">MODUL-ZEICHNER</div>
-          <div class="h-sub">DACHPLAN // LAYOUT-PLANUNG</div>
+          <label class="field-label" for="pruef-datum">Prüfdatum</label>
+          <input id="pruef-datum" type="date" class="sp-input" style="color-scheme:dark;">
         </div>
-        <div class="h-actions">
-          <button class="btn planer-only" id="btnClearLayout">✕ LEEREN</button>
-          <button class="btn btn-ok" id="btnExportLayout">↓ EXPORT</button>
-        </div>
-      </div>
-
-      <div class="canvas-wrap">
-        <div class="canvas-toolbar">
-          <button class="btn active" data-tool="place" data-canvas-tool>▣ PLATZIEREN</button>
-          <button class="btn" data-tool="fill" data-canvas-tool>▦ BEREICH FÜLLEN</button>
-          <button class="btn" data-tool="select" data-canvas-tool>◉ AUSWÄHLEN</button>
-          <button class="btn" data-tool="erase" data-canvas-tool>✕ LÖSCHEN</button>
-          <button class="btn planer-only" data-tool="pan" data-canvas-tool>✥ PAN</button>
-          <button class="btn" id="btnRotateSel">↻ ROTIEREN</button>
-          <button class="btn" id="btnZoomIn">+ ZOOM</button>
-          <button class="btn" id="btnZoomOut">− ZOOM</button>
-          <button class="btn" id="btnZoomReset">⊙ RESET</button>
-          <div class="canvas-info" id="canvasInfo">MODULE: 0 // GRID: 20</div>
-        </div>
-        <canvas id="cv"></canvas>
-        <div class="canvas-readonly" id="canvasRO">READ-ONLY // BAULEITUNG</div>
-        <div class="canvas-status" id="canvasStatus">BEREIT</div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;border:3px solid var(--line);margin-top:16px;">
-        <div class="stat" style="border-right:1px solid var(--line);"><div class="stat-l">MODULE</div><div class="stat-v" id="cntMod">0</div></div>
-        <div class="stat" style="border-right:1px solid var(--line);"><div class="stat-l">FLÄCHE</div><div class="stat-v"><span id="cntArea">0</span><span class="stat-u">M²</span></div></div>
-        <div class="stat" style="border-right:1px solid var(--line);"><div class="stat-l">STRINGS</div><div class="stat-v" id="cntStr">0</div></div>
-        <div class="stat"><div class="stat-l">LEISTUNG</div><div class="stat-v"><span id="cntPwr">0.00</span><span class="stat-u">KWP</span></div></div>
-      </div>
-    </div>
-
-    <!-- STRINGS -->
-    <div class="page" id="page-strings">
-      <div class="h-row">
-        <div>
-          <div class="h-title">STRING-MATRIX</div>
-          <div class="h-sub" id="strSub">PROJEKT // MODUL // LEISTUNG</div>
-        </div>
-        <div class="h-actions">
-          <button class="btn" id="btnFilterAll">ALLE WRs</button>
-          <button class="btn planer-only" id="btnAssign">⊕ ZUWEISEN</button>
-          <button class="btn planer-only" id="btnRelease">✓ FREIGEBEN</button>
-          <button class="btn" id="btnValidate">✓ PRÜFEN</button>
-          <button class="btn btn-ok" id="btnExportGak">GAK</button>
-          <button class="btn btn-ok" id="btnExportStr">STRINGS</button>
-          <button class="btn btn-ok" id="btnExportProto">PROTOKOLL</button>
-          <button class="btn" id="btnExportCsv">CSV</button>
-          <button class="btn" id="btnPrint">⎙ DRUCK</button>
-        </div>
-      </div>
-      <div class="tabs" id="wrTabs"></div>
-      <div id="wrContainer"></div>
-    </div>
-
-    <!-- KONFIG -->
-    <div class="page" id="page-config">
-      <div class="h-row">
-        <div>
-          <div class="h-title">KONFIGURATION</div>
-          <div class="h-sub">PROJEKT-EINSTELLUNGEN</div>
-        </div>
-      </div>
-      <div class="tabs" id="cfgTabs">
-        <button class="tab active" data-cfg="basic">BASIC</button>
-        <button class="tab" data-cfg="templates">TEMPLATES</button>
-        <button class="tab" data-cfg="validation">VALIDIERUNG</button>
-      </div>
-
-      <div data-cfg-pane="basic">
-        <div class="cfg-row"><span class="cfg-label">Projekt-Name:</span><input class="in" id="cfgName" style="max-width:300px;"></div>
-        <div class="cfg-row"><span class="cfg-label">Modul-Wp:</span><input class="in compact" type="number" id="cfgWp"></div>
-        <h3 style="margin:20px 0 10px;text-transform:uppercase;font-size:13px;">WECHSELRICHTER</h3>
-        <div class="cfg-row">
-          <span class="cfg-label">MPPTs:</span><input class="in compact" type="number" id="cfgMppts" value="12" min="1" max="48">
-          <span class="cfg-label">Inputs/MPPT:</span><input class="in compact" type="number" id="cfgInputs" value="2" min="1" max="4">
-          <button class="btn btn-ok" id="btnAddInv">+ HINZUFÜGEN</button>
-        </div>
-        <h3 style="margin:20px 0 10px;text-transform:uppercase;font-size:13px;">ODER PRESET</h3>
-        <div class="cfg-row">
-          <select class="in" id="cfgPreset" style="max-width:320px;"></select>
-          <button class="btn" id="btnUsePreset">ÜBERNEHMEN</button>
-        </div>
-        <h3 style="margin:20px 0 10px;text-transform:uppercase;font-size:13px;">AKTUELLE WR-LISTE</h3>
-        <div id="wrList"></div>
-      </div>
-
-      <div data-cfg-pane="templates" style="display:none;">
-        <h3 style="margin-bottom:12px;text-transform:uppercase;font-size:13px;">TEMPLATES</h3>
-        <div id="tplList"></div>
-        <h3 style="margin:20px 0 10px;text-transform:uppercase;font-size:13px;">SPEICHERN</h3>
-        <div class="cfg-row">
-          <input class="in" id="newTplName" placeholder="NAME" style="max-width:200px;">
-          <input class="in" id="newTplDesc" placeholder="BESCHREIBUNG" style="max-width:300px;">
-          <button class="btn btn-ok" id="btnSaveTpl">SPEICHERN</button>
-        </div>
-      </div>
-
-      <div data-cfg-pane="validation" style="display:none;">
-        <div class="cfg-row">
-          <button class="btn btn-primary" id="btnShowVal">BERICHT</button>
-          <button class="btn btn-ok" id="btnExportVal">EXPORT</button>
-        </div>
-        <div style="margin-top:16px;line-height:1.8;">
-          <b>REGELN:</b><br>
-          MAX MODULE/STRING: <b id="rMaxMod">30</b><br>
-          MAX LEISTUNG/MPPT: <b id="rMaxPwr">15</b> KWP<br>
-          SPANNUNG: <b id="rMinV">200</b>–<b id="rMaxV">1000</b> V<br>
-          MAX STROM: <b id="rMaxA">15</b> A
-        </div>
-      </div>
-    </div>
-
-    <!-- SETUP -->
-    <div class="page" id="page-setup">
-      <div class="h-row"><div><div class="h-title">SETUP</div><div class="h-sub">CLOUD & SYSTEM</div></div></div>
-      <div class="stats">
-        <div class="stat"><div class="stat-l">USER</div><div class="stat-v" id="setupUsers" style="font-size:18px;">—</div></div>
-        <div class="stat"><div class="stat-l">PROJEKTE</div><div class="stat-v" id="setupProj">0</div></div>
-        <div class="stat"><div class="stat-l">SUPABASE</div><div class="stat-v" id="setupSB" style="font-size:18px;">—</div></div>
-        <div class="stat"><div class="stat-l">VERSION</div><div class="stat-v" style="font-size:18px;">V3.0</div></div>
-      </div>
-
-      <div class="wr-card">
-        <div class="wr-head"><div style="display:flex;align-items:center;gap:10px;"><span class="wr-id">CLOUD</span><span class="wr-name">SUPABASE</span></div></div>
-        <div style="padding:18px;">
-          <div class="cfg-row"><span class="cfg-label">URL:</span><input class="in" id="sbUrl" style="max-width:400px;"></div>
-          <div class="cfg-row"><span class="cfg-label">KEY:</span><input class="in" type="password" id="sbKey" style="max-width:400px;"></div>
-          <div class="cfg-row">
-            <button class="btn btn-primary" id="btnTestSB">TESTEN</button>
-            <button class="btn btn-ok" id="btnSaveSB">SPEICHERN</button>
+        <div class="input-row">
+          <div>
+            <label class="field-label" for="modul">Modulleistung (Wp)</label>
+            <input id="modul" type="number" min="1" placeholder="z.B. 440" class="sp-input">
+          </div>
+          <div>
+            <label class="field-label" for="mppt">MPPTs pro WR</label>
+            <input id="mppt" placeholder="z.B. 2,3" class="sp-input">
           </div>
         </div>
-      </div>
+        <p class="hint" style="margin-top:-4px;">Kommagetrennt &#8212; <strong>2,3</strong> = WR&nbsp;1 mit 2&nbsp;MPPTs, WR&nbsp;2 mit 3&nbsp;MPPTs. Jeder MPPT hat 2&nbsp;String-Eingänge.</p>
 
-      <div class="wr-card">
-        <div class="wr-head"><div style="display:flex;align-items:center;gap:10px;"><span class="wr-id">USER</span><span class="wr-name">BENUTZER-VERWALTUNG</span></div></div>
-        <div style="padding:18px;">
-          <div class="cfg-row">
-            <input class="in" id="newUserName" placeholder="NAME" style="max-width:200px;">
-            <input class="in" id="newUserUser" placeholder="LOGIN" style="max-width:200px;">
-            <input class="in" id="newUserPass" placeholder="PASSWORT" style="max-width:200px;">
-            <select class="in" id="newUserRole" style="max-width:160px;">
-              <option value="BAULEITUNG">BAULEITUNG</option>
-              <option value="PLANER">PLANER</option>
-            </select>
-            <button class="btn btn-ok" id="btnAddUser">+ ANLEGEN</button>
+        <!-- Messwerte ausfüllbar Toggle -->
+        <div class="fill-option-box">
+          <label class="field-label" style="margin-bottom:10px;">Messwerte digital ausfüllbar</label>
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;row-gap:10px;">
+            <div class="tog-wrap">
+              <button id="fill-ja"  class="tog ton-ja"      onclick="setFillMode(true)"  style="padding:7px 18px;font-size:0.72rem;">JA</button>
+              <button id="fill-nei" class="tog ton-nei on"  onclick="setFillMode(false)" style="padding:7px 18px;font-size:0.72rem;">NEIN</button>
+            </div>
+            <span style="font-size:0.7rem;color:#4a6a85;line-height:1.5;">Uoc&nbsp;(V) &middot; Isc&nbsp;(A) &middot; Riso&nbsp;(M&#8486;)<br><span style="color:#2d3d52;">Werte direkt am Gerät eingeben</span></span>
           </div>
-          <div id="userList" style="margin-top:14px;"></div>
         </div>
+
+        <button onclick="startApp()" class="btn btn-green" style="margin-top:4px;font-size:0.9rem;padding:14px;">
+          &#9889;&nbsp; Matrix laden
+        </button>
       </div>
-    </div>
 
-    <!-- ABOUT -->
-    <div class="page" id="page-about">
-      <div class="h-row"><div><div class="h-title">ABOUT</div><div class="h-sub">SOLPRO V3 // BRUTAL</div></div></div>
-      <div class="wr-card">
-        <div class="wr-head"><div style="display:flex;align-items:center;gap:10px;"><span class="wr-id">SOLPRO</span><span class="wr-name">PV-PLANUNGSSYSTEM</span></div></div>
-        <div style="padding:20px;line-height:1.8;">
-          <p><b>SOLPRO V3</b> — BRUTALIST EDITION</p><br>
-          <p>Planungssystem für PV-Anlagen mit Rollen-System und Modul-Zeichner.</p><br>
-          <p><b>ROLLEN:</b></p>
-          <ul style="margin-left:20px;">
-            <li><b>PLANER</b> — VOLLER ZUGRIFF (Projekte, WR-Konfig, Zeichner, Freigabe)</li>
-            <li><b>BAULEITUNG</b> — NUR EINGABE (Messwerte, Modul-Anzahl, Status)</li>
-          </ul>
-          <br>
-          <p><b>WORKFLOW:</b></p>
-          <ol style="margin-left:20px;">
-            <li>PLANER ERSTELLT PROJEKT + KONFIGURIERT WR</li>
-            <li>PLANER ZEICHNET MODULE AUF DACHPLAN</li>
-            <li>PLANER WEIST PROJEKT BAULEITUNG ZU</li>
-            <li>BAULEITUNG ERFASST MESSWERTE (Uoc, Isc, Riso)</li>
-            <li>PLANER PRÜFT UND SCHLIESST AB</li>
-          </ol>
-        </div>
-      </div>
-    </div>
-
-  </main>
-</div>
-
-<!-- ============================================================
-     MODALS
-     ============================================================ -->
-<div class="overlay" id="newProjModal">
-  <div class="modal">
-    <div class="modal-head"><span class="modal-title">NEUES PROJEKT</span><button class="modal-close" data-close="newProjModal">✕</button></div>
-    <div class="modal-body">
-      <div class="cfg-row"><span class="cfg-label">Name:</span><input class="in" id="npName" placeholder="PV MUSTERSTRASSE 1"></div>
-      <div class="cfg-row"><span class="cfg-label">Template:</span><select class="in" id="npTpl" style="max-width:300px;"></select></div>
-      <div class="cfg-row"><span class="cfg-label">Modul-Wp:</span><input class="in compact" type="number" id="npWp" value="465"></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn" data-close="newProjModal">ABBRECHEN</button>
-      <button class="btn btn-primary" id="btnConfirmNew">✓ ERSTELLEN</button>
     </div>
   </div>
 </div>
 
-<div class="overlay" id="assignModal">
-  <div class="modal">
-    <div class="modal-head"><span class="modal-title">PROJEKT ZUWEISEN</span><button class="modal-close" data-close="assignModal">✕</button></div>
-    <div class="modal-body">
-      <div class="cfg-row"><span class="cfg-label">Bauleitung:</span><select class="in" id="assignUser" style="max-width:300px;"></select></div>
-      <div style="background:var(--paper);border:2px solid var(--line);padding:12px;font-size:11px;line-height:1.6;">
-        <b>HINWEIS:</b> NACH ZUWEISUNG KANN DIE BAULEITUNG NUR NOCH MESSWERTE UND MODULANZAHLEN BEARBEITEN. WR-KONFIGURATION UND LAYOUT SIND GESPERRT.
+<!-- MATRIX VIEW -->
+<div id="matrix-view" style="display:none;">
+  <div class="wrap">
+
+    <!-- Print header (hidden on screen) -->
+    <div id="ph" style="display:none;">
+      <div>
+        <div class="ph-title">Prüfprotokoll</div>
+        <div class="ph-sub">PV-Generator &middot; Messprotokoll</div>
+      </div>
+      <div class="ph-grid">
+        <div><span class="lbl">Standort: </span><strong id="ph-loc"></strong></div>
+        <div><span class="lbl">Prüfdatum: </span><strong id="ph-date"></strong></div>
+        <div><span class="lbl">Prüfer: </span><strong id="ph-tech"></strong></div>
+        <div><span class="lbl">Modulleistung: </span><strong id="ph-mod"></strong></div>
       </div>
     </div>
-    <div class="modal-foot">
-      <button class="btn" data-close="assignModal">ABBRECHEN</button>
-      <button class="btn btn-primary" id="btnConfirmAssign">✓ ZUWEISEN</button>
+
+    <!-- Dashboard -->
+    <div class="dashboard no-print">
+      <div class="kpi-card">
+        <div class="kpi-label">Gesamtleistung</div>
+        <div class="kpi-value"><span id="d-pwr">0.00</span><span class="kpi-unit">kWp</span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Module gesamt</div>
+        <div class="kpi-value" id="d-mods">0</div>
+        <div class="progress-track"><div class="progress-fill" id="d-prog" style="width:0%"></div></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Aktive Strings</div>
+        <div class="kpi-value" id="d-str">0</div>
+      </div>
     </div>
+
+    <!-- Toolbar -->
+    <div id="toolbar" class="no-print">
+      <div class="toolbar-info">
+        <span style="font-size:0.75rem;color:#1e3a5f;">&#128205;</span>
+        <span class="toolbar-project" id="tb-loc"></span>
+        <span class="toolbar-sep">&middot;</span>
+        <span class="toolbar-tech" id="tb-tech"></span>
+        <span class="toolbar-badge" id="tb-badge">&#10003; Gespeichert</span>
+      </div>
+      <div class="toolbar-actions">
+        <button onclick="saveProject()" class="btn btn-blue" title="Strg+S">&#128190; Speichern</button>
+        <button onclick="goMenu()" class="btn btn-ghost">&#x2715; Menü</button>
+      </div>
+    </div>
+
+    <!-- WR Tables -->
+    <div id="tables"></div>
+
+    <!-- Grand total print row -->
+    <div id="grand-total" class="print-only" style="margin-top:10px;padding:8px 10px;background:#e4f0b0;border:2px solid #9fc131;border-radius:0;display:none;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="font-size:8.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1a2e00;padding:4px 8px;width:40%;">Gesamtanlage</td>
+          <td style="font-size:8.5pt;font-weight:700;color:#1a2e00;padding:4px 8px;width:20%;text-align:center;"><span id="gt-mod"></span></td>
+          <td style="font-size:8.5pt;font-weight:700;color:#1a2e00;padding:4px 8px;width:20%;text-align:center;"><span id="gt-pwr"></span></td>
+          <td style="font-size:8.5pt;color:#475569;padding:4px 8px;">Module gesamt &middot; kWp Gesamtleistung</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- GAK-Pickerl / SmartScript Export -->
+    <div class="gak-export-bar no-print">
+      <div class="gak-export-label">GAK-Pickerl &middot; nur aktive Strings</div>
+      <div class="gak-export-actions">
+        <button onclick="exportActiveStrings()" class="btn btn-ghost" title="Nur die IDs der aktiven Strings, eine pro Zeile">&#128203; Aktive Strings (Liste)</button>
+        <button onclick="exportGakPickerl()" class="btn btn-blue" title="CSV für SmartScript: BVH;String;GAK;Module;Leistung">&#127991;&#65039; GAK-Pickerl (CSV)</button>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="bottom-bar no-print">
+      <button onclick="doPrint()" class="btn btn-print">
+        &#128196; Als PDF drucken <span style="font-size:0.7rem;color:#2d3d52;margin-left:6px;">(Strg+P)</span>
+      </button>
+      <button onclick="doExcel()" class="btn btn-xl-green">
+        &#128202; Excel exportieren
+      </button>
+    </div>
+
+    <!-- Print signature -->
+    <div id="pr-sig" style="display:none;">
+      <div class="sig-f"><div class="sig-l"></div><div class="sig-t">Datum &amp; Unterschrift Prüfer</div></div>
+      <div class="sig-f"><div class="sig-l"></div><div class="sig-t">Datum &amp; Unterschrift Auftraggeber</div></div>
+      <div class="sig-f"><div class="sig-l"></div><div class="sig-t">Stempel / Firmenstempel</div></div>
+    </div>
+
   </div>
 </div>
-
-<div class="toast" id="toast"></div>
 
 <script>
-/* ============================================================
-   SOLPRO V3 — BRUTALIST
-   ============================================================ */
-'use strict';
+let cfg={}, toast_t=null, save_t=null;
+let fillable=false;
 
-const $=id=>document.getElementById(id);
-const el=(t,p={},...c)=>{const e=document.createElement(t);Object.assign(e,p);c.flat().forEach(x=>x&&e.appendChild(typeof x==='string'?document.createTextNode(x):x));return e;};
-const clone=o=>JSON.parse(JSON.stringify(o));
-const ls={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),del:k=>localStorage.removeItem(k)};
-const sum=a=>a.reduce((x,y)=>x+(+y||0),0);
-const fmt=(n,d=2)=>Number(n||0).toFixed(d);
-const toast=(m,d=2500)=>{const t=$('toast');t.textContent=m;t.classList.remove('err');t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),d);};
-const errtoast=m=>{const t=$('toast');t.textContent=m;t.classList.add('err','show');clearTimeout(errtoast._t);errtoast._t=setTimeout(()=>t.classList.remove('show'),3500);};
-
-/* ----------------------------------------------------------
-   USERS
-   ---------------------------------------------------------- */
-const LS_USERS='sp_v3_users';
-const Users={
-  all(){return ls.get(LS_USERS)||{}},
-  save(u){ls.set(LS_USERS,u);},
-  init(){
-    let u=this.all();
-    if(!Object.keys(u).length){
-      u={
-        'planer':{pwd:'planer',role:'PLANER',name:'PLANER'},
-        'bauleiter':{pwd:'bauleiter',role:'BAULEITUNG',name:'BAULEITER MUSTERMANN'}
-      };
-      this.save(u);
-    }
-  },
-  auth(user,pwd){
-    const u=this.all()[user];
-    return u&&u.pwd===pwd?u:null;
-  },
-  add(user,pwd,role,name){
-    const u=this.all();u[user]={pwd,role,name:name||user};this.save(u);
-  },
-  del(user){
-    const u=this.all();delete u[user];this.save(u);
-  }
-};
-
-/* ----------------------------------------------------------
-   DATA
-   ---------------------------------------------------------- */
-const LS_PROJ='sp_v3_proj';
-const LS_CUR='sp_v3_cur';
-const RULES={maxMod:30,maxPwr:15,minV:200,maxV:1000,maxA:15};
-
-const WR_TYPES={
-  SMA_STP125:{name:'SMA SUNNY TRIPOWER 125',brand:'SMA',mppts:12,inputs:2},
-  SMA_STP100:{name:'SMA SUNNY TRIPOWER 100',brand:'SMA',mppts:10,inputs:2},
-  SMA_STP80:{name:'SMA SUNNY TRIPOWER 80',brand:'SMA',mppts:8,inputs:2},
-  HUAWEI_100K:{name:'HUAWEI SUN2000-100KTL',brand:'Huawei',mppts:10,inputs:2,huawei:true},
-  HUAWEI_50K:{name:'HUAWEI SUN2000-50KTL',brand:'Huawei',mppts:4,inputs:2,huawei:true},
-  FRONIUS_TAU:{name:'FRONIUS TAURO',brand:'Fronius',mppts:6,inputs:2},
-  KOSTAL:{name:'KOSTAL PIKO',brand:'Kostal',mppts:6,inputs:2},
-  CUSTOM:{name:'CUSTOM',brand:'Custom',mppts:12,inputs:2}
-};
-
-const TPL={
-  sma6:{name:'SMA STANDARD 6× STP125',build:()=>makeConfig('PV SMA',465,['SMA_STP125','SMA_STP125','SMA_STP125','SMA_STP125','SMA_STP125','SMA_STP125'])},
-  huawei:{name:'HUAWEI 2× 100K + 2× 50K',build:()=>makeConfig('PV HUAWEI',465,['HUAWEI_100K','HUAWEI_100K','HUAWEI_50K','HUAWEI_50K'])},
-  small:{name:'KLEIN 2× STP80',build:()=>makeConfig('PV KLEIN',465,['SMA_STP80','SMA_STP80'])},
-  fronius:{name:'FRONIUS 3× TAURO',build:()=>makeConfig('PV FRONIUS',465,['FRONIUS_TAU','FRONIUS_TAU','FRONIUS_TAU'])}
-};
-
-function makeConfig(name,wp,types){
-  return{
-    name,wp,
-    wr:types.map((t,i)=>({id:i+1,type:t,name:`WR ${i+1}`}))
-  };
+/* ── Input helpers: allow only numbers (and decimal point/comma) ── */
+function filterNum(el){
+  const pos=el.selectionStart;
+  const old=el.value;
+  // allow digits, dot and comma as decimal separator
+  let v=old.replace(/[^0-9.,]/g,'');
+  // normalise comma to dot
+  v=v.replace(',','.');
+  // only one dot allowed
+  const parts=v.split('.');
+  if(parts.length>2) v=parts[0]+'.'+parts.slice(1).join('');
+  if(el.value!==v){ el.value=v; try{el.setSelectionRange(pos,pos);}catch(e){} }
+}
+function filterInt(el){
+  const pos=el.selectionStart;
+  const v=el.value.replace(/[^0-9]/g,'');
+  if(el.value!==v){ el.value=v; try{el.setSelectionRange(pos,pos);}catch(e){} }
 }
 
-function buildMatrix(cfg){
-  const m={};
-  cfg.wr.forEach((inv,i)=>{
-    const wr=i+1,t=WR_TYPES[inv.type]||WR_TYPES.CUSTOM;
-    for(let mp=1;mp<=t.mppts;mp++) for(let ip=1;ip<=t.inputs;ip++){
-      const id=`${wr}.${mp}.${ip}`;
-      m[id]={plan:'',gak:t.huawei?`GAK ${wr}.${mp}`:`GAK ${wr}.${ip}`,stat:'NEIN',mod:0,uoc:'',isc:'',riso:'',note:''};
+/* ── Fill mode toggle ── */
+function setFillMode(val){
+  fillable=val;
+  const ja=g('fill-ja'), nei=g('fill-nei');
+  if(ja&&nei){
+    if(val){ ja.classList.add('on'); nei.classList.remove('on'); }
+    else   { nei.classList.add('on'); ja.classList.remove('on'); }
+  }
+}
+
+/* ── Init ── */
+window.onload=()=>{
+  updateDD();
+  const s=JSON.parse(localStorage.getItem('sp_cfg')||'{}');
+  if(s.standort) g('standort').value=s.standort;
+  if(s.pruefer)  g('pruefer').value=s.pruefer;
+  if(s.modul)    g('modul').value=s.modul;
+  if(s.mppt)     g('mppt').value=s.mppt;
+  if(s.fillable) setFillMode(true); else setFillMode(false);
+  // default date to today
+  const td=new Date(); const pruef=g('pruef-datum');
+  if(pruef) pruef.value=td.toISOString().slice(0,10);
+  // restore saved date if present
+  const sc=JSON.parse(localStorage.getItem('sp_cfg')||'{}');
+  if(sc.datum) pruef.value=sc.datum;
+  g('setup-form').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();startApp();}});
+  document.addEventListener('keydown',e=>{
+    const inM=g('matrix-view').style.display!=='none';
+    if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();if(inM)saveProject();}
+    if((e.ctrlKey||e.metaKey)&&e.key==='p'){e.preventDefault();if(inM)doPrint();}
+  });
+};
+
+const g=id=>document.getElementById(id);
+
+function toast(msg,ms=2800){
+  const t=g('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toast_t); toast_t=setTimeout(()=>t.classList.remove('show'),ms);
+}
+
+function parseMPPT(raw){return raw.split(',').map(s=>s.trim()).filter(Boolean).map(Number).filter(n=>n>0&&Number.isInteger(n));}
+function safeName(n){return(n||'Projekt').replace(/[<>:"\/\\|?*\s]+/g,'_').replace(/_+/g,'_').slice(0,80);}
+
+function updateDD(){
+  const proj=JSON.parse(localStorage.getItem('sp_archive')||'{}');
+  const sel=g('project-list');
+  sel.innerHTML='<option value="">&#8212; Neues Projekt &#8212;</option>';
+  Object.keys(proj).sort((a,b)=>a.localeCompare(b,'de')).forEach(n=>{
+    const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o);
+  });
+}
+
+function setStatus(id,val){
+  g('stat-'+id).value=val;
+  const ja=g('tja-'+id), nei=g('tnei-'+id);
+  if(val==='JA'){ja.classList.add('on');nei.classList.remove('on');}
+  else{nei.classList.add('on');ja.classList.remove('on');}
+  processRow(id);
+}
+
+function processRow(id){
+  const stat=g('stat-'+id).value;
+  const mod=parseFloat(g('mod-'+id).value)||0;
+  const row=g('row-'+id);
+  const pw=g('pw-'+id);
+  const ps=g('ps-'+id);
+  const pm=g('pm-'+id);
+  if(stat==='NEIN'){
+    row.classList.add('row-nein');
+    pw.textContent='—'; pw.classList.remove('has-val');
+    if(ps){ps.textContent='NEIN'; ps.style.color='#94a3b8';}
+    if(pm) pm.textContent='—';
+  } else {
+    row.classList.remove('row-nein');
+    if(mod>0){pw.textContent=((mod*cfg.modul)/1000).toFixed(2)+' kWp'; pw.classList.add('has-val');}
+    else{pw.textContent='—'; pw.classList.remove('has-val');}
+    if(ps){ps.textContent='JA'; ps.style.color='#4d6b00';}
+    if(pm) pm.textContent=mod>0?String(mod):'—';
+  }
+  scheduleSave(); updateDash();
+}
+
+function collect(){
+  const d={};
+  document.querySelectorAll('[id^="mod-"],[id^="note-"],[id^="stat-"],[id^="uoc-"],[id^="isc-"],[id^="riso-"],[id^="gak-"]').forEach(el=>{ d[el.id]=el.value; });
+  return d;
+}
+function scheduleSave(){
+  clearTimeout(save_t);
+  save_t=setTimeout(()=>{
+    localStorage.setItem('sp_autosave',JSON.stringify(collect()));
+    const b=g('tb-badge'); if(b){b.style.opacity='1'; setTimeout(()=>b.style.opacity='0',2200);}
+  },400);
+}
+
+function updateDash(){
+  let pwr=0,mods=0,strs=0,filled=0;
+  document.querySelectorAll('[id^="stat-"]').forEach(s=>{
+    if(s.value!=='JA') return;
+    strs++;
+    const id=s.id.replace('stat-','');
+    const v=parseFloat((g('mod-'+id)||{}).value)||0;
+    mods+=v; pwr+=(v*cfg.modul)/1000;
+    if(v>0) filled++;
+  });
+  g('d-pwr').textContent=pwr.toFixed(2);
+  g('d-mods').textContent=mods;
+  g('d-str').textContent=strs;
+  g('d-prog').style.width=(strs>0?Math.round(filled/strs*100):0)+'%';
+  // print header
+  const pl=g('ph-loc'),pt=g('ph-tech'),pm=g('ph-mod');
+  if(pl) pl.textContent=cfg.standort||'—';
+  if(pt) pt.textContent=cfg.pruefer||'—';
+  if(pm) pm.textContent=cfg.modul+' Wp';
+}
+
+function saveProject(){
+  const name=(g('standort').value||'').trim();
+  if(!name) return toast('Bitte Standort eingeben');
+  const proj=JSON.parse(localStorage.getItem('sp_archive')||'{}');
+  proj[name]={cfg:{standort:name,pruefer:g('pruefer').value,modul:g('modul').value,mppt:g('mppt').value,fillable:cfg.fillable},data:collect(),ts:new Date().toISOString()};
+  localStorage.setItem('sp_archive',JSON.stringify(proj));
+  updateDD(); g('project-list').value=name;
+  toast('✓ "'+name+'" gespeichert');
+}
+function loadProject(){
+  const sel=g('project-list').value; if(!sel) return toast('Bitte Projekt auswählen');
+  const p=(JSON.parse(localStorage.getItem('sp_archive')||'{}')||{})[sel]; if(!p) return toast('Nicht gefunden');
+  g('standort').value=p.cfg.standort; g('pruefer').value=p.cfg.pruefer; g('modul').value=p.cfg.modul; g('mppt').value=p.cfg.mppt;
+  if(p.cfg.fillable) setFillMode(true); else setFillMode(false);
+  startApp({restore:true,data:p.data}); toast('📂 "'+sel+'" geladen');
+}
+function deleteProject(){
+  const sel=g('project-list').value; if(!sel) return;
+  if(!confirm('Projekt "'+sel+'" wirklich löschen?')) return;
+  const proj=JSON.parse(localStorage.getItem('sp_archive')||'{}'); delete proj[sel];
+  localStorage.setItem('sp_archive',JSON.stringify(proj)); updateDD(); toast('Gelöscht');
+}
+function goMenu(){if(confirm('Zurück zum Menü? Auto-Save bleibt erhalten.')) location.reload();}
+
+function updateTotalsNotes(){
+  let gtMods=0, gtPwr=0;
+  parseMPPT(cfg.mppt).forEach((cnt,wi)=>{
+    const wr=wi+1; let ms=0,pw=0;
+    for(let m=1;m<=cnt;m++) for(let s=1;s<=2;s++){
+      const id=`${wr}.${m}.${s}`;
+      const st=g('stat-'+id); if(!st||st.value!=='JA') continue;
+      const v=parseFloat((g('mod-'+id)||{}).value)||0; ms+=v; pw+=(v*cfg.modul)/1000;
+      const ne=g('note-'+id), pn=g('pn-'+id);
+      if(ne&&pn){pn.textContent=ne.value; pn.style.display=ne.value?'inline':'none';}
+      // sync measurement print cells
+      ['uoc','isc','riso'].forEach(f=>{
+        const inp=g(f+'-'+id), pc=g('p'+f+'-'+id);
+        if(inp&&pc){pc.textContent=inp.value; pc.style.display=inp.value?'inline':'none';}
+      });
+    }
+    gtMods+=ms; gtPwr+=pw;
+    const tm=g('tm-'+wr),tp=g('tp-'+wr);
+    if(tm) tm.textContent=ms>0?ms+' Stk.':'—';
+    if(tp) tp.textContent=pw>0?pw.toFixed(2)+' kWp':'—';
+    const gakEl=g('gak-'+wr), gakp=g('gakp-'+wr);
+    if(gakp){ const gv=(gakEl&&gakEl.value.trim())?gakEl.value.trim():''; gakp.textContent=gv?('GAK '+gv):''; gakp.style.display=gv?'inline':'none'; }
+  });
+  // grand total
+  const gt=g('grand-total');
+  if(gt){ gt.style.display='block'; g('gt-mod').textContent=gtMods+' Module gesamt'; g('gt-pwr').textContent=gtPwr.toFixed(2)+' kWp'; }
+}
+
+function doPrint(){
+  updateTotalsNotes();
+  const datumEl=g('pruef-datum');
+  if(datumEl&&datumEl.value){
+    const [y,mo,d]=datumEl.value.split('-');
+    const months=['Jänner','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+    g('ph-date').textContent=parseInt(d)+'. '+months[parseInt(mo)-1]+' '+y;
+  } else {
+    g('ph-date').textContent=new Date().toLocaleDateString('de-AT',{day:'numeric',month:'long',year:'numeric'});
+  }
+  let s=g('_plo'); if(!s){s=document.createElement('style');s.id='_plo';s.textContent='@media print{@page{size:A4 landscape!important;}}';document.head.appendChild(s);}
+  window.print();
+}
+
+function doExcel(){
+  const exDatum=cfg.datum?new Date(cfg.datum).toLocaleDateString('de-AT'):new Date().toLocaleDateString('de-AT');
+  const rows=[['SOLPRO MESS- UND PRUEFPROTOKOLL'],['Projekt:',cfg.standort,'','Pruefer:',cfg.pruefer],['Modulleistung:',cfg.modul+' Wp','','Pruefdatum:',exDatum],[],['String','Module','Leistung (kWp)','Uoc (V)','Isc (A)','Riso (MOhm)','Bemerkung']];
+  document.querySelectorAll('[id^="stat-"]').forEach(s=>{
+    if(s.value!=='JA') return;
+    const id=s.id.replace('stat-','');
+    rows.push([
+      {t:'s',v:id},
+      (g('mod-'+id)||{}).value,
+      (g('pw-'+id)||{}).textContent.replace(' kWp','').replace('—','').replace('—',''),
+      cfg.fillable ? ((g('uoc-'+id)||{}).value||'') : '',
+      cfg.fillable ? ((g('isc-'+id)||{}).value||'') : '',
+      cfg.fillable ? ((g('riso-'+id)||{}).value||'') : '',
+      (g('note-'+id)||{}).value
+    ]);
+  });
+  const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:13},{wch:9},{wch:14},{wch:10},{wch:10},{wch:12},{wch:32}];
+  XLSX.utils.book_append_sheet(wb,ws,'Protokoll');
+  XLSX.writeFile(wb,'SOLPRO_'+safeName(cfg.standort)+'.xlsx');
+  toast('Excel exportiert');
+}
+
+/* ── GAK-Pickerl / SmartScript Export ── */
+function downloadText(text,filename){
+  const blob=new Blob([text],{type:'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function exportActiveStrings(){
+  const ids=[];
+  document.querySelectorAll('[id^="stat-"]').forEach(s=>{ if(s.value==='JA') ids.push(s.id.replace('stat-','')); });
+  if(!ids.length) return toast('Keine aktiven Strings vorhanden');
+  downloadText(ids.join('\r\n'),'SOLPRO_Strings_'+safeName(cfg.standort)+'.txt');
+  toast(ids.length+' aktive Strings exportiert');
+}
+
+function exportGakPickerl(){
+  const rows=[['BVH','String','GAK','Module','Leistung']];
+  document.querySelectorAll('[id^="stat-"]').forEach(s=>{
+    if(s.value!=='JA') return;
+    const id=s.id.replace('stat-','');
+    const wr=id.split('.')[0];
+    const modVal=parseFloat((g('mod-'+id)||{}).value)||0;
+    if(modVal<=0) return;
+    const gakEl=g('gak-'+wr);
+    const gakVal=(gakEl&&gakEl.value.trim())?gakEl.value.trim():wr;
+    const pwrVal=((modVal*cfg.modul)/1000).toFixed(2).replace('.',',');
+    rows.push([cfg.standort, id, 'GAK '+gakVal, modVal+' Module', pwrVal+' kWp']);
+  });
+  if(rows.length<=1) return toast('Keine aktiven Strings mit Modulanzahl vorhanden — bitte Module eintragen');
+  const csv=rows.map(r=>r.join(';')).join('\r\n');
+  downloadText('\uFEFF'+csv,'SOLPRO_GAK-Pickerl_'+safeName(cfg.standort)+'.csv');
+  toast((rows.length-1)+' Pickerl-Zeilen exportiert');
+}
+
+
+function startApp(opts={}){
+  cfg.standort=(g('standort').value||'').trim();
+  cfg.pruefer =(g('pruefer').value ||'').trim();
+  cfg.modul   =parseFloat(g('modul').value)||0;
+  cfg.mppt    =(g('mppt').value||'').trim();
+  cfg.fillable=fillable;
+  if(!cfg.standort) return toast('Bitte Standort/Projektname eingeben');
+  if(!cfg.mppt)     return toast('Bitte MPPTs eingeben');
+  if(!cfg.modul)    return toast('Bitte Modulleistung (Wp) eingeben');
+  const mpptList=parseMPPT(cfg.mppt);
+  if(!mpptList.length) return toast('Ungueltige MPPT-Eingabe — z.B. 2,3');
+  cfg.mppt=mpptList.join(','); g('mppt').value=cfg.mppt;
+  cfg.datum=(g('pruef-datum')||{}).value||'';
+  localStorage.setItem('sp_cfg',JSON.stringify(cfg));
+  g('tb-loc').textContent=cfg.standort; g('tb-tech').textContent=cfg.pruefer;
+  document.title='SOLPRO | '+cfg.standort;
+
+  const cont=g('tables'); cont.innerHTML='';
+
+  mpptList.forEach((cnt,wi)=>{
+    const wr=wi+1;
+    const bl=document.createElement('div');
+    bl.className='wr-block pr-break';
+
+    // Build measurement column cells based on fillable mode
+    function msrCell(field, id, placeholder, label){
+      if(cfg.fillable){
+        return `<td class="col-msr" data-label="${label}">
+          <input type="text" inputmode="decimal" id="${field}-${id}" oninput="filterNum(this);scheduleSave()" class="msr-inp no-print" placeholder="${placeholder}" autocomplete="off">
+          <span class="print-only print-cell" id="p${field}-${id}"></span>
+          <div class="print-blank print-only"></div>
+        </td>`;
+      } else {
+        return `<td class="col-msr" data-label="${label}">
+          <span class="screen-dash" style="color:#1e2a3a;font-size:0.7rem;">&#8212;</span>
+          <div class="print-blank"></div>
+          <span class="print-dash">&#8212;</span>
+        </td>`;
+      }
+    }
+
+    bl.innerHTML=`
+      <div class="wr-head">
+        <span class="wr-num">WR ${wr}</span>
+        <span class="wr-name">Wechselrichter ${wr}</span>
+        <span class="wr-meta">&nbsp;&middot; ${cnt} MPPT &middot; ${cnt*2} Strings</span>
+        <span class="wr-gak-wrap no-print">
+          <label class="wr-gak-label" for="gak-${wr}">GAK</label>
+          <input type="text" id="gak-${wr}" class="wr-gak-inp" placeholder="Nr." oninput="scheduleSave()" autocomplete="off">
+        </span>
+        <span class="wr-gak-print" id="gakp-${wr}"></span>
+      </div>
+      <div class="tbl-wrap">
+      <table class="mt">
+        <thead><tr>
+          <th class="col-id" style="text-align:left;padding-left:20px;">Input</th>
+          <th class="no-print">Aktiv</th>
+          <th class="print-only col-stat">Status</th>
+          <th class="col-mod">Module</th>
+          <th class="col-pwr">Leistung</th>
+          <th class="col-msr">Uoc (V)</th>
+          <th class="col-msr">Isc (A)</th>
+          <th class="col-msr">Riso (M&#8486;)</th>
+          <th class="col-note no-print">Bemerkung</th>
+          <th class="col-note print-only">Bemerkung</th>
+        </tr></thead>
+        <tbody id="tb-${wr}"></tbody>
+        <tfoot>
+          <tr class="tot-row print-only">
+            <td colspan="2" style="text-align:left;padding-left:8px;font-size:7pt;text-transform:uppercase;letter-spacing:.05em;">Summe WR ${wr}</td>
+            <td></td>
+            <td id="tm-${wr}" style="text-align:center;"></td>
+            <td id="tp-${wr}" style="text-align:center;color:#4d6b00;"></td>
+            <td colspan="4"></td>
+          </tr>
+        </tfoot>
+      </table>
+      </div>`;
+    cont.appendChild(bl);
+
+    const tbody=g('tb-'+wr);
+    for(let m=1;m<=cnt;m++) for(let s=1;s<=2;s++){
+      const id=`${wr}.${m}.${s}`;
+      const tr=document.createElement('tr');
+      tr.id='row-'+id;
+      if(s===1&&m>1) tr.classList.add('mppt-div');
+      tr.innerHTML=`
+        <td class="col-id"><span class="string-id">${id}</span></td>
+        <td class="no-print" data-label="Aktiv">
+          <div class="tog-wrap">
+            <button id="tja-${id}"  class="tog ton-ja on"  onclick="setStatus('${id}','JA')">JA</button>
+            <button id="tnei-${id}" class="tog ton-nei"    onclick="setStatus('${id}','NEIN')">NEIN</button>
+          </div>
+          <select id="stat-${id}" style="display:none;" onchange="processRow('${id}')">
+            <option value="JA">JA</option><option value="NEIN">NEIN</option>
+          </select>
+        </td>
+        <td class="print-only col-stat" id="ps-${id}" style="font-weight:700;color:#4d6b00;">JA</td>
+        <td class="col-mod" data-label="Module">
+          <input type="text" inputmode="numeric" id="mod-${id}" oninput="filterInt(this);processRow('${id}')" class="mod-inp" placeholder="&#8212;" autocomplete="off">
+          <span class="print-only print-cell" id="pm-${id}"></span>
+        </td>
+        <td class="col-pwr pwr-cell" id="pw-${id}" data-label="Leistung">&#8212;</td>
+        ${msrCell('uoc', id, 'V', 'Uoc (V)')}
+        ${msrCell('isc', id, 'A', 'Isc (A)')}
+        ${msrCell('riso', id, 'M\u03a9', 'Riso (M\u03a9)')}
+        <td class="col-note no-print" data-label="Bemerkung">
+          <input type="text" id="note-${id}" oninput="scheduleSave()" placeholder="Bemerkung&#8230;" class="note-inp">
+        </td>
+        <td class="col-note print-only">
+          <span id="pn-${id}" class="print-note" style="display:none;font-size:9pt;color:#334155;"></span>
+        </td>`;
+      tbody.appendChild(tr);
     }
   });
-  return m;
+
+  g('setup-screen').style.display='none';
+  g('matrix-view').style.display='block';
+
+  if(opts.restore&&opts.data){
+    for(const k in opts.data){const el=g(k);if(el) el.value=opts.data[k];}
+    document.querySelectorAll('[id^="stat-"]').forEach(s=>setStatus(s.id.replace('stat-',''),s.value));
+  } else {
+    const saved=localStorage.getItem('sp_autosave');
+    if(saved){const d=JSON.parse(saved); for(const k in d){const el=g(k);if(el)el.value=d[k];}}
+    document.querySelectorAll('[id^="stat-"]').forEach(s=>setStatus(s.id.replace('stat-',''),s.value));
+  }
+  // update print-cell visibility for mod fields
+  document.querySelectorAll('[id^="mod-"]').forEach(el=>{
+    const id=el.id.replace('mod-',''); const pm=g('pm-'+id);
+    if(pm&&el.value){pm.textContent=el.value; pm.style.display='inline';}
+  });
+  updateDash();
 }
-
-/* ----------------------------------------------------------
-   STATE
-   ---------------------------------------------------------- */
-const State={
-  user:null,
-  projects:{},
-  currentId:null,
-  sb:null,
-  layout:{},  // per-project: {modules:[],grid:20,modW:60,modH:40}
-
-  init(){
-    Users.init();
-    this.projects=ls.get(LS_PROJ)||{};
-    if(!Object.keys(this.projects).length){
-      // demo project for planer
-      const id='demo1';
-      const cfg=clone(TPL.sma6.build());
-      this.projects[id]={
-        id,name:cfg.name,created:Date.now(),createdBy:'planer',
-        assignedTo:null,status:'DRAFT',
-        config:cfg,matrix:buildMatrix(cfg)
-      };
-      this.layout[id]={modules:[],grid:20,modW:60,modH:40,pan:{x:0,y:0},zoom:1};
-      ls.set(LS_PROJ,this.projects);
-    }
-    this.currentId=ls.get(LS_CUR)||Object.keys(this.projects)[0];
-  },
-
-  current(){return this.projects[this.currentId];},
-
-  canEditStructure(){
-    return this.user?.role==='PLANER' && this.current()?.status!=='DONE';
-  },
-  canEditValues(){
-    if(!this.user||!this.current())return false;
-    if(this.user.role==='PLANER')return true;
-    // Bauleitung: nur wenn zugewiesen
-    return this.current().assignedTo===this.user.name;
-  },
-  canEditLayout(){
-    return this.canEditStructure() && this.current()?.status!=='IN_PROGRESS' && this.current()?.status!=='DONE';
-  },
-  canCreateProject(){return this.user?.role==='PLANER';},
-
-  save(){ls.set(LS_PROJ,this.projects);ls.set(LS_CUR,this.currentId);}
-};
-
-/* ----------------------------------------------------------
-   CANVAS / DRAWING
-   ---------------------------------------------------------- */
-const Draw={
-  tool:'place',
-  sel:null,
-  drawing:false,
-  dragStart:null,
-  dragRect:null,
-
-  init(){
-    const cv=$('cv');
-    const ctx=cv.getContext('2d');
-    this.cv=cv;this.ctx=ctx;
-    this.resize();
-    window.addEventListener('resize',()=>this.resize());
-    this.attachEvents();
-    this.render();
-  },
-
-  resize(){
-    const r=this.cv.getBoundingClientRect();
-    const dpr=window.devicePixelRatio||1;
-    this.cv.width=r.width*dpr;this.cv.height=r.height*dpr;
-    this.ctx.setTransform(dpr,0,0,dpr,0,0);
-    this.W=r.width;this.H=r.height;
-    this.render();
-  },
-
-  attachEvents(){
-    const c=this.cv;
-    c.addEventListener('mousedown',e=>this.onDown(e));
-    c.addEventListener('mousemove',e=>this.onMove(e));
-    c.addEventListener('mouseup',e=>this.onUp(e));
-    c.addEventListener('mouseleave',e=>this.onUp(e));
-    c.addEventListener('contextmenu',e=>{e.preventDefault();this.onRight(e);});
-    c.addEventListener('wheel',e=>this.onWheel(e),{passive:false});
-    document.addEventListener('keydown',e=>{
-      if(this.toolActive())return;
-      if(e.key==='r'||e.key==='R')this.rotateSel();
-      if(e.key==='Delete'||e.key==='Backspace')this.deleteSel();
-      if(e.key==='Escape')this.sel=null,this.render();
-    });
-  },
-
-  toolActive(){return document.querySelector('.page.active')?.id!=='page-draw';},
-
-  layout(){return State.layout[State.currentId]||{modules:[],grid:20,modW:60,modH:40,pan:{x:0,y:0},zoom:1};},
-
-  toWorld(sx,sy){
-    const r=this.cv.getBoundingClientRect();
-    const L=this.layout();
-    return{
-      x:(sx-r.left-L.pan.x)/L.zoom,
-      y:(sy-r.top-L.pan.y)/L.zoom
-    };
-  },
-  snap(v,L){return Math.round(v/L.grid)*L.grid;},
-
-  hit(wx,wy){
-    const L=this.layout();
-    for(let i=L.modules.length-1;i>=0;i--){
-      const m=L.modules[i];
-      if(wx>=m.x&&wx<=m.x+m.w&&wy>=m.y&&wy<=m.y+m.h)return m;
-    }
-    return null;
-  },
-
-  onDown(e){
-    if(!State.canEditLayout())return;
-    const w=this.toWorld(e.clientX,e.clientY);
-    const L=this.layout();
-    if(this.tool==='place'){
-      const m={x:this.snap(w.x,L),y:this.snap(w.y,L),w:L.modW,h:L.modH,rot:0,plan:'',modIdx:0};
-      L.modules.push(m);this.sel=m;this.drawing=true;this.dragStart={x:m.x,y:m.y};this.dragRect={x:m.x,y:m.y,w:L.modW,h:L.modH};
-    } else if(this.tool==='fill'){
-      this.drawing=true;this.dragStart={x:this.snap(w.x,L),y:this.snap(w.y,L)};this.dragRect={x:this.dragStart.x,y:this.dragStart.y,w:0,h:0};
-    } else if(this.tool==='select'){
-      this.sel=this.hit(w.x,w.y);
-    } else if(this.tool==='erase'){
-      const m=this.hit(w.x,w.y);
-      if(m){L.modules=L.modules.filter(x=>x!==m);this.sel=null;}
-    }
-    this.render();
-  },
-  onMove(e){
-    const w=this.toWorld(e.clientX,e.clientY);
-    $('canvasStatus').textContent=`X:${Math.round(w.x)} Y:${Math.round(w.y)}`;
-    if(!this.drawing)return;
-    const L=this.layout();
-    if(this.tool==='place'){
-      this.dragRect={x:this.dragStart.x,y:this.dragStart.y,w:Math.max(L.modW,this.snap(w.x,L)-this.dragStart.x+L.modW),h:Math.max(L.modH,this.snap(w.y,L)-this.dragStart.y+L.modH)};
-    } else if(this.tool==='fill'){
-      const ex=this.snap(w.x,L),ey=this.snap(w.y,L);
-      this.dragRect={x:Math.min(this.dragStart.x,ex),y:Math.min(this.dragStart.y,ey),w:Math.abs(ex-this.dragStart.x),h:Math.abs(ey-this.dragStart.y)};
-    }
-    this.render();
-  },
-  onUp(e){
-    if(!this.drawing)return;
-    const L=this.layout();
-    if(this.tool==='place'&&this.dragRect){
-      const m=this.sel;
-      if(m){m.w=this.dragRect.w;m.h=this.dragRect.h;}
-    } else if(this.tool==='fill'&&this.dragRect&&this.dragRect.w>L.grid&&this.dragRect.h>L.grid){
-      const cols=Math.floor(this.dragRect.w/(L.modW+4));
-      const rows=Math.floor(this.dragRect.h/(L.modH+4));
-      let idx=L.modules.length;
-      for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
-        L.modules.push({x:this.dragRect.x+c*(L.modW+4),y:this.dragRect.y+r*(L.modH+4),w:L.modW,h:L.modH,rot:0,plan:'',modIdx:idx++});
-      }
-    }
-    this.drawing=false;this.dragStart=null;this.dragRect=null;
-    this.render();this.updateInfo();
-  },
-  onRight(e){
-    if(!State.canEditLayout())return;
-    const w=this.toWorld(e.clientX,e.clientY);
-    const m=this.hit(w.x,w.y);
-    if(m){const L=this.layout();L.modules=L.modules.filter(x=>x!==m);if(this.sel===m)this.sel=null;this.render();this.updateInfo();}
-  },
-  onWheel(e){
-    e.preventDefault();
-    const L=this.layout();
-    const oldZ=L.zoom;
-    L.zoom*=e.deltaY<0?1.1:0.9;
-    L.zoom=Math.max(0.2,Math.min(4,L.zoom));
-    // zoom to mouse
-    const w=this.toWorld(e.clientX,e.clientY);
-    L.pan.x-=(w.x*oldZ+L.pan.x)-(w.x*L.zoom+L.pan.x);
-    L.pan.y-=(w.y*oldZ+L.pan.y)-(w.y*L.zoom+L.pan.y);
-    this.render();
-  },
-
-  setTool(t){this.tool=t;this.sel=null;this.render();},
-  rotateSel(){
-    if(!this.sel||!State.canEditLayout())return;
-    if(this.sel.rot===0){this.sel.rot=90;const t=this.sel.w;this.sel.w=this.sel.h;this.sel.h=t;}
-    else{this.sel.rot=0;const t=this.sel.w;this.sel.w=this.sel.h;this.sel.h=t;}
-    this.render();
-  },
-  deleteSel(){
-    if(!this.sel)return;
-    const L=this.layout();
-    L.modules=L.modules.filter(x=>x!==this.sel);
-    this.sel=null;this.render();this.updateInfo();
-  },
-  clearAll(){
-    if(!confirm('LAYOUT WIRKLICH LEEREN?'))return;
-    const L=this.layout();L.modules=[];this.sel=null;this.render();this.updateInfo();toast('LAYOUT GELEERT');
-  },
-  zoom(d){
-    const L=this.layout();
-    L.zoom=Math.max(0.2,Math.min(4,L.zoom*d));
-    this.render();
-  },
-  reset(){
-    const L=this.layout();L.zoom=1;L.pan={x:0,y:0};this.render();
-  },
-
-  render(){
-    const ctx=this.ctx,W=this.W,H=this.H;
-    const L=this.layout();
-    ctx.fillStyle='#f4f4ee';ctx.fillRect(0,0,W,H);
-
-    // grid
-    ctx.strokeStyle='#e0e0d8';ctx.lineWidth=1;
-    const gs=L.grid*L.zoom;
-    const ox=((L.pan.x%gs)+gs)%gs, oy=((L.pan.y%gs)+gs)%gs;
-    ctx.beginPath();
-    for(let x=ox;x<W;x+=gs){ctx.moveTo(x,0);ctx.lineTo(x,H);}
-    for(let y=oy;y<H;y+=gs){ctx.moveTo(0,y);ctx.lineTo(W,y);}
-    ctx.stroke();
-
-    // heavier grid every 5
-    ctx.strokeStyle='#c8c8c0';
-    ctx.beginPath();
-    for(let x=ox,i=0;x<W;x+=gs,i++){if(i%5===0){ctx.moveTo(x,0);ctx.lineTo(x,H);}}
-    for(let y=oy,i=0;y<H;y+=gs,i++){if(i%5===0){ctx.moveTo(0,y);ctx.lineTo(W,y);}}
-    ctx.stroke();
-
-    // modules
-    L.modules.forEach((m,i)=>{
-      const x=m.x*L.zoom+L.pan.x, y=m.y*L.zoom+L.pan.y, w=m.w*L.zoom, h=m.h*L.zoom;
-      const sel=m===this.sel;
-      ctx.fillStyle=sel?'#ff2e00':(m.rot?'#0050ff':'#000');
-      ctx.fillRect(x,y,w,h);
-      ctx.fillStyle='#fff';
-      ctx.font='bold 9px JetBrains Mono, monospace';
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(String(i+1),x+w/2,y+h/2);
-    });
-
-    // drag rect
-    if(this.dragRect){
-      const r=this.dragRect;
-      ctx.strokeStyle='#ff2e00';ctx.lineWidth=2;ctx.setLineDash([4,4]);
-      ctx.strokeRect(r.x*L.zoom+L.pan.x,r.y*L.zoom+L.pan.y,r.w*L.zoom,r.h*L.zoom);
-      ctx.setLineDash([]);
-    }
-
-    // canvas state hint
-    if(!State.canEditLayout()&&L.modules.length){
-      // ok, readonly is overlaid by CSS
-    }
-  },
-
-  updateInfo(){
-    const L=this.layout();
-    $('cntMod').textContent=L.modules.length;
-    const area=sum(L.modules.map(m=>(m.w/40)*(m.h/40)*1.7)); // approx
-    $('cntArea').textContent=fmt(area,1);
-    // strings: group by similar y/x — simplified
-    const strs=new Set();
-    L.modules.forEach(m=>{strs.add(`${Math.round(m.y/200)}_${Math.round(m.x/200)}`);});
-    $('cntStr').textContent=strs.size;
-    $('cntPwr').textContent=fmt(L.modules.length*State.current().config.wp/1000);
-    $('canvasInfo').textContent=`MODULE: ${L.modules.length} // GRID: ${L.grid} // ZOOM: ${L.zoom.toFixed(1)}X`;
-  }
-};
-
-/* ----------------------------------------------------------
-   RENDER
-   ---------------------------------------------------------- */
-const Render={
-  init(){
-    this.updateTabbar();
-    this.renderHome();
-    this.renderProjects();
-    this.renderStrings();
-    this.renderConfigLists();
-    if(State.current())this.updateHeader();
-  },
-
-  updateTabbar(){
-    $('tbUser').textContent=State.user?.name||'—';
-    const r=State.user?.role||'—';
-    $('tbRole').textContent=r;
-    document.querySelectorAll('.planer-only').forEach(b=>{
-      b.style.display=State.user?.role==='PLANER'?'':'none';
-    });
-    // Bauleitung: hide zeichnen if read-only
-    // (we keep it visible — read-only via canvas overlay)
-  },
-
-  updateHeader(){
-    const p=State.current();
-    if(!p){$('strSub').textContent='KEIN PROJEKT';return;}
-    $('strSub').textContent=`${p.name} // ${p.config.wp}WP // ${p.config.wr.length} WR // STATUS: ${p.status}`;
-  },
-
-  renderHome(){
-    const ps=Object.values(State.projects);
-    $('homeProj').textContent=ps.length;
-    $('homeActive').textContent=ps.filter(p=>p.status==='IN_PROGRESS').length;
-    $('homePending').textContent=ps.filter(p=>p.status==='DRAFT'||p.status==='ASSIGNED').length;
-    $('homeDone').textContent=ps.filter(p=>p.status==='DONE').length;
-
-    const p=State.current();
-    const box=$('homeCurrent');
-    if(!p){box.innerHTML='<div style="padding:20px;border:3px solid var(--line);background:var(--paper);">KEIN PROJEKT AUSGEWÄHLT</div>';return;}
-
-    const canEdit=State.canEditValues();
-    const role=State.user.role;
-    box.innerHTML=`
-      <div class="wr-card">
-        <div class="wr-head">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <span class="wr-id">${p.name}</span>
-            <span class="wr-name">${p.config.name}</span>
-            <span class="proj-status s-${p.status.toLowerCase()}">${p.status}</span>
-            <span class="role-tag role-${role.toLowerCase()}">${role}</span>
-          </div>
-          <div class="wr-stats">
-            <div>WR: <b>${p.config.wr.length}</b></div>
-            <div>WP: <b>${p.config.wp}</b></div>
-          </div>
-        </div>
-        <div style="padding:18px;line-height:1.8;">
-          <div>ZUGEWIESEN AN: <b>${p.assignedTo||'—'}</b></div>
-          <div>ERSTELLT VON: <b>${p.createdBy||'—'}</b></div>
-          <div>ERSTELLT: <b>${new Date(p.created).toLocaleDateString()}</b></div>
-          <div style="margin-top:10px;">
-            <button class="btn" onclick="App.openPage('strings')">→ STRINGS</button>
-            <button class="btn" onclick="App.openPage('draw')">→ ZEICHNEN</button>
-            ${canEdit?`<button class="btn btn-ok" onclick="App.openPage('strings')">→ WERTE ERFASSEN</button>`:''}
-          </div>
-        </div>
-      </div>`;
-  },
-
-  renderProjects(){
-    const list=$('projList');
-    list.innerHTML='';
-    const isPlaner=State.user?.role==='PLANER';
-    const myProjects=Object.values(State.projects).filter(p=>{
-      if(isPlaner)return true;
-      return p.assignedTo===State.user.name||p.createdBy===State.user.name;
-    });
-
-    if(!myProjects.length){
-      list.innerHTML='<div style="padding:30px;text-align:center;color:var(--muted);">KEINE PROJEKTE</div>';
-      return;
-    }
-
-    myProjects.forEach(p=>{
-      const isCur=p.id===State.currentId;
-      const it=el('div',{className:'proj-item'});
-      it.innerHTML=`
-        <div>
-          <div class="proj-name">${p.name} ${isCur?'<span style="color:var(--red);">●</span>':''}</div>
-          <div class="proj-meta">${p.config.wr.length} WR · ${p.config.wp}WP · ERSTELLT ${new Date(p.created).toLocaleDateString()}</div>
-        </div>
-        <div class="proj-meta">${p.assignedTo?'→ '+p.assignedTo:'Nicht zugewiesen'}</div>
-        <div class="proj-status s-${p.status.toLowerCase()}">${p.status}</div>
-        <div style="display:flex;gap:0;">
-          <button class="btn btn-sm" onclick="App.openProj('${p.id}')">ÖFFNEN</button>
-          ${isPlaner&&!isCur?`<button class="btn btn-sm btn-danger" onclick="App.delProj('${p.id}')">✕</button>`:''}
-        </div>
-      `;
-      list.appendChild(it);
-    });
-  },
-
-  renderStrings(){
-    const p=State.current();
-    if(!p)return;
-
-    // tabs
-    const tabs=$('wrTabs');
-    tabs.innerHTML='<button class="tab active" data-wr="0">⚡ ALLE</button>';
-    p.config.wr.forEach((inv,i)=>{
-      tabs.innerHTML+=`<button class="tab" data-wr="${i+1}">${inv.name}</button>`;
-    });
-
-    // cards
-    const cont=$('wrContainer');
-    cont.innerHTML='';
-    const canEdit=State.canEditValues();
-    const isPlaner=State.user?.role==='PLANER';
-
-    p.config.wr.forEach((inv,i)=>{
-      const wr=i+1,t=WR_TYPES[inv.type]||WR_TYPES.CUSTOM;
-      const card=el('div',{className:'wr-card'});
-      let rows='';
-      for(let mp=1;mp<=t.mppts;mp++){
-        for(let ip=1;ip<=t.inputs;ip++){
-          const id=`${wr}.${mp}.${ip}`;
-          const it=p.matrix[id]||{stat:'NEIN',mod:0,gak:'',note:'',plan:''};
-          const off=it.stat==='NEIN';
-          const pwr=(!off&&it.mod>0)?fmt(it.mod*p.config.wp/1000)+' kWp':'—';
-          const planHtml=it.plan?`<span class="plan on"><b>${it.plan}</b> · ${it.mod}M · ${it.gak}</span>`:`<span class="plan">FREI</span>`;
-          const ro=isPlaner?'':'readonly';
-          rows+=`
-            <tr id="row-${id}" class="${ip===1&&mp>1?'mppt':''} ${off?'off':''}">
-              <td data-l="Klemme"><span class="klemme">${id}</span> <span style="color:var(--muted);font-size:10px;">M${mp}.${ip}</span></td>
-              <td data-l="Plan">${planHtml}</td>
-              <td data-l="GAK"><input class="in gak" id="gak-${id}" value="${it.gak||''}" ${ro} oninput="App.matInput('${id}')"></td>
-              <td data-l="Aktiv">
-                <div class="toggle">
-                  <button class="tg ${it.stat==='JA'?'on-yes':''}" onclick="App.setStat('${id}','JA')">JA</button>
-                  <button class="tg ${it.stat==='NEIN'?'on-no':''}" onclick="App.setStat('${id}','NEIN')">NEIN</button>
-                </div>
-                <input type="hidden" id="stat-${id}" value="${it.stat}">
-              </td>
-              <td data-l="Mod"><input class="in compact" type="number" id="mod-${id}" value="${it.mod||''}" oninput="App.matInput('${id}')"></td>
-              <td data-l="Leistung" class="power" id="pw-${id}">${pwr}</td>
-              <td data-l="Uoc"><input class="in compact" id="uoc-${id}" value="${it.uoc||''}" placeholder="V" oninput="App.matInput('${id}')"></td>
-              <td data-l="Isc"><input class="in compact" id="isc-${id}" value="${it.isc||''}" placeholder="A" oninput="App.matInput('${id}')"></td>
-              <td data-l="Riso"><input class="in compact" id="riso-${id}" value="${it.riso||''}" placeholder="MΩ" oninput="App.matInput('${id}')"></td>
-              <td data-l="Notiz"><input class="in" id="note-${id}" value="${it.note||''}" oninput="App.matInput('${id}')"></td>
-            </tr>`;
-        }
-      }
-      card.innerHTML=`
-        <div class="wr-head">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <span class="wr-id">${inv.name}</span>
-            <div>
-              <div class="wr-name">${t.name}</div>
-              <div class="wr-meta">${t.brand} · ${t.mppts} MPPTs · ${t.inputs} INPUTS</div>
-            </div>
-          </div>
-          <div class="wr-stats">
-            <div>MOD: <b id="wr-mod-${wr}">0</b></div>
-            <div>PWR: <b class="ok" id="wr-pwr-${wr}">0.00</b> KWP</div>
-          </div>
-        </div>
-        <div class="tbl-wrap">
-        <table class="tbl">
-          <thead><tr>
-            <th>KLEMME</th><th>PLAN</th><th>GAK</th><th>AKTIV</th>
-            <th>MOD</th><th>LEISTUNG</th><th>UOC</th><th>ISC</th><th>RISO</th><th>NOTIZ</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        </div>`;
-      cont.appendChild(card);
-    });
-
-    this.updateKpis();
-  },
-
-  updateKpis(){
-    const p=State.current();if(!p)return;
-    let totPwr=0,totMods=0,totActive=0,totStrings=0;
-    p.config.wr.forEach((inv,i)=>{
-      const wr=i+1,t=WR_TYPES[inv.type]||WR_TYPES.CUSTOM;
-      let wM=0,wP=0;
-      for(let mp=1;mp<=t.mppts;mp++) for(let ip=1;ip<=t.inputs;ip++){
-        totStrings++;
-        const id=`${wr}.${mp}.${ip}`;
-        const st=$(`stat-${id}`)?.value;
-        if(st==='JA'){
-          const mod=parseFloat($(`mod-${id}`)?.value)||0;
-          wM+=mod;wP+=mod*p.config.wp/1000;
-          totMods+=mod;totPwr+=mod*p.config.wp/1000;
-          if(mod>0)totActive++;
-        }
-      }
-      const wm=$(`wr-mod-${wr}`),wp=$(`wr-pwr-${wr}`);
-      if(wm)wm.textContent=wM;
-      if(wp)wp.textContent=fmt(wP);
-    });
-  },
-
-  renderConfigLists(){
-    const list=$('wrList');
-    if(!list)return;
-    const p=State.current();if(!p)return;
-    list.innerHTML='';
-    p.config.wr.forEach((inv,i)=>{
-      const t=WR_TYPES[inv.type]||WR_TYPES.CUSTOM;
-      list.appendChild(el('div',{className:'cfg-item'},
-        el('span',{className:'nm',textContent:inv.name}),
-        el('span',{className:'if',textContent:`${t.name} (${t.mppts}×${t.inputs})`}),
-        el('button',{className:'btn btn-danger btn-sm',textContent:'✕',onclick:()=>App.removeWR(i)})
-      ));
-    });
-
-    const preset=$('cfgPreset');
-    if(preset){
-      preset.innerHTML='<option value="">-- TYP --</option>';
-      Object.entries(WR_TYPES).forEach(([k,t])=>{
-        preset.innerHTML+=`<option value="${k}">${t.name} (${t.mppts}×${t.inputs})</option>`;
-      });
-    }
-
-    const tplList=$('tplList');
-    if(tplList){
-      tplList.innerHTML='';
-      Object.entries(TPL).forEach(([k,t])=>{
-        tplList.appendChild(el('div',{className:'cfg-item'},
-          el('span',{className:'nm',textContent:t.name}),
-          el('button',{className:'btn btn-ok btn-sm',textContent:'LADEN',onclick:()=>App.loadTpl(k)})
-        ));
-      });
-    }
-
-    // new project template
-    const npTpl=$('npTpl');
-    if(npTpl){
-      npTpl.innerHTML='<option value="">-- LEER --</option>';
-      Object.entries(TPL).forEach(([k,t])=>{
-        npTpl.innerHTML+=`<option value="${k}">${t.name}</option>`;
-      });
-    }
-
-    // assign user
-    const aUser=$('assignUser');
-    if(aUser){
-      aUser.innerHTML='';
-      Object.entries(Users.all()).forEach(([k,u])=>{
-        if(u.role==='BAULEITUNG')aUser.innerHTML+=`<option value="${u.name}">${u.name} (${k})</option>`;
-      });
-    }
-
-    // users list
-    const uList=$('userList');
-    if(uList){
-      uList.innerHTML='';
-      Object.entries(Users.all()).forEach(([k,u])=>{
-        uList.appendChild(el('div',{className:'cfg-item'},
-          el('span',{className:'nm',textContent:u.name}),
-          el('span',{className:'if',textContent:`${k} / ${u.role}`}),
-          el('button',{className:'btn btn-danger btn-sm',textContent:'✕',onclick:()=>App.delUser(k)})
-        ));
-      });
-    }
-
-    $('setupUsers').textContent=Object.keys(Users.all()).length;
-    $('setupProj').textContent=Object.keys(State.projects).length;
-  }
-};
-
-/* ----------------------------------------------------------
-   APP / ACTIONS
-   ---------------------------------------------------------- */
-const App={
-  init(){
-    State.init();
-    this.bind();
-    // if no session -> show login
-    if(!State.user)$('login').style.display='flex';
-    else this.afterLogin();
-  },
-
-  bind(){
-    // login
-    $('btnLogin').onclick=()=>this.doLogin();
-    $('loginPass').onkeydown=e=>{if(e.key==='Enter')this.doLogin();};
-
-    // tabbar
-    document.querySelectorAll('.tb-item').forEach(b=>{
-      b.onclick=()=>this.openPage(b.dataset.page);
-    });
-
-    // modal close
-    document.querySelectorAll('[data-close]').forEach(b=>{
-      b.onclick=()=>$(b.dataset.close).classList.remove('open');
-    });
-    document.querySelectorAll('.overlay').forEach(o=>{
-      o.onclick=e=>{if(e.target===o)o.classList.remove('open');};
-    });
-
-    // home
-    $('btnNewProj').onclick=()=>this.newProj();
-    $('btnNewProj2').onclick=()=>this.newProj();
-
-    // config tabs
-    document.querySelectorAll('#cfgTabs .tab').forEach(t=>{
-      t.onclick=()=>{
-        document.querySelectorAll('#cfgTabs .tab').forEach(x=>x.classList.remove('active'));
-        t.classList.add('active');
-        document.querySelectorAll('[data-cfg-pane]').forEach(p=>p.style.display='none');
-        document.querySelector(`[data-cfg-pane="${t.dataset.cfg}"]`).style.display='';
-      };
-    });
-    $('btnAddInv').onclick=()=>this.addWR();
-    $('btnUsePreset').onclick=()=>this.usePreset();
-    $('btnSaveTpl').onclick=()=>this.saveTpl();
-    $('btnShowVal').onclick=()=>this.validate(true);
-    $('btnExportVal').onclick=()=>this.exportVal();
-
-    // strings
-    $('btnFilterAll').onclick=()=>{
-      document.querySelectorAll('#wrTabs .tab').forEach(t=>t.classList.remove('active'));
-      document.querySelector('#wrTabs .tab').classList.add('active');
-      document.querySelectorAll('#wrContainer .wr-card').forEach(c=>c.style.display='');
-    };
-    $('btnValidate').onclick=()=>this.validate(true);
-    $('btnExportGak').onclick=()=>this.exportGak();
-    $('btnExportStr').onclick=()=>this.exportStr();
-    $('btnExportProto').onclick=()=>this.exportProto();
-    $('btnExportCsv').onclick=()=>this.exportCsv();
-    $('btnPrint').onclick=()=>window.print();
-    $('btnAssign').onclick=()=>this.openAssign();
-    $('btnRelease').onclick=()=>this.releaseProj();
-    $('btnConfirmNew').onclick=()=>this.confirmNew();
-    $('btnConfirmAssign').onclick=()=>this.confirmAssign();
-
-    // canvas
-    document.querySelectorAll('[data-canvas-tool]').forEach(b=>{
-      b.onclick=()=>{
-        document.querySelectorAll('[data-canvas-tool]').forEach(x=>x.classList.remove('active'));
-        b.classList.add('active');
-        Draw.setTool(b.dataset.tool);
-      };
-    });
-    $('btnRotateSel').onclick=()=>Draw.rotateSel();
-    $('btnZoomIn').onclick=()=>Draw.zoom(1.2);
-    $('btnZoomOut').onclick=()=>Draw.zoom(0.83);
-    $('btnZoomReset').onclick=()=>Draw.reset();
-    $('btnClearLayout').onclick=()=>Draw.clearAll();
-    $('btnExportLayout').onclick=()=>this.exportLayout();
-
-    // setup
-    $('btnTestSB').onclick=()=>this.testSB();
-    $('btnSaveSB').onclick=()=>this.saveSB();
-    $('btnAddUser').onclick=()=>this.addUser();
-  },
-
-  doLogin(){
-    const u=$('loginUser').value.trim();
-    const p=$('loginPass').value;
-    const auth=Users.auth(u,p);
-    if(!auth){$('loginErr').textContent='✕ USER ODER PASSWORT FALSCH';$('loginErr').style.display='';return;}
-    State.user={name:auth.name,role:auth.role,login:u};
-    $('login').style.display='none';
-    this.afterLogin();
-  },
-
-  afterLogin(){
-    $('app').style.display='grid';
-    Render.init();
-    Draw.init();
-    setTimeout(()=>{Draw.updateInfo();},100);
-    // default page based on role
-    if(State.user.role==='BAULEITUNG'){
-      // show first assigned project
-      const my=Object.values(State.projects).find(p=>p.assignedTo===State.user.name);
-      if(my){State.currentId=my.id;State.save();}
-    }
-    this.openPage('home');
-  },
-
-  openPage(p){
-    document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
-    document.querySelectorAll('.tb-item').forEach(x=>x.classList.remove('active'));
-    const pg=$(`page-${p}`);if(pg)pg.classList.add('active');
-    const tb=document.querySelector(`.tb-item[data-page="${p}"]`);if(tb)tb.classList.add('active');
-    if(p==='home')Render.renderHome();
-    if(p==='projects')Render.renderProjects();
-    if(p==='strings'){Render.renderStrings();this.updateKpis();}
-    if(p==='config'){
-      const p=State.current();
-      if(p){$('cfgName').value=p.config.name;$('cfgWp').value=p.config.wp;}
-    }
-    if(p==='setup')Render.renderConfigLists();
-    if(p==='draw'){Draw.resize();setTimeout(()=>{Draw.updateInfo();$('canvasRO').classList.toggle('show',!State.canEditLayout());},50);}
-  },
-
-  /* ---- PROJECTS ---- */
-  newProj(){
-    if(!State.canCreateProject())return errtoast('✕ KEINE BERECHTIGUNG');
-    $('npName').value='';$('npWp').value=465;$('npTpl').value='';
-    Render.renderConfigLists();
-    $('newProjModal').classList.add('open');
-  },
-  confirmNew(){
-    const name=$('npName').value.trim();
-    if(!name)return errtoast('✕ NAME ERFORDERLICH');
-    const tplKey=$('npTpl').value;
-    const wp=parseInt($('npWp').value)||465;
-    const cfg=tplKey?clone(TPL[tplKey].build()):makeConfig(name,wp,['SMA_STP125']);
-    cfg.name=name;cfg.wp=wp;
-    const id='p'+Date.now();
-    State.projects[id]={id,name,created:Date.now(),createdBy:State.user.login,assignedTo:null,status:'DRAFT',config:cfg,matrix:buildMatrix(cfg)};
-    State.layout[id]={modules:[],grid:20,modW:60,modH:40,pan:{x:0,y:0},zoom:1};
-    State.currentId=id;State.save();
-    $('newProjModal').classList.remove('open');
-    toast('✓ PROJEKT ERSTELLT');
-    Render.init();
-  },
-  openProj(id){State.currentId=id;State.save();this.openPage('strings');Render.init();toast('PROJEKT GEWECHSELT');},
-  delProj(id){
-    if(!State.canCreateProject())return errtoast('✕ KEINE BERECHTIGUNG');
-    if(!confirm('PROJEKT WIRKLICH LÖSCHEN?'))return;
-    delete State.projects[id];delete State.layout[id];State.save();
-    if(State.currentId===id)State.currentId=Object.keys(State.projects)[0]||null;
-    State.save();
-    Render.renderProjects();Render.renderHome();toast('GELÖSCHT');
-  },
-
-  openAssign(){
-    if(!State.canCreateProject())return errtoast('✕ KEINE BERECHTIGUNG');
-    const p=State.current();if(!p)return errtoast('✕ KEIN PROJEKT');
-    if(p.status==='DONE')return errtoast('✕ BEREITS ABGESCHLOSSEN');
-    Render.renderConfigLists();
-    $('assignModal').classList.add('open');
-  },
-  confirmAssign(){
-    const p=State.current();if(!p)return;
-    const user=$('assignUser').value;
-    if(!user)return errtoast('✕ USER WÄHLEN');
-    p.assignedTo=user;p.status='ASSIGNED';State.save();
-    $('assignModal').classList.remove('open');
-    toast('✓ ZUGEWIESEN AN '+user);
-    Render.init();
-  },
-  releaseProj(){
-    const p=State.current();if(!p)return;
-    if(!State.canCreateProject())return errtoast('✕ KEINE BERECHTIGUNG');
-    if(p.status==='DRAFT')return errtoast('✕ ZUERST ZUWEISEN');
-    if(p.status==='DONE')return errtoast('✕ BEREITS FERTIG');
-    p.status='IN_PROGRESS';State.save();
-    toast('✓ FREIGEGEBEN — WERTE KÖNNEN ERFASST WERDEN');
-    Render.init();
-  },
-
-  /* ---- MATRIX ---- */
-  matInput(id){
-    const p=State.current();if(!p||!State.canEditValues())return;
-    const f=id_=>$(id_+'-'+id)?.value||'';
-    p.matrix[id]={...p.matrix[id],
-      gak:f('gak'),stat:f('stat')||'NEIN',mod:parseFloat(f('mod'))||0,
-      uoc:f('uoc'),isc:f('isc'),riso:f('riso'),note:f('note')
-    };
-    this.recalcRow(id);this.updateKpis();State.save();
-  },
-  setStat(id,st){
-    if(!State.canEditValues())return errtoast('✕ GESPERRT');
-    const p=State.current();if(!p)return;
-    p.matrix[id].stat=st;
-    $(`stat-${id}`).value=st;
-    const row=$(`row-${id}`);
-    row.classList.toggle('off',st==='NEIN');
-    this.recalcRow(id);this.updateKpis();State.save();
-  },
-  recalcRow(id){
-    const p=State.current();if(!p)return;
-    const st=$(`stat-${id}`).value;
-    const mod=parseFloat($(`mod-${id}`).value)||0;
-    if(st==='NEIN'){$(`row-${id}`).classList.add('off');$(`pw-${id}`).textContent='—';}
-    else{$(`row-${id}`).classList.remove('off');$(`pw-${id}`).textContent=mod>0?fmt(mod*p.config.wp/1000)+' kWp':'—';}
-  },
-  updateKpis(){Render.updateKpis();},
-
-  /* ---- CONFIG ---- */
-  addWR(){
-    if(!State.canEditStructure())return errtoast('✕ GESPERRT');
-    const p=State.current();if(!p)return;
-    const mp=parseInt($('cfgMppts').value)||12;
-    const ip=parseInt($('cfgInputs').value)||2;
-    p.config.wr.push({id:p.config.wr.length+1,type:'CUSTOM',name:`WR ${p.config.wr.length+1}`,customMppts:mp,customInputs:ip});
-    p.matrix=buildMatrix(p.config);
-    State.save();Render.renderConfigLists();Render.renderStrings();
-    toast('WR HINZUGEFÜGT');
-  },
-  usePreset(){
-    const t=$('cfgPreset').value;if(!t)return;
-    $('cfgMppts').value=WR_TYPES[t].mppts;$('cfgInputs').value=WR_TYPES[t].inputs;
-    if(!State.canEditStructure())return errtoast('✕ GESPERRT');
-    const p=State.current();if(!p)return;
-    p.config.wr.push({id:p.config.wr.length+1,type:t,name:`WR ${p.config.wr.length+1}`});
-    p.matrix=buildMatrix(p.config);
-    State.save();Render.renderConfigLists();Render.renderStrings();
-    toast('PRESET HINZUGEFÜGT');
-  },
-  removeWR(i){
-    if(!State.canEditStructure())return errtoast('✕ GESPERRT');
-    const p=State.current();if(!p)return;
-    p.config.wr.splice(i,1);
-    p.config.wr.forEach((w,j)=>{w.id=j+1;w.name=`WR ${j+1}`;});
-    p.matrix=buildMatrix(p.config);
-    State.save();Render.renderConfigLists();Render.renderStrings();
-  },
-  loadTpl(k){
-    if(!State.canEditStructure())return errtoast('✕ GESPERRT');
-    const p=State.current();if(!p)return;
-    if(!confirm('TEMPLATE LADEN? AKTUELLE KONFIG WIRD ÜBERSCHRIEBEN.'))return;
-    p.config=clone(TPL[k].build());
-    p.matrix=buildMatrix(p.config);
-    State.save();Render.renderConfigLists();Render.renderStrings();
-    $('cfgName').value=p.config.name;$('cfgWp').value=p.config.wp;
-    toast('✓ TEMPLATE GELADEN');
-  },
-  saveTpl(){
-    const p=State.current();if(!p)return;
-    const n=$('newTplName').value.trim();if(!n)return errtoast('✕ NAME?');
-    localStorage.setItem('sp_v3_user_tpl_'+n,JSON.stringify(p.config));
-    toast('✓ TEMPLATE GESPEICHERT');
-  },
-
-  /* ---- VALIDATION ---- */
-  validate(show){
-    const p=State.current();if(!p)return;
-    const errs=[],warns=[];
-    p.config.wr.forEach((inv,i)=>{
-      const wr=i+1,t=WR_TYPES[inv.type]||WR_TYPES.CUSTOM;
-      let pwr=0;
-      for(let mp=1;mp<=t.mppts;mp++) for(let ip=1;ip<=t.inputs;ip++){
-        const id=`${wr}.${mp}.${ip}`,it=p.matrix[id];
-        if(it.stat==='JA'){
-          pwr+=it.mod*p.config.wp/1000;
-          if(it.mod>RULES.maxMod)errs.push(`${id}: MOD > ${RULES.maxMod}`);
-          if(+it.uoc>RULES.maxV)errs.push(`${id}: Uoc > ${RULES.maxV}V`);
-          if(+it.uoc>0&&+it.uoc<RULES.minV)errs.push(`${id}: Uoc < ${RULES.minV}V`);
-          if(+it.isc>RULES.maxA)errs.push(`${id}: Isc > ${RULES.maxA}A`);
-        }
-      }
-      if(pwr>t.mppts*RULES.maxPwr)warns.push(`${inv.name}: ${fmt(pwr)} kWp`);
-    });
-    if(!show)return{errs,warns};
-    if(!errs.length&&!warns.length)return toast('✓ ALLES OK');
-    let msg='';
-    if(errs.length)msg+='FEHLER:\n'+errs.join('\n')+'\n\n';
-    if(warns.length)msg+='WARNUNGEN:\n'+warns.join('\n');
-    alert(msg);
-  },
-  exportVal(){
-    const p=State.current();if(!p)return;
-    const{errs,warns}=this.validate(false);
-    let txt=`SOLPRO V3 VALIDIERUNG\n${p.name}\n${new Date().toLocaleString()}\n${'='.repeat(40)}\n\n`;
-    if(!errs.length&&!warns.length)txt+='✓ KEINE PROBLEME\n';
-    else{
-      if(errs.length)txt+='FEHLER:\n'+errs.map(e=>'  • '+e).join('\n')+'\n\n';
-      if(warns.length)txt+='WARNUNGEN:\n'+warns.map(w=>'  • '+w).join('\n')+'\n';
-    }
-    const b=new Blob([txt],{type:'text/plain'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`VALIDIERUNG_${p.name}.txt`;a.click();
-    toast('✓ EXPORTIERT');
-  },
-
-  /* ---- EXPORTS ---- */
-  collectRows(p,activeOnly){
-    const rows=[];
-    p.config.wr.forEach((inv,i)=>{
-      const wr=i+1,t=WR_TYPES[inv.type]||WR_TYPES.CUSTOM;
-      for(let mp=1;mp<=t.mppts;mp++) for(let ip=1;ip<=t.inputs;ip++){
-        const id=`${wr}.${mp}.${ip}`,it=p.matrix[id];
-        if(activeOnly&&it.stat!=='JA')continue;
-        if(activeOnly&&(!it.mod||it.mod<=0))continue;
-        rows.push({id,...it,wr,mp,ip,wp:p.config.wp});
-      }
-    });
-    return rows;
-  },
-  exportGak(){
-    const p=State.current();if(!p)return;
-    const rows=[['Etikett']];
-    let cnt=0;
-    this.collectRows(p,true).forEach(r=>{
-      const pwr=fmt(r.mod*r.wp/1000).replace('.',',');
-      const txt=['BVH '+p.name,r.id,r.gak,`${r.mod} MOD`,`${pwr} kWp`,r.note].filter(Boolean).join('\r\n');
-      rows.push([{t:'s',v:txt}]);cnt++;
-    });
-    const wb=XLSX.utils.book_new();
-    const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:38}];
-    XLSX.utils.book_append_sheet(wb,ws,'Etiketten');
-    XLSX.writeFile(wb,`GAK_${p.name}.xlsx`);
-    toast(`✓ ${cnt} ETIKETTEN`);
-  },
-  exportStr(){
-    const p=State.current();if(!p)return;
-    const rows=[['String']];
-    this.collectRows(p,true).forEach(r=>rows.push([r.id]));
-    const wb=XLSX.utils.book_new();
-    const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:15}];
-    XLSX.utils.book_append_sheet(wb,ws,'Strings');
-    XLSX.writeFile(wb,`STRINGS_${p.name}.xlsx`);
-    toast('✓ EXPORTIERT');
-  },
-  exportProto(){
-    const p=State.current();if(!p)return;
-    const rows=[['Klemme','Plan','GAK','Status','Mod','kWp','Uoc','Isc','Riso','Notiz']];
-    this.collectRows(p,false).forEach(r=>{
-      const pwr=r.stat==='JA'&&r.mod>0?fmt(r.mod*r.wp/1000):'0';
-      rows.push([r.id,r.plan||'—',r.gak,r.stat,r.mod||0,pwr,r.uoc,r.isc,r.riso,r.note||'']);
-    });
-    const wb=XLSX.utils.book_new();
-    const ws=XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols']=[{wch:10},{wch:14},{wch:10},{wch:8},{wch:6},{wch:9},{wch:8},{wch:8},{wch:8},{wch:20}];
-    XLSX.utils.book_append_sheet(wb,ws,'Protokoll');
-    XLSX.writeFile(wb,`PROTOKOLL_${p.name}.xlsx`);
-    toast('✓ EXPORTIERT');
-  },
-  exportCsv(){
-    const p=State.current();if(!p)return;
-    const rows=[['Klemme','Plan','GAK','Status','Mod','kWp','Uoc','Isc','Riso','Notiz']];
-    this.collectRows(p,false).forEach(r=>{
-      const pwr=r.stat==='JA'&&r.mod>0?fmt(r.mod*r.wp/1000):'0';
-      rows.push([r.id,r.plan||'',r.gak,r.stat,r.mod||0,pwr,r.uoc,r.isc,r.riso,r.note||'']);
-    });
-    const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
-    const b=new Blob([csv],{type:'text/csv'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`EXPORT_${p.name}.csv`;a.click();
-    toast('✓ CSV');
-  },
-  exportLayout(){
-    const p=State.current();if(!p)return;
-    const L=State.layout[p.id]||{modules:[]};
-    const data=JSON.stringify({project:p.name,modules:L.modules,grid:L.grid,modW:L.modW,modH:L.modH},null,2);
-    const b=new Blob([data],{type:'application/json'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`LAYOUT_${p.name}.json`;a.click();
-    toast('✓ LAYOUT EXPORTIERT');
-  },
-
-  /* ---- SETUP ---- */
-  testSB(){
-    const url=$('sbUrl').value.trim(),key=$('sbKey').value.trim();
-    if(!url||!key)return errtoast('✕ URL+KEY');
-    try{
-      const c=window.supabase.createClient(url,key);
-      c.from('pv_projects').select('count',{count:'exact',head:true}).then(({error})=>{
-        if(error){$('setupSB').textContent='FEHLER';errtoast('✕ '+error.message);}
-        else{$('setupSB').textContent='VERBUNDEN';toast('✓ VERBUNDEN');}
-      });
-    }catch(e){errtoast('✕ '+e.message);}
-  },
-  saveSB(){
-    ls.set('sp_v3_sb_url',$('sbUrl').value.trim());
-    ls.set('sp_v3_sb_key',$('sbKey').value.trim());
-    toast('✓ GESPEICHERT');
-  },
-  addUser(){
-    const n=$('newUserName').value.trim(),u=$('newUserUser').value.trim(),p=$('newUserPass').value,r=$('newUserRole').value;
-    if(!n||!u||!p)return errtoast('✕ ALLE FELDER');
-    if(Users.all()[u])return errtoast('✕ EXISTIERT SCHON');
-    Users.add(u,p,r,n);
-    $('newUserName').value='';$('newUserUser').value='';$('newUserPass').value='';
-    Render.renderConfigLists();toast('✓ USER ANGELEGT');
-  },
-  delUser(u){
-    if(u==='planer')return errtoast('✕ PLANER GESCHÜTZT');
-    if(!confirm('USER LÖSCHEN?'))return;
-    Users.del(u);Render.renderConfigLists();toast('✓ GELÖSCHT');
-  }
-};
-
-window.App=App;
-window.Draw=Draw;
-App.init();
 </script>
 </body>
 </html>

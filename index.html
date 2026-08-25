@@ -96,8 +96,8 @@ body.sun-mode .wr-head { background: rgba(255, 255, 255, 0.95); }
 .wr-kpis { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
 
 table.mt { width: 100%; border-collapse: collapse; table-layout: fixed; }
-table.mt thead th { position: sticky; top: 61px; z-index: 20; padding: 8px 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; color: var(--muted); background: var(--bg); text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
-table.mt td { padding: 6px 4px; font-size: 0.75rem; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+table.mt thead th { position: sticky; top: 61px; z-index: 20; padding: 6px 4px; font-size: 0.55rem; font-weight: 700; text-transform: uppercase; color: var(--muted); background: var(--bg); text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.mt td { padding: 4px 2px; font-size: 0.7rem; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 table.mt tbody tr:hover { background: var(--panel); }
 table.mt tbody tr.mppt-div { border-top: 2px solid var(--border); }
 table.mt tbody tr.row-nein { opacity: 0.35; transition: opacity 0.2s; }
@@ -703,7 +703,7 @@ function getCurrentProject(){ return PROJECTS[CURRENT_PROJECT_ID] || null; }
 function getCurrentPlan(){ return getCurrentProject() ? getCurrentProject().plan : {}; }
 function getCurrentWp(){ return getCurrentProject() ? getCurrentProject().model_wp : 465; }
 
-function generateState(plan){
+function generateState(plan, allActiveByDefault = true){
   const result = {};
   if(!plan) return result;
   
@@ -725,10 +725,10 @@ function generateState(plan){
           if(ptr < totalStrings){
             const s1 = list[ptr++];
             result[`${wr}.${m}.1`] = { planName: `STR ${s1.p}`, gak: `GAK ${wr}.${s1.g}`, mod: s1.m, stat: "JA", note: s1.n || "", uoc:"", isc:"", riso:"" };
-            result[`${wr}.${m}.2`] = { planName: "", gak: `GAK ${wr}.${s1.g}`, mod: 0, stat: "NEIN", note: "", uoc:"", isc:"", riso:"" };
+            result[`${wr}.${m}.2`] = { planName: "", gak: `GAK ${wr}.${s1.g}`, mod: 0, stat: allActiveByDefault ? "JA" : "NEIN", note: "", uoc:"", isc:"", riso:"" };
           } else {
-            result[`${wr}.${m}.1`] = { planName: "", gak: `GAK ${wr}.2`, mod: 0, stat: "NEIN", note: "", uoc:"", isc:"", riso:"" };
-            result[`${wr}.${m}.2`] = { planName: "", gak: `GAK ${wr}.2`, mod: 0, stat: "NEIN", note: "", uoc:"", isc:"", riso:"" };
+            result[`${wr}.${m}.1`] = { planName: "", gak: `GAK ${wr}.2`, mod: 0, stat: allActiveByDefault ? "JA" : "NEIN", note: "", uoc:"", isc:"", riso:"" };
+            result[`${wr}.${m}.2`] = { planName: "", gak: `GAK ${wr}.2`, mod: 0, stat: allActiveByDefault ? "JA" : "NEIN", note: "", uoc:"", isc:"", riso:"" };
           }
         }
       }
@@ -738,9 +738,9 @@ function generateState(plan){
       const defMods = wrData.defaultMods || 0;
       for(let m=1; m<=mppts; m++){
         for(let s=1; s<=inputs; s++){
-          const isAct = defMods > 0;
+          const isAct = defMods > 0 || allActiveByDefault;
           result[`${wr}.${m}.${s}`] = { 
-            planName: "", gak: `GAK ${wr}`, mod: isAct ? defMods : 0, 
+            planName: "", gak: `GAK ${wr}`, mod: isAct ? (defMods || 1) : 0, 
             stat: isAct ? "JA" : "NEIN", note: "", uoc:"", isc:"", riso:"" 
           };
         }
@@ -750,9 +750,9 @@ function generateState(plan){
   return result;
 }
 
-function loadCurrentProjectData(){
+function loadCurrentProjectData(allActiveByDefault = false){
   if(!CURRENT_PROJECT_ID) return;
-  APP_STATE = generateState(getCurrentPlan());
+  APP_STATE = generateState(getCurrentPlan(), allActiveByDefault);
   try {
     const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
     const projData = allData[CURRENT_PROJECT_ID] || {};
@@ -819,30 +819,30 @@ function renderMatrix(remoteOverride = null){
 
         rowsHtml += `
           <tr id="row-${id}" class="${(s===1 && m>1) ? 'mppt-div' : ''} ${!isJa ? 'row-nein' : ''}">
-            <td data-label="Klemme" style="text-align:left; padding-left:8px; width:15%;">
+            <td data-label="Klemme" style="text-align:left; padding-left:6px; width:12%;">
                <div style="display:flex;flex-direction:column;gap:1px;">
-                 <span class="string-id" style="font-size:0.8rem;">${id}</span>
+                 <span class="string-id" style="font-size:0.7rem;">${id}</span>
                  ${strLabel}
                </div>
             </td>
-            <td data-label="GAK" style="width:12%;"><input type="text" id="gak-${id}" value="${item.gak}" class="sp-inp sp-inp-center sp-inp-gak" style="font-size:0.75rem;padding:4px;" oninput="saveData('${id}', 'gak', this.value)">
+            <td data-label="GAK" style="width:12%;"><input type="text" id="gak-${id}" value="${item.gak}" class="sp-inp sp-inp-center sp-inp-gak" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'gak', this.value)">
                <span class="print-cell">${item.gak}</span>
             </td>
             <td data-label="Aktiv" class="no-print" style="width:12%;">
-              <div class="tog-wrap" style="transform:scale(0.9);">
+              <div class="tog-wrap" style="transform:scale(0.85);">
                 <button id="tja-${id}" class="tog ${isJa?'on-ja':''}" onclick="setStat('${id}','JA')">JA</button>
                 <button id="tnei-${id}" class="tog ${!isJa?'on-nei':''}" onclick="setStat('${id}','NEIN')">NEIN</button>
               </div>
             </td>
-            <td data-label="Module" style="width:8%;"><input type="number" id="mod-${id}" value="${item.mod||''}" class="sp-inp sp-inp-center" style="font-size:0.75rem;padding:4px;" oninput="saveData('${id}', 'mod', this.value); updateKPIs();">
+            <td data-label="Module" style="width:8%;"><input type="number" id="mod-${id}" value="${item.mod||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'mod', this.value); updateKPIs();">
                <span class="print-cell" id="pm-${id}">${item.mod > 0 ? item.mod : '—'}</span>
             </td>
             <td data-label="kWp" class="pwr-cell" style="width:8%;" id="pw-${id}">${pwr}</td>
-            <td data-label="Uoc(V)" style="width:10%;"><input type="text" inputmode="decimal" id="uoc-${id}" value="${item.uoc||''}" class="sp-inp sp-inp-center" style="font-size:0.75rem;padding:4px;" oninput="saveData('${id}', 'uoc', this.value)"></td>
-            <td data-label="Isc(A)" style="width:10%;"><input type="text" inputmode="decimal" id="isc-${id}" value="${item.isc||''}" class="sp-inp sp-inp-center" style="font-size:0.75rem;padding:4px;" oninput="saveData('${id}', 'isc', this.value)"></td>
-            <td data-label="Riso(MΩ)" style="width:10%;"><input type="text" inputmode="decimal" id="riso-${id}" value="${item.riso||''}" class="sp-inp sp-inp-center" style="font-size:0.75rem;padding:4px;" oninput="saveData('${id}', 'riso', this.value)"></td>
-            <td data-label="Info" class="col-note" style="text-align:left; width:15%;">
-              <input type="text" id="note-${id}" value="${item.note||''}" class="sp-inp" style="text-align:left;font-size:0.75rem;padding:4px;" oninput="saveData('${id}', 'note', this.value)">
+            <td data-label="Uoc(V)" style="width:10%;"><input type="text" inputmode="decimal" id="uoc-${id}" value="${item.uoc||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'uoc', this.value)"></td>
+            <td data-label="Isc(A)" style="width:10%;"><input type="text" inputmode="decimal" id="isc-${id}" value="${item.isc||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'isc', this.value)"></td>
+            <td data-label="Riso(MΩ)" style="width:10%;"><input type="text" inputmode="decimal" id="riso-${id}" value="${item.riso||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'riso', this.value)"></td>
+            <td data-label="Info" class="col-note" style="text-align:left; width:18%;">
+              <input type="text" id="note-${id}" value="${item.note||''}" class="sp-inp" style="text-align:left;font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'note', this.value)">
               <span class="print-cell" style="font-size:7pt;color:#71717a;">${item.note||''}</span>
             </td>
           </tr>`;
@@ -1277,14 +1277,14 @@ async function doCreateNewProject(){
   localStorage.setItem(STORAGE_KEYS.current, id);
   
   closeNewProjectModal();
-  loadCurrentProjectData();
+  loadCurrentProjectData(true); // Alle Strings standardmäßig aktiv
   
   // Automatisch in Cloud speichern
   if(supabaseClient && currentUser){
     await saveProjectToCloud(id);
   }
   
-  toast('✅ Projekt erstellt');
+  toast('✅ Projekt erstellt (alle Strings aktiv)');
 }
 
 async function deleteProject(id){

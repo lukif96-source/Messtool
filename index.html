@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
-<title>SOLPRO | PV Matrix Tool v2</title>
+<title>SOLPRO | PV Matrix Tool v2.1</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -99,10 +99,14 @@ table.mt { width: 100%; border-collapse: collapse; table-layout: fixed; }
 table.mt thead th { position: sticky; top: 61px; z-index: 20; padding: 6px 4px; font-size: 0.55rem; font-weight: 700; text-transform: uppercase; color: var(--muted); background: var(--bg); text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
 table.mt td { padding: 4px 2px; font-size: 0.7rem; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 table.mt tbody tr:hover { background: var(--panel); }
-table.mt tbody tr.mppt-div { border-top: 2px solid var(--border); }
 table.mt tbody tr.row-nein { opacity: 0.35; transition: opacity 0.2s; }
 table.mt tbody tr.row-nein:hover { opacity: 0.6; }
 body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
+
+/* MPPT Header Styles */
+table.mt tbody tr.mppt-header { background: var(--panel); cursor: default; }
+body.sun-mode table.mt tbody tr.mppt-header { background: #f1f5f9; }
+table.mt tbody tr.mppt-header td { padding: 8px 12px; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: var(--accent); text-align: left; border-bottom: 1px solid var(--border); letter-spacing: 0.05em; }
 
 .string-id { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent); }
 .pwr-cell { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--accent-muted); }
@@ -198,7 +202,6 @@ body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
 }
 .print-cell { display: none; }
 
-/* File upload styling */
 .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; }
 .file-upload-wrapper input[type=file] { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
 .file-upload-btn { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: var(--accent-glow); border: 2px dashed var(--accent); border-radius: 12px; color: var(--accent); font-weight: 700; cursor: pointer; transition: all 0.2s; width: 100%; justify-content: center; }
@@ -214,7 +217,7 @@ body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
   <div class="auth-card">
     <div style="font-size:1.8rem;font-weight:900;color:var(--accent);margin-bottom:14px;letter-spacing:-0.05em;">SOLPRO</div>
     <div style="font-size:1.25rem;font-weight:800;color:var(--text);margin-bottom:4px;" id="auth-title">Anmelden</div>
-    <div style="font-size:0.8rem;color:var(--muted);margin-bottom:20px;">PV Matrix Tool v2</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-bottom:20px;">PV Matrix Tool v2.1</div>
     <div class="auth-error" id="auth-error"></div>
     <div class="auth-field">
       <label>E-Mail</label>
@@ -289,7 +292,7 @@ body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
 <aside class="sidebar no-print" id="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-logo">SOLPRO</div>
-    <div class="sidebar-subtitle">Matrix Tool v2</div>
+    <div class="sidebar-subtitle">Matrix Tool v2.1</div>
   </div>
 
   <div class="user-badge" id="user-badge" style="display:none;">
@@ -490,7 +493,6 @@ body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
     </div>
   </div>
 </div>
-
 <script>
 // === SUPABASE CONFIG ===
 const SB_URL = "https://rcuimtfmjkpxkazbsggj.supabase.co";
@@ -601,7 +603,7 @@ function renderProjectGrid(){
           </div>
           <div class="project-card-stat">
             <div class="project-card-stat-label">MPPTs</div>
-            <div class="project-card-stat-value">${Object.values(proj.plan).reduce((sum, wr) => sum + (wr.mppts || 12), 0)}</div>
+            <div class="project-card-stat-value">${Object.values(proj.plan).reduce((sum, wr) => sum + (Array.isArray(wr) ? 12 : (wr.mppts || 12)), 0)}</div>
           </div>
         </div>
       </div>
@@ -609,71 +611,10 @@ function renderProjectGrid(){
   }).join('');
 }
 
-// === THE ORIGINAL HARDCODED PLAN (PV MAN P52) ===
-const STRICT_CHRONO_PLAN = {
-  1: [
-    { p: 1, m: 23, g: 1, n: "Fläche A" }, { p: 2, m: 23, g: 1, n: "Fläche A" },
-    { p: 3, m: 22, g: 1, n: "Fläche A" }, { p: 4, m: 22, g: 1, n: "Fläche A" },
-    { p: 5, m: 21, g: 1, n: "Fläche A" }, { p: 6, m: 21, g: 1, n: "Fläche A" },
-    { p: 7, m: 21, g: 1, n: "Fläche A" }, { p: 8, m: 21, g: 1, n: "Fläche A" },
-    { p: 9, m: 20, g: 2, n: "Fläche A" }, { p: 10, m: 20, g: 2, n: "Fläche A" },
-    { p: 11, m: 21, g: 2, n: "Fläche A" }, { p: 12, m: 21, g: 2, n: "Fläche A" }
-  ],
-  2: [
-    { p: 1, m: 13, g: 1, n: "Fläche B" }, { p: 2, m: 13, g: 1, n: "Fläche B" },
-    { p: 3, m: 21, g: 1, n: "Fläche B" }, { p: 4, m: 21, g: 1, n: "Fläche B" },
-    { p: 5, m: 20, g: 2, n: "Fläche B" }, { p: 6, m: 20, g: 2, n: "Fläche B" },
-    { p: 7, m: 21, g: 2, n: "Fläche B" }, { p: 8, m: 21, g: 2, n: "Fläche B" },
-    { p: 9, m: 21, g: 2, n: "Fläche B" }, { p: 10, m: 21, g: 2, n: "Fläche B" },
-    { p: 11, m: 14, g: 2, n: "Fläche B (10 mm²)" }, { p: 12, m: 14, g: 2, n: "Fläche B (10 mm²)" },
-    { p: 13, m: 18, g: 2, n: "Fläche B (10 mm²)" }, { p: 14, m: 18, g: 2, n: "Fläche B (10 mm²)" }
-  ],
-  3: [
-    { p: 1, m: 13, g: 1, n: "Fläche C" }, { p: 2, m: 13, g: 1, n: "Fläche C" },
-    { p: 3, m: 16, g: 1, n: "Fläche C" }, { p: 4, m: 16, g: 1, n: "Fläche C" },
-    { p: 5, m: 16, g: 1, n: "Fläche C" }, { p: 6, m: 16, g: 1, n: "Fläche C" },
-    { p: 7, m: 23, g: 1, n: "Fläche C" }, { p: 8, m: 23, g: 1, n: "Fläche C" },
-    { p: 9, m: 23, g: 1, n: "Fläche C" }, { p: 10, m: 23, g: 1, n: "Fläche C" },
-    { p: 11, m: 8, g: 1, n: "Fläche C" }, { p: 12, m: 8, g: 1, n: "Fläche C" },
-    { p: 13, m: 16, g: 2, n: "Fläche C" }, { p: 14, m: 16, g: 2, n: "Fläche C" },
-    { p: 15, m: 16, g: 2, n: "Fläche C" }, { p: 16, m: 16, g: 2, n: "Fläche C" },
-    { p: 17, m: 15, g: 2, n: "Fläche C" }, { p: 18, m: 15, g: 2, n: "Fläche C" }
-  ],
-  4: [
-    { p: 1, m: 16, g: 1, n: "Fläche D" }, { p: 2, m: 16, g: 1, n: "Fläche D" },
-    { p: 3, m: 23, g: 1, n: "Fläche D" }, { p: 4, m: 23, g: 1, n: "Fläche D" },
-    { p: 5, m: 8, g: 1, n: "Fläche D" }, { p: 6, m: 8, g: 1, n: "Fläche D" },
-    { p: 7, m: 16, g: 2, n: "Fläche D" }, { p: 8, m: 16, g: 2, n: "Fläche D" },
-    { p: 9, m: 16, g: 2, n: "Fläche D" }, { p: 10, m: 16, g: 2, n: "Fläche D" },
-    { p: 11, m: 23, g: 2, n: "Fläche D (10 mm²)" }, { p: 12, m: 23, g: 2, n: "Fläche D (10 mm²)" },
-    { p: 13, m: 23, g: 2, n: "Fläche D (10 mm²)" }, { p: 14, m: 23, g: 2, n: "Fläche D (10 mm²)" },
-    { p: 15, m: 20, g: 2, n: "Fläche D (10 mm²)" }, { p: 16, m: 20, g: 2, n: "Fläche D (10 mm²)" }
-  ],
-  5: [
-    { p: 1, m: 22, g: 1, n: "Fläche E" }, { p: 2, m: 22, g: 1, n: "Fläche E" },
-    { p: 3, m: 22, g: 1, n: "Fläche E" }, { p: 4, m: 22, g: 1, n: "Fläche E" },
-    { p: 5, m: 17, g: 1, n: "Fläche E" }, { p: 6, m: 17, g: 1, n: "Fläche E" },
-    { p: 7, m: 22, g: 1, n: "Fläche E" }, { p: 8, m: 22, g: 1, n: "Fläche E" },
-    { p: 9, m: 13, g: 1, n: "Fläche E" }, { p: 10, m: 13, g: 1, n: "Fläche E" },
-    { p: 11, m: 18, g: 1, n: "Fläche E" }, { p: 12, m: 18, g: 1, n: "Fläche E" },
-    { p: 13, m: 17, g: 2, n: "Fläche E" }, { p: 14, m: 17, g: 2, n: "Fläche E" },
-    { p: 15, m: 17, g: 2, n: "Fläche E (10 mm²)" }, { p: 16, m: 17, g: 2, n: "Fläche E (10 mm²)" },
-    { p: 17, m: 13, g: 2, n: "Fläche E (10 mm²)" }, { p: 18, m: 13, g: 2, n: "Fläche E (10 mm²)" }
-  ],
-  6: [
-    { p: 1, m: 23, g: 1, n: "Fläche F (10 mm²)" }, { p: 2, m: 23, g: 1, n: "Fläche F (10 mm²)" },
-    { p: 3, m: 23, g: 1, n: "Fläche F (10 mm²)" }, { p: 4, m: 23, g: 1, n: "Fläche F (10 mm²)" },
-    { p: 5, m: 23, g: 2, n: "Fläche F (10 mm²)" }, { p: 6, m: 23, g: 2, n: "Fläche F (10 mm²)" },
-    { p: 7, m: 20, g: 2, n: "Fläche F (10 mm²)" }, { p: 8, m: 20, g: 2, n: "Fläche F (10 mm²)" },
-    { p: 9, m: 18, g: 2, n: "Fläche F (10 mm²)" }, { p: 10, m: 18, g: 2, n: "Fläche F (10 mm²)" },
-    { p: 11, m: 17, g: 2, n: "Fläche F (10 mm²)" }, { p: 12, m: 17, g: 2, n: "Fläche F (10 mm²)" },
-    { p: 13, m: 18, g: 2, n: "Fläche F (10 mm²)" }, { p: 14, m: 18, g: 2, n: "Fläche F (10 mm²)" },
-    { p: 15, m: 18, g: 2, n: "Fläche F (10 mm²)" }, { p: 16, m: 18, g: 2, n: "Fläche F (10 mm²)" }
-  ]
-};
-
 const DEFAULT_PROJECTS = {
-  PV_MAN_P52: { id: 'PV_MAN_P52', name: 'PV MAN P52', model_wp: 465, plan: STRICT_CHRONO_PLAN }
+  PV_MAN_P52: { id: 'PV_MAN_P52', name: 'PV MAN P52', model_wp: 465, plan: {
+    1: [{ p: 1, m: 23, g: 1, n: "Fläche A" }, { p: 2, m: 23, g: 1, n: "Fläche A" }, { p: 3, m: 22, g: 1, n: "Fläche A" }, { p: 4, m: 22, g: 1, n: "Fläche A" }, { p: 5, m: 21, g: 1, n: "Fläche A" }, { p: 6, m: 21, g: 1, n: "Fläche A" }, { p: 7, m: 21, g: 1, n: "Fläche A" }, { p: 8, m: 21, g: 1, n: "Fläche A" }, { p: 9, m: 20, g: 2, n: "Fläche A" }, { p: 10, m: 20, g: 2, n: "Fläche A" }, { p: 11, m: 21, g: 2, n: "Fläche A" }, { p: 12, m: 21, g: 2, n: "Fläche A" }]
+  }}
 };
 
 let PROJECTS = {};
@@ -682,7 +623,6 @@ let APP_STATE = {};
 
 async function initProjects(){
   try {
-    // Zuerst aus localStorage laden (Cache)
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.projects) || '{}');
     PROJECTS = Object.keys(stored).length > 0 ? stored : JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
   } catch(e){ PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS)); }
@@ -691,7 +631,6 @@ async function initProjects(){
   CURRENT_PROJECT_ID = localStorage.getItem(STORAGE_KEYS.current) || Object.keys(PROJECTS)[0];
   if(!PROJECTS[CURRENT_PROJECT_ID]) CURRENT_PROJECT_ID = Object.keys(PROJECTS)[0];
   
-  // Dann aus Supabase laden falls verfügbar
   if(supabaseClient && currentUser){
     await fetchProjectsFromCloud();
   }
@@ -802,6 +741,12 @@ function renderMatrix(remoteOverride = null){
     let wrMods = 0, wrPwr = 0, activeStrings = 0;
 
     for(let m = 1; m <= mppts; m++){
+      // --- MPPT ÜBERSCHRIFT ---
+      rowsHtml += `
+        <tr class="mppt-header">
+          <td colspan="9">⚡ MPPT ${m}</td>
+        </tr>`;
+
       for(let s = 1; s <= inputs; s++){
         const id = `${wr}.${m}.${s}`;
         if(!APP_STATE[id]) continue;
@@ -818,7 +763,7 @@ function renderMatrix(remoteOverride = null){
         }
 
         rowsHtml += `
-          <tr id="row-${id}" class="${(s===1 && m>1) ? 'mppt-div' : ''} ${!isJa ? 'row-nein' : ''}">
+          <tr id="row-${id}" class="${!isJa ? 'row-nein' : ''}">
             <td data-label="Klemme" style="text-align:left; padding-left:6px; width:12%;">
                <div style="display:flex;flex-direction:column;gap:1px;">
                  <span class="string-id" style="font-size:0.7rem;">${id}</span>
@@ -913,7 +858,7 @@ function setStat(id, st) {
 
 function updateKPIs(){ renderMatrix(); }
 
-// === PVSOL IMPORT LOGIC ===
+// === PVSOL IMPORT LOGIC (FIXED & ROBUST) ===
 function openPVSOLModal(){
   pendingPVSOLData = null;
   g('pvsol-file-input').value = '';
@@ -927,30 +872,22 @@ function closePVSOLModal(e){ if(!e || e.target===e.currentTarget) g('pvsol-modal
 function handlePVSOLFile(input){
   const file = input.files[0];
   if(!file) return;
-  
   g('pvsol-file-label').textContent = file.name;
   
   const reader = new FileReader();
   reader.onload = function(e){
     try {
-      // Entfernt UTF-8 BOM (Byte Order Mark) und whitespace
       const rawText = e.target.result.replace(/^\uFEFF/, '').trim();
       const json = JSON.parse(rawText);
       
-      // FLEXIBLE SUCHE nach dem Configuration-Objekt
       let configRoot = null;
-      if (json.Configuration) {
-        configRoot = json.Configuration;
-      } else if (json.Project && json.Project.Configuration) {
-        configRoot = json.Project.Configuration;
-      } else if (json.ProjectOverview && json.ProjectOverview.Configuration) {
-        configRoot = json.ProjectOverview.Configuration;
-      }
+      if (json.Configuration) configRoot = json.Configuration;
+      else if (json.Project && json.Project.Configuration) configRoot = json.Project.Configuration;
+      else if (json.ProjectOverview && json.ProjectOverview.Configuration) configRoot = json.ProjectOverview.Configuration;
 
-      // Prüfung, ob wir die ModuleAreas gefunden haben
       if(!configRoot || !configRoot.ModuleAreas){
         console.error("JSON Struktur:", json);
-        toast('Ungültiges PVSOL-Format: Konfigurations-Daten nicht gefunden');
+        toast('Ungültiges PVSOL-Format: Konfiguration nicht gefunden');
         pendingPVSOLData = null;
         return;
       }
@@ -959,7 +896,6 @@ function handlePVSOLFile(input){
       const parsed = parsePVSOLData(json);
       showPVSOLPreview(parsed);
       g('pvsol-confirm-btn').disabled = false;
-      
     } catch(err){
       console.error("Parse Fehler:", err);
       toast('Fehler beim Lesen der Datei: ' + err.message);
@@ -968,94 +904,62 @@ function handlePVSOLFile(input){
   };
   reader.readAsText(file);
 }
+
 function parsePVSOLData(json){
   const plan = {};
   let totalWp = 0;
   let projectName = 'PVSOL Import';
   let moduleWp = 460; 
 
-  // Root-Ebene finden
   const root = json.Project ? json.Project : json;
   const config = root.Configuration || (root.ProjectOverview ? root.ProjectOverview.Configuration : null);
 
-  // Projektnamen extrahieren
   const projectData = root.ProjectOverview?.ProjectData;
-  if(projectData && projectData.ProjectName){
-    projectName = projectData.ProjectName;
-  }
+  if(projectData && projectData.ProjectName) projectName = projectData.ProjectName;
   
-  // Modul-Wp extrahieren
   if(config?.ModuleAreas && config.ModuleAreas.length > 0){
     const firstArea = config.ModuleAreas[0];
     if(firstArea.ModuleData){
-      // Sucht nach Zahlen gefolgt von "W" (z.B. 460W) oder zwischen Bindestrich und Slash
       const wpMatch = firstArea.ModuleData.match(/(\d{3})W/i) || firstArea.ModuleData.match(/-(\d{3})\//);
-      if(wpMatch){
-        moduleWp = parseInt(wpMatch[1]);
-      }
+      if(wpMatch) moduleWp = parseInt(wpMatch[1]);
     }
   }
   
   if(config?.ModuleAreas){
     config.ModuleAreas.forEach(area => {
       if(!area.Inverters) return;
-      
       area.Inverters.forEach(inv => {
         const wrNum = inv.Number;
         const configs = inv.Configuration || [];
-        
         let mpptCount = 0;
         const mpptData = [];
-        
         configs.forEach(configStr => {
           if(!configStr || typeof configStr !== 'string' || configStr.toLowerCase().includes('nicht belegt')) return;
-          
-          // Erkennt "MPP 1: 1 x 17"
           const match = configStr.match(/MPP\s+(\d+):\s*(\d+)\s*x\s*(\d+)/i);
           if(match){
             const mpptNum = parseInt(match[1]);
             const inputCount = parseInt(match[2]);
             const modulesPerString = parseInt(match[3]);
-            
             mpptCount = Math.max(mpptCount, mpptNum);
-            mpptData[mpptNum] = {
-              inputs: inputCount,
-              modules: modulesPerString
-            };
+            mpptData[mpptNum] = { inputs: inputCount, modules: modulesPerString };
             totalWp += inputCount * modulesPerString * moduleWp;
           }
         });
-        
         if(mpptCount === 0) mpptCount = 3; 
-        
-        plan[wrNum] = {
-          mppts: mpptCount,
-          inputs: 2, 
-          defaultMods: 0,
-          mpptData: mpptData
-        };
+        plan[wrNum] = { mppts: mpptCount, inputs: 2, defaultMods: 0, mpptData: mpptData };
       });
     });
   }
-  
   return { plan, totalWp, projectName, moduleWp };
 }
+
 function showPVSOLPreview(parsed){
   const preview = g('pvsol-preview-content');
   const wrCount = Object.keys(parsed.plan).length;
-  
   let html = `<div style="margin-bottom:8px;"><strong>${wrCount} Wechselrichter</strong> gefunden</div>`;
-  
-  if(parsed.projectName){
-    html += `<div style="margin-bottom:8px;"><strong>Projektname:</strong> ${parsed.projectName}</div>`;
-  }
-  
-  if(parsed.moduleWp){
-    html += `<div style="margin-bottom:8px;"><strong>Modul-Leistung:</strong> ${parsed.moduleWp} Wp</div>`;
-  }
-  
+  if(parsed.projectName) html += `<div style="margin-bottom:8px;"><strong>Projektname:</strong> ${parsed.projectName}</div>`;
+  if(parsed.moduleWp) html += `<div style="margin-bottom:8px;"><strong>Modul-Leistung:</strong> ${parsed.moduleWp} Wp</div>`;
   html += '<div style="display:flex;flex-direction:column;gap:4px;">';
-  
   Object.keys(parsed.plan).sort((a,b)=>a-b).forEach(wr => {
     const wrData = parsed.plan[wr];
     html += `<div style="display:flex;justify-content:space-between;padding:4px 8px;background:var(--panel);border-radius:4px;">
@@ -1063,7 +967,6 @@ function showPVSOLPreview(parsed){
       <span style="color:var(--muted);">${wrData.mppts} MPPTs</span>
     </div>`;
   });
-  
   html += '</div>';
   preview.innerHTML = html;
   g('pvsol-preview').style.display = 'block';
@@ -1071,30 +974,14 @@ function showPVSOLPreview(parsed){
 
 function confirmPVSOLImport(){
   if(!pendingPVSOLData) return;
-  
   const parsed = parsePVSOLData(pendingPVSOLData);
-  
-  // Use extracted project name and module Wp
   const projectName = parsed.projectName || 'PVSOL Import';
   const wp = parsed.moduleWp || 460;
-  
   let id = projectName.replace(/[^a-zA-Z0-9]/g, '_');
   if(PROJECTS[id]) id += '_' + Date.now();
-  
-  PROJECTS[id] = {
-    id,
-    name: projectName,
-    model_wp: wp,
-    plan: parsed.plan
-  };
-  
+  PROJECTS[id] = { id, name: projectName, model_wp: wp, plan: parsed.plan };
   localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
-  
-  // Speichere direkt in Cloud
-  if(supabaseClient && currentUser){
-    saveProjectToCloud(id);
-  }
-  
+  if(supabaseClient && currentUser) saveProjectToCloud(id);
   closePVSOLModal();
   selectProject(id);
   toast('✅ PVSOL-Import erfolgreich');
@@ -1102,11 +989,7 @@ function confirmPVSOLImport(){
 
 // === NEW PROJECT LOGIC ===
 async function openProjectsModal(){
-  // Erst automatisch aus Cloud synchronisieren
-  if(supabaseClient && currentUser){
-    await fetchProjectsFromCloud();
-  }
-  
+  if(supabaseClient && currentUser) await fetchProjectsFromCloud();
   const list = g('proj-list');
   const ids = Object.keys(PROJECTS);
   list.innerHTML = ids.map(id => `
@@ -1127,86 +1010,41 @@ function closeProjectsModal(e){ if(!e || e.target===e.currentTarget) g('projects
 
 async function refreshProjects(){
   const btn = document.querySelector('button[onclick="refreshProjects()"]');
-  if(btn) {
-    btn.disabled = true;
-    btn.textContent = '⏳ Lade...';
-  }
-  
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ Lade...'; }
   try {
-    if(!supabaseClient){
-      toast('❌ Keine Cloud-Verbindung');
-      return;
-    }
-    
-    if(!currentUser){
-      toast('❌ Nicht eingeloggt');
-      return;
-    }
-    
-    console.log('Starte Projekt-Refresh...');
-    console.log('User:', currentUser.email, 'Role:', currentUserRole);
+    if(!supabaseClient || !currentUser) { toast('❌ Keine Cloud-Verbindung'); return; }
     toast('🔄 Aktualisiere Projekte...');
-    
     await fetchProjectsFromCloud();
-    renderProjectGrid(); // Grid neu rendern
+    renderProjectGrid();
     toast('✅ Projekte aktualisiert');
-    
   } catch(e){
     console.error('Refresh Fehler:', e);
     toast('❌ Fehler: ' + e.message);
   } finally {
-    if(btn) {
-      btn.disabled = false;
-      btn.textContent = '🔄 Aktualisieren';
-    }
+    if(btn) { btn.disabled = false; btn.textContent = '🔄 Aktualisieren'; }
   }
 }
 
 async function debugCloudProjects(){
   if(!supabaseClient || !currentUser) return;
-  
   try {
-    console.log('=== DEBUG: Alle Projekte in Cloud ===');
     const { data, error } = await supabaseClient.from('pv_projects').select('*');
-    
-    if(error){
-      console.error('Debug Fehler:', error);
-    } else {
-      console.log('Alle Projekte:', data);
-      console.log('Anzahl:', data ? data.length : 0);
-      
-      if(data && data.length > 0){
-        data.forEach(proj => {
-          console.log(`- ${proj.id}: ${proj.name} (User: ${proj.user_id}, Prüfer: ${proj.pruefer})`);
-        });
-      }
-    }
-  } catch(e){
-    console.error('Debug Exception:', e);
-  }
+    if(error) console.error('Debug Fehler:', error);
+    else console.log('Alle Projekte:', data);
+  } catch(e){ console.error('Debug Exception:', e); }
 }
 
 async function selectProject(id){
   CURRENT_PROJECT_ID = id;
   localStorage.setItem(STORAGE_KEYS.current, id);
   loadCurrentProjectData();
-  
-  // Automatisch aus Cloud laden falls verfügbar
-  if(supabaseClient && currentUser){
-    await fetchCloudDataManually();
-  }
-  
-  // Wenn wir im Projekt-Tab sind, wechsle zum Matrix-Tab
-  if(g('projects-view').classList.contains('active')){
-    switchMainTab('matrix');
-  }
-  
+  if(supabaseClient && currentUser) await fetchCloudDataManually();
+  if(g('projects-view').classList.contains('active')) switchMainTab('matrix');
   toast('Projekt geladen');
 }
 
 function openNewProjectModal(){
   g('np-name').value = '';
-  
   const sel = g('np-clone-from');
   sel.innerHTML = '';
   Object.values(PROJECTS).forEach(p => {
@@ -1214,10 +1052,7 @@ function openNewProjectModal(){
     opt.value = p.id; opt.textContent = p.name;
     sel.appendChild(opt);
   });
-
-  document.querySelectorAll('input[name="np-template"]').forEach(r => {
-    r.checked = (r.value === 'plan');
-  });
+  document.querySelectorAll('input[name="np-template"]').forEach(r => r.checked = (r.value === 'plan'));
   updateNewProjectForm();
   renderNPWRPlan();
   closeProjectsModal();
@@ -1232,7 +1067,6 @@ function updateNewProjectForm(){
   document.querySelectorAll('input[name="np-template"]').forEach(r => {
     r.closest('.field-radio').classList.toggle('selected', r.checked);
   });
-  
   g('np-clone-from-field').style.display = v === 'clone' ? 'block' : 'none';
   g('np-plan-field').style.display = v === 'plan' ? 'block' : 'none';
 }
@@ -1259,21 +1093,16 @@ async function doCreateNewProject(){
   const wp = parseInt(g('np-wp').value)||465;
   const count = parseInt(g('np-wr-count').value)||1;
   const template = document.querySelector('input[name="np-template"]:checked').value;
-  
   if(!name) return toast('Bitte Namen eingeben');
-  
   let id = name.replace(/[^a-zA-Z0-9]/g, '_');
   if(PROJECTS[id]) id += '_' + Date.now();
-  
   let plan = {};
   if(template === 'clone'){
     const cloneId = g('np-clone-from').value;
     if(!PROJECTS[cloneId]) return toast('Quellprojekt ungültig');
     plan = JSON.parse(JSON.stringify(PROJECTS[cloneId].plan));
   } else if(template === 'empty') {
-    for(let wr=1; wr<=count; wr++){
-      plan[wr] = { mppts: 12, inputs: 2, defaultMods: 0 };
-    }
+    for(let wr=1; wr<=count; wr++) plan[wr] = { mppts: 12, inputs: 2, defaultMods: 0 };
   } else {
     for(let wr=1; wr<=count; wr++){
       plan[wr] = {
@@ -1283,23 +1112,14 @@ async function doCreateNewProject(){
       };
     }
   }
-  
   PROJECTS[id] = { id, name, model_wp: wp, plan };
   localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
-  
-  // Force project selection
   CURRENT_PROJECT_ID = id;
   localStorage.setItem(STORAGE_KEYS.current, id);
-  
   closeNewProjectModal();
-  loadCurrentProjectData(true); // Alle Strings standardmäßig aktiv
-  
-  // Automatisch in Cloud speichern
-  if(supabaseClient && currentUser){
-    await saveProjectToCloud(id);
-  }
-  
-  toast('✅ Projekt erstellt (alle Strings aktiv)');
+  loadCurrentProjectData(true);
+  if(supabaseClient && currentUser) await saveProjectToCloud(id);
+  toast('✅ Projekt erstellt');
 }
 
 async function deleteProject(id){
@@ -1307,23 +1127,12 @@ async function deleteProject(id){
   if(!confirm('Projekt wirklich löschen?')) return;
   delete PROJECTS[id];
   localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
-  
-  // Auch aus Cloud löschen
-  if(supabaseClient && currentUser){
-    try {
-      await supabaseClient.from('pv_projects').delete().eq('id', id);
-    } catch(e){
-      console.error('Fehler beim Löschen aus Cloud:', e);
-    }
-  }
-  
+  if(supabaseClient && currentUser) try { await supabaseClient.from('pv_projects').delete().eq('id', id); } catch(e){}
   openProjectsModal();
   toast('🗑️ Projekt gelöscht');
 }
 
-
 // === EXPORT / PRINT LOGIC ===
-
 function getAllFullIds(){
   return Object.keys(APP_STATE).sort((a,b) => {
     let pA = a.split('.').map(Number), pB = b.split('.').map(Number);
@@ -1377,10 +1186,7 @@ function doExcel(){
   getAllFullIds().forEach(fullId => {
     const item = APP_STATE[fullId];
     const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * getCurrentWp())/1000).toFixed(2) : '0';
-    rows.push([
-      { t: 's', v: fullId }, item.planName || '—', item.gak, item.stat, item.mod,
-      parseFloat(pwr.replace(',','.')) || 0, item.uoc, item.isc, item.riso, item.note
-    ]);
+    rows.push([ { t: 's', v: fullId }, item.planName || '—', item.gak, item.stat, item.mod, parseFloat(pwr.replace(',','.')) || 0, item.uoc, item.isc, item.riso, item.note ]);
   });
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -1396,129 +1202,21 @@ function printBlankMeasurementSheet(){
   const dateStr = new Date().toLocaleDateString('de-AT');
   let win = window.open('', '_blank');
   let pagesHtml = '';
-
   const wrKeys = Object.keys(proj.plan).map(Number).sort((a,b)=>a-b);
   wrKeys.forEach(wr => {
     let rowsHtml = '';
     const itemsForWR = getAllFullIds().filter(k => k.startsWith(`${wr}.`));
-    
     itemsForWR.forEach(id => {
       const item = APP_STATE[id];
-      if(item.stat !== 'JA') return; // Only print active
-      
-      rowsHtml += `
-        <tr>
-          <td style="font-weight:700; font-family:'JetBrains Mono', monospace; font-size:12pt; color:#16a34a;">${id}</td>
-          <td style="font-size:10pt;">${item.gak || ''}</td>
-          <td style="font-weight:700;">${item.mod || ''}</td>
-          <td><div class="write-line"></div></td>
-          <td><div class="write-line"></div></td>
-          <td><div class="write-line"></div></td>
-          <td>
-            <div class="chk-wrap">
-              <div class="chk"><div class="box"></div>i.O.</div>
-              <div class="chk"><div class="box"></div>n.i.O.</div>
-            </div>
-          </td>
-          <td><div class="write-line" style="width:90%;"></div></td>
-        </tr>`;
+      if(item.stat !== 'JA') return;
+      rowsHtml += `<tr><td style="font-weight:700; font-family:'JetBrains Mono', monospace; font-size:12pt; color:#16a34a;">${id}</td><td style="font-size:10pt;">${item.gak || ''}</td><td style="font-weight:700;">${item.mod || ''}</td><td><div class="write-line"></div></td><td><div class="write-line"></div></td><td><div class="write-line"></div></td><td><div class="chk-wrap"><div class="chk"><div class="box"></div>i.O.</div><div class="chk"><div class="box"></div>n.i.O.</div></div></td><td><div class="write-line" style="width:90%;"></div></td></tr>`;
     });
-
     if(rowsHtml !== '') {
-      pagesHtml += `
-        <div class="sheet">
-          <div class="header">
-            <div>
-              <div class="brand">SOLPRO</div>
-              <div class="title">DC-Strangmessung / Inbetriebnahme</div>
-            </div>
-            <div class="meta">
-              <div class="meta-row"><span>Projekt:</span> <strong>${proj.name}</strong></div>
-              <div class="meta-row"><span>Datum:</span> <strong>${dateStr}</strong></div>
-              <div class="meta-row"><span>Wechselrichter:</span> <strong>WR ${wr}</strong></div>
-              <div class="meta-row"><span>Prüfer:</span> <strong>_______________________</strong></div>
-            </div>
-          </div>
-          
-          <div class="env-zone">
-            <div class="env-box">
-              <div class="env-label">Einstrahlung (W/m²)</div>
-            </div>
-            <div class="env-box">
-              <div class="env-label">Modultemperatur (°C)</div>
-            </div>
-            <div class="env-box" style="flex: 1.5;">
-              <div class="env-label">Eingesetztes Messgerät (Typ / S/N)</div>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th style="width:9%;">Klemme</th>
-                <th style="width:12%;">GAK</th>
-                <th style="width:7%;">Mods</th>
-                <th style="width:12%;">Uoc [V]</th>
-                <th style="width:12%;">Isc [A]</th>
-                <th style="width:12%;">Riso [MΩ]</th>
-                <th style="width:18%;">Polarität</th>
-                <th style="width:18%;">Bemerkung</th>
-              </tr>
-            </thead>
-            <tbody>${rowsHtml}</tbody>
-          </table>
-
-          <div class="footer">
-            <div class="sig-box">
-              <div class="sig-line"></div>
-              <div>Ort, Datum, Unterschrift Prüfer</div>
-            </div>
-            <div class="sig-box">
-              <div class="sig-line"></div>
-              <div>Ort, Datum, Unterschrift Bauleitung</div>
-            </div>
-          </div>
-        </div>`;
+      pagesHtml += `<div class="sheet"><div class="header"><div><div class="brand">SOLPRO</div><div class="title">DC-Strangmessung / Inbetriebnahme</div></div><div class="meta"><div class="meta-row"><span>Projekt:</span> <strong>${proj.name}</strong></div><div class="meta-row"><span>Datum:</span> <strong>${dateStr}</strong></div><div class="meta-row"><span>Wechselrichter:</span> <strong>WR ${wr}</strong></div><div class="meta-row"><span>Prüfer:</span> <strong>_______________________</strong></div></div></div><div class="env-zone"><div class="env-box"><div class="env-label">Einstrahlung (W/m²)</div></div><div class="env-box"><div class="env-label">Modultemperatur (°C)</div></div><div class="env-box" style="flex: 1.5;"><div class="env-label">Eingesetztes Messgerät (Typ / S/N)</div></div></div><table><thead><tr><th style="width:9%;">Klemme</th><th style="width:12%;">GAK</th><th style="width:7%;">Mods</th><th style="width:12%;">Uoc [V]</th><th style="width:12%;">Isc [A]</th><th style="width:12%;">Riso [MΩ]</th><th style="width:18%;">Polarität</th><th style="width:18%;">Bemerkung</th></tr></thead><tbody>${rowsHtml}</tbody></table><div class="footer"><div class="sig-box"><div class="sig-line"></div><div>Ort, Datum, Unterschrift Prüfer</div></div><div class="sig-box"><div class="sig-line"></div><div>Ort, Datum, Unterschrift Bauleitung</div></div></div></div>`;
     }
   });
-
-  if(pagesHtml === '') { toast('Keine aktiven Strings zum Drucken gefunden!'); win.close(); return; }
-
-  win.document.write(`
-    <!DOCTYPE html><html><head><title>Messblatt ${proj.name}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-    <style>
-      @page { size: A4 landscape; margin: 12mm; }
-      body { font-family: 'Inter', sans-serif; color: #18181b; background: #fff; margin:0; padding:0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .sheet { page-break-after: always; display: flex; flex-direction: column; min-height: calc(100vh - 24mm); }
-      .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #18181b; padding-bottom: 12px; margin-bottom: 24px; }
-      .brand { font-size: 20pt; font-weight: 900; color: #16a34a; letter-spacing: -0.05em; margin-bottom: 4px; text-transform: uppercase; }
-      .title { font-size: 14pt; font-weight: 700; color: #3f3f46; text-transform: uppercase; }
-      .meta { display: grid; grid-template-columns: 1fr 1fr; gap: x-gap; column-gap: 30px; row-gap: 6px; font-size: 10pt; color: #3f3f46; }
-      .meta-row { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dotted #e4e4e7; }
-      .meta-row span { color: #71717a; }
-      
-      .env-zone { display: flex; gap: 20px; margin-bottom: 24px; }
-      .env-box { flex: 1; border: 2px solid #e4e4e7; border-radius: 8px; position: relative; height: 50px; background: #fafafa; }
-      .env-label { position: absolute; top: -8px; left: 12px; background: #fff; padding: 0 6px; font-size: 8pt; font-weight: 700; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.05em; }
-
-      table { width: 100%; border-collapse: collapse; margin-bottom: auto; }
-      th { background: #f4f4f5; border: 1px solid #d4d4d8; padding: 10px 8px; font-size: 9pt; font-weight: 700; text-transform: uppercase; color: #52525b; letter-spacing: 0.02em; }
-      td { border: 1px solid #d4d4d8; padding: 12px 8px; text-align: center; font-size: 11pt; color: #18181b; }
-      tr:nth-child(even) td { background-color: #fafafa; }
-      
-      .write-line { height: 20px; border-bottom: 2px dotted #a1a1aa; width: 70%; margin: 0 auto; }
-      
-      .chk-wrap { display: flex; justify-content: center; gap: 14px; }
-      .chk { display: flex; align-items: center; gap: 6px; font-size: 9pt; font-weight: 700; color: #52525b; text-transform: uppercase; }
-      .box { width: 14px; height: 14px; border: 2px solid #a1a1aa; border-radius: 4px; background: #fff; }
-
-      .footer { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 10px; }
-      .sig-box { width: 260px; text-align: center; font-size: 9pt; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;}
-      .sig-line { border-bottom: 1px solid #18181b; height: 30px; margin-bottom: 6px; }
-    </style>
-    </head><body onload="setTimeout(()=>window.print(), 500)">${pagesHtml}</body></html>
-  `);
+  if(pagesHtml === '') { toast('Keine aktiven Strings gefunden!'); win.close(); return; }
+  win.document.write(`<!DOCTYPE html><html><head><title>Messblatt ${proj.name}</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"><style>@page { size: A4 landscape; margin: 12mm; } body { font-family: 'Inter', sans-serif; color: #18181b; background: #fff; margin:0; padding:0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .sheet { page-break-after: always; display: flex; flex-direction: column; min-height: calc(100vh - 24mm); } .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #18181b; padding-bottom: 12px; margin-bottom: 24px; } .brand { font-size: 20pt; font-weight: 900; color: #16a34a; letter-spacing: -0.05em; margin-bottom: 4px; text-transform: uppercase; } .title { font-size: 14pt; font-weight: 700; color: #3f3f46; text-transform: uppercase; } .meta { display: grid; grid-template-columns: 1fr 1fr; gap: x-gap; column-gap: 30px; row-gap: 6px; font-size: 10pt; color: #3f3f46; } .meta-row { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dotted #e4e4e7; } .meta-row span { color: #71717a; } .env-zone { display: flex; gap: 20px; margin-bottom: 24px; } .env-box { flex: 1; border: 2px solid #e4e4e7; border-radius: 8px; position: relative; height: 50px; background: #fafafa; } .env-label { position: absolute; top: -8px; left: 12px; background: #fff; padding: 0 6px; font-size: 8pt; font-weight: 700; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.05em; } table { width: 100%; border-collapse: collapse; margin-bottom: auto; } th { background: #f4f4f5; border: 1px solid #d4d4d8; padding: 10px 8px; font-size: 9pt; font-weight: 700; text-transform: uppercase; color: #52525b; letter-spacing: 0.02em; } td { border: 1px solid #d4d4d8; padding: 12px 8px; text-align: center; font-size: 11pt; color: #18181b; } tr:nth-child(even) td { background-color: #fafafa; } .write-line { height: 20px; border-bottom: 2px dotted #a1a1aa; width: 70%; margin: 0 auto; } .chk-wrap { display: flex; justify-content: center; gap: 14px; } .chk { display: flex; align-items: center; gap: 6px; font-size: 9pt; font-weight: 700; color: #52525b; text-transform: uppercase; } .box { width: 14px; height: 14px; border: 2px solid #a1a1aa; border-radius: 4px; background: #fff; } .footer { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 10px; } .sig-box { width: 260px; text-align: center; font-size: 9pt; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;} .sig-line { border-bottom: 1px solid #18181b; height: 30px; margin-bottom: 6px; }</style></head><body onload="setTimeout(()=>window.print(), 500)">${pagesHtml}</body></html>`);
   win.document.close();
 }
 
@@ -1527,256 +1225,88 @@ function printWRMontagePlan(){
   if(!proj) return;
   let win = window.open('', '_blank');
   let pagesHtml = '';
-
   const wrKeys = Object.keys(proj.plan).map(Number).sort((a,b)=>a-b);
   wrKeys.forEach(wr => {
     let rowsHtml = '';
     const itemsForWR = getAllFullIds().filter(k => k.startsWith(`${wr}.`));
-    
     itemsForWR.forEach(fullId => {
       const item = APP_STATE[fullId];
       if(item.stat !== 'JA') return;
       const planName = item.planName || `STR ?`;
-      rowsHtml += `
-        <tr>
-          <td style="padding:10px 14px;border:2px solid #334155;font-size:14pt;font-weight:800;color:#1e3a8a;">${planName}</td>
-          <td style="padding:10px 14px;border:2px solid #334155;font-size:16pt;font-weight:900;font-family:monospace;color:#15803d;background:#f0fdf4;text-align:center;">🔌 ${fullId}</td>
-          <td style="padding:10px 14px;border:2px solid #334155;font-size:13pt;font-weight:800;">${item.gak} <span style="font-size:10pt;font-weight:500;color:#475569;">(${item.mod} Mod.)</span></td>
-        </tr>`;
+      rowsHtml += `<tr><td style="padding:10px 14px;border:2px solid #334155;font-size:14pt;font-weight:800;color:#1e3a8a;">${planName}</td><td style="padding:10px 14px;border:2px solid #334155;font-size:16pt;font-weight:900;font-family:monospace;color:#15803d;background:#f0fdf4;text-align:center;">🔌 ${fullId}</td><td style="padding:10px 14px;border:2px solid #334155;font-size:13pt;font-weight:800;">${item.gak} <span style="font-size:10pt;font-weight:500;color:#475569;">(${item.mod} Mod.)</span></td></tr>`;
     });
-
     if(rowsHtml !== '') {
-      pagesHtml += `
-        <div style="page-break-after: always; padding-bottom: 20px;">
-          <h1 style="background:#09090b;color:#fff;padding:12px 16px;border-radius:6px;font-size:16pt;margin:0 0 8px;">WECHSELRICHTER ${wr} &middot; KABEL-MONTAGEPLAN</h1>
-          <p style="margin:0 0 16px;font-size:10pt;color:#475569;"><strong>Bauvorhaben:</strong> ${proj.name}</p>
-          <table style="width:100%;border-collapse:collapse;text-align:left;">
-            <thead>
-              <tr style="background:#e2e8f0;">
-                <th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:35%;">Plan-String (SLD)</th>
-                <th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:35%;text-align:center;">WR-Klemme (Matrix)</th>
-                <th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:30%;">GAK</th>
-              </tr>
-            </thead>
-            <tbody>${rowsHtml}</tbody>
-          </table>
-        </div>`;
+      pagesHtml += `<div style="page-break-after: always; padding-bottom: 20px;"><h1 style="background:#09090b;color:#fff;padding:12px 16px;border-radius:6px;font-size:16pt;margin:0 0 8px;">WECHSELRICHTER ${wr} &middot; KABEL-MONTAGEPLAN</h1><p style="margin:0 0 16px;font-size:10pt;color:#475569;"><strong>Bauvorhaben:</strong> ${proj.name}</p><table style="width:100%;border-collapse:collapse;text-align:left;"><thead><tr style="background:#e2e8f0;"><th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:35%;">Plan-String (SLD)</th><th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:35%;text-align:center;">WR-Klemme (Matrix)</th><th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:30%;">GAK</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
     }
   });
-
-  win.document.write(`
-    <!DOCTYPE html><html><head><title>Montageplan ${proj.name}</title>
-    <style>body{font-family:'Inter',Arial,sans-serif;padding:20px;color:#111;} @media print{@page{size:A4 portrait;margin:12mm;}}</style>
-    </head><body onload="window.print()">${pagesHtml}</body></html>
-  `);
+  win.document.write(`<!DOCTYPE html><html><head><title>Montageplan ${proj.name}</title><style>body{font-family:'Inter',Arial,sans-serif;padding:20px;color:#111;} @media print{@page{size:A4 portrait;margin:12mm;}}</style></head><body onload="window.print()">${pagesHtml}</body></html>`);
   win.document.close();
 }
 
 // === SUPABASE SYNC LOGIC ===
-
-let cloudConnectionStatus = 'unknown';
-
 async function testCloudConnection(){
-  if(!supabaseClient){
-    cloudConnectionStatus = 'no_client';
-    return false;
-  }
-  
+  if(!supabaseClient) return false;
   try {
-    // Teste mit einer einfachen Abfrage
     const { data, error } = await supabaseClient.from('pv_projects').select('count').limit(1);
-    if(error){
-      cloudConnectionStatus = 'error';
-      console.error('Cloud Verbindungstest fehlgeschlagen:', error);
-      return false;
-    }
-    cloudConnectionStatus = 'connected';
-    console.log('Cloud Verbindung erfolgreich');
-    return true;
-  } catch(e){
-    cloudConnectionStatus = 'error';
-    console.error('Cloud Verbindungstest Exception:', e);
-    return false;
-  }
+    return !error;
+  } catch(e){ return false; }
 }
 
 async function fetchProjectsFromCloud(){
-  if(!supabaseClient || !currentUser) {
-    console.log('Kein Supabase Client oder User vorhanden');
-    toast('⚠️ Cloud nicht verfügbar - zeige lokale Projekte');
-    return;
-  }
-  
+  if(!supabaseClient || !currentUser) return;
   try {
-    console.log('Lade Projekte aus Cloud...');
-    console.log('User:', currentUser.email, 'ID:', currentUser.id, 'Role:', currentUserRole);
-    
-    // Lade Projekte des aktuellen Users oder alle für Admins
     let query;
-    if(currentUserRole === 'admin'){
-      console.log('Admin-Modus: Lade alle Projekte');
-      query = supabaseClient.from('pv_projects').select('id, name, config, updated_at, user_id, pruefer, modul_wp');
-    } else {
-      console.log('User-Modus: Lade nur eigene Projekte');
-      query = supabaseClient.from('pv_projects').select('id, name, config, updated_at, user_id, pruefer, modul_wp').eq('user_id', currentUser.id);
-    }
-    
+    if(currentUserRole === 'admin') query = supabaseClient.from('pv_projects').select('id, name, config, updated_at, user_id, pruefer, modul_wp');
+    else query = supabaseClient.from('pv_projects').select('id, name, config, updated_at, user_id, pruefer, modul_wp').eq('user_id', currentUser.id);
     const { data, error } = await query;
-    
-    if(error){
-      console.error('Fehler beim Laden der Projekte:', error);
-      toast('❌ Cloud-Fehler: ' + error.message);
-      return;
-    }
-    
-    console.log('Cloud Antwort:', data);
-    console.log('Anzahl Projekte:', data ? data.length : 0);
-    
+    if(error) { toast('❌ Cloud-Fehler: ' + error.message); return; }
     if(data && data.length > 0){
-      console.log('Projekte aus Cloud erhalten:', data.length);
-      
-      // Projekte aus Cloud in lokale Struktur übernehmen
       data.forEach(cloudProj => {
-        console.log('Lade Projekt:', cloudProj.id, cloudProj.name, 'User:', cloudProj.user_id, 'Prüfer:', cloudProj.pruefer);
-        PROJECTS[cloudProj.id] = {
-          id: cloudProj.id,
-          name: cloudProj.name || 'Unbenannt',
-          model_wp: cloudProj.modul_wp || 465, // Fallback wenn Spalte fehlt
-          plan: cloudProj.config || {},
-          updated_at: cloudProj.updated_at,
-          user_id: cloudProj.user_id
-        };
+        PROJECTS[cloudProj.id] = { id: cloudProj.id, name: cloudProj.name || 'Unbenannt', model_wp: cloudProj.modul_wp || 465, plan: cloudProj.config || {}, updated_at: cloudProj.updated_at, user_id: cloudProj.user_id };
       });
-      
-      // Speichern in localStorage als Cache
       localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
-      console.log('Projekte aus Cloud geladen:', Object.keys(PROJECTS));
-      toast(`✅ ${data.length} Projekte aus Cloud geladen`);
-    } else {
-      console.log('Keine Projekte in Cloud gefunden');
-      toast('ℹ️ Keine Projekte in Cloud');
+      toast(`✅ ${data.length} Projekte geladen`);
     }
-  } catch(e){
-    console.error('Fehler beim Laden der Projekte:', e);
-    toast('❌ Verbindungsfehler: ' + e.message);
-  }
+  } catch(e){ toast('❌ Verbindungsfehler'); }
 }
 
 async function saveProjectToCloud(projectId){
-  if(!supabaseClient || !currentUser) {
-    console.log('Kein Supabase Client oder User vorhanden');
-    return;
-  }
-  
+  if(!supabaseClient || !currentUser) return;
   const proj = PROJECTS[projectId];
-  if(!proj) {
-    console.log('Projekt nicht gefunden:', projectId);
-    return;
-  }
-  
+  if(!proj) return;
   try {
-    console.log('Speichere Projekt in Cloud:', projectId, 'Name:', proj.name);
-    console.log('Benutzer:', currentUser.email, 'ID:', currentUser.id);
-    
     const projData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
     const stateData = projData[projectId] || generateState(proj.plan);
-    
-    const payload = {
-      id: projectId,
-      name: proj.name || 'Unbenanntes Projekt',
-      pruefer: currentUser.email || 'unbekannt',
-      user_id: currentUser.id, // User ID als UUID
-      modul_wp: proj.model_wp || 465, // modul_wp ist der Spaltenname in Supabase
-      mppts: "dynamic",
-      data: stateData,
-      config: proj.plan,
-      updated_at: new Date().toISOString()
-    };
-    
-    console.log('Payload:', payload);
-    
+    const payload = { id: projectId, name: proj.name, pruefer: currentUser.email, user_id: currentUser.id, modul_wp: proj.model_wp || 465, mppts: "dynamic", data: stateData, config: proj.plan, updated_at: new Date().toISOString() };
     const { error } = await supabaseClient.from('pv_projects').upsert(payload);
-    
-    if(error){
-      console.error('Fehler beim Speichern des Projekts:', error);
-      toast('Speichern fehlgeschlagen: ' + error.message);
-    } else {
-      console.log('Projekt erfolgreich in Cloud gespeichert:', projectId);
-      toast('✅ Projekt in Cloud gespeichert');
-    }
-  } catch(e){
-    console.error('Fehler beim Speichern des Projekts:', e);
-    toast('Verbindungsfehler: ' + e.message);
-  }
+    if(error) toast('Speichern fehlgeschlagen: ' + error.message); else toast('✅ In Cloud gespeichert');
+  } catch(e){ toast('Verbindungsfehler'); }
 }
 
 async function pushCloudDataManually(){
-  if(!supabaseClient) return toast('Keine Cloud-Verbindung');
-  if(!CURRENT_PROJECT_ID) return toast('Kein Projekt ausgewählt');
-  if(!currentUser) return toast('Nicht eingeloggt');
-  
+  if(!supabaseClient || !CURRENT_PROJECT_ID || !currentUser) return toast('Cloud/Projekt nicht bereit');
   const proj = getCurrentProject();
   toast('☁️ Lade hoch...');
-  
   try {
-    console.log('Pushing data for project:', CURRENT_PROJECT_ID);
     const projData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
     const stateData = projData[CURRENT_PROJECT_ID] || APP_STATE;
-    
-    const { data, error } = await supabaseClient.from('pv_projects').upsert({
-      id: CURRENT_PROJECT_ID,
-      name: proj.name,
-      pruefer: currentUser.email,
-      modul_wp: proj.model_wp || 465,
-      mppts: "dynamic",
-      data: stateData,
-      config: proj.plan,
-      updated_at: new Date().toISOString()
-    });
-    
-    console.log('Push result:', { data, error });
-    if(!error){ 
-      toast('✅ Cloud gespeichert!'); 
-    } else { 
-      toast('Fehler: ' + error.message); 
-      console.error('Push error:', error); 
-    }
-  } catch(e) { 
-    toast('Verbindungsfehler: ' + e.message); 
-    console.error('Push exception:', e); 
-  }
+    const { error } = await supabaseClient.from('pv_projects').upsert({ id: CURRENT_PROJECT_ID, name: proj.name, pruefer: currentUser.email, modul_wp: proj.model_wp || 465, mppts: "dynamic", data: stateData, config: proj.plan, updated_at: new Date().toISOString() });
+    if(!error) toast('✅ Cloud gespeichert!'); else toast('Fehler: ' + error.message);
+  } catch(e) { toast('Verbindungsfehler'); }
 }
 
 async function fetchCloudDataManually(){
-  if(!supabaseClient) return toast('Keine Cloud-Verbindung');
-  if(!CURRENT_PROJECT_ID) return toast('Kein Projekt ausgewählt');
-  if(!currentUser) return toast('Nicht eingeloggt');
-  
+  if(!supabaseClient || !CURRENT_PROJECT_ID || !currentUser) return toast('Cloud/Projekt nicht bereit');
   toast('📥 Lade aus Cloud...');
-  
   try {
-    console.log('Fetching data for project:', CURRENT_PROJECT_ID);
     const { data, error } = await supabaseClient.from('pv_projects').select('*').eq('id', CURRENT_PROJECT_ID).single();
-    
-    console.log('Fetch result:', { data, error });
-    if(data && data.data){
-      renderMatrix(data.data);
-      toast('✅ Stand geladen');
-    } else if(error) { 
-      toast('Fehler: ' + error.message); 
-      console.error('Fetch error:', error); 
-    } else { 
-      toast('Keine Daten in Cloud gefunden'); 
-    }
-  } catch(e) { 
-    toast('Verbindungsfehler: ' + e.message); 
-    console.error('Fetch exception:', e); 
-  }
+    if(data && data.data) { renderMatrix(data.data); toast('✅ Stand geladen'); } else if(error) toast('Fehler: ' + error.message); else toast('Keine Daten gefunden');
+  } catch(e) { toast('Verbindungsfehler'); }
 }
 
 async function factoryResetCloud(){
-  if(currentUserRole === 'site') return toast('Nicht erlaubt für Bauleitung');
-  if(!confirm("Achtung: Dies setzt das aktuelle Projekt komplett zurück! Fortfahren?")) return;
+  if(currentUserRole === 'site') return toast('Nicht erlaubt');
+  if(!confirm("Matrix komplett zurücksetzen?")) return;
   APP_STATE = generateState(getCurrentPlan());
   try {
     const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
@@ -1788,9 +1318,7 @@ async function factoryResetCloud(){
   toast('✅ Matrix zurückgesetzt');
 }
 
-
 // === AUTH FLOW & USER MANAGEMENT ===
-
 function toggleAuthMode(){
   authMode = authMode === 'login' ? 'register' : 'login';
   g('auth-title').textContent = authMode === 'login' ? 'Anmelden' : 'Konto erstellen';
@@ -1814,8 +1342,8 @@ async function handleAuthSubmit(){
   } else {
     const { data, error } = await supabaseClient.auth.signUp({ email, password });
     if(error){ errEl.textContent = 'Registrierung fehlgeschlagen: ' + error.message; return; }
-    if(data.session){ await onAuthenticated(data.user); } 
-    else { errEl.style.color = 'var(--accent)'; errEl.textContent = 'Konto erstellt! Bestätige ggf. die E-Mail.'; toggleAuthMode(); }
+    if(data.session) await onAuthenticated(data.user); 
+    else { errEl.style.color = 'var(--accent)'; errEl.textContent = 'Konto erstellt! Bestätige E-Mail.'; toggleAuthMode(); }
   }
 }
 
@@ -1824,11 +1352,10 @@ async function doLogout(){
   if(supabaseClient) await supabaseClient.auth.signOut();
   currentUser = null; currentUserRole = null;
   g('user-badge').style.display = 'none'; g('auth-gate').style.display = 'flex';
-  g('auth-email').value = ''; g('auth-password').value = '';
 }
 
 async function checkSession(){
-  if(!supabaseClient){ g('auth-error').textContent = 'Keine Verbindung konfiguriert.'; return; }
+  if(!supabaseClient) return;
   const { data } = await supabaseClient.auth.getSession();
   if(data && data.session && data.session.user) await onAuthenticated(data.session.user);
 }
@@ -1837,109 +1364,28 @@ async function onAuthenticated(user){
   currentUser = user;
   g('auth-gate').style.display = 'none';
   await loadMyProfile();
-  
   const isAdmin = currentUserRole === 'admin';
   const isPlannerUp = currentUserRole === 'admin' || currentUserRole === 'planner';
   document.querySelectorAll('.role-gate-admin').forEach(el => el.classList.toggle('hidden-role', !isAdmin));
   document.querySelectorAll('.role-gate-planner').forEach(el => el.classList.toggle('hidden-role', !isPlannerUp));
-
   g('user-badge').style.display = 'flex';
   g('user-badge-email').textContent = currentUser.email;
   const roleLabels = { admin: 'Admin', planner: 'Planer', site: 'Bauleitung' };
-  const roleChip = g('user-badge-role');
-  roleChip.textContent = roleLabels[currentUserRole] || '—';
-  
-  // Teste Cloud-Verbindung
-  const cloudConnected = await testCloudConnection();
-  if(cloudConnected){
-    toast('☁️ Cloud-Verbindung aktiv');
-  } else {
-    toast('⚠️ Cloud-Verbindung fehlt');
-  }
-  
+  g('user-badge-role').textContent = roleLabels[currentUserRole] || '—';
   initProjects();
-  
-  // Migriere lokale Projekte in Cloud falls nötig
-  if(cloudConnected){
-    await migrateLocalProjectsToCloud();
-  }
-  
-  // SVEN-LOGIK: Wenn Bauleitung, dann Inaktive Strings zwingend beim Start verstecken!
-  if(currentUserRole === 'site') {
-    toggleHideInactive(true);
-  }
-}
-
-async function migrateLocalProjectsToCloud(){
-  if(!supabaseClient || !currentUser) return;
-  
-  try {
-    // Hole alle Projekte aus Cloud
-    const { data: cloudProjects, error } = await supabaseClient.from('pv_projects').select('id, name');
-    if(error){
-      console.error('Fehler beim Laden der Cloud-Projekte:', error);
-      return;
-    }
-    
-    console.log('Cloud-Projekte:', cloudProjects);
-    
-    const cloudIds = new Set(cloudProjects ? cloudProjects.map(p => p.id) : []);
-    let migratedCount = 0;
-    
-    // Migriere lokale Projekte die nicht in Cloud sind
-    for(const projectId of Object.keys(PROJECTS)){
-      if(!cloudIds.has(projectId)){
-        const proj = PROJECTS[projectId];
-        console.log('Migriere Projekt nach Cloud:', projectId, 'Name:', proj.name);
-        
-        await saveProjectToCloud(projectId);
-        migratedCount++;
-      }
-    }
-    
-    if(migratedCount > 0){
-      toast(`✅ ${migratedCount} Projekte in Cloud migriert`);
-    } else {
-      console.log('Keine Projekte zu migrieren');
-    }
-  } catch(e){
-    console.error('Fehler bei Migration:', e);
-  }
+  if(currentUserRole === 'site') toggleHideInactive(true);
 }
 
 async function loadMyProfile(){
   try {
-    // Prüfe ob Profil existiert
     const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
-    
     if(error || !data){
-      console.log('Profil nicht gefunden, erstelle neues...');
-      // Profil erstellen falls nicht vorhanden
-      const { error: insertError } = await supabaseClient.from('profiles').insert({
-        id: currentUser.id,
-        email: currentUser.email,
-        role: 'site'
-      });
-      
-      if(insertError){
-        console.error('Fehler beim Erstellen des Profils:', insertError);
-      } else {
-        console.log('Profil erfolgreich erstellt');
-        currentUserRole = 'site';
-      }
+      await supabaseClient.from('profiles').insert({ id: currentUser.id, email: currentUser.email, role: 'site' });
+      currentUserRole = 'site';
     } else {
-      console.log('Profil gefunden:', data);
       currentUserRole = data.role || 'site';
-      
-      // Falls E-Mail fehlt, aktualisieren
-      if(!data.email && currentUser.email){
-        await supabaseClient.from('profiles').update({ email: currentUser.email }).eq('id', currentUser.id);
-      }
     }
-  } catch(e){
-    console.error('Fehler beim Laden des Profils:', e);
-    currentUserRole = 'site';
-  }
+  } catch(e){ currentUserRole = 'site'; }
 }
 
 function openUsersModal(){

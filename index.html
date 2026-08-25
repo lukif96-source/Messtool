@@ -70,8 +70,8 @@ body.sun-mode .wr-head { background: rgba(255, 255, 255, 0.95); }
 .wr-kpis { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
 
 table.mt { width: 100%; border-collapse: collapse; table-layout: fixed; }
-table.mt thead th { position: sticky; top: 61px; z-index: 20; padding: 10px 8px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--muted); background: var(--bg); text-align: center; border-bottom: 1px solid var(--border); }
-table.mt td { padding: 8px; font-size: 0.85rem; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; }
+table.mt thead th { position: sticky; top: 61px; z-index: 20; padding: 10px 8px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--muted); background: var(--bg); text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.mt td { padding: 8px; font-size: 0.85rem; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; white-space: nowrap; }
 table.mt tbody tr:hover { background: var(--panel); }
 table.mt tbody tr.mppt-div { border-top: 2px solid var(--border); }
 table.mt tbody tr.row-nein { opacity: 0.35; transition: opacity 0.2s; }
@@ -452,7 +452,7 @@ let authMode = 'login';
 let hideInactive = false;
 let pendingPVSOLData = null;
 
-const STORAGE_KEYS = { projects: 'solpro_projects_v3', data: 'solpro_data_v3', current: 'solpro_curr_v3' };
+const STORAGE_KEYS = { projects: 'solpro_projects_v2', data: 'solpro_data_v2', current: 'solpro_curr_v2' };
 
 const g = id => document.getElementById(id);
 let toast_t = null;
@@ -567,8 +567,9 @@ let PROJECTS = {};
 let CURRENT_PROJECT_ID = null;
 let APP_STATE = {};
 
-function initProjects(){
+async function initProjects(){
   try {
+    // Zuerst aus localStorage laden (Cache)
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.projects) || '{}');
     PROJECTS = Object.keys(stored).length > 0 ? stored : JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
   } catch(e){ PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS)); }
@@ -576,6 +577,11 @@ function initProjects(){
   if(Object.keys(PROJECTS).length === 0) { PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS)); }
   CURRENT_PROJECT_ID = localStorage.getItem(STORAGE_KEYS.current) || Object.keys(PROJECTS)[0];
   if(!PROJECTS[CURRENT_PROJECT_ID]) CURRENT_PROJECT_ID = Object.keys(PROJECTS)[0];
+  
+  // Dann aus Supabase laden falls verfügbar
+  if(supabaseClient && currentUser){
+    await fetchProjectsFromCloud();
+  }
   
   loadCurrentProjectData();
 }
@@ -741,11 +747,11 @@ function renderMatrix(remoteOverride = null){
       <div style="overflow-x:auto;">
         <table class="mt">
           <thead><tr>
-            <th style="text-align:left;padding-left:14px;width:14%;">Klemme</th><th style="width:10%;">GAK</th>
-            <th class="no-print" style="width:10%;">Aktiv</th>
-            <th style="width:10%;">Mods</th><th style="width:10%;">kWp</th>
-            <th style="width:10%;">Uoc(V)</th><th style="width:10%;">Isc(A)</th>
-            <th style="width:10%;">Riso(MΩ)</th><th style="text-align:left;width:16%;">Bemerkung</th>
+            <th style="text-align:left;padding-left:14px;width:14%;min-width:120px;">Klemme</th><th style="width:10%;min-width:80px;">GAK</th>
+            <th class="no-print" style="width:10%;min-width:80px;">Aktiv</th>
+            <th style="width:10%;min-width:60px;">Mods</th><th style="width:10%;min-width:70px;">kWp</th>
+            <th style="width:10%;min-width:70px;">Uoc(V)</th><th style="width:10%;min-width:70px;">Isc(A)</th>
+            <th style="width:10%;min-width:70px;">Riso(MΩ)</th><th style="text-align:left;width:16%;min-width:150px;">Bemerkung</th>
           </tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
@@ -949,11 +955,17 @@ function openProjectsModal(){
 }
 function closeProjectsModal(e){ if(!e || e.target===e.currentTarget) g('projects-modal').classList.remove('show'); }
 
-function selectProject(id){
+async function selectProject(id){
   CURRENT_PROJECT_ID = id;
   localStorage.setItem(STORAGE_KEYS.current, id);
   loadCurrentProjectData();
   closeProjectsModal();
+  
+  // Automatisch aus Cloud laden falls verfügbar
+  if(supabaseClient && currentUser){
+    await fetchCloudDataManually();
+  }
+  
   toast('Projekt geladen');
 }
 
@@ -1007,7 +1019,7 @@ function renderNPWRPlan(){
   g('np-wr-plan-list').innerHTML = html;
 }
 
-function doCreateNewProject(){
+async function doCreateNewProject(){
   const name = g('np-name').value.trim();
   const wp = parseInt(g('np-wp').value)||465;
   const count = parseInt(g('np-wr-count').value)||1;
@@ -1039,16 +1051,37 @@ function doCreateNewProject(){
   
   PROJECTS[id] = { id, name, model_wp: wp, plan };
   localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
+  
+  // Force project selection
+  CURRENT_PROJECT_ID = id;
+  localStorage.setItem(STORAGE_KEYS.current, id);
+  
   closeNewProjectModal();
-  selectProject(id);
+  loadCurrentProjectData();
+  
+  // Automatisch in Cloud speichern
+  if(supabaseClient && currentUser){
+    await saveProjectToCloud(id);
+  }
+  
   toast('✅ Projekt erstellt');
 }
 
-function deleteProject(id){
+async function deleteProject(id){
   if(id === CURRENT_PROJECT_ID) return toast('Aktives Projekt kann nicht gelöscht werden');
   if(!confirm('Projekt wirklich löschen?')) return;
   delete PROJECTS[id];
   localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
+  
+  // Auch aus Cloud löschen
+  if(supabaseClient && currentUser){
+    try {
+      await supabaseClient.from('pv_projects').delete().eq('id', id);
+    } catch(e){
+      console.error('Fehler beim Löschen aus Cloud:', e);
+    }
+  }
+  
   openProjectsModal();
   toast('🗑️ Projekt gelöscht');
 }
@@ -1306,37 +1339,105 @@ function printWRMontagePlan(){
 
 // === SUPABASE SYNC LOGIC ===
 
+async function fetchProjectsFromCloud(){
+  if(!supabaseClient || !currentUser) return;
+  try {
+    const { data, error } = await supabaseClient.from('pv_projects').select('id, name, model_wp, config, updated_at');
+    if(error){
+      console.error('Fehler beim Laden der Projekte:', error);
+      return;
+    }
+    
+    if(data && data.length > 0){
+      // Projekte aus Cloud in lokale Struktur übernehmen
+      data.forEach(cloudProj => {
+        PROJECTS[cloudProj.id] = {
+          id: cloudProj.id,
+          name: cloudProj.name,
+          model_wp: cloudProj.modul_wp || 465,
+          plan: cloudProj.config || {},
+          updated_at: cloudProj.updated_at
+        };
+      });
+      
+      // Speichern in localStorage als Cache
+      localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
+      console.log('Projekte aus Cloud geladen:', Object.keys(PROJECTS));
+    }
+  } catch(e){
+    console.error('Fehler beim Laden der Projekte:', e);
+  }
+}
+
+async function saveProjectToCloud(projectId){
+  if(!supabaseClient || !currentUser) return;
+  const proj = PROJECTS[projectId];
+  if(!proj) return;
+  
+  try {
+    const projData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
+    const stateData = projData[projectId] || generateState(proj.plan);
+    
+    const { error } = await supabaseClient.from('pv_projects').upsert({
+      id: projectId,
+      name: proj.name,
+      pruefer: currentUser.email,
+      modul_wp: proj.model_wp,
+      mppts: "dynamic",
+      data: stateData,
+      config: proj.plan,
+      updated_at: new Date().toISOString()
+    });
+    
+    if(error){
+      console.error('Fehler beim Speichern des Projekts:', error);
+    } else {
+      console.log('Projekt erfolgreich in Cloud gespeichert:', projectId);
+    }
+  } catch(e){
+    console.error('Fehler beim Speichern des Projekts:', e);
+  }
+}
+
 async function pushCloudDataManually(){
   if(!supabaseClient) return toast('Keine Cloud-Verbindung');
   if(!CURRENT_PROJECT_ID) return toast('Kein Projekt ausgewählt');
   const proj = getCurrentProject();
   toast('☁️ Lade hoch...');
   try {
-    const { error } = await supabaseClient.from('pv_projects').upsert({
+    const projData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
+    const stateData = projData[CURRENT_PROJECT_ID] || APP_STATE;
+    
+    const { data, error } = await supabaseClient.from('pv_projects').upsert({
       id: CURRENT_PROJECT_ID,
       name: proj.name,
-      pruefer: "SOLPRO Matrix",
+      pruefer: currentUser ? currentUser.email : "SOLPRO Matrix",
       modul_wp: proj.model_wp,
       mppts: "dynamic",
-      data: APP_STATE,
+      data: stateData,
       config: proj.plan,
       updated_at: new Date().toISOString()
     });
+    console.log('Push result:', { data, error });
     if(!error){ toast('✅ Cloud gespeichert!'); } 
-    else { toast('Fehler: ' + error.message); }
-  } catch(e) { toast('Verbindungsfehler: ' + e.message); }
+    else { toast('Fehler: ' + error.message); console.error('Push error:', error); }
+  } catch(e) { toast('Verbindungsfehler: ' + e.message); console.error('Push exception:', e); }
 }
 
 async function fetchCloudDataManually(){
   if(!supabaseClient) return toast('Keine Cloud-Verbindung');
+  if(!CURRENT_PROJECT_ID) return toast('Kein Projekt ausgewählt');
   toast('📥 Lade aus Cloud...');
   try {
+    console.log('Fetching data for project:', CURRENT_PROJECT_ID);
     const { data, error } = await supabaseClient.from('pv_projects').select('*').eq('id', CURRENT_PROJECT_ID).single();
+    console.log('Fetch result:', { data, error });
     if(data && data.data){
       renderMatrix(data.data);
       toast('✅ Stand geladen');
-    } else if(error) { toast('Fehler: ' + error.message); }
-  } catch(e) { toast('Verbindungsfehler: ' + e.message); }
+    } else if(error) { toast('Fehler: ' + error.message); console.error('Fetch error:', error); }
+    else { toast('Keine Daten in Cloud gefunden'); }
+  } catch(e) { toast('Verbindungsfehler: ' + e.message); console.error('Fetch exception:', e); }
 }
 
 async function factoryResetCloud(){

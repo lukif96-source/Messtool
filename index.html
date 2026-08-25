@@ -1,4 +1,318 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=0">
+<meta name="theme-color" content="#05080f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<title>SOLPRO | PV MAN P52 (Chronologische Sortierung)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
+:root {
+  --bg: #05080f; --surface: #0c1220; --panel: #111827;
+  --border: rgba(255,255,255,0.08); --green: #9fc131;
+  --text: #f0f4f8; --muted: #64748b;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+body.sun-mode {
+  --bg: #ffffff; --surface: #f1f5f9; --panel: #f8fafc;
+  --border: #cbd5e1; --green: #4d7c0f; --text: #0f172a; --muted: #475569;
+}
+body.sun-mode .sp-inp { background: #ffffff; color: #0f172a; border-color: #94a3b8; font-weight: 700; }
+body.sun-mode #toolbar, body.sun-mode .mobile-fab { background: rgba(255,255,255,0.96); border-color: #cbd5e1; }
+
+/* === SUN-MODE OVERRIDES (Light/Day Mode) === */
+body.sun-mode .btn-ghost { background: #ffffff; color: #475569; border-color: #cbd5e1; }
+body.sun-mode .btn-ghost:hover { background: #f1f5f9; }
+body.sun-mode .kpi-card { background: #ffffff; }
+body.sun-mode .kpi-value { color: #0f172a; }
+body.sun-mode .kpi-label { color: #64748b; }
+body.sun-mode .wr-block { background: #ffffff; }
+body.sun-mode .wr-head { background: linear-gradient(135deg, rgba(77, 124, 15, 0.08) 0%, transparent 60%); border-bottom-color: rgba(77, 124, 15, 0.2); }
+body.sun-mode .wr-kpis { color: #64748b; }
+body.sun-mode .wr-kpis span { color: #0f172a; }
+body.sun-mode .string-id { color: #4d7c0f; }
+body.sun-mode .pwr-cell { color: #4d7c0f; }
+body.sun-mode .plan-badge { background: rgba(0,0,0,0.05); color: #475569; }
+body.sun-mode .plan-badge-green { background: rgba(77, 124, 15, 0.12); color: #4d7c0f; border-color: rgba(77, 124, 15, 0.3); }
+body.sun-mode .sp-inp-gak { color: #4d7c0f; }
+body.sun-mode .tog { color: #cbd5e1; }
+body.sun-mode .tog.on-ja { background: rgba(77, 124, 15, 0.2); color: #4d7c0f; }
+body.sun-mode .tog.on-nei { background: rgba(100, 116, 139, 0.25); color: #475569; }
+body.sun-mode .wr-num { background: #4d7c0f; color: #ffffff; }
+body.sun-mode table.mt thead th { background: rgba(0,0,0,0.04); color: #475569; }
+body.sun-mode table.mt td { border-bottom-color: rgba(0,0,0,0.06); }
+body.sun-mode table.mt tbody tr:hover { background: rgba(77, 124, 15, 0.04); }
+body.sun-mode table.mt tbody tr.mppt-div { border-top-color: rgba(77, 124, 15, 0.2); }
+
+/* Project modal sun-mode */
+body.sun-mode .proj-modal-card { background: #ffffff; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+body.sun-mode .proj-modal-head { background: #ffffff; border-bottom-color: #e2e8f0; }
+body.sun-mode .proj-modal-head h2 { color: #0f172a; }
+body.sun-mode .proj-list-item { background: #f8fafc; border-color: #e2e8f0; }
+body.sun-mode .proj-list-item:hover { border-color: #94a3b8; }
+body.sun-mode .proj-list-item.current { background: rgba(77, 124, 15, 0.06); border-color: #4d7c0f; }
+body.sun-mode .proj-list-item-name { color: #0f172a; }
+body.sun-mode .proj-list-item-meta { color: #64748b; }
+body.sun-mode .field label { color: #64748b; }
+body.sun-mode .field input, body.sun-mode .field select { background: #ffffff; border-color: #cbd5e1; color: #0f172a; }
+body.sun-mode .field input:focus, body.sun-mode .field select:focus { border-color: #4d7c0f; }
+body.sun-mode .field-radio { background: #ffffff; border-color: #cbd5e1; }
+body.sun-mode .field-radio.selected { background: rgba(77, 124, 15, 0.06); border-color: #4d7c0f; }
+body.sun-mode .field-radio-title { color: #0f172a; }
+body.sun-mode .field-radio-desc { color: #64748b; }
+
+/* Bottom sheet sun-mode */
+body.sun-mode #more-menu > div { background: #ffffff; }
+body.sun-mode #more-menu h3 { color: #0f172a; }
+body.sun-mode #more-menu .btn-ghost { color: #475569; }
+body.sun-mode #more-menu .btn-ghost[style*="border-color:#38bdf8"] { color: #0284c7; border-color: #38bdf8 !important; }
+body.sun-mode #more-menu .btn-ghost[style*="border-color:#a8cc35"] { color: #4d7c0f; border-color: #a8cc35 !important; }
+body.sun-mode #more-menu .btn-ghost[style*="border-color:#eab308"] { color: #b45309; border-color: #eab308 !important; }
+body.sun-mode .mobile-fab { background: rgba(255,255,255,0.98); }
+
+/* Toast sun-mode */
+body.sun-mode #toast { background: #ffffff; color: #0f172a; border-color: #4d7c0f; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+
+/* Project selector button in toolbar (sun) */
+body.sun-mode #proj-selector { background: #ffffff !important; color: #0f172a !important; border-color: #cbd5e1 !important; }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text);
+  min-height: 100vh; min-height: 100dvh; -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: rgba(159, 193, 49, 0.25);
+  overscroll-behavior-y: contain;
+}
+
+.wrap {
+  max-width: 1360px; margin: 0 auto;
+  padding: 12px 12px 160px;
+  padding-left: max(12px, calc(var(--safe-left) + 12px));
+  padding-right: max(12px, calc(var(--safe-right) + 12px));
+  padding-bottom: max(160px, calc(var(--safe-bottom) + 160px));
+}
+
+/* DASHBOARD */
+.dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.kpi-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; position: relative; overflow: hidden; }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--green), transparent); }
+.kpi-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; letter-spacing: 0.02em; }
+.kpi-value { font-size: 1.4rem; font-weight: 900; color: var(--text); line-height: 1.1; word-break: break-word; }
+.kpi-unit { font-size: 0.72rem; color: var(--green); margin-left: 2px; }
+
+/* TOOLBAR */
+#toolbar {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(17,24,39,0.94);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-bottom: 12px; flex-wrap: wrap;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  padding-left: max(12px, calc(var(--safe-left) + 12px));
+  padding-right: max(12px, calc(var(--safe-right) + 12px));
+}
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  font-weight: 700; cursor: pointer; border: none; border-radius: 8px;
+  padding: 7px 11px; font-size: 0.75rem;
+  transition: filter 0.15s, transform 0.1s;
+  min-height: 38px; min-width: 38px;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none; -webkit-user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn-green { background: linear-gradient(135deg, #a8cc35, #7a9420); color: #061200; font-weight: 900; }
+.btn-blue  { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; }
+.btn-ghost { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; }
+.btn:hover { filter: brightness(1.1); }
+
+/* TABS */
+.wr-filter-bar {
+  display: flex; gap: 6px; overflow-x: auto;
+  padding: 4px 2px 8px; margin-bottom: 12px;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+.wr-filter-bar::-webkit-scrollbar { display: none; }
+.wr-tab {
+  flex: 0 0 auto; background: var(--panel); border: 1px solid var(--border);
+  color: var(--muted); font-size: 0.78rem; font-weight: 700;
+  border-radius: 10px; padding: 10px 14px; cursor: pointer;
+  min-height: 42px; -webkit-tap-highlight-color: transparent;
+  scroll-snap-align: start;
+}
+.wr-tab.active { background: var(--green); color: #061200; border-color: var(--green); }
+
+.proj-select {
+  background: rgba(5,8,15,0.9); border: 1px solid rgba(159,193,49,0.4);
+  color: var(--text); font-weight: 700; font-size: 0.8rem; border-radius: 8px;
+  padding: 5px 8px; outline: none; cursor: pointer; min-height: 38px;
+}
+
+/* WR BLOCK & TABLES */
+.wr-block { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 14px; }
+.wr-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(159,193,49,0.08) 0%, transparent 60%);
+  border-bottom: 1px solid rgba(159,193,49,0.15);
+  flex-wrap: wrap;
+}
+.wr-num { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700; background: var(--green); color: #061200; padding: 2px 7px; border-radius: 5px; }
+.wr-kpis { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+.wr-kpis span { color: var(--text); }
+
+table.mt { width: 100%; border-collapse: collapse; }
+table.mt thead th {
+  padding: 8px 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+  color: #64748b; background: rgba(0,0,0,0.25); text-align: center; white-space: nowrap;
+}
+table.mt td {
+  padding: 5px 6px; font-size: 0.78rem;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  text-align: center; vertical-align: middle;
+}
+table.mt tbody tr:hover { background: rgba(159,193,49,0.03); }
+table.mt tbody tr.mppt-div { border-top: 1.5px solid rgba(159,193,49,0.18); }
+table.mt tbody tr.row-nein { opacity: 0.25; }
+
+.string-id { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--green); }
+.pwr-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--green); }
+
+.plan-badge { font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.05); color: #94a3b8; font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+.plan-badge-green { background: rgba(159,193,49,0.12); color: #a8cc35; border: 1px solid rgba(159,193,49,0.25); }
+
+.str-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.sp-inp {
+  background: rgba(5,8,15,0.8); border: 1px solid rgba(100,116,139,0.25);
+  border-radius: 6px; padding: 4px 6px; color: var(--text);
+  font-size: 0.8rem; text-align: center; outline: none; width: 100%;
+  -webkit-appearance: none; appearance: none;
+  min-height: 34px;
+}
+.sp-inp:focus { border-color: var(--green); }
+.sp-inp-gak { color: #a8cc35; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+.tog-wrap { display: inline-flex; background: rgba(0,0,0,0.4); border-radius: 6px; padding: 2px; }
+.tog {
+  padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 800;
+  border: none; cursor: pointer; background: transparent; color: #475569;
+  min-height: 28px;
+  -webkit-tap-highlight-color: transparent;
+}
+.tog.on-ja  { background: rgba(159,193,49,0.25); color: #a8cc35; }
+.tog.on-nei { background: rgba(100,116,139,0.25); color: #94a3b8; }
+
+#toast {
+  position: fixed; bottom: 100px; left: 50%;
+  transform: translateX(-50%) translateY(150%);
+  background: #0f172a; border: 1px solid var(--green);
+  color: #fff; padding: 10px 20px; border-radius: 8px;
+  font-size: 0.85rem; font-weight: 600;
+  transition: transform 0.3s; z-index: 9999;
+  max-width: calc(100% - 32px); text-align: center;
+}
+
+/* MOBILE FLOATING ACTION BAR */
+.mobile-fab {
+  display: none;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+  background: rgba(17, 24, 39, 0.97);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  padding: 10px 12px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+  gap: 8px; box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+}
+.mobile-fab .btn { flex: 1; min-height: 48px; font-size: 0.85rem; border-radius: 10px; }
+
+/* === PROJECT MODAL === */
+#projects-modal, #newproj-modal {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  align-items: center; justify-content: center;
+  padding: 16px;
+}
+#projects-modal.show, #newproj-modal.show { display: flex; }
+.proj-modal-card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 16px; width: 100%; max-width: 560px;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  -webkit-overflow-scrolling: touch;
+}
+.proj-modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--panel); z-index: 1;
+}
+.proj-modal-head h2 { font-size: 1.1rem; font-weight: 800; }
+.proj-modal-body { padding: 16px 20px; }
+
+.proj-list-item {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  transition: border-color 0.15s;
+}
+.proj-list-item.current { border-color: var(--green); background: rgba(159,193,49,0.06); }
+.proj-list-item-info { flex: 1; min-width: 0; }
+.proj-list-item-name {
+  font-weight: 800; font-size: 0.95rem; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.proj-list-item-meta { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+.proj-list-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.proj-list-item-actions .btn { padding: 6px 10px; font-size: 0.7rem; min-height: 36px; }
+
+.field { margin-bottom: 14px; }
+.field label {
+  display: block; font-size: 0.72rem; font-weight: 700;
+  color: var(--muted); margin-bottom: 6px;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.field input, .field select {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px; color: var(--text);
+  font-size: 16px; min-height: 44px; outline: none;
+  -webkit-appearance: none; appearance: none;
+}
+.field input:focus, .field select:focus { border-color: var(--green); }
+
+.field-radio-group { display: flex; flex-direction: column; gap: 6px; }
+.field-radio {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 10px;
+  cursor: pointer; min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+.field-radio.selected { border-color: var(--green); background: rgba(159,193,49,0.08); }
+.field-radio input[type="radio"] { width: 20px; height: 20px; accent-color: var(--green); flex-shrink: 0; }
+.field-radio-text { flex: 1; min-width: 0; }
 .field-radio-title { font-weight: 700; font-size: 0.9rem; }
 .field-radio-desc { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
 
@@ -48,17 +362,421 @@ body.sun-mode .np-wr-buttons button { background: #ffffff; border-color: #cbd5e1
 #projects-modal .proj-modal-body > button { width: 100%; margin-top: 8px; min-height: 48px; }
 
 @media (max-width: 600px) {
+  #projects-modal, #newproj-modal { padding: 8px; align-items: flex-end; }
+  .proj-modal-card { max-height: 95vh; border-radius: 16px 16px 0 0; }
+  .proj-modal-head { padding: 12px 14px; }
+  .proj-modal-body { padding: 12px 14px; }
+  .proj-list-item { padding: 10px 12px; flex-wrap: wrap; }
+  .proj-list-item-actions { width: 100%; }
+  .proj-list-item-actions .btn { flex: 1; min-height: 40px; }
+  .field-radio { padding: 10px 12px; }
+  .field input, .field select { font-size: 16px; }
+}
+
+/* === RESPONSIVE BREAKPOINTS === */
+
+/* Tablet & smaller desktop */
+@media (max-width: 900px) {
+  .dashboard { grid-template-columns: repeat(2, 1fr); }
+  .wrap { padding: 10px 10px 160px; }
+}
+
+/* Phone landscape & small tablets */
+@media (max-width: 768px) {
+  body { font-size: 15px; }
+  .dashboard { gap: 8px; }
+  .kpi-card { padding: 12px; }
+  .kpi-value { font-size: 1.25rem; }
+  .kpi-label { font-size: 0.6rem; }
+
+  #toolbar {
+    flex-direction: column; align-items: stretch;
+    padding: 10px; gap: 8px;
+  }
+  #toolbar > div {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    justify-content: stretch;
+  }
+  #toolbar > div:first-child { justify-content: space-between; }
+  #toolbar > div:last-child { justify-content: center; }
+  #toolbar .btn { flex: 1 1 auto; min-height: 44px; font-size: 0.78rem; padding: 8px 10px; }
+
+  .wr-filter-bar { padding: 4px 0 8px; margin-left: -10px; margin-right: -10px; padding-left: 10px; padding-right: 10px; }
+  .wr-tab { font-size: 0.85rem; padding: 12px 16px; min-height: 44px; }
+
+  .wr-block { border-radius: 12px; margin-bottom: 10px; }
+  .wr-head { padding: 10px 12px; gap: 6px; }
+  .wr-num { font-size: 0.78rem; padding: 3px 8px; }
+}
+
+/* Phone portrait (iPhone/Android) */
+@media (max-width: 600px) {
+  .dashboard { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .kpi-value { font-size: 1.1rem; }
+  .kpi-card { padding: 10px; border-radius: 10px; }
+  .kpi-label { font-size: 0.58rem; }
+
+  /* Show mobile FAB, hide less critical desktop toolbar buttons */
+  .desktop-only { display: none !important; }
+  .mobile-fab { display: flex; }
+  #toolbar > div:last-child .desktop-only { display: none !important; }
+}
+
+/* Very small phones (iPhone SE, 320px) */
+@media (max-width: 380px) {
+  .wrap { padding: 8px 8px 160px; }
+  .dashboard { grid-template-columns: 1fr 1fr; gap: 5px; }
+  .kpi-value { font-size: 1rem; }
+  .kpi-label { font-size: 0.55rem; }
+  #toolbar .btn { font-size: 0.72rem; padding: 6px 8px; min-height: 42px; }
+  .wr-tab { font-size: 0.78rem; padding: 10px 12px; }
+  .wr-num { font-size: 0.72rem; }
+  .mobile-fab .btn { font-size: 0.78rem; padding: 8px; }
+}
+
+/* MOBILE CARD LAYOUT — Tabelle wird zu Karten */
+@media (max-width: 800px) {
+  table.mt, table.mt tbody, table.mt tr, table.mt td { display: block; width: 100%; }
+  table.mt thead { display: none; }
+  table.mt tbody tr {
+    border: 1px solid var(--border); border-radius: 12px;
+    margin: 10px 6px; padding: 4px 0;
+    background: rgba(255,255,255,0.02); overflow: hidden;
+  }
+  table.mt tbody tr.mppt-div { border-top: 3px solid rgba(159,193,49,0.4); margin-top: 20px; }
+  table.mt td {
+    display: flex; align-items: center; justify-content: space-between;
+    text-align: right; padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    min-height: 44px; gap: 12px;
+  }
+  table.mt td:last-child { border-bottom: none; }
+  table.mt td::before {
+    content: attr(data-label);
+    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+    color: var(--muted); text-align: left; letter-spacing: 0.04em;
+    flex: 0 0 auto; max-width: 45%;
+  }
+  table.mt td > * { flex: 0 1 auto; }
+  table.mt td:first-child {
+    background: rgba(159,193,49,0.08); padding: 12px;
+  }
+  table.mt td:first-child::before { display: none; }
+  table.mt td:first-child .string-id { font-size: 1rem; }
+  table.mt td:first-child span { font-size: 0.7rem; }
+
+  .sp-inp {
+    max-width: 65%; min-height: 44px;
+    font-size: 16px; /* prevents iOS zoom on focus */
+    padding: 8px 10px; text-align: right;
+  }
+  .sp-inp-gak { text-align: center; }
+
+  .tog-wrap { padding: 3px; }
+  .tog { padding: 8px 16px; min-height: 36px; font-size: 0.78rem; min-width: 50px; }
+
+  .tog-wrap + input[type="hidden"] { display: none; }
+
+  td.col-note { flex-direction: column; align-items: stretch; gap: 4px; padding: 10px 12px 12px; }
+  td.col-note::before { margin-bottom: 2px; }
+  td.col-note .sp-inp { max-width: 100%; text-align: left; min-height: 44px; }
+  td.col-note .print-cell { display: none; }
+
+  td .print-cell { display: none !important; }
+
+  .plan-badge { font-size: 0.72rem; padding: 4px 8px; }
+  .pwr-cell { font-size: 1rem; }
+}
+
+/* Landscape phone */
+@media (max-width: 900px) and (orientation: landscape) {
+  .dashboard { grid-template-columns: repeat(4, 1fr); }
+  #toolbar { flex-direction: row; }
+  #toolbar > div { flex-wrap: nowrap; }
+  #toolbar > div .btn { flex: 0 1 auto; }
+}
+
+/* === PRINT === */
+@media print {
+  body { background: #fff !important; color: #000 !important; font-size: 8pt; }
+  .no-print, .wr-filter-bar, .mobile-fab, .sidebar, .sidebar-toggle { display: none !important; }
+  .main-content { margin-left: 0 !important; padding: 0 !important; }
+  .wr-block { border: 1px solid #cbd5e1 !important; break-inside: avoid; display: block !important; margin-bottom: 15px; }
+  table.mt { width: 100%; display: table !important; }
+  table.mt thead { display: table-header-group !important; }
+  table.mt tr { display: table-row !important; }
+  table.mt td, table.mt th { display: table-cell !important; padding: 5px; border: 1px solid #94a3b8; }
+  table.mt tbody tr.row-nein { display: none !important; }
+  table.mt td::before { display: none !important; }
+  .sp-inp, .tog-wrap { display: none !important; }
+  .print-cell { display: inline !important; font-weight: bold; }
+  .wrap { padding: 0; padding-bottom: 0; }
+}
+.print-cell { display: none; }
+
+/* === SIDEBAR LAYOUT === */
+.app-layout { display: flex; min-height: 100vh; min-height: 100dvh; }
+
+.sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: 240px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 14px 10px;
+  padding-top: max(14px, env(safe-area-inset-top));
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  z-index: 60;
+  display: flex; flex-direction: column; gap: 2px;
+  transition: transform 0.25s ease;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.sidebar-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 8px 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.sidebar-logo {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(135deg, #a8cc35, #7a9420);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; font-weight: 900; color: #061200;
+}
+.sidebar-title { font-size: 0.85rem; font-weight: 800; color: var(--text); line-height: 1.1; }
+.sidebar-subtitle { font-size: 0.65rem; color: var(--muted); margin-top: 2px; }
+
+.sidebar-section {
+  font-size: 0.6rem; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 12px 8px 6px;
+}
+
+.sidebar-btn {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font-weight: 600; font-size: 0.82rem;
+  text-align: left; cursor: pointer;
+  min-height: 40px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, border-color 0.12s;
+}
+.sidebar-btn:hover { background: rgba(255,255,255,0.04); }
+.sidebar-btn:active { transform: scale(0.98); }
+.sidebar-btn .icon { font-size: 1rem; width: 20px; flex-shrink: 0; text-align: center; }
+.sidebar-btn .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-btn .arrow { font-size: 0.65rem; opacity: 0.5; }
+
+.sidebar-btn.primary {
+  background: var(--surface);
+  border-color: var(--border);
+  font-weight: 800;
+}
+.sidebar-btn.primary:hover { border-color: var(--green); }
+
+.sidebar-btn.active {
+  background: var(--green); color: #061200; border-color: var(--green);
+}
+.sidebar-btn.active .arrow { color: #061200; }
+
+.sidebar-btn.blue { border-color: rgba(59,130,246,0.4); color: #3b82f6; }
+.sidebar-btn.blue:hover { background: rgba(59,130,246,0.08); }
+.sidebar-btn.green { border-color: rgba(168,204,53,0.4); color: #a8cc35; }
+.sidebar-btn.green:hover { background: rgba(168,204,53,0.08); }
+.sidebar-btn.yellow { border-color: rgba(234,179,8,0.4); color: #eab308; }
+.sidebar-btn.yellow:hover { background: rgba(234,179,8,0.08); }
+.sidebar-btn.red { border-color: rgba(220,38,38,0.4); color: #dc2626; }
+.sidebar-btn.red:hover { background: rgba(220,38,38,0.08); }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px 8px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.65rem; color: var(--muted);
+  text-align: center;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 240px;
+  padding: 12px;
+  padding-left: 12px;
+  padding-right: 12px;
+  min-width: 0;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 55;
+  backdrop-filter: blur(2px);
+}
+
+.sidebar-toggle {
+  display: none;
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: 10px;
+  z-index: 70;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  font-size: 1.3rem; cursor: pointer;
+  align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); box-shadow: 4px 0 20px rgba(0,0,0,0.4); }
+  .sidebar.open { transform: translateX(0); }
+  .main-content { margin-left: 0; }
+  .sidebar-toggle { display: flex; }
+  .sidebar-overlay.open { display: block; }
+}
+
+body.sun-mode .sidebar { background: #ffffff; border-right-color: #cbd5e1; }
+body.sun-mode .sidebar-btn:hover { background: rgba(0,0,0,0.04); }
+body.sun-mode .sidebar-btn.primary { background: #f8fafc; border-color: #cbd5e1; }
+body.sun-mode .sidebar-title { color: #0f172a; }
+body.sun-mode .sidebar-footer { border-top-color: #e2e8f0; }
+body.sun-mode .sidebar-toggle { background: #ffffff; border-color: #cbd5e1; color: #0f172a; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<button class="sidebar-toggle no-print" onclick="toggleSidebar()" aria-label="Menü">☰</button>
+<div class="sidebar-overlay no-print" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar no-print" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">S</div>
+    <div>
+      <div class="sidebar-title">SOLPRO</div>
+      <div class="sidebar-subtitle">PV Matrix Tool</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">Projekt</div>
+  <button onclick="openProjectsModal();closeSidebar();" class="sidebar-btn primary" id="sb-proj-selector">
+    <span class="icon">📁</span>
+    <span class="label" id="sb-proj-name">PV MAN P52</span>
+    <span class="arrow">▼</span>
+  </button>
+
+  <div class="sidebar-section">Aktionen</div>
+  <button onclick="pushCloudDataManually();closeSidebar();" class="sidebar-btn blue">
+    <span class="icon">☁️</span><span class="label">In Cloud sichern</span>
+  </button>
+  <button onclick="fetchCloudDataManually();closeSidebar();" class="sidebar-btn">
+    <span class="icon">📥</span><span class="label">Aus Cloud laden</span>
+  </button>
+  <button onclick="printWRMontagePlan();closeSidebar();" class="sidebar-btn yellow">
+    <span class="icon">📋</span><span class="label">Montage-Plan drucken</span>
+  </button>
+  <button onclick="exportSmartScriptExcel();closeSidebar();" class="sidebar-btn green">
+    <span class="icon">🏷️</span><span class="label">GAK-Etiketten</span>
+  </button>
+  <button onclick="exportStringNumbersExcel();closeSidebar();" class="sidebar-btn green">
+    <span class="icon">🔢</span><span class="label">String-Nummern</span>
+  </button>
+  <button onclick="doExcel();closeSidebar();" class="sidebar-btn">
+    <span class="icon">📊</span><span class="label">Prüfprotokoll</span>
+  </button>
+
+  <div class="sidebar-section">Einstellungen</div>
+  <button onclick="toggleSunMode();closeSidebar();" class="sidebar-btn" id="btn-sun">
+    <span class="icon">☀️</span><span class="label">Dach-Modus</span>
+  </button>
+  <button onclick="factoryResetCloud();closeSidebar();" class="sidebar-btn red">
+    <span class="icon">🚨</span><span class="label">Plan zurücksetzen</span>
+  </button>
+
+  <div class="sidebar-footer">
+    SOLPRO · Mavis Edition
+  </div>
+</aside>
+
+<div class="app-layout">
+<div class="main-content">
+
+  <!-- DASHBOARD -->
+  <div class="dashboard no-print">
+    <div class="kpi-card">
+      <div class="kpi-label">Leistung Gesamt</div>
+      <div class="kpi-value"><span id="d-pwr">0.00</span><span style="font-size:0.75rem;color:var(--green);margin-left:2px;">kWp</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Module Gesamt</div>
+      <div class="kpi-value" id="d-mods">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Belegte Strings</div>
+      <div class="kpi-value"><span id="d-act">0</span><span style="font-size:0.7rem;color:#64748b;"> / <span id="d-tot">0</span></span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Wp / Modul</div>
+      <div class="kpi-value" id="d-wp" style="color:var(--green);">465</div>
+    </div>
+  </div>
+
+  <div class="wr-filter-bar no-print" id="wr-filter-bar"></div>
+
+  <!-- TABLES -->
+  <div id="tables"></div>
+
+</div>
+</div>
+
+<!-- PROJECTS MODAL -->
+<div id="projects-modal" onclick="closeProjectsModal(event)">
+  <div class="proj-modal-card" onclick="event.stopPropagation()">
+    <div class="proj-modal-head">
+      <h2>📁 Projekte</h2>
+      <button onclick="closeProjectsModal()" class="btn btn-ghost" style="padding:6px 10px;min-width:38px;">✕</button>
+    </div>
+    <div class="proj-modal-body" id="proj-list">
+      <!-- generated -->
+    </div>
+  </div>
+</div>
+
+<!-- NEW PROJECT MODAL -->
+<div id="newproj-modal" onclick="closeNewProjectModal(event)">
+  <div class="proj-modal-card" onclick="event.stopPropagation()">
+    <div class="proj-modal-head">
+      <h2>➕ Neues Projekt</h2>
+      <button onclick="closeNewProjectModal()" class="btn btn-ghost" style="padding:6px 10px;min-width:38px;">✕</button>
+    </div>
+    <div class="proj-modal-body">
+      <div class="field">
+        <label>Projektname</label>
+        <input type="text" id="np-name" placeholder="z.B. PV MUC 01" autocomplete="off">
       </div>
       <div class="field">
         <label>Modul-Leistung (Wp)</label>
-        <input type="number" id="np-wp" value="465" min="100" max="1000" inputmode="numeric">
         <input type="number" id="np-wp" value="465" min="100" max="1000" inputmode="numeric" oninput="recalcAllNPWRCoun()">
       </div>
       <div class="field">
         <label>Start-Vorlage</label>
         <div class="field-radio-group" id="np-template-group">
-          <label class="field-radio selected" data-value="empty">
-            <input type="radio" name="np-template" value="empty" checked>
           <label class="field-radio selected" data-value="plan">
             <input type="radio" name="np-template" value="plan" checked>
             <div class="field-radio-text">
@@ -70,7 +788,6 @@ body.sun-mode .np-wr-buttons button { background: #ffffff; border-color: #cbd5e1
             <input type="radio" name="np-template" value="empty">
             <div class="field-radio-text">
               <div class="field-radio-title">Leer starten</div>
-              <div class="field-radio-desc">Frische Matrix ohne vordefinierte Strings</div>
               <div class="field-radio-desc">Alle 24 Slots/WR auf NEIN, du füllst in der Tabelle</div>
             </div>
           </label>
@@ -78,15 +795,17 @@ body.sun-mode .np-wr-buttons button { background: #ffffff; border-color: #cbd5e1
             <input type="radio" name="np-template" value="clone">
             <div class="field-radio-text">
               <div class="field-radio-title">Klonen von bestehendem Projekt</div>
-              <div class="field-radio-desc">Übernimmt die komplette String-Matrix</div>
               <div class="field-radio-desc">Übernimmt die komplette String-Matrix eines Projekts</div>
             </div>
           </label>
         </div>
       </div>
+      <div class="field" id="np-clone-from-field" style="display:none;">
+        <label>Klonen von Projekt</label>
+        <select id="np-clone-from"></select>
+      </div>
       <div class="field" id="np-wr-count-field">
         <label>Anzahl Wechselrichter (1–10)</label>
-        <input type="number" id="np-wr-count" value="6" min="1" max="10" inputmode="numeric">
         <input type="number" id="np-wr-count" value="6" min="1" max="10" inputmode="numeric" oninput="renderNPWRPlan()">
       </div>
       <div class="field" id="np-plan-field">
@@ -99,14 +818,862 @@ body.sun-mode .np-wr-buttons button { background: #ffffff; border-color: #cbd5e1
       <div style="display:flex;gap:8px;margin-top:20px;">
         <button onclick="closeNewProjectModal()" class="btn btn-ghost" style="flex:1;min-height:48px;">Abbrechen</button>
         <button onclick="doCreateNewProject()" class="btn btn-green" style="flex:1;min-height:48px;">Erstellen &amp; Öffnen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SB_URL = "https://rcuimtfmjkpxkazbsggj.supabase.co";
+const SB_KEY = "sb_publishable_pe8Ye20-e9az1D5MvNCB5A_8_ai7afc";
+let supabaseClient = window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null;
+const STORAGE_KEYS = {
+  projects: 'sp_projects_v1',
+  data: 'sp_projects_data_v1',
+  current: 'sp_current_project_v1',
+  legacy: 'sp_local_backup_chrono'
+};
+let MODEL_WP = 465;
+
+const g = id => document.getElementById(id);
+let toast_t = null;
+function toast(msg, ms=3000){
+  const t = g('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast_t); toast_t = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function toggleSunMode(){
+  document.body.classList.toggle('sun-mode');
+  const isSun = document.body.classList.contains('sun-mode');
+  const btn = g('btn-sun');
+  if(btn){
+    const icon = btn.querySelector('.icon');
+    const label = btn.querySelector('.label');
+    if(icon) icon.textContent = isSun ? '🌙' : '☀️';
+    if(label) label.textContent = isSun ? 'Dark-Modus' : 'Dach-Modus';
+  }
+}
+
+function openMoreMenu(){ /* legacy, jetzt Sidebar */ toggleSidebar(); }
+function closeMoreMenu(){ closeSidebar(); }
+function toggleSidebar(){
+  const sb = g('sidebar');
+  const ov = g('sidebar-overlay');
+  const isOpen = sb.classList.contains('open');
+  if(isOpen){ closeSidebar(); } else {
+    sb.classList.add('open');
+    ov.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+function closeSidebar(){
+  g('sidebar').classList.remove('open');
+  g('sidebar-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function filterInverter(n, btn){
+  document.querySelectorAll('.wr-tab').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.querySelectorAll('.wr-block').forEach((d) => {
+    const wrId = parseInt(d.dataset.wrId);
+    d.style.display = (n === 0 || wrId === n) ? 'block' : 'none';
+  });
+  if(btn && btn.scrollIntoView) {
+    btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+}
+
+function buildFilterBar(){
+  const bar = g('wr-filter-bar');
+  if(!bar) return;
+  const wrKeys = Object.keys(getCurrentPlan()).map(k => parseInt(k)).filter(n => !isNaN(n)).sort((a,b) => a-b);
+  if(wrKeys.length === 0){ bar.innerHTML = ''; return; }
+  let html = `<button class="wr-tab active" data-wr="0" onclick="filterInverter(0, this)">⚡ Alle WRs (1–${wrKeys.length})</button>`;
+  wrKeys.forEach(wr => {
+    html += `<button class="wr-tab" data-wr="${wr}" onclick="filterInverter(${wr}, this)">WR ${wr}</button>`;
+  });
+  bar.innerHTML = html;
+}
+
+const STRICT_CHRONO_PLAN = {
+  1: [
+    { p: 1,  m: 23, g: 1, n: "Fläche A" },
+    { p: 2,  m: 23, g: 1, n: "Fläche A" },
+    { p: 3,  m: 22, g: 1, n: "Fläche A" },
+    { p: 4,  m: 22, g: 1, n: "Fläche A" },
+    { p: 5,  m: 21, g: 1, n: "Fläche A" },
+    { p: 6,  m: 21, g: 1, n: "Fläche A" },
+    { p: 7,  m: 21, g: 1, n: "Fläche A" },
+    { p: 8,  m: 21, g: 1, n: "Fläche A" },
+    { p: 9,  m: 20, g: 2, n: "Fläche A" },
+    { p: 10, m: 20, g: 2, n: "Fläche A" },
+    { p: 11, m: 21, g: 2, n: "Fläche A" },
+    { p: 12, m: 21, g: 2, n: "Fläche A" }
+  ],
+  2: [
+    { p: 1,  m: 13, g: 1, n: "Fläche B" },
+    { p: 2,  m: 13, g: 1, n: "Fläche B" },
+    { p: 3,  m: 21, g: 1, n: "Fläche B" },
+    { p: 4,  m: 21, g: 1, n: "Fläche B" },
+    { p: 5,  m: 20, g: 2, n: "Fläche B" },
+    { p: 6,  m: 20, g: 2, n: "Fläche B" },
+    { p: 7,  m: 21, g: 2, n: "Fläche B" },
+    { p: 8,  m: 21, g: 2, n: "Fläche B" },
+    { p: 9,  m: 21, g: 2, n: "Fläche B" },
+    { p: 10, m: 21, g: 2, n: "Fläche B" },
+    { p: 11, m: 14, g: 2, n: "Fläche B (10 mm²)" },
+    { p: 12, m: 14, g: 2, n: "Fläche B (10 mm²)" },
+    { p: 13, m: 18, g: 2, n: "Fläche B (10 mm²)" },
+    { p: 14, m: 18, g: 2, n: "Fläche B (10 mm²)" }
+  ],
+  3: [
+    { p: 1,  m: 13, g: 1, n: "Fläche C" },
+    { p: 2,  m: 13, g: 1, n: "Fläche C" },
+    { p: 3,  m: 16, g: 1, n: "Fläche C" },
+    { p: 4,  m: 16, g: 1, n: "Fläche C" },
+    { p: 5,  m: 16, g: 1, n: "Fläche C" },
+    { p: 6,  m: 16, g: 1, n: "Fläche C" },
+    { p: 7,  m: 23, g: 1, n: "Fläche C" },
+    { p: 8,  m: 23, g: 1, n: "Fläche C" },
+    { p: 9,  m: 23, g: 1, n: "Fläche C" },
+    { p: 10, m: 23, g: 1, n: "Fläche C" },
+    { p: 11, m: 8,  g: 1, n: "Fläche C" },
+    { p: 12, m: 8,  g: 1, n: "Fläche C" },
+    { p: 13, m: 16, g: 2, n: "Fläche C" },
+    { p: 14, m: 16, g: 2, n: "Fläche C" },
+    { p: 15, m: 16, g: 2, n: "Fläche C" },
+    { p: 16, m: 16, g: 2, n: "Fläche C" },
+    { p: 17, m: 15, g: 2, n: "Fläche C" },
+    { p: 18, m: 15, g: 2, n: "Fläche C" }
+  ],
+  4: [
+    { p: 1,  m: 16, g: 1, n: "Fläche D" },
+    { p: 2,  m: 16, g: 1, n: "Fläche D" },
+    { p: 3,  m: 23, g: 1, n: "Fläche D" },
+    { p: 4,  m: 23, g: 1, n: "Fläche D" },
+    { p: 5,  m: 8,  g: 1, n: "Fläche D" },
+    { p: 6,  m: 8,  g: 1, n: "Fläche D" },
+    { p: 7,  m: 16, g: 2, n: "Fläche D" },
+    { p: 8,  m: 16, g: 2, n: "Fläche D" },
+    { p: 9,  m: 16, g: 2, n: "Fläche D" },
+    { p: 10, m: 16, g: 2, n: "Fläche D" },
+    { p: 11, m: 23, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 12, m: 23, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 13, m: 23, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 14, m: 23, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 15, m: 20, g: 2, n: "Fläche D (10 mm²)" },
+    { p: 16, m: 20, g: 2, n: "Fläche D (10 mm²)" }
+  ],
+  5: [
+    { p: 1,  m: 22, g: 1, n: "Fläche E" },
+    { p: 2,  m: 22, g: 1, n: "Fläche E" },
+    { p: 3,  m: 22, g: 1, n: "Fläche E" },
+    { p: 4,  m: 22, g: 1, n: "Fläche E" },
+    { p: 5,  m: 17, g: 1, n: "Fläche E" },
+    { p: 6,  m: 17, g: 1, n: "Fläche E" },
+    { p: 7,  m: 22, g: 1, n: "Fläche E" },
+    { p: 8,  m: 22, g: 1, n: "Fläche E" },
+    { p: 9,  m: 13, g: 1, n: "Fläche E" },
+    { p: 10, m: 13, g: 1, n: "Fläche E" },
+    { p: 11, m: 18, g: 1, n: "Fläche E" },
+    { p: 12, m: 18, g: 1, n: "Fläche E" },
+    { p: 13, m: 17, g: 2, n: "Fläche E" },
+    { p: 14, m: 17, g: 2, n: "Fläche E" },
+    { p: 15, m: 17, g: 2, n: "Fläche E (10 mm²)" },
+    { p: 16, m: 17, g: 2, n: "Fläche E (10 mm²)" },
+    { p: 17, m: 13, g: 2, n: "Fläche E (10 mm²)" },
+    { p: 18, m: 13, g: 2, n: "Fläche E (10 mm²)" }
+  ],
+  6: [
+    { p: 1,  m: 23, g: 1, n: "Fläche F (10 mm²)" },
+    { p: 2,  m: 23, g: 1, n: "Fläche F (10 mm²)" },
+    { p: 3,  m: 23, g: 1, n: "Fläche F (10 mm²)" },
+    { p: 4,  m: 23, g: 1, n: "Fläche F (10 mm²)" },
+    { p: 5,  m: 23, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 6,  m: 23, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 7,  m: 20, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 8,  m: 20, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 9,  m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 10, m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 11, m: 17, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 12, m: 17, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 13, m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 14, m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 15, m: 18, g: 2, n: "Fläche F (10 mm²)" },
+    { p: 16, m: 18, g: 2, n: "Fläche F (10 mm²)" }
+  ]
+};
+
+function generateState(plan){
+  const result = {};
+  if(!plan) return result;
+  const wrKeys = Object.keys(plan).map(k => parseInt(k)).filter(n => !isNaN(n)).sort((a,b) => a-b);
+  wrKeys.forEach(wr => {
+    const list = plan[wr] || [];
+    const totalStrings = list.length;
+    const doubleCount = Math.max(0, totalStrings - 12);
+    let ptr = 0;
+
+    for(let m = 1; m <= 12; m++){
+      if(m <= doubleCount){
+        const s1 = list[ptr++];
+        const s2 = list[ptr++];
+        result[`${wr}.${m}.1`] = { planName: `STR ${s1.p}`, gak: `GAK ${wr}.${s1.g}`, mod: s1.m, stat: "JA", note: s1.n || "" };
+        result[`${wr}.${m}.2`] = { planName: `STR ${s2.p}`, gak: `GAK ${wr}.${s2.g}`, mod: s2.m, stat: "JA", note: s2.n || "" };
+      } else {
+        if(ptr < totalStrings){
+          const s1 = list[ptr++];
+          result[`${wr}.${m}.1`] = { planName: `STR ${s1.p}`, gak: `GAK ${wr}.${s1.g}`, mod: s1.m, stat: "JA", note: s1.n || "" };
+          result[`${wr}.${m}.2`] = { planName: "", gak: `GAK ${wr}.${s1.g}`, mod: 0, stat: "NEIN", note: "" };
+        } else {
+          result[`${wr}.${m}.1`] = { planName: "", gak: `GAK ${wr}.2`, mod: 0, stat: "NEIN", note: "" };
+          result[`${wr}.${m}.2`] = { planName: "", gak: `GAK ${wr}.2`, mod: 0, stat: "NEIN", note: "" };
+        }
+      }
+    }
+  });
+  return result;
+}
+
+function generateEmptyPlan(wrCount){
+  const plan = {};
+  for(let wr = 1; wr <= wrCount; wr++){
+    plan[wr] = [];
+  }
+  return plan;
+}
+
+const DEFAULT_PROJECTS = {
+  PV_MAN_P52: {
+    id: 'PV_MAN_P52',
+    name: 'PV MAN P52',
+    model_wp: 465,
+    plan: STRICT_CHRONO_PLAN
+  }
+};
+
+let PROJECTS = {};
+let CURRENT_PROJECT_ID = null;
+let APP_STATE = {};
+
+function getCurrentProject(){ return PROJECTS[CURRENT_PROJECT_ID] || null; }
+function getCurrentPlan(){ const p = getCurrentProject(); return p ? p.plan : {}; }
+function getCurrentWp(){ const p = getCurrentProject(); return p ? p.model_wp : 465; }
+function getCurrentName(){ const p = getCurrentProject(); return p ? p.name : '—'; }
+
+function renderMatrix(remoteOverride){
+  const wp = getCurrentWp();
+  const plan = getCurrentPlan();
+  // Stelle sicher, dass APP_STATE für jeden Plan-Slot existiert
+  const baseState = generateState(plan);
+  Object.keys(baseState).forEach(k => {
+    if(!APP_STATE[k]) APP_STATE[k] = baseState[k];
+  });
+
+  if(remoteOverride){
+    Object.keys(remoteOverride).forEach(k => {
+      if(APP_STATE[k]){
+        APP_STATE[k].gak = remoteOverride[k].gak !== undefined ? remoteOverride[k].gak : APP_STATE[k].gak;
+        APP_STATE[k].mod = remoteOverride[k].mod !== undefined ? remoteOverride[k].mod : APP_STATE[k].mod;
+        APP_STATE[k].stat = remoteOverride[k].stat || APP_STATE[k].stat;
+        APP_STATE[k].uoc = remoteOverride[k].uoc || "";
+        APP_STATE[k].isc = remoteOverride[k].isc || "";
+        APP_STATE[k].riso = remoteOverride[k].riso || "";
+        APP_STATE[k].note = remoteOverride[k].note || APP_STATE[k].note;
+      }
+    });
+  }
+
+  const container = g('tables');
+  container.innerHTML = '';
+
+  const wrKeys = Object.keys(plan).map(k => parseInt(k)).filter(n => !isNaN(n)).sort((a,b) => a-b);
+  wrKeys.forEach(wr => {
+    const bl = document.createElement('div');
+    bl.className = 'wr-block';
+    bl.dataset.wrId = wr;
+
+    let rowsHtml = '';
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        if(!APP_STATE[fullId]) continue;
+        const item = APP_STATE[fullId];
+        const isMpptDiv = (s === 1 && m > 1);
+        const isNein = (item.stat === 'NEIN');
+        const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * wp)/1000).toFixed(2) + ' kWp' : '—';
+        const strLabel = item.planName
+          ? `<span class="str-label">${item.planName}</span>`
+          : `<span class="str-label" style="opacity:0.3;">—</span>`;
+
+        rowsHtml += `
+          <tr id="row-${fullId}" class="${isMpptDiv ? 'mppt-div' : ''} ${isNein ? 'row-nein' : ''}">
+            <td data-label="Klemme" style="padding-left:14px;text-align:left;">
+              <div style="display:flex;flex-direction:column;gap:2px;">
+                <span class="string-id">${fullId}</span>
+                ${strLabel}
+              </div>
+            </td>
+            <td data-label="GAK (Ist)">
+              <input type="text" id="gak-${fullId}" value="${item.gak}" class="sp-inp sp-inp-gak" oninput="saveLocal()">
+              <span class="print-cell" style="color:#3d5800;">${item.gak}</span>
+            </td>
+            <td data-label="Aktiv" class="no-print">
+              <div class="tog-wrap">
+                <button id="tja-${fullId}" class="tog ${item.stat==='JA'?'on-ja':''}" onclick="setStatus('${fullId}','JA')">JA</button>
+                <button id="tnei-${fullId}" class="tog ${item.stat==='NEIN'?'on-nei':''}" onclick="setStatus('${fullId}','NEIN')">NEIN</button>
+              </div>
+              <input type="hidden" id="stat-${fullId}" value="${item.stat}">
+            </td>
+            <td data-label="Module">
+              <input type="number" inputmode="numeric" id="mod-${fullId}" value="${item.mod > 0 ? item.mod : ''}" class="sp-inp" style="width:50px;" oninput="onModInput('${wr}','${m}','${s}',this.value)">
+              <span class="print-cell" id="pm-${fullId}">${item.mod > 0 ? item.mod : '—'}</span>
+            </td>
+            <td data-label="Leistung" class="pwr-cell" id="pw-${fullId}">${pwr}</td>
+            <td data-label="Uoc (V)"><input type="text" inputmode="decimal" id="uoc-${fullId}" value="${item.uoc||''}" placeholder="V" class="sp-inp" style="width:60px;" oninput="saveLocal()"></td>
+            <td data-label="Isc (A)"><input type="text" inputmode="decimal" id="isc-${fullId}" value="${item.isc||''}" placeholder="A" class="sp-inp" style="width:60px;" oninput="saveLocal()"></td>
+            <td data-label="Riso (MΩ)"><input type="text" inputmode="decimal" id="riso-${fullId}" value="${item.riso||''}" placeholder="MΩ" class="sp-inp" style="width:60px;" oninput="saveLocal()"></td>
+            <td data-label="Info" class="col-note" style="text-align:left;">
+              <input type="text" id="note-${fullId}" value="${item.note||''}" class="sp-inp" style="width:100%;text-align:left;" oninput="saveLocal()">
+              <span class="print-cell" style="font-size:7pt;color:#475569;">${item.note||''}</span>
+            </td>
+          </tr>`;
+      }
+    }
+
+    bl.innerHTML = `
+      <div class="wr-head">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="wr-num">WR ${wr}</span>
+          <span style="font-size:0.7rem;color:var(--muted);">${(plan[wr]||[]).length} Strings</span>
+        </div>
+        <div class="wr-kpis">
+          <span id="wr-mod-${wr}">0</span> Mod. &middot; <span id="wr-pwr-${wr}" style="color:#a8cc35;">0.00 kWp</span>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="mt">
+          <thead><tr>
+            <th style="width:16%;padding-left:14px;text-align:left;">Klemme</th>
+            <th style="width:10%;">GAK</th>
+            <th class="no-print" style="width:9%;">Aktiv</th>
+            <th style="width:8%;">Module</th>
+            <th style="width:12%;">Leistung</th>
+            <th style="width:9%;">Uoc (V)</th>
+            <th style="width:9%;">Isc (A)</th>
+            <th style="width:9%;">Riso (MΩ)</th>
+            <th style="width:18%;text-align:left;">Bemerkung</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+    container.appendChild(bl);
+  });
+
+  buildFilterBar();
+  updateKpis();
+}
+
+function onModInput(wr, mppt, input, val){
+  const partnerInput = (input === '1') ? '2' : '1';
+  const partnerId = `${wr}.${mppt}.${partnerInput}`;
+  const partnerStat = g('stat-' + partnerId);
+  const partnerEl = g('mod-' + partnerId);
+
+  if(partnerEl && partnerStat && partnerStat.value === 'JA'){
+    partnerEl.value = val;
+    recalcRow(partnerId);
+  }
+  recalcRow(`${wr}.${mppt}.${input}`);
+  saveLocal();
+}
+
+function setStatus(id, st){
+  g('stat-'+id).value = st;
+  const ja = g('tja-'+id), nei = g('tnei-'+id);
+  if(st === 'JA'){ ja.className = 'tog on-ja'; nei.className = 'tog'; }
+  else { nei.className = 'tog on-nei'; ja.className = 'tog'; }
+  recalcRow(id);
+  saveLocal();
+}
+
+function recalcRow(id){
+  const st = g('stat-'+id).value;
+  const mod = parseFloat(g('mod-'+id).value) || 0;
+  const row = g('row-'+id);
+  const pw = g('pw-'+id);
+  const pm = g('pm-'+id);
+
+  if(st === 'NEIN'){
+    row.classList.add('row-nein');
+    pw.textContent = '—';
+    if(pm) pm.textContent = '—';
+  } else {
+    row.classList.remove('row-nein');
+    if(mod > 0){
+      pw.textContent = ((mod * getCurrentWp())/1000).toFixed(2) + ' kWp';
+      if(pm) pm.textContent = mod;
+    } else {
+      pw.textContent = '—';
+      if(pm) pm.textContent = '—';
+    }
+  }
+  updateKpis();
+}
+
+function updateKpis(){
+  let totMods = 0, totPwr = 0, totActive = 0;
+  const wrKeys = Object.keys(getCurrentPlan()).map(k => parseInt(k)).filter(n => !isNaN(n));
+
+  wrKeys.forEach(wr => {
+    let wrM = 0, wrP = 0;
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        const st = g('stat-'+fullId);
+        if(st && st.value === 'JA'){
+          const mod = parseFloat((g('mod-'+fullId)||{}).value) || 0;
+          const pwr = (mod * getCurrentWp()) / 1000;
+          wrM += mod; wrP += pwr;
+          totMods += mod; totPwr += pwr;
+          if(mod > 0) totActive++;
+        }
+      }
+    }
+    const wm = g(`wr-mod-${wr}`), wp = g(`wr-pwr-${wr}`);
+    if(wm) wm.textContent = wrM;
+    if(wp) wp.textContent = wrP.toFixed(2) + ' kWp';
+  });
+
+  g('d-mods').textContent = totMods;
+  g('d-pwr').textContent = totPwr.toFixed(2);
+  g('d-act').textContent = totActive;
+  const totEl = g('d-tot');
+  if(totEl) totEl.textContent = Object.keys(APP_STATE).length;
+}
+
+function saveLocal(){
+  const payload = collectData();
+  try {
+    const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
+    allData[CURRENT_PROJECT_ID] = payload;
+    localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(allData));
+  } catch(e){}
+}
+
+function collectData(){
+  const payload = {};
+  const wrKeys = Object.keys(getCurrentPlan()).map(k => parseInt(k)).filter(n => !isNaN(n));
+  wrKeys.forEach(wr => {
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        if(!APP_STATE[fullId]) continue;
+        payload[fullId] = {
+          gak: (g('gak-'+fullId)||{}).value || "",
+          stat: (g('stat-'+fullId)||{}).value || "NEIN",
+          mod: parseFloat((g('mod-'+fullId)||{}).value) || 0,
+          uoc: (g('uoc-'+fullId)||{}).value || "",
+          isc: (g('isc-'+fullId)||{}).value || "",
+          riso: (g('riso-'+fullId)||{}).value || "",
+          note: (g('note-'+fullId)||{}).value || ""
+        };
+      }
+    }
+  });
+  return payload;
+}
+
+async function pushCloudDataManually(){
+  if(!supabaseClient) return toast('Keine Cloud-Verbindung konfiguriert');
+  if(!CURRENT_PROJECT_ID) return toast('Kein Projekt ausgewählt');
+  const proj = getCurrentProject();
+  toast('☁️ Lade "' + proj.name + '" in Supabase hoch...');
+  try {
+    const wrCount = Object.keys(proj.plan).length;
+    const mppts = Array(wrCount).fill(12).join(',');
+    const { error } = await supabaseClient.from('pv_projects').upsert({
+      id: CURRENT_PROJECT_ID,
+      name: proj.name,
+      pruefer: "Christoph Huber / Sven",
+      modul_wp: proj.model_wp,
+      mppts: mppts,
+      data: collectData(),
+      updated_at: new Date().toISOString()
+    });
+    if(!error){
+      saveLocal();
+      toast('✅ "' + proj.name + '" erfolgreich gespeichert!');
+    } else {
+      toast('Fehler beim Speichern in Cloud');
+    }
+  } catch(e) { toast('Verbindungsfehler zur Cloud'); }
+}
+
+async function fetchCloudDataManually(){
+  if(!supabaseClient) return toast('Keine Cloud-Verbindung');
+  if(!CURRENT_PROJECT_ID) return toast('Kein Projekt ausgewählt');
+  const proj = getCurrentProject();
+  toast('📥 Lade "' + proj.name + '" aus Cloud...');
+  try {
+    const { data, error } = await supabaseClient
+      .from('pv_projects')
+      .select('*')
+      .eq('id', CURRENT_PROJECT_ID)
+      .single();
+
+    if(data && data.data){
+      renderMatrix(data.data);
+      saveLocal();
+      toast('✅ Stand aus Cloud geladen');
+    } else {
+      toast('Cloud-Eintrag ist noch leer.');
+    }
+  } catch(e) { toast('Fehler beim Abrufen aus Cloud'); }
+}
+
+async function factoryResetCloud(){
+  if(!confirm("Achtung: Dies setzt das aktuelle Projekt auf die saubere Matrix zurück und überschreibt die Cloud-Daten. Fortfahren?")) return;
+  APP_STATE = generateState(getCurrentPlan());
+  try {
+    const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
+    allData[CURRENT_PROJECT_ID] = collectData();
+    localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(allData));
+  } catch(e){}
+  renderMatrix(null);
+  await pushCloudDataManually();
+  toast('✅ Plan sauber zurückgesetzt!');
+}
+
+function printWRMontagePlan(){
+  const proj = getCurrentProject();
+  if(!proj) return;
+  let win = window.open('', '_blank');
+  let pagesHtml = '';
+  const wrKeys = Object.keys(proj.plan).map(k => parseInt(k)).filter(n => !isNaN(n)).sort((a,b) => a-b);
+
+  wrKeys.forEach(wr => {
+    let rowsHtml = '';
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const fullId = `${wr}.${m}.${s}`;
+        if(!APP_STATE[fullId]) continue;
+        const item = APP_STATE[fullId];
+        const st = (g('stat-'+fullId)||{}).value || item.stat;
+        if(st !== 'JA') continue;
+
+        const mod = (g('mod-'+fullId)||{}).value || item.mod;
+        const gak = (g('gak-'+fullId)||{}).value || item.gak;
+        const planName = item.planName || `STR ?`;
+
+        rowsHtml += `
+          <tr>
+            <td style="padding:10px 14px;border:2px solid #334155;font-size:14pt;font-weight:800;color:#1e3a8a;">${planName}</td>
+            <td style="padding:10px 14px;border:2px solid #334155;font-size:16pt;font-weight:900;font-family:monospace;color:#15803d;background:#f0fdf4;text-align:center;">🔌 ${fullId}</td>
+            <td style="padding:10px 14px;border:2px solid #334155;font-size:13pt;font-weight:800;">${gak} <span style="font-size:10pt;font-weight:500;color:#475569;">(${mod} Mod.)</span></td>
+          </tr>`;
+      }
+    }
+
+    pagesHtml += `
+      <div style="page-break-after: always; padding-bottom: 20px;">
+        <h1 style="background:#0f172a;color:#fff;padding:12px 16px;border-radius:6px;font-size:16pt;margin:0 0 8px;">
+          WECHSELRICHTER ${wr} &middot; KABEL-MONTAGEPLAN
+        </h1>
+        <p style="margin:0 0 16px;font-size:10pt;color:#475569;">
+          <strong>Bauvorhaben:</strong> ${proj.name} &middot; <strong>Gerät:</strong> SMA Sunny Tripower 125 (WR ${wr})
+        </p>
+        <table style="width:100%;border-collapse:collapse;text-align:left;">
+          <thead>
+            <tr style="background:#e2e8f0;">
+              <th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:35%;">Plan-String (SLD)</th>
+              <th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:35%;text-align:center;">WR-Klemme (Matrix)</th>
+              <th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:30%;">GAK</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+  });
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>SOLPRO | Montageplan ${proj.name}</title>
+      <style>
+        body { font-family: 'Inter', Arial, sans-serif; padding: 20px; color: #111; }
+        @media print { @page { size: A4 portrait; margin: 12mm; } }
+      </style>
+    </head>
+    <body onload="window.print()">
+      ${pagesHtml}
+    </body>
+    </html>
+  `);
+  win.document.close();
+}
+
+function getAllFullIds(){
+  const plan = getCurrentPlan();
+  const wrKeys = Object.keys(plan).map(k => parseInt(k)).filter(n => !isNaN(n)).sort((a,b) => a-b);
+  const ids = [];
+  wrKeys.forEach(wr => {
+    for(let m = 1; m <= 12; m++){
+      for(let s = 1; s <= 2; s++){
+        const id = `${wr}.${m}.${s}`;
+        if(APP_STATE[id]) ids.push(id);
+      }
+    }
+  });
+  return ids;
+}
+
+function exportSmartScriptExcel(){
+  const proj = getCurrentProject();
+  const rows = [['Etikett']];
+  let cnt = 0;
+
+  getAllFullIds().forEach(fullId => {
+    const st = (g('stat-'+fullId)||{}).value || APP_STATE[fullId].stat;
+    if(st !== 'JA') return;
+
+    const mod = parseFloat((g('mod-'+fullId)||{}).value) || APP_STATE[fullId].mod || 0;
+    if(mod <= 0) return;
+
+    const gak = (g('gak-'+fullId)||{}).value || APP_STATE[fullId].gak;
+    const note = (g('note-'+fullId)||{}).value || APP_STATE[fullId].note || '';
+    const pwr = ((mod * getCurrentWp())/1000).toFixed(2).replace('.', ',');
+
+    const labelText = [
+      `BVH ${proj.name}`,
+      fullId,
+      gak,
+      `${mod} Module`,
+      `${pwr} kWp`,
+      note
+    ].filter(Boolean).join('\r\n');
+
+    rows.push([{ t: 's', v: labelText }]);
+    cnt++;
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 35 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Etiketten');
+  const safeName = proj.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+  XLSX.writeFile(wb, `SmartScript_GAK-Pickerl_${safeName}.xlsx`);
+  toast(`${cnt} GAK-Pickerl exportiert`);
+}
+
+function exportStringNumbersExcel(){
+  const proj = getCurrentProject();
+  const rows = [['String']];
+  let cnt = 0;
+
+  getAllFullIds().forEach(fullId => {
+    const st = (g('stat-'+fullId)||{}).value || APP_STATE[fullId].stat;
+    if(st !== 'JA') return;
+    const mod = parseFloat((g('mod-'+fullId)||{}).value) || APP_STATE[fullId].mod || 0;
+    if(mod <= 0) return;
+
+    rows.push([{ t: 's', v: fullId }]);
+    cnt++;
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 15 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'String-Nummern');
+  const safeName = proj.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+  XLSX.writeFile(wb, `SmartScript_String-Nummern_${safeName}.xlsx`);
+  toast(`${cnt} String-Nummern exportiert`);
+}
+
+function doExcel(){
+  const proj = getCurrentProject();
+  const rows = [
+    [{t:'s', v:'Klemme (WR.M.In)'}, 'Plan-String', 'GAK', 'Status', 'Module', 'Leistung (kWp)', 'Uoc (V)', 'Isc (A)', 'Riso (MOhm)', 'Bemerkung']
+  ];
+
+  getAllFullIds().forEach(fullId => {
+    const item = APP_STATE[fullId];
+    const st = (g('stat-'+fullId)||{}).value || item.stat;
+    const mod = (g('mod-'+fullId)||{}).value || item.mod;
+    const pwr = (st === 'JA' && parseFloat(mod) > 0) ? ((parseFloat(mod) * getCurrentWp())/1000).toFixed(2) : '0';
+    const gak = (g('gak-'+fullId)||{}).value || item.gak;
+    const note = (g('note-'+fullId)||{}).value || item.note || '';
+
+    rows.push([
+      { t: 's', v: fullId },
+      item.planName || '—',
+      gak,
+      st,
+      parseInt(mod) || 0,
+      parseFloat(pwr.replace(',','.')) || 0,
+      (g('uoc-'+fullId)||{}).value || '',
+      (g('isc-'+fullId)||{}).value || '',
+      (g('riso-'+fullId)||{}).value || '',
+      note
+    ]);
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 18 }, { wch: 16 }, { wch: 12 }, { wch: 10 }, { wch: 10 },
+    { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 26 }
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'Prüfprotokoll');
+  const safeName = proj.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+  XLSX.writeFile(wb, `Protokoll_${safeName}.xlsx`);
+  toast('Prüfprotokoll exportiert');
+}
+
+// Prevent body scroll when bottom sheet is open
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') {
+    closeSidebar();
+    closeProjectsModal();
+    closeNewProjectModal();
+  }
+});
+
+// === PROJEKT-MANAGEMENT ===
+
+function initProjects(){
+  // 1. Projekte laden
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.projects) || '{}');
+    PROJECTS = (stored && Object.keys(stored).length > 0) ? stored : JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
+  } catch(e){
+    PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
+  }
+
+  // 2. Legacy-Migration: sp_local_backup_chrono → sp_projects_data_v1.PV_MAN_P52
+  try {
+    const legacy = JSON.parse(localStorage.getItem(STORAGE_KEYS.legacy) || '{}');
+    const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
+    if(Object.keys(legacy).length > 0 && !allData.PV_MAN_P52){
+      allData.PV_MAN_P52 = legacy;
+      localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(allData));
+    }
+    if(Object.keys(legacy).length > 0) localStorage.removeItem(STORAGE_KEYS.legacy);
+  } catch(e){}
+
+  // 3. Aktuelles Projekt bestimmen
+  CURRENT_PROJECT_ID = localStorage.getItem(STORAGE_KEYS.current) || 'PV_MAN_P52';
+  if(!PROJECTS[CURRENT_PROJECT_ID]){
+    CURRENT_PROJECT_ID = Object.keys(PROJECTS)[0] || 'PV_MAN_P52';
+  }
+
+  // 4. Speichern (Defaults persistieren)
+  try {
+    localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
+    localStorage.setItem(STORAGE_KEYS.current, CURRENT_PROJECT_ID);
+  } catch(e){}
+
+  // 5. APP_STATE aus per-Projekt-Storage laden
+  loadCurrentProjectData();
+}
+
+function loadCurrentProjectData(){
+  if(!CURRENT_PROJECT_ID) return;
+  APP_STATE = generateState(getCurrentPlan());
+  try {
+    const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
+    const projData = allData[CURRENT_PROJECT_ID] || {};
+    Object.keys(projData).forEach(k => {
+      if(APP_STATE[k]){
+        APP_STATE[k].gak = projData[k].gak !== undefined ? projData[k].gak : APP_STATE[k].gak;
+        APP_STATE[k].mod = projData[k].mod !== undefined ? projData[k].mod : APP_STATE[k].mod;
+        APP_STATE[k].stat = projData[k].stat || APP_STATE[k].stat;
+        APP_STATE[k].uoc = projData[k].uoc || "";
+        APP_STATE[k].isc = projData[k].isc || "";
+        APP_STATE[k].riso = projData[k].riso || "";
+        APP_STATE[k].note = projData[k].note || APP_STATE[k].note;
+      }
+    });
+  } catch(e){}
+}
+
+function selectProject(id){
+  if(!PROJECTS[id]) return toast('Projekt nicht gefunden');
+  if(id === CURRENT_PROJECT_ID){ closeProjectsModal(); return; }
+  saveLocal();
+  CURRENT_PROJECT_ID = id;
+  try { localStorage.setItem(STORAGE_KEYS.current, id); } catch(e){}
+  loadCurrentProjectData();
+  updateProjectSelector();
+  renderMatrix(null);
+  resetFilter();
+  closeProjectsModal();
+  toast('📁 "' + PROJECTS[id].name + '" geladen');
+}
+
+function updateProjectSelector(){
+  const name = getCurrentName();
+  const sbName = g('sb-proj-name');
+  if(sbName) sbName.textContent = name;
+  const wpEl = g('d-wp');
+  if(wpEl) wpEl.textContent = getCurrentWp();
+}
+
+function openProjectsModal(){
+  renderProjectsList();
+  g('projects-modal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeProjectsModal(e){
+  if(e && e.target !== e.currentTarget) return;
+  g('projects-modal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function renderProjectsList(){
+  const list = g('proj-list');
+  const ids = Object.keys(PROJECTS);
+  let html = '';
+  ids.forEach(id => {
+    const p = PROJECTS[id];
+    const wrCount = Object.keys(p.plan).length;
+    const isCurrent = id === CURRENT_PROJECT_ID;
+    const totalStrings = Object.values(p.plan).reduce((sum, arr) => sum + arr.length, 0);
+    html += `
+      <div class="proj-list-item ${isCurrent ? 'current' : ''}">
+        <div class="proj-list-item-info">
+          <div class="proj-list-item-name">${isCurrent ? '✓ ' : ''}${escapeHtml(p.name)}</div>
+          <div class="proj-list-item-meta">${wrCount} WR · ${totalStrings} Strings · ${p.model_wp} Wp</div>
+        </div>
+        <div class="proj-list-item-actions">
+          <button onclick="selectProject('${id}')" class="btn ${isCurrent ? 'btn-green' : 'btn-ghost'}" style="border-color:${isCurrent ? 'transparent' : '#38bdf8'};color:${isCurrent ? '#061200' : '#38bdf8'};">${isCurrent ? 'Aktiv' : 'Öffnen'}</button>
+          ${ids.length > 1 ? `<button onclick="deleteProject('${id}')" class="btn btn-ghost" style="border-color:#dc2626;color:#dc2626;">Löschen</button>` : ''}
+        </div>
+      </div>`;
+  });
+  html += `<button onclick="openNewProjectModal()" class="btn btn-green">➕ Neues Projekt erstellen</button>`;
+  list.innerHTML = html;
+}
+
+function openNewProjectModal(){
+  g('np-name').value = '';
+  g('np-wp').value = getCurrentWp();
+  g('np-wr-count').value = '6';
+
+  // Clone-Dropdown füllen
+  const sel = g('np-clone-from');
+  sel.innerHTML = '';
+  Object.values(PROJECTS).forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
     sel.appendChild(opt);
   });
 
-  // Radio-Auswahl zurücksetzen
   // Radio-Auswahl zurücksetzen (Default: MPPT-Plan)
   document.querySelectorAll('input[name="np-template"]').forEach(r => {
-    r.checked = (r.value === 'empty');
-    r.closest('.field-radio').classList.toggle('selected', r.value === 'empty');
     r.checked = (r.value === 'plan');
     r.closest('.field-radio').classList.toggle('selected', r.value === 'plan');
   });
@@ -114,12 +1681,16 @@ body.sun-mode .np-wr-buttons button { background: #ffffff; border-color: #cbd5e1
   updateNewProjectForm();
 
   g('newproj-modal').classList.add('show');
+  setTimeout(() => g('np-name').focus(), 100);
+}
+function closeNewProjectModal(e){
+  if(e && e.target !== e.currentTarget) return;
+  g('newproj-modal').classList.remove('show');
+}
+
 function updateNewProjectForm(){
   const selected = document.querySelector('input[name="np-template"]:checked');
   if(!selected) return;
-  g('np-clone-from-field').style.display = selected.value === 'clone' ? 'block' : 'none';
-  // WR-Anzahl ist nur bei "leer" editierbar
-  g('np-wr-count-field').style.display = selected.value === 'empty' ? 'block' : 'none';
   const v = selected.value;
   g('np-clone-from-field').style.display = v === 'clone' ? 'block' : 'none';
   g('np-wr-count-field').style.display = (v === 'plan' || v === 'empty') ? 'block' : 'none';
@@ -201,6 +1772,16 @@ function recalcAllNPWRCoun(){
 function doCreateNewProject(){
   const name = g('np-name').value.trim();
   const wp = parseInt(g('np-wp').value) || 465;
+  const template = document.querySelector('input[name="np-template"]:checked').value;
+
+  if(!name) return toast('Bitte Projektname eingeben');
+  if(name.length < 2) return toast('Name zu kurz');
+
+  const id = generateProjectId(name);
+  if(PROJECTS[id]) return toast('Projekt mit ähnlichem Namen existiert bereits');
+
+  let plan;
+  if(template === 'clone'){
     const cloneFromId = g('np-clone-from').value;
     if(!PROJECTS[cloneFromId]) return toast('Quellprojekt ungültig');
     plan = JSON.parse(JSON.stringify(PROJECTS[cloneFromId].plan));
@@ -227,3 +1808,67 @@ function doCreateNewProject(){
     const wrCount = Math.max(1, Math.min(10, parseInt(g('np-wr-count').value) || 6));
     plan = generateEmptyPlan(wrCount);
   }
+
+  PROJECTS[id] = { id, name, model_wp: wp, plan };
+  try { localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS)); } catch(e){}
+
+  closeNewProjectModal();
+  selectProject(id);
+  toast('✅ Projekt "' + name + '" erstellt');
+}
+
+function generateProjectId(name){
+  let id = name.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  if(!id) id = 'Projekt';
+  let candidate = id;
+  let n = 2;
+  while(PROJECTS[candidate]){
+    candidate = id + '_' + n;
+    n++;
+  }
+  return candidate;
+}
+
+function deleteProject(id){
+  if(id === CURRENT_PROJECT_ID) return toast('Aktives Projekt kann nicht gelöscht werden');
+  const p = PROJECTS[id];
+  if(!p) return;
+  if(!confirm('Projekt "' + p.name + '" wirklich löschen? Lokale Daten gehen verloren.')) return;
+  delete PROJECTS[id];
+  try {
+    localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
+    const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
+    delete allData[id];
+    localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(allData));
+  } catch(e){}
+  renderProjectsList();
+  toast('🗑️ Projekt gelöscht');
+}
+
+function resetFilter(){
+  buildFilterBar();
+  document.querySelectorAll('.wr-block').forEach(d => d.style.display = 'block');
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Radio-Template-Auswahl: Click-Handler für die Karten
+document.addEventListener('change', e => {
+  if(e.target && e.target.name === 'np-template'){
+    document.querySelectorAll('input[name="np-template"]').forEach(r => {
+      r.closest('.field-radio').classList.toggle('selected', r.checked);
+    });
+    updateNewProjectForm();
+  }
+});
+
+window.onload = () => {
+  initProjects();
+  updateProjectSelector();
+  renderMatrix(null);
+};
+</script>
+</body>
+</html>

@@ -60,6 +60,32 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .wr-filter-bar::-webkit-scrollbar { display: none; }
 .wr-tab { flex: 0 0 auto; background: var(--panel); border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; font-weight: 700; border-radius: 10px; padding: 10px 14px; cursor: pointer; min-height: 42px; scroll-snap-align: start; transition: all 0.2s; }
 .wr-tab.active { background: var(--accent-glow); color: var(--accent); border-color: var(--accent); }
+
+.main-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.main-tab { flex: 1; background: var(--panel); border: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; font-weight: 700; border-radius: 10px; padding: 12px 16px; cursor: pointer; transition: all 0.2s; text-align: center; }
+.main-tab.active { background: var(--accent-glow); color: var(--accent); border-color: var(--accent); }
+.main-tab:hover { background: var(--bg); }
+
+.projects-view { display: none; }
+.projects-view.active { display: block; }
+.matrix-view { display: none; }
+.matrix-view.active { display: block; }
+
+.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.project-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; transition: all 0.2s; cursor: pointer; }
+.project-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.project-card.active { border-color: var(--accent); background: var(--accent-glow); }
+.project-card-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
+.project-card-title { font-weight: 700; font-size: 1rem; color: var(--text); }
+.project-card-meta { font-size: 0.75rem; color: var(--muted); }
+.project-card-stats { display: flex; gap: 12px; margin-top: 12px; }
+.project-card-stat { display: flex; flex-direction: column; }
+.project-card-stat-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; }
+.project-card-stat-value { font-size: 0.9rem; font-weight: 700; color: var(--accent); }
+.sync-status { display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem; padding: 4px 8px; border-radius: 6px; }
+.sync-status.synced { background: rgba(34, 197, 94, 0.1); color: var(--accent); }
+.sync-status.pending { background: rgba(234, 179, 8, 0.1); color: #eab308; }
+.sync-status.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 .filter-toggle-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 0.76rem; font-weight: 700; border-radius: 10px; padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; min-height: 42px; transition: all 0.2s;}
 .filter-toggle-btn.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
 
@@ -69,9 +95,9 @@ body.sun-mode .wr-head { background: rgba(255, 255, 255, 0.95); }
 .wr-num { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 800; background: var(--accent); color: #000; padding: 4px 10px; border-radius: 6px; }
 .wr-kpis { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
 
-table.mt { width: 100%; border-collapse: collapse; table-layout: fixed; }
-table.mt thead th { position: sticky; top: 61px; z-index: 20; padding: 10px 8px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--muted); background: var(--bg); text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
-table.mt td { padding: 8px; font-size: 0.85rem; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; white-space: nowrap; }
+table.mt { width: 100%; border-collapse: collapse; table-layout: auto; }
+table.mt thead th { position: sticky; top: 61px; z-index: 20; padding: 12px 10px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--muted); background: var(--bg); text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.mt td { padding: 10px; font-size: 0.85rem; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; white-space: nowrap; }
 table.mt tbody tr:hover { background: var(--panel); }
 table.mt tbody tr.mppt-div { border-top: 2px solid var(--border); }
 table.mt tbody tr.row-nein { opacity: 0.35; transition: opacity 0.2s; }
@@ -345,14 +371,36 @@ body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
     </div>
   </div>
 
-  <div class="view-bar-wrap no-print">
-    <div class="wr-filter-bar" id="wr-filter-bar"></div>
-    <button class="filter-toggle-btn" id="btn-hide-nein" onclick="toggleHideInactive(null)">
-      <span>👁️</span> <span id="hide-nein-text">Nur aktive Strings</span>
-    </button>
+  <div class="main-tabs no-print">
+    <button class="main-tab active" onclick="switchMainTab('matrix')" id="tab-matrix">📊 Matrix</button>
+    <button class="main-tab" onclick="switchMainTab('projects')" id="tab-projects">📁 Projekte</button>
   </div>
 
-  <div id="tables"></div>
+  <div class="matrix-view active" id="matrix-view">
+    <div class="view-bar-wrap no-print">
+      <div class="wr-filter-bar" id="wr-filter-bar"></div>
+      <button class="filter-toggle-btn" id="btn-hide-nein" onclick="toggleHideInactive(null)">
+        <span>👁️</span> <span id="hide-nein-text">Nur aktive Strings</span>
+      </button>
+    </div>
+
+    <div id="tables"></div>
+  </div>
+
+  <div class="projects-view" id="projects-view">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div>
+        <h2 style="font-size:1.2rem; font-weight:800; color:var(--text);">Projektübersicht</h2>
+        <div style="font-size:0.8rem; color:var(--muted);">Verwalte und synchronisiere deine PV-Projekte</div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" onclick="refreshProjects()">🔄 Aktualisieren</button>
+        <button class="btn btn-primary role-gate-planner" onclick="openNewProjectModal()">+ Neues Projekt</button>
+      </div>
+    </div>
+
+    <div class="project-grid" id="project-grid"></div>
+  </div>
 
 </div>
 </div>
@@ -362,7 +410,10 @@ body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
   <div class="modal-card" onclick="event.stopPropagation()">
     <div class="modal-head">
       <h2>📁 Projekte</h2>
-      <button onclick="closeProjectsModal()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
+      <div style="display:flex; gap:8px;">
+        <button onclick="refreshProjects()" class="btn btn-ghost" style="padding:4px 8px;" title="Aus Cloud aktualisieren">🔄</button>
+        <button onclick="closeProjectsModal()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
+      </div>
     </div>
     <div class="modal-body">
       <div id="proj-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
@@ -494,6 +545,67 @@ function buildFilterBar(){
   let html = `<button class="wr-tab active" data-wr="0" onclick="filterInverter(0, this)">⚡ Alle WRs (1–${wrKeys.length})</button>`;
   wrKeys.forEach(wr => { html += `<button class="wr-tab" data-wr="${wr}" onclick="filterInverter(${wr}, this)">WR ${wr}</button>`; });
   bar.innerHTML = html;
+}
+
+function switchMainTab(tab){
+  document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.matrix-view, .projects-view').forEach(v => v.classList.remove('active'));
+  
+  g(`tab-${tab}`).classList.add('active');
+  g(`${tab}-view`).classList.add('active');
+  
+  if(tab === 'projects'){
+    renderProjectGrid();
+  }
+}
+
+function renderProjectGrid(){
+  const grid = g('project-grid');
+  const ids = Object.keys(PROJECTS);
+  
+  if(ids.length === 0){
+    grid.innerHTML = `
+      <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--muted);">
+        <div style="font-size:3rem; margin-bottom:16px;">📁</div>
+        <div style="font-size:1.1rem; font-weight:700; margin-bottom:8px;">Keine Projekte vorhanden</div>
+        <div style="font-size:0.85rem;">Erstelle dein erstes Projekt oder lade aus der Cloud</div>
+      </div>
+    `;
+    return;
+  }
+  
+  grid.innerHTML = ids.map(id => {
+    const proj = PROJECTS[id];
+    const isActive = id === CURRENT_PROJECT_ID;
+    const wrCount = Object.keys(proj.plan).length;
+    const wp = proj.model_wp || 465;
+    
+    return `
+      <div class="project-card ${isActive ? 'active' : ''}" onclick="selectProject('${id}'); switchMainTab('matrix');">
+        <div class="project-card-header">
+          <div class="project-card-title">${isActive ? '✓ ' : ''}${proj.name}</div>
+          <div class="sync-status synced">☁️</div>
+        </div>
+        <div class="project-card-meta">
+          ${wrCount} Wechselrichter &middot; ${wp} Wp
+        </div>
+        <div class="project-card-stats">
+          <div class="project-card-stat">
+            <div class="project-card-stat-label">WR</div>
+            <div class="project-card-stat-value">${wrCount}</div>
+          </div>
+          <div class="project-card-stat">
+            <div class="project-card-stat-label">Wp</div>
+            <div class="project-card-stat-value">${wp}</div>
+          </div>
+          <div class="project-card-stat">
+            <div class="project-card-stat-label">MPPTs</div>
+            <div class="project-card-stat-value">${Object.values(proj.plan).reduce((sum, wr) => sum + (wr.mppts || 12), 0)}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 // === THE ORIGINAL HARDCODED PLAN (PV MAN P52) ===
@@ -706,29 +818,29 @@ function renderMatrix(remoteOverride = null){
 
         rowsHtml += `
           <tr id="row-${id}" class="${(s===1 && m>1) ? 'mppt-div' : ''} ${!isJa ? 'row-nein' : ''}">
-            <td data-label="Klemme" style="text-align:left; padding-left:14px; width:14%;">
+            <td data-label="Klemme" style="text-align:left; padding-left:14px; min-width:120px;">
                <div style="display:flex;flex-direction:column;gap:2px;">
                  <span class="string-id">${id}</span>
                  ${strLabel}
                </div>
             </td>
-            <td data-label="GAK" style="width:10%;"><input type="text" id="gak-${id}" value="${item.gak}" class="sp-inp sp-inp-center sp-inp-gak" oninput="saveData('${id}', 'gak', this.value)">
+            <td data-label="GAK" style="min-width:100px;"><input type="text" id="gak-${id}" value="${item.gak}" class="sp-inp sp-inp-center sp-inp-gak" oninput="saveData('${id}', 'gak', this.value)">
                <span class="print-cell">${item.gak}</span>
             </td>
-            <td data-label="Aktiv" class="no-print" style="width:10%;">
+            <td data-label="Aktiv" class="no-print" style="min-width:100px;">
               <div class="tog-wrap">
                 <button id="tja-${id}" class="tog ${isJa?'on-ja':''}" onclick="setStat('${id}','JA')">JA</button>
                 <button id="tnei-${id}" class="tog ${!isJa?'on-nei':''}" onclick="setStat('${id}','NEIN')">NEIN</button>
               </div>
             </td>
-            <td data-label="Module" style="width:10%;"><input type="number" id="mod-${id}" value="${item.mod||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'mod', this.value); updateKPIs();">
+            <td data-label="Module" style="min-width:80px;"><input type="number" id="mod-${id}" value="${item.mod||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'mod', this.value); updateKPIs();">
                <span class="print-cell" id="pm-${id}">${item.mod > 0 ? item.mod : '—'}</span>
             </td>
-            <td data-label="kWp" class="pwr-cell" style="width:10%;" id="pw-${id}">${pwr}</td>
-            <td data-label="Uoc(V)" style="width:10%;"><input type="text" inputmode="decimal" id="uoc-${id}" value="${item.uoc||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'uoc', this.value)"></td>
-            <td data-label="Isc(A)" style="width:10%;"><input type="text" inputmode="decimal" id="isc-${id}" value="${item.isc||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'isc', this.value)"></td>
-            <td data-label="Riso(MΩ)" style="width:10%;"><input type="text" inputmode="decimal" id="riso-${id}" value="${item.riso||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'riso', this.value)"></td>
-            <td data-label="Info" class="col-note" style="text-align:left; width:16%;">
+            <td data-label="kWp" class="pwr-cell" style="min-width:80px;" id="pw-${id}">${pwr}</td>
+            <td data-label="Uoc(V)" style="min-width:80px;"><input type="text" inputmode="decimal" id="uoc-${id}" value="${item.uoc||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'uoc', this.value)"></td>
+            <td data-label="Isc(A)" style="min-width:80px;"><input type="text" inputmode="decimal" id="isc-${id}" value="${item.isc||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'isc', this.value)"></td>
+            <td data-label="Riso(MΩ)" style="min-width:80px;"><input type="text" inputmode="decimal" id="riso-${id}" value="${item.riso||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'riso', this.value)"></td>
+            <td data-label="Info" class="col-note" style="text-align:left; min-width:150px;">
               <input type="text" id="note-${id}" value="${item.note||''}" class="sp-inp" style="text-align:left;" oninput="saveData('${id}', 'note', this.value)">
               <span class="print-cell" style="font-size:7pt;color:#71717a;">${item.note||''}</span>
             </td>
@@ -747,11 +859,11 @@ function renderMatrix(remoteOverride = null){
       <div style="overflow-x:auto;">
         <table class="mt">
           <thead><tr>
-            <th style="text-align:left;padding-left:14px;width:14%;min-width:120px;">Klemme</th><th style="width:10%;min-width:80px;">GAK</th>
-            <th class="no-print" style="width:10%;min-width:80px;">Aktiv</th>
-            <th style="width:10%;min-width:60px;">Mods</th><th style="width:10%;min-width:70px;">kWp</th>
-            <th style="width:10%;min-width:70px;">Uoc(V)</th><th style="width:10%;min-width:70px;">Isc(A)</th>
-            <th style="width:10%;min-width:70px;">Riso(MΩ)</th><th style="text-align:left;width:16%;min-width:150px;">Bemerkung</th>
+            <th style="text-align:left;padding-left:14px;min-width:120px;">Klemme</th><th style="min-width:100px;">GAK</th>
+            <th class="no-print" style="min-width:100px;">Aktiv</th>
+            <th style="min-width:80px;">Mods</th><th style="min-width:80px;">kWp</th>
+            <th style="min-width:80px;">Uoc(V)</th><th style="min-width:80px;">Isc(A)</th>
+            <th style="min-width:80px;">Riso(MΩ)</th><th style="text-align:left;min-width:150px;">Bemerkung</th>
           </tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
@@ -936,7 +1048,12 @@ function confirmPVSOLImport(){
 }
 
 // === NEW PROJECT LOGIC ===
-function openProjectsModal(){
+async function openProjectsModal(){
+  // Erst automatisch aus Cloud synchronisieren
+  if(supabaseClient && currentUser){
+    await fetchProjectsFromCloud();
+  }
+  
   const list = g('proj-list');
   const ids = Object.keys(PROJECTS);
   list.innerHTML = ids.map(id => `
@@ -955,15 +1072,30 @@ function openProjectsModal(){
 }
 function closeProjectsModal(e){ if(!e || e.target===e.currentTarget) g('projects-modal').classList.remove('show'); }
 
+async function refreshProjects(){
+  if(supabaseClient && currentUser){
+    toast('🔄 Aktualisiere Projekte...');
+    await fetchProjectsFromCloud();
+    renderProjectGrid(); // Grid neu rendern
+    toast('✅ Projekte aktualisiert');
+  } else {
+    toast('Nicht eingeloggt');
+  }
+}
+
 async function selectProject(id){
   CURRENT_PROJECT_ID = id;
   localStorage.setItem(STORAGE_KEYS.current, id);
   loadCurrentProjectData();
-  closeProjectsModal();
   
   // Automatisch aus Cloud laden falls verfügbar
   if(supabaseClient && currentUser){
     await fetchCloudDataManually();
+  }
+  
+  // Wenn wir im Projekt-Tab sind, wechsle zum Matrix-Tab
+  if(g('projects-view').classList.contains('active')){
+    switchMainTab('matrix');
   }
   
   toast('Projekt geladen');
@@ -1339,16 +1471,50 @@ function printWRMontagePlan(){
 
 // === SUPABASE SYNC LOGIC ===
 
-async function fetchProjectsFromCloud(){
-  if(!supabaseClient || !currentUser) return;
+let cloudConnectionStatus = 'unknown';
+
+async function testCloudConnection(){
+  if(!supabaseClient){
+    cloudConnectionStatus = 'no_client';
+    return false;
+  }
+  
   try {
+    // Teste mit einer einfachen Abfrage
+    const { data, error } = await supabaseClient.from('pv_projects').select('count').limit(1);
+    if(error){
+      cloudConnectionStatus = 'error';
+      console.error('Cloud Verbindungstest fehlgeschlagen:', error);
+      return false;
+    }
+    cloudConnectionStatus = 'connected';
+    console.log('Cloud Verbindung erfolgreich');
+    return true;
+  } catch(e){
+    cloudConnectionStatus = 'error';
+    console.error('Cloud Verbindungstest Exception:', e);
+    return false;
+  }
+}
+
+async function fetchProjectsFromCloud(){
+  if(!supabaseClient || !currentUser) {
+    console.log('Kein Supabase Client oder User vorhanden');
+    return;
+  }
+  
+  try {
+    console.log('Lade Projekte aus Cloud...');
     const { data, error } = await supabaseClient.from('pv_projects').select('id, name, model_wp, config, updated_at');
+    
     if(error){
       console.error('Fehler beim Laden der Projekte:', error);
+      toast('Cloud-Fehler: ' + error.message);
       return;
     }
     
     if(data && data.length > 0){
+      console.log('Projekte aus Cloud erhalten:', data.length);
       // Projekte aus Cloud in lokale Struktur übernehmen
       data.forEach(cloudProj => {
         PROJECTS[cloudProj.id] = {
@@ -1363,18 +1529,30 @@ async function fetchProjectsFromCloud(){
       // Speichern in localStorage als Cache
       localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
       console.log('Projekte aus Cloud geladen:', Object.keys(PROJECTS));
+      toast(`✅ ${data.length} Projekte aus Cloud geladen`);
+    } else {
+      console.log('Keine Projekte in Cloud gefunden');
     }
   } catch(e){
     console.error('Fehler beim Laden der Projekte:', e);
+    toast('Verbindungsfehler: ' + e.message);
   }
 }
 
 async function saveProjectToCloud(projectId){
-  if(!supabaseClient || !currentUser) return;
+  if(!supabaseClient || !currentUser) {
+    console.log('Kein Supabase Client oder User vorhanden');
+    return;
+  }
+  
   const proj = PROJECTS[projectId];
-  if(!proj) return;
+  if(!proj) {
+    console.log('Projekt nicht gefunden:', projectId);
+    return;
+  }
   
   try {
+    console.log('Speichere Projekt in Cloud:', projectId);
     const projData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
     const stateData = projData[projectId] || generateState(proj.plan);
     
@@ -1391,53 +1569,79 @@ async function saveProjectToCloud(projectId){
     
     if(error){
       console.error('Fehler beim Speichern des Projekts:', error);
+      toast('Speichern fehlgeschlagen: ' + error.message);
     } else {
       console.log('Projekt erfolgreich in Cloud gespeichert:', projectId);
+      toast('✅ Projekt in Cloud gespeichert');
     }
   } catch(e){
     console.error('Fehler beim Speichern des Projekts:', e);
+    toast('Verbindungsfehler: ' + e.message);
   }
 }
 
 async function pushCloudDataManually(){
   if(!supabaseClient) return toast('Keine Cloud-Verbindung');
   if(!CURRENT_PROJECT_ID) return toast('Kein Projekt ausgewählt');
+  if(!currentUser) return toast('Nicht eingeloggt');
+  
   const proj = getCurrentProject();
   toast('☁️ Lade hoch...');
+  
   try {
+    console.log('Pushing data for project:', CURRENT_PROJECT_ID);
     const projData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
     const stateData = projData[CURRENT_PROJECT_ID] || APP_STATE;
     
     const { data, error } = await supabaseClient.from('pv_projects').upsert({
       id: CURRENT_PROJECT_ID,
       name: proj.name,
-      pruefer: currentUser ? currentUser.email : "SOLPRO Matrix",
+      pruefer: currentUser.email,
       modul_wp: proj.model_wp,
       mppts: "dynamic",
       data: stateData,
       config: proj.plan,
       updated_at: new Date().toISOString()
     });
+    
     console.log('Push result:', { data, error });
-    if(!error){ toast('✅ Cloud gespeichert!'); } 
-    else { toast('Fehler: ' + error.message); console.error('Push error:', error); }
-  } catch(e) { toast('Verbindungsfehler: ' + e.message); console.error('Push exception:', e); }
+    if(!error){ 
+      toast('✅ Cloud gespeichert!'); 
+    } else { 
+      toast('Fehler: ' + error.message); 
+      console.error('Push error:', error); 
+    }
+  } catch(e) { 
+    toast('Verbindungsfehler: ' + e.message); 
+    console.error('Push exception:', e); 
+  }
 }
 
 async function fetchCloudDataManually(){
   if(!supabaseClient) return toast('Keine Cloud-Verbindung');
   if(!CURRENT_PROJECT_ID) return toast('Kein Projekt ausgewählt');
+  if(!currentUser) return toast('Nicht eingeloggt');
+  
   toast('📥 Lade aus Cloud...');
+  
   try {
     console.log('Fetching data for project:', CURRENT_PROJECT_ID);
     const { data, error } = await supabaseClient.from('pv_projects').select('*').eq('id', CURRENT_PROJECT_ID).single();
+    
     console.log('Fetch result:', { data, error });
     if(data && data.data){
       renderMatrix(data.data);
       toast('✅ Stand geladen');
-    } else if(error) { toast('Fehler: ' + error.message); console.error('Fetch error:', error); }
-    else { toast('Keine Daten in Cloud gefunden'); }
-  } catch(e) { toast('Verbindungsfehler: ' + e.message); console.error('Fetch exception:', e); }
+    } else if(error) { 
+      toast('Fehler: ' + error.message); 
+      console.error('Fetch error:', error); 
+    } else { 
+      toast('Keine Daten in Cloud gefunden'); 
+    }
+  } catch(e) { 
+    toast('Verbindungsfehler: ' + e.message); 
+    console.error('Fetch exception:', e); 
+  }
 }
 
 async function factoryResetCloud(){
@@ -1515,11 +1719,57 @@ async function onAuthenticated(user){
   const roleChip = g('user-badge-role');
   roleChip.textContent = roleLabels[currentUserRole] || '—';
   
+  // Teste Cloud-Verbindung
+  const cloudConnected = await testCloudConnection();
+  if(cloudConnected){
+    toast('☁️ Cloud-Verbindung aktiv');
+  } else {
+    toast('⚠️ Cloud-Verbindung fehlt');
+  }
+  
   initProjects();
+  
+  // Migriere lokale Projekte in Cloud falls nötig
+  if(cloudConnected){
+    await migrateLocalProjectsToCloud();
+  }
   
   // SVEN-LOGIK: Wenn Bauleitung, dann Inaktive Strings zwingend beim Start verstecken!
   if(currentUserRole === 'site') {
     toggleHideInactive(true);
+  }
+}
+
+async function migrateLocalProjectsToCloud(){
+  if(!supabaseClient || !currentUser) return;
+  
+  try {
+    // Hole alle Projekte aus Cloud
+    const { data: cloudProjects, error } = await supabaseClient.from('pv_projects').select('id');
+    if(error){
+      console.error('Fehler beim Laden der Cloud-Projekte:', error);
+      return;
+    }
+    
+    const cloudIds = new Set(cloudProjects ? cloudProjects.map(p => p.id) : []);
+    let migratedCount = 0;
+    
+    // Migriere lokale Projekte die nicht in Cloud sind
+    for(const projectId of Object.keys(PROJECTS)){
+      if(!cloudIds.has(projectId)){
+        const proj = PROJECTS[projectId];
+        console.log('Migriere Projekt nach Cloud:', projectId);
+        
+        await saveProjectToCloud(projectId);
+        migratedCount++;
+      }
+    }
+    
+    if(migratedCount > 0){
+      toast(`✅ ${migratedCount} Projekte in Cloud migriert`);
+    }
+  } catch(e){
+    console.error('Fehler bei Migration:', e);
   }
 }
 

@@ -546,7 +546,10 @@ function buildFilterBar(){
   const wrKeys = Object.keys(plan).map(k => parseInt(k)).filter(n => !isNaN(n)).sort((a,b) => a-b);
   if(wrKeys.length === 0){ bar.innerHTML = ''; return; }
   let html = `<button class="wr-tab active" data-wr="0" onclick="filterInverter(0, this)">⚡ Alle WRs (1–${wrKeys.length})</button>`;
-  wrKeys.forEach(wr => { html += `<button class="wr-tab" data-wr="${wr}" onclick="filterInverter(${wr}, this)">WR ${wr}</button>`; });
+wrKeys.forEach(wr => { 
+  const name = getCurrentPlan()[wr].name || `WR ${wr}`;
+  html += `<button class="wr-tab" data-wr="${wr}" onclick="filterInverter(${wr}, this)">${name}</button>`; 
+});
   bar.innerHTML = html;
 }
 
@@ -797,7 +800,7 @@ function renderMatrix(remoteOverride = null){
     bl.innerHTML = `
       <div class="wr-head">
         <div style="display:flex;align-items:center;gap:12px;">
-          <span class="wr-num">WR ${wr}</span>
+          <span class="wr-num">${wrData.name || 'WR ' + wr}</span>
           <span class="wr-kpis">${activeStrings} Strings &middot; ${mppts} MPPTs</span>
         </div>
         <div class="wr-kpis"><strong style="color:var(--accent);">${wrPwr.toFixed(2)} kWp</strong></div>
@@ -1078,7 +1081,8 @@ function renderNPWRPlan(){
     html += `
       <div class="np-wr-row">
         <div style="font-weight:800; font-size:0.8rem; margin-bottom:10px; color:var(--accent);">Wechselrichter ${wr}</div>
-        <div style="display:flex; gap:12px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <div style="flex:2; min-width:200px;"><label>Name/Bezeichnung</label><input type="text" id="np-name-${wr}" placeholder="z.B. WR 1 - Dach Ost" class="sp-inp"></div>
           <div style="flex:1;"><label>MPPTs</label><input type="number" id="np-mppts-${wr}" value="12" class="sp-inp sp-inp-center"></div>
           <div style="flex:1;"><label>Eingänge/MPPT</label><input type="number" id="np-inputs-${wr}" value="2" class="sp-inp sp-inp-center"></div>
           <div style="flex:1;"><label>Mods/String (Opt.)</label><input type="number" id="np-mods-${wr}" placeholder="Leer" class="sp-inp sp-inp-center"></div>
@@ -1106,12 +1110,14 @@ async function doCreateNewProject(){
   } else {
     for(let wr=1; wr<=count; wr++){
       plan[wr] = {
+        name: g(`np-name-${wr}`).value || `WR ${wr}`, // <--- HIER den Namen speichern
         mppts: parseInt(g(`np-mppts-${wr}`).value)||12,
         inputs: parseInt(g(`np-inputs-${wr}`).value)||2,
         defaultMods: parseInt(g(`np-mods-${wr}`).value)||0
       };
     }
   }
+  // ... (restlicher Code bleibt gleich)
   PROJECTS[id] = { id, name, model_wp: wp, plan };
   localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
   CURRENT_PROJECT_ID = id;

@@ -1600,10 +1600,10 @@ async function fetchProjectsFromCloud(){
     let query;
     if(currentUserRole === 'admin'){
       console.log('Admin-Modus: Lade alle Projekte');
-      query = supabaseClient.from('pv_projects').select('id, name, model_wp, config, updated_at, user_id, pruefer');
+      query = supabaseClient.from('pv_projects').select('id, name, config, updated_at, user_id, pruefer, modul_wp');
     } else {
       console.log('User-Modus: Lade nur eigene Projekte');
-      query = supabaseClient.from('pv_projects').select('id, name, model_wp, config, updated_at, user_id, pruefer').eq('user_id', currentUser.id);
+      query = supabaseClient.from('pv_projects').select('id, name, config, updated_at, user_id, pruefer, modul_wp').eq('user_id', currentUser.id);
     }
     
     const { data, error } = await query;
@@ -1626,7 +1626,7 @@ async function fetchProjectsFromCloud(){
         PROJECTS[cloudProj.id] = {
           id: cloudProj.id,
           name: cloudProj.name || 'Unbenannt',
-          model_wp: cloudProj.modul_wp || 465,
+          model_wp: cloudProj.modul_wp || 465, // Fallback wenn Spalte fehlt
           plan: cloudProj.config || {},
           updated_at: cloudProj.updated_at,
           user_id: cloudProj.user_id
@@ -1671,7 +1671,7 @@ async function saveProjectToCloud(projectId){
       name: proj.name || 'Unbenanntes Projekt',
       pruefer: currentUser.email || 'unbekannt',
       user_id: currentUser.id, // User ID als UUID
-      modul_wp: proj.model_wp || 465,
+      modul_wp: proj.model_wp || 465, // modul_wp ist der Spaltenname in Supabase
       mppts: "dynamic",
       data: stateData,
       config: proj.plan,
@@ -1712,7 +1712,7 @@ async function pushCloudDataManually(){
       id: CURRENT_PROJECT_ID,
       name: proj.name,
       pruefer: currentUser.email,
-      modul_wp: proj.model_wp,
+      modul_wp: proj.model_wp || 465,
       mppts: "dynamic",
       data: stateData,
       config: proj.plan,

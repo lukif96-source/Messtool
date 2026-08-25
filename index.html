@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
-<title>SOLPRO | PV Matrix Tool</title>
+<title>SOLPRO | PV Matrix Tool v2</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -69,7 +69,7 @@ body.sun-mode .wr-head { background: rgba(255, 255, 255, 0.95); }
 .wr-num { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 800; background: var(--accent); color: #000; padding: 4px 10px; border-radius: 6px; }
 .wr-kpis { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
 
-table.mt { width: 100%; border-collapse: collapse; }
+table.mt { width: 100%; border-collapse: collapse; table-layout: fixed; }
 table.mt thead th { position: sticky; top: 61px; z-index: 20; padding: 10px 8px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--muted); background: var(--bg); text-align: center; border-bottom: 1px solid var(--border); }
 table.mt td { padding: 8px; font-size: 0.85rem; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; }
 table.mt tbody tr:hover { background: var(--panel); }
@@ -171,6 +171,12 @@ body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
   .print-cell { display: inline !important; font-weight: bold; }
 }
 .print-cell { display: none; }
+
+/* File upload styling */
+.file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; }
+.file-upload-wrapper input[type=file] { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.file-upload-btn { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: var(--accent-glow); border: 2px dashed var(--accent); border-radius: 12px; color: var(--accent); font-weight: 700; cursor: pointer; transition: all 0.2s; width: 100%; justify-content: center; }
+.file-upload-btn:hover { background: var(--accent); color: #000; }
 </style>
 </head>
 <body>
@@ -182,7 +188,7 @@ body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
   <div class="auth-card">
     <div style="font-size:1.8rem;font-weight:900;color:var(--accent);margin-bottom:14px;letter-spacing:-0.05em;">SOLPRO</div>
     <div style="font-size:1.25rem;font-weight:800;color:var(--text);margin-bottom:4px;" id="auth-title">Anmelden</div>
-    <div style="font-size:0.8rem;color:var(--muted);margin-bottom:20px;">PV Matrix Tool</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-bottom:20px;">PV Matrix Tool v2</div>
     <div class="auth-error" id="auth-error"></div>
     <div class="auth-field">
       <label>E-Mail</label>
@@ -218,6 +224,35 @@ body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
   </div>
 </div>
 
+<!-- PVSOL IMPORT MODAL -->
+<div id="pvsol-modal" class="modal-overlay" onclick="closePVSOLModal(event)">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h2>📊 PVSOL Import</h2>
+      <button onclick="closePVSOLModal()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;line-height:1.4;">
+        Importiere Wechselrichter-Konfiguration aus PVSOL JSON-Export. Die MPPT-Belegung wird automatisch übernommen.
+      </div>
+      <div class="file-upload-wrapper">
+        <button class="file-upload-btn">
+          <span>📁</span> <span id="pvsol-file-label">JSON-Datei auswählen</span>
+        </button>
+        <input type="file" id="pvsol-file-input" accept=".json" onchange="handlePVSOLFile(this)">
+      </div>
+      <div id="pvsol-preview" style="margin-top:16px; display:none;">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--muted);margin-bottom:8px;">Vorschau:</div>
+        <div id="pvsol-preview-content" style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:0.8rem;"></div>
+      </div>
+      <div style="display:flex; gap:12px; margin-top:16px;">
+        <button onclick="closePVSOLModal()" class="btn btn-ghost" style="flex:1;">Abbrechen</button>
+        <button onclick="confirmPVSOLImport()" class="btn btn-primary" style="flex:1;" id="pvsol-confirm-btn" disabled>Importieren</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MOBILE HEADER -->
 <div class="top-bar-mobile no-print">
   <div style="font-weight:900; font-size:1.1rem; color:var(--accent); letter-spacing:-0.05em;">SOLPRO</div>
@@ -228,7 +263,7 @@ body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
 <aside class="sidebar no-print" id="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-logo">SOLPRO</div>
-    <div class="sidebar-subtitle">Matrix Tool &middot; KISS Edition</div>
+    <div class="sidebar-subtitle">Matrix Tool v2</div>
   </div>
 
   <div class="user-badge" id="user-badge" style="display:none;">
@@ -244,7 +279,10 @@ body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
     </button>
   </div>
 
-  <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Aktionen & Export</div>
+  <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Import & Export</div>
+  <button onclick="openPVSOLModal();closeSidebar();" class="sidebar-btn role-gate-planner">
+    <span class="icon" style="color:#3b82f6;">📊</span><span class="label">PVSOL Import</span>
+  </button>
   <button onclick="pushCloudDataManually();closeSidebar();" class="sidebar-btn">
     <span class="icon" style="color:#3b82f6;">☁️</span><span class="label">In Cloud sichern</span>
   </button>
@@ -412,8 +450,9 @@ let currentUser = null;
 let currentUserRole = null;
 let authMode = 'login';
 let hideInactive = false;
+let pendingPVSOLData = null;
 
-const STORAGE_KEYS = { projects: 'solpro_projects_v2', data: 'solpro_data_v2', current: 'solpro_curr_v2' };
+const STORAGE_KEYS = { projects: 'solpro_projects_v3', data: 'solpro_data_v3', current: 'solpro_curr_v3' };
 
 const g = id => document.getElementById(id);
 let toast_t = null;
@@ -661,29 +700,29 @@ function renderMatrix(remoteOverride = null){
 
         rowsHtml += `
           <tr id="row-${id}" class="${(s===1 && m>1) ? 'mppt-div' : ''} ${!isJa ? 'row-nein' : ''}">
-            <td data-label="Klemme" style="text-align:left; padding-left:14px;">
+            <td data-label="Klemme" style="text-align:left; padding-left:14px; width:14%;">
                <div style="display:flex;flex-direction:column;gap:2px;">
                  <span class="string-id">${id}</span>
                  ${strLabel}
                </div>
             </td>
-            <td data-label="GAK"><input type="text" id="gak-${id}" value="${item.gak}" class="sp-inp sp-inp-center sp-inp-gak" oninput="saveData('${id}', 'gak', this.value)">
+            <td data-label="GAK" style="width:10%;"><input type="text" id="gak-${id}" value="${item.gak}" class="sp-inp sp-inp-center sp-inp-gak" oninput="saveData('${id}', 'gak', this.value)">
                <span class="print-cell">${item.gak}</span>
             </td>
-            <td data-label="Aktiv" class="no-print">
+            <td data-label="Aktiv" class="no-print" style="width:10%;">
               <div class="tog-wrap">
                 <button id="tja-${id}" class="tog ${isJa?'on-ja':''}" onclick="setStat('${id}','JA')">JA</button>
                 <button id="tnei-${id}" class="tog ${!isJa?'on-nei':''}" onclick="setStat('${id}','NEIN')">NEIN</button>
               </div>
             </td>
-            <td data-label="Module"><input type="number" id="mod-${id}" value="${item.mod||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'mod', this.value); updateKPIs();">
+            <td data-label="Module" style="width:10%;"><input type="number" id="mod-${id}" value="${item.mod||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'mod', this.value); updateKPIs();">
                <span class="print-cell" id="pm-${id}">${item.mod > 0 ? item.mod : '—'}</span>
             </td>
-            <td data-label="kWp" class="pwr-cell" id="pw-${id}">${pwr}</td>
-            <td data-label="Uoc(V)"><input type="text" inputmode="decimal" id="uoc-${id}" value="${item.uoc||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'uoc', this.value)"></td>
-            <td data-label="Isc(A)"><input type="text" inputmode="decimal" id="isc-${id}" value="${item.isc||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'isc', this.value)"></td>
-            <td data-label="Riso(MΩ)"><input type="text" inputmode="decimal" id="riso-${id}" value="${item.riso||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'riso', this.value)"></td>
-            <td data-label="Info" class="col-note" style="text-align:left;">
+            <td data-label="kWp" class="pwr-cell" style="width:10%;" id="pw-${id}">${pwr}</td>
+            <td data-label="Uoc(V)" style="width:10%;"><input type="text" inputmode="decimal" id="uoc-${id}" value="${item.uoc||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'uoc', this.value)"></td>
+            <td data-label="Isc(A)" style="width:10%;"><input type="text" inputmode="decimal" id="isc-${id}" value="${item.isc||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'isc', this.value)"></td>
+            <td data-label="Riso(MΩ)" style="width:10%;"><input type="text" inputmode="decimal" id="riso-${id}" value="${item.riso||''}" class="sp-inp sp-inp-center" oninput="saveData('${id}', 'riso', this.value)"></td>
+            <td data-label="Info" class="col-note" style="text-align:left; width:16%;">
               <input type="text" id="note-${id}" value="${item.note||''}" class="sp-inp" style="text-align:left;" oninput="saveData('${id}', 'note', this.value)">
               <span class="print-cell" style="font-size:7pt;color:#71717a;">${item.note||''}</span>
             </td>
@@ -702,11 +741,11 @@ function renderMatrix(remoteOverride = null){
       <div style="overflow-x:auto;">
         <table class="mt">
           <thead><tr>
-            <th style="width:14%;text-align:left;padding-left:14px;">Klemme</th><th style="width:10%;">GAK</th>
+            <th style="text-align:left;padding-left:14px;width:14%;">Klemme</th><th style="width:10%;">GAK</th>
             <th class="no-print" style="width:10%;">Aktiv</th>
             <th style="width:10%;">Mods</th><th style="width:10%;">kWp</th>
             <th style="width:10%;">Uoc(V)</th><th style="width:10%;">Isc(A)</th>
-            <th style="width:10%;">Riso(MΩ)</th><th style="width:16%;text-align:left;">Bemerkung</th>
+            <th style="width:10%;">Riso(MΩ)</th><th style="text-align:left;width:16%;">Bemerkung</th>
           </tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
@@ -754,6 +793,141 @@ function setStat(id, st) {
 }
 
 function updateKPIs(){ renderMatrix(); }
+
+// === PVSOL IMPORT LOGIC ===
+function openPVSOLModal(){
+  pendingPVSOLData = null;
+  g('pvsol-file-input').value = '';
+  g('pvsol-file-label').textContent = 'JSON-Datei auswählen';
+  g('pvsol-preview').style.display = 'none';
+  g('pvsol-confirm-btn').disabled = true;
+  g('pvsol-modal').classList.add('show');
+}
+function closePVSOLModal(e){ if(!e || e.target===e.currentTarget) g('pvsol-modal').classList.remove('show'); }
+
+function handlePVSOLFile(input){
+  const file = input.files[0];
+  if(!file) return;
+  
+  g('pvsol-file-label').textContent = file.name;
+  
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const json = JSON.parse(e.target.result);
+      pendingPVSOLData = json;
+      
+      // Validate PVSOL structure
+      if(!json.Configuration || !json.Configuration.ModuleAreas){
+        toast('Ungültiges PVSOL-Format');
+        pendingPVSOLData = null;
+        return;
+      }
+      
+      // Parse and show preview
+      const parsed = parsePVSOLData(json);
+      showPVSOLPreview(parsed);
+      g('pvsol-confirm-btn').disabled = false;
+      
+    } catch(err){
+      toast('Fehler beim Parsen: ' + err.message);
+      pendingPVSOLData = null;
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parsePVSOLData(json){
+  const plan = {};
+  let totalWp = 0;
+  
+  json.Configuration.ModuleAreas.forEach(area => {
+    area.Inverters.forEach(inv => {
+      const wrNum = inv.Number;
+      const configs = inv.Configuration || [];
+      
+      // Count MPPTs and inputs
+      let mpptCount = 0;
+      let inputsPerMppt = 2;
+      const mpptData = [];
+      
+      configs.forEach(config => {
+        if(config.includes('nicht belegt')) return;
+        
+        const match = config.match(/MPP\s+(\d+):\s*(\d+)\s*x\s*(\d+)/);
+        if(match){
+          const mpptNum = parseInt(match[1]);
+          const inputCount = parseInt(match[2]);
+          const modulesPerString = parseInt(match[3]);
+          
+          mpptCount = Math.max(mpptCount, mpptNum);
+          mpptData[mpptNum] = {
+            inputs: inputCount,
+            modules: modulesPerString
+          };
+          
+          totalWp += inputCount * modulesPerString * 460; // Default 460W, will be adjusted
+        }
+      });
+      
+      if(mpptCount === 0) mpptCount = 3; // Default 3 MPPTs
+      
+      plan[wrNum] = {
+        mppts: mpptCount,
+        inputs: inputsPerMppt,
+        defaultMods: 0,
+        mpptData: mpptData
+      };
+    });
+  });
+  
+  return { plan, totalWp };
+}
+
+function showPVSOLPreview(parsed){
+  const preview = g('pvsol-preview-content');
+  const wrCount = Object.keys(parsed.plan).length;
+  
+  let html = `<div style="margin-bottom:8px;"><strong>${wrCount} Wechselrichter</strong> gefunden</div>`;
+  html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+  
+  Object.keys(parsed.plan).sort((a,b)=>a-b).forEach(wr => {
+    const wrData = parsed.plan[wr];
+    html += `<div style="display:flex;justify-content:space-between;padding:4px 8px;background:var(--panel);border-radius:4px;">
+      <span>WR ${wr}</span>
+      <span style="color:var(--muted);">${wrData.mppts} MPPTs</span>
+    </div>`;
+  });
+  
+  html += '</div>';
+  preview.innerHTML = html;
+  g('pvsol-preview').style.display = 'block';
+}
+
+function confirmPVSOLImport(){
+  if(!pendingPVSOLData) return;
+  
+  const parsed = parsePVSOLData(pendingPVSOLData);
+  
+  // Create new project from PVSOL data
+  const projectName = pendingPVSOLData.ProjectOverview?.ProjectData?.ProjectName || 'PVSOL Import';
+  const wp = 460; // Default, can be adjusted
+  
+  let id = projectName.replace(/[^a-zA-Z0-9]/g, '_');
+  if(PROJECTS[id]) id += '_' + Date.now();
+  
+  PROJECTS[id] = {
+    id,
+    name: projectName,
+    model_wp: wp,
+    plan: parsed.plan
+  };
+  
+  localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
+  closePVSOLModal();
+  selectProject(id);
+  toast('✅ PVSOL-Import erfolgreich');
+}
 
 // === NEW PROJECT LOGIC ===
 function openProjectsModal(){

@@ -96,7 +96,7 @@ body.sun-mode .wr-head { background: rgba(255, 255, 255, 0.95); }
 .wr-kpis { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
 
 table.mt { width: 100%; border-collapse: collapse; table-layout: fixed; }
-table.mt thead th { position: sticky; top: 61px; z-index: 20; padding: 6px 4px; font-size: 0.55rem; font-weight: 700; text-transform: uppercase; color: var(--muted); background: var(--bg); text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.mt thead th { padding: 6px 4px; font-size: 0.55rem; font-weight: 700; text-transform: uppercase; color: var(--muted); background: var(--bg); text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
 table.mt td { padding: 4px 2px; font-size: 0.7rem; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 table.mt tbody tr:hover { background: var(--panel); }
 table.mt tbody tr.row-nein { opacity: 0.35; transition: opacity 0.2s; }
@@ -741,7 +741,7 @@ function renderMatrix(remoteOverride = null){
     let wrMods = 0, wrPwr = 0, activeStrings = 0;
 
     for(let m = 1; m <= mppts; m++){
-      // --- MPPT ÜBERSCHRIFT ---
+      // --- MPPT Header Row ---
       rowsHtml += `
         <tr class="mppt-header">
           <td colspan="9">⚡ MPPT ${m}</td>

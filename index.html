@@ -248,14 +248,14 @@ table.mt tbody tr.row-nein { opacity: 0.25; }
 .mobile-fab .btn { flex: 1; min-height: 48px; font-size: 0.85rem; border-radius: 10px; }
 
 /* === PROJECT MODAL === */
-#projects-modal, #newproj-modal {
+#projects-modal, #newproj-modal, #users-modal {
   display: none; position: fixed; inset: 0; z-index: 200;
   background: rgba(0,0,0,0.7);
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   align-items: center; justify-content: center;
   padding: 16px;
 }
-#projects-modal.show, #newproj-modal.show { display: flex; }
+#projects-modal.show, #newproj-modal.show, #users-modal.show { display: flex; }
 .proj-modal-card {
   background: var(--panel); border: 1px solid var(--border);
   border-radius: 16px; width: 100%; max-width: 560px;
@@ -656,11 +656,119 @@ body.sun-mode .sidebar-toggle { background: #ffffff; border-color: #cbd5e1; colo
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* === AUTH / LOGIN GATE === */
+#auth-gate {
+  position: fixed; inset: 0; z-index: 5000;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.auth-card {
+  width: 100%; max-width: 380px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 24px;
+}
+.auth-logo {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: var(--green); color: #0c1220;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 1.25rem; margin-bottom: 14px;
+}
+.auth-title { font-size: 1.25rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.auth-sub { font-size: 0.8rem; color: var(--muted); margin-bottom: 20px; }
+.auth-field { margin-bottom: 12px; }
+.auth-field label { display:block; font-size:0.72rem; font-weight:700; color: var(--muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px; }
+.auth-field input {
+  width: 100%; min-height: 46px; padding: 0 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); font-size: 0.95rem; font-family: inherit;
+}
+.auth-field input:focus { outline: none; border-color: var(--green); }
+.auth-error { font-size: 0.8rem; color: #f87171; margin-bottom: 10px; min-height: 1em; }
+.auth-actions { display:flex; gap:8px; margin-top: 6px; }
+.auth-switch { margin-top: 16px; font-size: 0.8rem; color: var(--muted); text-align:center; }
+.auth-switch button { background:none; border:none; color: var(--green); font-weight:700; cursor:pointer; padding: 0; font-size: 0.8rem; }
+
+.user-badge {
+  display:flex; align-items:center; gap:8px;
+  padding: 10px 12px; margin: 4px 10px 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  font-size: 0.78rem; color: var(--muted);
+}
+.user-badge .role-chip {
+  font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 7px; border-radius: 999px; background: rgba(159,193,49,0.15); color: var(--green);
+}
+.user-badge .role-chip.role-site { background: rgba(56,189,248,0.15); color: #38bdf8; }
+.user-badge .role-chip.role-admin { background: rgba(239,68,68,0.15); color: #f87171; }
+
+/* Admin: Benutzerverwaltung */
+.user-row {
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px;
+}
+.user-row .email { font-weight: 700; font-size: 0.85rem; color: var(--text); flex: 1; min-width: 160px; word-break: break-all; }
+.user-row select {
+  background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 6px 8px; font-size: 0.8rem; font-family: inherit;
+}
+
+.hidden-role { display: none !important; }
 </style>
 </head>
 <body>
 
 <div id="toast"></div>
+
+<!-- AUTH GATE -->
+<div id="auth-gate">
+  <div class="auth-card">
+    <div class="auth-logo">S</div>
+    <div class="auth-title" id="auth-title">Anmelden</div>
+    <div class="auth-sub">SOLPRO PV Matrix Tool</div>
+
+    <div class="auth-error" id="auth-error"></div>
+
+    <div class="auth-field">
+      <label>E-Mail</label>
+      <input type="email" id="auth-email" autocomplete="username" placeholder="name@solpro.at">
+    </div>
+    <div class="auth-field">
+      <label>Passwort</label>
+      <input type="password" id="auth-password" autocomplete="current-password" placeholder="••••••••">
+    </div>
+
+    <div class="auth-actions">
+      <button class="btn btn-green" style="flex:1;min-height:46px;" id="auth-submit-btn" onclick="handleAuthSubmit()">Anmelden</button>
+    </div>
+
+    <div class="auth-switch">
+      <span id="auth-switch-text">Noch kein Konto?</span>
+      <button onclick="toggleAuthMode()" id="auth-switch-btn">Registrieren</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER ADMIN MODAL -->
+<div id="users-modal" onclick="closeUsersModal(event)">
+  <div class="proj-modal-card" onclick="event.stopPropagation()">
+    <div class="proj-modal-head">
+      <h2>👤 Benutzerverwaltung</h2>
+      <button onclick="closeUsersModal()" class="btn btn-ghost" style="padding:6px 10px;min-width:38px;">✕</button>
+    </div>
+    <div class="proj-modal-body">
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:14px;line-height:1.4;">
+        Rollen: <b>Admin</b> (volle Kontrolle inkl. Benutzerverwaltung), <b>Planer</b> (Projekte anlegen/planen),
+        <b>Bauleitung</b> (nur String-Status, Module, Messwerte eingeben). Neue Registrierungen starten als
+        Bauleitung und müssen hier hochgestuft werden.
+      </div>
+      <div id="users-list">Lade Benutzer...</div>
+    </div>
+  </div>
+</div>
 
 <button class="sidebar-toggle no-print" onclick="toggleSidebar()" aria-label="Menü">☰</button>
 <div class="sidebar-overlay no-print" id="sidebar-overlay" onclick="closeSidebar()"></div>
@@ -672,6 +780,11 @@ body.sun-mode .sidebar-toggle { background: #ffffff; border-color: #cbd5e1; colo
       <div class="sidebar-title">SOLPRO</div>
       <div class="sidebar-subtitle">PV Matrix Tool</div>
     </div>
+  </div>
+
+  <div class="user-badge" id="user-badge" style="display:none;">
+    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="user-badge-email">—</span>
+    <span class="role-chip" id="user-badge-role">—</span>
   </div>
 
   <div class="sidebar-section">Projekt</div>
@@ -701,12 +814,18 @@ body.sun-mode .sidebar-toggle { background: #ffffff; border-color: #cbd5e1; colo
     <span class="icon">📊</span><span class="label">Prüfprotokoll</span>
   </button>
 
-  <div class="sidebar-section">Einstellungen</div>
+  <div class="sidebar-section role-gate-planner">Verwaltung</div>
+  <button onclick="openUsersModal();closeSidebar();" class="sidebar-btn role-gate-admin">
+    <span class="icon">👤</span><span class="label">Benutzerverwaltung</span>
+  </button>
   <button onclick="toggleSunMode();closeSidebar();" class="sidebar-btn" id="btn-sun">
     <span class="icon">☀️</span><span class="label">Dach-Modus</span>
   </button>
-  <button onclick="factoryResetCloud();closeSidebar();" class="sidebar-btn red">
+  <button onclick="factoryResetCloud();closeSidebar();" class="sidebar-btn red role-gate-planner">
     <span class="icon">🚨</span><span class="label">Plan zurücksetzen</span>
+  </button>
+  <button onclick="doLogout();closeSidebar();" class="sidebar-btn">
+    <span class="icon">🚪</span><span class="label">Abmelden</span>
   </button>
 
   <div class="sidebar-footer">
@@ -827,6 +946,11 @@ body.sun-mode .sidebar-toggle { background: #ffffff; border-color: #cbd5e1; colo
 const SB_URL = "https://rcuimtfmjkpxkazbsggj.supabase.co";
 const SB_KEY = "sb_publishable_pe8Ye20-e9az1D5MvNCB5A_8_ai7afc";
 let supabaseClient = window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null;
+
+// === AUTH / BENUTZERVERWALTUNG ===
+let currentUser = null;      // { id, email }
+let currentUserRole = null;  // 'admin' | 'planner' | 'site'
+let authMode = 'login';      // 'login' | 'register'
 const STORAGE_KEYS = {
   projects: 'sp_projects_v1',
   data: 'sp_projects_data_v1',
@@ -1649,11 +1773,13 @@ function renderProjectsList(){
         </div>
         <div class="proj-list-item-actions">
           <button onclick="selectProject('${id}')" class="btn ${isCurrent ? 'btn-green' : 'btn-ghost'}" style="border-color:${isCurrent ? 'transparent' : '#38bdf8'};color:${isCurrent ? '#061200' : '#38bdf8'};">${isCurrent ? 'Aktiv' : 'Öffnen'}</button>
-          ${ids.length > 1 ? `<button onclick="deleteProject('${id}')" class="btn btn-ghost" style="border-color:#dc2626;color:#dc2626;">Löschen</button>` : ''}
+          ${(ids.length > 1 && currentUserRole !== 'site') ? `<button onclick="deleteProject('${id}')" class="btn btn-ghost" style="border-color:#dc2626;color:#dc2626;">Löschen</button>` : ''}
         </div>
       </div>`;
   });
-  html += `<button onclick="openNewProjectModal()" class="btn btn-green">➕ Neues Projekt erstellen</button>`;
+  if(currentUserRole !== 'site'){
+    html += `<button onclick="openNewProjectModal()" class="btn btn-green">➕ Neues Projekt erstellen</button>`;
+  }
   list.innerHTML = html;
 }
 
@@ -1864,10 +1990,219 @@ document.addEventListener('change', e => {
   }
 });
 
-window.onload = () => {
+// ---------- AUTH FLOW ----------
+
+function toggleAuthMode(){
+  authMode = authMode === 'login' ? 'register' : 'login';
+  g('auth-title').textContent = authMode === 'login' ? 'Anmelden' : 'Konto erstellen';
+  g('auth-submit-btn').textContent = authMode === 'login' ? 'Anmelden' : 'Registrieren';
+  g('auth-switch-text').textContent = authMode === 'login' ? 'Noch kein Konto?' : 'Bereits registriert?';
+  g('auth-switch-btn').textContent = authMode === 'login' ? 'Registrieren' : 'Anmelden';
+  g('auth-error').textContent = '';
+}
+
+async function handleAuthSubmit(){
+  const email = (g('auth-email').value || '').trim();
+  const password = g('auth-password').value || '';
+  const errEl = g('auth-error');
+  errEl.textContent = '';
+
+  if(!email || !password){
+    errEl.textContent = 'Bitte E-Mail und Passwort eingeben.';
+    return;
+  }
+  if(!supabaseClient){
+    errEl.textContent = 'Keine Verbindung zu Supabase.';
+    return;
+  }
+
+  if(authMode === 'login'){
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if(error){
+      errEl.textContent = 'Login fehlgeschlagen: ' + error.message;
+      return;
+    }
+    await onAuthenticated(data.user);
+  } else {
+    const { data, error } = await supabaseClient.auth.signUp({ email, password });
+    if(error){
+      errEl.textContent = 'Registrierung fehlgeschlagen: ' + error.message;
+      return;
+    }
+    if(data.session){
+      // E-Mail-Bestätigung ist deaktiviert -> direkt eingeloggt
+      await onAuthenticated(data.user);
+    } else {
+      errEl.style.color = 'var(--green)';
+      errEl.textContent = 'Konto erstellt! Falls E-Mail-Bestätigung aktiv ist, bitte den Link in deinem Postfach öffnen und dich danach anmelden.';
+      toggleAuthMode();
+    }
+  }
+}
+
+async function doLogout(){
+  if(!confirm('Wirklich abmelden?')) return;
+  if(supabaseClient) await supabaseClient.auth.signOut();
+  currentUser = null;
+  currentUserRole = null;
+  g('user-badge').style.display = 'none';
+  g('auth-gate').style.display = 'flex';
+  g('auth-email').value = '';
+  g('auth-password').value = '';
+}
+
+async function checkSession(){
+  if(!supabaseClient){
+    // Kein Supabase verbunden -> Login-Gate anzeigen, aber Hinweis geben
+    g('auth-error').textContent = 'Keine Verbindung zu Supabase konfiguriert.';
+    return;
+  }
+  const { data } = await supabaseClient.auth.getSession();
+  if(data && data.session && data.session.user){
+    await onAuthenticated(data.session.user);
+  }
+}
+
+async function onAuthenticated(user){
+  currentUser = user;
+  g('auth-gate').style.display = 'none';
+
+  await loadMyProfile();
+  applyRoleGating();
+
+  g('user-badge').style.display = 'flex';
+  g('user-badge-email').textContent = currentUser.email;
+  const roleLabels = { admin: 'Admin', planner: 'Planer', site: 'Bauleitung' };
+  const roleChip = g('user-badge-role');
+  roleChip.textContent = roleLabels[currentUserRole] || '—';
+  roleChip.className = 'role-chip' + (currentUserRole === 'site' ? ' role-site' : currentUserRole === 'admin' ? ' role-admin' : '');
+
+  // App erst jetzt initialisieren (Daten laden, Matrix rendern)
   initProjects();
   updateProjectSelector();
   renderMatrix(null);
+}
+
+async function loadMyProfile(){
+  try {
+    const { data, error } = await supabaseClient
+      .from('profiles')
+      .select('role')
+      .eq('id', currentUser.id)
+      .single();
+    if(error || !data){
+      // Fallback: Profil evtl. noch nicht vom Trigger angelegt worden
+      currentUserRole = 'site';
+      return;
+    }
+    currentUserRole = data.role || 'site';
+  } catch(e){
+    currentUserRole = 'site';
+  }
+}
+
+function applyRoleGating(){
+  const isAdmin = currentUserRole === 'admin';
+  const isPlannerUp = currentUserRole === 'admin' || currentUserRole === 'planner';
+
+  document.querySelectorAll('.role-gate-admin').forEach(el => {
+    el.classList.toggle('hidden-role', !isAdmin);
+  });
+  document.querySelectorAll('.role-gate-planner').forEach(el => {
+    el.classList.toggle('hidden-role', !isPlannerUp);
+  });
+}
+
+// ---------- ADMIN: BENUTZERVERWALTUNG ----------
+
+function openUsersModal(){
+  if(currentUserRole !== 'admin'){
+    toast('Nur für Admins verfügbar');
+    return;
+  }
+  g('users-modal').classList.add('show');
+  loadAllUsers();
+}
+
+function closeUsersModal(evt){
+  if(evt && evt.target !== g('users-modal')) return;
+  g('users-modal').classList.remove('show');
+}
+
+async function loadAllUsers(){
+  const listEl = g('users-list');
+  listEl.innerHTML = 'Lade Benutzer...';
+  try {
+    const { data, error } = await supabaseClient
+      .from('profiles')
+      .select('id, email, role, created_at')
+      .order('created_at', { ascending: true });
+    if(error){
+      listEl.innerHTML = `<div style="color:#f87171;font-size:0.85rem;">Fehler: ${escapeHtml(error.message)}</div>`;
+      return;
+    }
+    renderUsersList(data || []);
+  } catch(e){
+    listEl.innerHTML = `<div style="color:#f87171;font-size:0.85rem;">Fehler: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderUsersList(users){
+  const listEl = g('users-list');
+  if(users.length === 0){
+    listEl.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">Keine Benutzer gefunden.</div>';
+    return;
+  }
+  listEl.innerHTML = users.map(u => `
+    <div class="user-row">
+      <span class="email">${escapeHtml(u.email)}${u.id === currentUser.id ? ' (du)' : ''}</span>
+      <select onchange="changeUserRole('${u.id}', this.value)" ${u.id === currentUser.id ? 'disabled title="Eigene Rolle nicht änderbar"' : ''}>
+        <option value="site" ${u.role === 'site' ? 'selected' : ''}>Bauleitung</option>
+        <option value="planner" ${u.role === 'planner' ? 'selected' : ''}>Planer</option>
+        <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+      </select>
+    </div>
+  `).join('');
+}
+
+async function changeUserRole(userId, newRole){
+  if(currentUserRole !== 'admin') return toast('Nur für Admins verfügbar');
+  try {
+    const { error } = await supabaseClient
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', userId);
+    if(error){
+      toast('Fehler beim Ändern der Rolle: ' + error.message);
+      return;
+    }
+    toast('Rolle aktualisiert');
+  } catch(e){
+    toast('Fehler: ' + e.message);
+  }
+}
+
+// Zusätzliche Absicherung auf Funktionsebene (nicht nur UI-Ausblendung)
+const _origDeleteProject = deleteProject;
+deleteProject = function(id){
+  if(currentUserRole === 'site') return toast('Im Bauleitung-Modus nicht verfügbar');
+  return _origDeleteProject(id);
+};
+
+const _origFactoryResetCloud = factoryResetCloud;
+factoryResetCloud = function(){
+  if(currentUserRole === 'site') return toast('Im Bauleitung-Modus nicht verfügbar');
+  return _origFactoryResetCloud();
+};
+
+const _origDoCreateNewProject = doCreateNewProject;
+doCreateNewProject = function(){
+  if(currentUserRole === 'site') return toast('Im Bauleitung-Modus nicht verfügbar');
+  return _origDoCreateNewProject();
+};
+
+window.onload = () => {
+  checkSession();
 };
 </script>
 </body>

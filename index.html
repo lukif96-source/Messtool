@@ -394,6 +394,7 @@ body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
         <div style="font-size:0.8rem; color:var(--muted);">Verwalte und synchronisiere deine PV-Projekte</div>
       </div>
       <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" onclick="debugCloudProjects()">🔍 Debug</button>
         <button class="btn btn-ghost" onclick="refreshProjects()">🔄 Aktualisieren</button>
         <button class="btn btn-primary role-gate-planner" onclick="openNewProjectModal()">+ Neues Projekt</button>
       </div>
@@ -958,6 +959,28 @@ function handlePVSOLFile(input){
 function parsePVSOLData(json){
   const plan = {};
   let totalWp = 0;
+  let projectName = '';
+  let moduleWp = 460; // Default
+  
+  // Projektnamen extrahieren
+  if(json.ProjectOverview && json.ProjectOverview.ProjectData && json.ProjectOverview.ProjectData.ProjectName){
+    projectName = json.ProjectOverview.ProjectData.ProjectName;
+  }
+  
+  // Modul-Wp aus den ModuleAreas extrahieren
+  if(json.Configuration && json.Configuration.ModuleAreas && json.Configuration.ModuleAreas.length > 0){
+    const firstArea = json.Configuration.ModuleAreas[0];
+    if(firstArea.ModuleData){
+      // Extrahiere Wp aus Modul-Bezeichnung wie "JAM54D40-460/LB"
+      const wpMatch = firstArea.ModuleData.match(/(\d+)W?/);
+      if(wpMatch){
+        const extractedWp = parseInt(wpMatch[1]);
+        if(extractedWp > 0 && extractedWp < 1000){
+          moduleWp = extractedWp;
+        }
+      }
+    }
+  }
   
   json.Configuration.ModuleAreas.forEach(area => {
     area.Inverters.forEach(inv => {
@@ -984,7 +1007,7 @@ function parsePVSOLData(json){
             modules: modulesPerString
           };
           
-          totalWp += inputCount * modulesPerString * 460; // Default 460W, will be adjusted
+          totalWp += inputCount * modulesPerString * moduleWp;
         }
       });
       
@@ -999,7 +1022,7 @@ function parsePVSOLData(json){
     });
   });
   
-  return { plan, totalWp };
+  return { plan, totalWp, projectName, moduleWp };
 }
 
 function showPVSOLPreview(parsed){
@@ -1007,6 +1030,15 @@ function showPVSOLPreview(parsed){
   const wrCount = Object.keys(parsed.plan).length;
   
   let html = `<div style="margin-bottom:8px;"><strong>${wrCount} Wechselrichter</strong> gefunden</div>`;
+  
+  if(parsed.projectName){
+    html += `<div style="margin-bottom:8px;"><strong>Projektname:</strong> ${parsed.projectName}</div>`;
+  }
+  
+  if(parsed.moduleWp){
+    html += `<div style="margin-bottom:8px;"><strong>Modul-Leistung:</strong> ${parsed.moduleWp} Wp</div>`;
+  }
+  
   html += '<div style="display:flex;flex-direction:column;gap:4px;">';
   
   Object.keys(parsed.plan).sort((a,b)=>a-b).forEach(wr => {
@@ -1027,9 +1059,9 @@ function confirmPVSOLImport(){
   
   const parsed = parsePVSOLData(pendingPVSOLData);
   
-  // Create new project from PVSOL data
-  const projectName = pendingPVSOLData.ProjectOverview?.ProjectData?.ProjectName || 'PVSOL Import';
-  const wp = 460; // Default, can be adjusted
+  // Use extracted project name and module Wp
+  const projectName = parsed.projectName || 'PVSOL Import';
+  const wp = parsed.moduleWp || 460;
   
   let id = projectName.replace(/[^a-zA-Z0-9]/g, '_');
   if(PROJECTS[id]) id += '_' + Date.now();
@@ -1042,6 +1074,12 @@ function confirmPVSOLImport(){
   };
   
   localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
+  
+  // Speichere direkt in Cloud
+  if(supabaseClient && currentUser){
+    saveProjectToCloud(id);
+  }
+  
   closePVSOLModal();
   selectProject(id);
   toast('✅ PVSOL-Import erfolgreich');
@@ -1073,13 +1111,63 @@ async function openProjectsModal(){
 function closeProjectsModal(e){ if(!e || e.target===e.currentTarget) g('projects-modal').classList.remove('show'); }
 
 async function refreshProjects(){
-  if(supabaseClient && currentUser){
+  const btn = document.querySelector('button[onclick="refreshProjects()"]');
+  if(btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ Lade...';
+  }
+  
+  try {
+    if(!supabaseClient){
+      toast('❌ Keine Cloud-Verbindung');
+      return;
+    }
+    
+    if(!currentUser){
+      toast('❌ Nicht eingeloggt');
+      return;
+    }
+    
+    console.log('Starte Projekt-Refresh...');
+    console.log('User:', currentUser.email, 'Role:', currentUserRole);
     toast('🔄 Aktualisiere Projekte...');
+    
     await fetchProjectsFromCloud();
     renderProjectGrid(); // Grid neu rendern
     toast('✅ Projekte aktualisiert');
-  } else {
-    toast('Nicht eingeloggt');
+    
+  } catch(e){
+    console.error('Refresh Fehler:', e);
+    toast('❌ Fehler: ' + e.message);
+  } finally {
+    if(btn) {
+      btn.disabled = false;
+      btn.textContent = '🔄 Aktualisieren';
+    }
+  }
+}
+
+async function debugCloudProjects(){
+  if(!supabaseClient || !currentUser) return;
+  
+  try {
+    console.log('=== DEBUG: Alle Projekte in Cloud ===');
+    const { data, error } = await supabaseClient.from('pv_projects').select('*');
+    
+    if(error){
+      console.error('Debug Fehler:', error);
+    } else {
+      console.log('Alle Projekte:', data);
+      console.log('Anzahl:', data ? data.length : 0);
+      
+      if(data && data.length > 0){
+        data.forEach(proj => {
+          console.log(`- ${proj.id}: ${proj.name} (User: ${proj.user_id}, Prüfer: ${proj.pruefer})`);
+        });
+      }
+    }
+  } catch(e){
+    console.error('Debug Exception:', e);
   }
 }
 
@@ -1500,29 +1588,48 @@ async function testCloudConnection(){
 async function fetchProjectsFromCloud(){
   if(!supabaseClient || !currentUser) {
     console.log('Kein Supabase Client oder User vorhanden');
+    toast('⚠️ Cloud nicht verfügbar - zeige lokale Projekte');
     return;
   }
   
   try {
     console.log('Lade Projekte aus Cloud...');
-    const { data, error } = await supabaseClient.from('pv_projects').select('id, name, model_wp, config, updated_at');
+    console.log('User:', currentUser.email, 'ID:', currentUser.id, 'Role:', currentUserRole);
+    
+    // Lade Projekte des aktuellen Users oder alle für Admins
+    let query;
+    if(currentUserRole === 'admin'){
+      console.log('Admin-Modus: Lade alle Projekte');
+      query = supabaseClient.from('pv_projects').select('id, name, model_wp, config, updated_at, user_id, pruefer');
+    } else {
+      console.log('User-Modus: Lade nur eigene Projekte');
+      query = supabaseClient.from('pv_projects').select('id, name, model_wp, config, updated_at, user_id, pruefer').eq('user_id', currentUser.id);
+    }
+    
+    const { data, error } = await query;
     
     if(error){
       console.error('Fehler beim Laden der Projekte:', error);
-      toast('Cloud-Fehler: ' + error.message);
+      toast('❌ Cloud-Fehler: ' + error.message);
       return;
     }
     
+    console.log('Cloud Antwort:', data);
+    console.log('Anzahl Projekte:', data ? data.length : 0);
+    
     if(data && data.length > 0){
       console.log('Projekte aus Cloud erhalten:', data.length);
+      
       // Projekte aus Cloud in lokale Struktur übernehmen
       data.forEach(cloudProj => {
+        console.log('Lade Projekt:', cloudProj.id, cloudProj.name, 'User:', cloudProj.user_id, 'Prüfer:', cloudProj.pruefer);
         PROJECTS[cloudProj.id] = {
           id: cloudProj.id,
-          name: cloudProj.name,
+          name: cloudProj.name || 'Unbenannt',
           model_wp: cloudProj.modul_wp || 465,
           plan: cloudProj.config || {},
-          updated_at: cloudProj.updated_at
+          updated_at: cloudProj.updated_at,
+          user_id: cloudProj.user_id
         };
       });
       
@@ -1532,10 +1639,11 @@ async function fetchProjectsFromCloud(){
       toast(`✅ ${data.length} Projekte aus Cloud geladen`);
     } else {
       console.log('Keine Projekte in Cloud gefunden');
+      toast('ℹ️ Keine Projekte in Cloud');
     }
   } catch(e){
     console.error('Fehler beim Laden der Projekte:', e);
-    toast('Verbindungsfehler: ' + e.message);
+    toast('❌ Verbindungsfehler: ' + e.message);
   }
 }
 
@@ -1552,20 +1660,27 @@ async function saveProjectToCloud(projectId){
   }
   
   try {
-    console.log('Speichere Projekt in Cloud:', projectId);
+    console.log('Speichere Projekt in Cloud:', projectId, 'Name:', proj.name);
+    console.log('Benutzer:', currentUser.email, 'ID:', currentUser.id);
+    
     const projData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
     const stateData = projData[projectId] || generateState(proj.plan);
     
-    const { error } = await supabaseClient.from('pv_projects').upsert({
+    const payload = {
       id: projectId,
-      name: proj.name,
-      pruefer: currentUser.email,
-      modul_wp: proj.model_wp,
+      name: proj.name || 'Unbenanntes Projekt',
+      pruefer: currentUser.email || 'unbekannt',
+      user_id: currentUser.id, // User ID als UUID
+      modul_wp: proj.model_wp || 465,
       mppts: "dynamic",
       data: stateData,
       config: proj.plan,
       updated_at: new Date().toISOString()
-    });
+    };
+    
+    console.log('Payload:', payload);
+    
+    const { error } = await supabaseClient.from('pv_projects').upsert(payload);
     
     if(error){
       console.error('Fehler beim Speichern des Projekts:', error);
@@ -1745,11 +1860,13 @@ async function migrateLocalProjectsToCloud(){
   
   try {
     // Hole alle Projekte aus Cloud
-    const { data: cloudProjects, error } = await supabaseClient.from('pv_projects').select('id');
+    const { data: cloudProjects, error } = await supabaseClient.from('pv_projects').select('id, name');
     if(error){
       console.error('Fehler beim Laden der Cloud-Projekte:', error);
       return;
     }
+    
+    console.log('Cloud-Projekte:', cloudProjects);
     
     const cloudIds = new Set(cloudProjects ? cloudProjects.map(p => p.id) : []);
     let migratedCount = 0;
@@ -1758,7 +1875,7 @@ async function migrateLocalProjectsToCloud(){
     for(const projectId of Object.keys(PROJECTS)){
       if(!cloudIds.has(projectId)){
         const proj = PROJECTS[projectId];
-        console.log('Migriere Projekt nach Cloud:', projectId);
+        console.log('Migriere Projekt nach Cloud:', projectId, 'Name:', proj.name);
         
         await saveProjectToCloud(projectId);
         migratedCount++;
@@ -1767,6 +1884,8 @@ async function migrateLocalProjectsToCloud(){
     
     if(migratedCount > 0){
       toast(`✅ ${migratedCount} Projekte in Cloud migriert`);
+    } else {
+      console.log('Keine Projekte zu migrieren');
     }
   } catch(e){
     console.error('Fehler bei Migration:', e);
@@ -1775,9 +1894,37 @@ async function migrateLocalProjectsToCloud(){
 
 async function loadMyProfile(){
   try {
-    const { data, error } = await supabaseClient.from('profiles').select('role').eq('id', currentUser.id).single();
-    currentUserRole = (data && data.role) ? data.role : 'site';
-  } catch(e){ currentUserRole = 'site'; }
+    // Prüfe ob Profil existiert
+    const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
+    
+    if(error || !data){
+      console.log('Profil nicht gefunden, erstelle neues...');
+      // Profil erstellen falls nicht vorhanden
+      const { error: insertError } = await supabaseClient.from('profiles').insert({
+        id: currentUser.id,
+        email: currentUser.email,
+        role: 'site'
+      });
+      
+      if(insertError){
+        console.error('Fehler beim Erstellen des Profils:', insertError);
+      } else {
+        console.log('Profil erfolgreich erstellt');
+        currentUserRole = 'site';
+      }
+    } else {
+      console.log('Profil gefunden:', data);
+      currentUserRole = data.role || 'site';
+      
+      // Falls E-Mail fehlt, aktualisieren
+      if(!data.email && currentUser.email){
+        await supabaseClient.from('profiles').update({ email: currentUser.email }).eq('id', currentUser.id);
+      }
+    }
+  } catch(e){
+    console.error('Fehler beim Laden des Profils:', e);
+    currentUserRole = 'site';
+  }
 }
 
 function openUsersModal(){

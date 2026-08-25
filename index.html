@@ -933,19 +933,24 @@ function handlePVSOLFile(input){
   const reader = new FileReader();
   reader.onload = function(e){
     try {
-      // .trim() entfernt Leerzeichen oder Zeilenumbrüche am Anfang/Ende
-      const rawText = e.target.result.trim();
+      // Entfernt UTF-8 BOM (Byte Order Mark) und whitespace
+      const rawText = e.target.result.replace(/^\uFEFF/, '').trim();
       const json = JSON.parse(rawText);
       
-      // ROBUSTHEIT: Prüfen, ob Configuration direkt da ist oder unter "Project" liegt
-      let configRoot = json.Configuration;
-      if(!configRoot && json.Project && json.Project.Configuration){
+      // FLEXIBLE SUCHE nach dem Configuration-Objekt
+      let configRoot = null;
+      if (json.Configuration) {
+        configRoot = json.Configuration;
+      } else if (json.Project && json.Project.Configuration) {
         configRoot = json.Project.Configuration;
+      } else if (json.ProjectOverview && json.ProjectOverview.Configuration) {
+        configRoot = json.ProjectOverview.Configuration;
       }
 
+      // Prüfung, ob wir die ModuleAreas gefunden haben
       if(!configRoot || !configRoot.ModuleAreas){
-        console.error("Strukturfehler:", json); // Hilft beim Debuggen in der F12 Konsole
-        toast('Ungültiges PVSOL-Format: Konfiguration nicht gefunden');
+        console.error("JSON Struktur:", json);
+        toast('Ungültiges PVSOL-Format: Konfigurations-Daten nicht gefunden');
         pendingPVSOLData = null;
         return;
       }
@@ -969,20 +974,21 @@ function parsePVSOLData(json){
   let projectName = 'PVSOL Import';
   let moduleWp = 460; 
 
-  // Root-Ebene finden (direkt oder unter Project)
+  // Root-Ebene finden
   const root = json.Project ? json.Project : json;
-  const config = root.Configuration;
+  const config = root.Configuration || (root.ProjectOverview ? root.ProjectOverview.Configuration : null);
 
   // Projektnamen extrahieren
-  if(root.ProjectOverview && root.ProjectOverview.ProjectData && root.ProjectOverview.ProjectData.ProjectName){
-    projectName = root.ProjectOverview.ProjectData.ProjectName;
+  const projectData = root.ProjectOverview?.ProjectData;
+  if(projectData && projectData.ProjectName){
+    projectName = projectData.ProjectName;
   }
   
   // Modul-Wp extrahieren
-  if(config && config.ModuleAreas && config.ModuleAreas.length > 0){
+  if(config?.ModuleAreas && config.ModuleAreas.length > 0){
     const firstArea = config.ModuleAreas[0];
-    // Versuche Wp aus Modul-Bezeichnung zu lesen (z.B. "JAM54D40-460/LB")
     if(firstArea.ModuleData){
+      // Sucht nach Zahlen gefolgt von "W" (z.B. 460W) oder zwischen Bindestrich und Slash
       const wpMatch = firstArea.ModuleData.match(/(\d{3})W/i) || firstArea.ModuleData.match(/-(\d{3})\//);
       if(wpMatch){
         moduleWp = parseInt(wpMatch[1]);
@@ -990,7 +996,7 @@ function parsePVSOLData(json){
     }
   }
   
-  if(config && config.ModuleAreas){
+  if(config?.ModuleAreas){
     config.ModuleAreas.forEach(area => {
       if(!area.Inverters) return;
       
@@ -1002,10 +1008,9 @@ function parsePVSOLData(json){
         const mpptData = [];
         
         configs.forEach(configStr => {
-          // Case-insensitive Prüfung auf "nicht belegt"
-          if(!configStr || configStr.toLowerCase().includes('nicht belegt')) return;
+          if(!configStr || typeof configStr !== 'string' || configStr.toLowerCase().includes('nicht belegt')) return;
           
-          // Regex verbessert: Erkennt "MPP 1: 1 x 17"
+          // Erkennt "MPP 1: 1 x 17"
           const match = configStr.match(/MPP\s+(\d+):\s*(\d+)\s*x\s*(\d+)/i);
           if(match){
             const mpptNum = parseInt(match[1]);
@@ -1025,7 +1030,7 @@ function parsePVSOLData(json){
         
         plan[wrNum] = {
           mppts: mpptCount,
-          inputs: 2, // Standard SMA/Huawei
+          inputs: 2, 
           defaultMods: 0,
           mpptData: mpptData
         };

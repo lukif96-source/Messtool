@@ -253,7 +253,7 @@ body.hide-inactive table.mt tbody tr.row-nein { display: none !important; }
   </button>
   <hr style="border:none; border-top:1px solid var(--border); margin: 12px 8px;">
   <button onclick="printBlankMeasurementSheet();closeSidebar();" class="sidebar-btn" style="color:var(--text); font-weight:600;">
-    <span class="icon" style="color:#eab308;">📝</span><span class="label">Messprotokoll (Blanko PDF)</span>
+    <span class="icon" style="color:#eab308;">📝</span><span class="label">Messblatt (PDF Druck)</span>
   </button>
   <button onclick="printWRMontagePlan();closeSidebar();" class="sidebar-btn">
     <span class="icon">📋</span><span class="label">Montage-Plan (PDF)</span>
@@ -534,11 +534,7 @@ function initProjects(){
     PROJECTS = Object.keys(stored).length > 0 ? stored : JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
   } catch(e){ PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS)); }
 
-  // Fallback if data got completely lost
-  if(Object.keys(PROJECTS).length === 0) {
-     PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
-  }
-
+  if(Object.keys(PROJECTS).length === 0) { PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS)); }
   CURRENT_PROJECT_ID = localStorage.getItem(STORAGE_KEYS.current) || Object.keys(PROJECTS)[0];
   if(!PROJECTS[CURRENT_PROJECT_ID]) CURRENT_PROJECT_ID = Object.keys(PROJECTS)[0];
   
@@ -558,7 +554,6 @@ function generateState(plan){
     const isLegacy = Array.isArray(wrData);
     
     if(isLegacy) {
-      // Compatibility mapping
       const list = wrData;
       const totalStrings = list.length;
       const doubleCount = Math.max(0, totalStrings - 12);
@@ -580,7 +575,6 @@ function generateState(plan){
         }
       }
     } else {
-      // Dynamic Hardware Mapping
       const mppts = wrData.mppts || 12;
       const inputs = wrData.inputs || 2;
       const defMods = wrData.defaultMods || 0;
@@ -968,59 +962,79 @@ function printBlankMeasurementSheet(){
     
     itemsForWR.forEach(id => {
       const item = APP_STATE[id];
-      if(item.stat !== 'JA') return; // Only print active strings for measuring
+      if(item.stat !== 'JA') return; // Only print active
+      
       rowsHtml += `
         <tr>
-          <td style="padding:12px; border:1px solid #000; font-weight:bold; font-size:12pt; text-align:center;">${id}</td>
-          <td style="padding:12px; border:1px solid #000; font-size:11pt; text-align:center;">${item.gak || ''}</td>
-          <td style="padding:12px; border:1px solid #000; font-size:11pt; text-align:center;">${item.mod || ''}</td>
-          <td style="padding:12px; border:1px solid #000; border-right:2px solid #000;"></td>
-          <td style="padding:12px; border:1px solid #000;"></td>
-          <td style="padding:12px; border:1px solid #000; border-right:2px solid #000;"></td>
-          <td style="padding:12px; border:1px solid #000; text-align:center;">
-             <div style="display:inline-block; width:16px; height:16px; border:1px solid #000; margin-right:8px;"></div> Ja
-             <div style="display:inline-block; width:16px; height:16px; border:1px solid #000; margin-left:12px; margin-right:8px;"></div> Nein
+          <td style="font-weight:700; font-family:'JetBrains Mono', monospace; font-size:12pt; color:#16a34a;">${id}</td>
+          <td style="font-size:10pt;">${item.gak || ''}</td>
+          <td style="font-weight:700;">${item.mod || ''}</td>
+          <td><div class="write-line"></div></td>
+          <td><div class="write-line"></div></td>
+          <td><div class="write-line"></div></td>
+          <td>
+            <div class="chk-wrap">
+              <div class="chk"><div class="box"></div>i.O.</div>
+              <div class="chk"><div class="box"></div>n.i.O.</div>
+            </div>
           </td>
-          <td style="padding:12px; border:1px solid #000;"></td>
+          <td><div class="write-line" style="width:90%;"></div></td>
         </tr>`;
     });
 
     if(rowsHtml !== '') {
       pagesHtml += `
-        <div style="page-break-after: always; padding-bottom: 20px;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:20px; border-bottom:3px solid #000; padding-bottom:10px;">
+        <div class="sheet">
+          <div class="header">
             <div>
-              <h1 style="margin:0 0 5px 0; font-size:20pt; font-family:sans-serif;">Messprotokoll DC-Strings</h1>
-              <div style="font-size:12pt; font-family:sans-serif; font-weight:bold;">Projekt: ${proj.name} &middot; Wechselrichter: ${wr}</div>
+              <div class="brand">SOLPRO</div>
+              <div class="title">DC-Strangmessung / Inbetriebnahme</div>
             </div>
-            <div style="font-size:10pt; font-family:sans-serif; text-align:right;">Datum: ${dateStr}<br>Geprüft von: _______________________</div>
+            <div class="meta">
+              <div class="meta-row"><span>Projekt:</span> <strong>${proj.name}</strong></div>
+              <div class="meta-row"><span>Datum:</span> <strong>${dateStr}</strong></div>
+              <div class="meta-row"><span>Wechselrichter:</span> <strong>WR ${wr}</strong></div>
+              <div class="meta-row"><span>Prüfer:</span> <strong>_______________________</strong></div>
+            </div>
           </div>
           
-          <div style="display:flex; gap:20px; margin-bottom:20px; font-family:sans-serif; font-size:11pt;">
-             <div style="flex:1; border:1px solid #000; padding:10px;">Einstrahlung (W/m²): </div>
-             <div style="flex:1; border:1px solid #000; padding:10px;">Modultemperatur (°C): </div>
-             <div style="flex:1; border:1px solid #000; padding:10px;">Messgerät: </div>
+          <div class="env-zone">
+            <div class="env-box">
+              <div class="env-label">Einstrahlung (W/m²)</div>
+            </div>
+            <div class="env-box">
+              <div class="env-label">Modultemperatur (°C)</div>
+            </div>
+            <div class="env-box" style="flex: 1.5;">
+              <div class="env-label">Eingesetztes Messgerät (Typ / S/N)</div>
+            </div>
           </div>
 
-          <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
+          <table>
             <thead>
-              <tr style="background:#eee;">
-                <th style="padding:12px; border:1px solid #000; width:10%;">Klemme</th>
-                <th style="padding:12px; border:1px solid #000; width:10%;">GAK</th>
-                <th style="padding:12px; border:1px solid #000; width:8%;">Mods</th>
-                <th style="padding:12px; border:1px solid #000; border-right:2px solid #000; width:12%;">Uoc [V]</th>
-                <th style="padding:12px; border:1px solid #000; width:12%;">Isc [A]</th>
-                <th style="padding:12px; border:1px solid #000; border-right:2px solid #000; width:12%;">Riso [MΩ]</th>
-                <th style="padding:12px; border:1px solid #000; width:18%;">Polarität i.O.</th>
-                <th style="padding:12px; border:1px solid #000; width:18%;">Bemerkung</th>
+              <tr>
+                <th style="width:9%;">Klemme</th>
+                <th style="width:12%;">GAK</th>
+                <th style="width:7%;">Mods</th>
+                <th style="width:12%;">Uoc [V]</th>
+                <th style="width:12%;">Isc [A]</th>
+                <th style="width:12%;">Riso [MΩ]</th>
+                <th style="width:18%;">Polarität</th>
+                <th style="width:18%;">Bemerkung</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
           </table>
-          
-          <div style="margin-top:40px; display:flex; justify-content:space-between; font-family:sans-serif; font-size:10pt;">
-             <div style="border-top:1px solid #000; padding-top:5px; width:250px; text-align:center;">Unterschrift Prüfer</div>
-             <div style="border-top:1px solid #000; padding-top:5px; width:250px; text-align:center;">Unterschrift Bauleitung</div>
+
+          <div class="footer">
+            <div class="sig-box">
+              <div class="sig-line"></div>
+              <div>Ort, Datum, Unterschrift Prüfer</div>
+            </div>
+            <div class="sig-box">
+              <div class="sig-line"></div>
+              <div>Ort, Datum, Unterschrift Bauleitung</div>
+            </div>
           </div>
         </div>`;
     }
@@ -1030,8 +1044,38 @@ function printBlankMeasurementSheet(){
 
   win.document.write(`
     <!DOCTYPE html><html><head><title>Messblatt ${proj.name}</title>
-    <style>body{font-family:Arial,sans-serif;color:#000;background:#fff;margin:0;padding:20mm;} @media print{ @page{size:A4 landscape;margin:10mm;} body{padding:0;} }</style>
-    </head><body onload="setTimeout(()=>window.print(), 300)">${pagesHtml}</body></html>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <style>
+      @page { size: A4 landscape; margin: 12mm; }
+      body { font-family: 'Inter', sans-serif; color: #18181b; background: #fff; margin:0; padding:0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .sheet { page-break-after: always; display: flex; flex-direction: column; min-height: calc(100vh - 24mm); }
+      .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #18181b; padding-bottom: 12px; margin-bottom: 24px; }
+      .brand { font-size: 20pt; font-weight: 900; color: #16a34a; letter-spacing: -0.05em; margin-bottom: 4px; text-transform: uppercase; }
+      .title { font-size: 14pt; font-weight: 700; color: #3f3f46; text-transform: uppercase; }
+      .meta { display: grid; grid-template-columns: 1fr 1fr; gap: x-gap; column-gap: 30px; row-gap: 6px; font-size: 10pt; color: #3f3f46; }
+      .meta-row { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dotted #e4e4e7; }
+      .meta-row span { color: #71717a; }
+      
+      .env-zone { display: flex; gap: 20px; margin-bottom: 24px; }
+      .env-box { flex: 1; border: 2px solid #e4e4e7; border-radius: 8px; position: relative; height: 50px; background: #fafafa; }
+      .env-label { position: absolute; top: -8px; left: 12px; background: #fff; padding: 0 6px; font-size: 8pt; font-weight: 700; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.05em; }
+
+      table { width: 100%; border-collapse: collapse; margin-bottom: auto; }
+      th { background: #f4f4f5; border: 1px solid #d4d4d8; padding: 10px 8px; font-size: 9pt; font-weight: 700; text-transform: uppercase; color: #52525b; letter-spacing: 0.02em; }
+      td { border: 1px solid #d4d4d8; padding: 12px 8px; text-align: center; font-size: 11pt; color: #18181b; }
+      tr:nth-child(even) td { background-color: #fafafa; }
+      
+      .write-line { height: 20px; border-bottom: 2px dotted #a1a1aa; width: 70%; margin: 0 auto; }
+      
+      .chk-wrap { display: flex; justify-content: center; gap: 14px; }
+      .chk { display: flex; align-items: center; gap: 6px; font-size: 9pt; font-weight: 700; color: #52525b; text-transform: uppercase; }
+      .box { width: 14px; height: 14px; border: 2px solid #a1a1aa; border-radius: 4px; background: #fff; }
+
+      .footer { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 10px; }
+      .sig-box { width: 260px; text-align: center; font-size: 9pt; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;}
+      .sig-line { border-bottom: 1px solid #18181b; height: 30px; margin-bottom: 6px; }
+    </style>
+    </head><body onload="setTimeout(()=>window.print(), 500)">${pagesHtml}</body></html>
   `);
   win.document.close();
 }

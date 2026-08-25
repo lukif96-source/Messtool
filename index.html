@@ -933,98 +933,108 @@ function handlePVSOLFile(input){
   const reader = new FileReader();
   reader.onload = function(e){
     try {
-      const json = JSON.parse(e.target.result);
-      pendingPVSOLData = json;
+      // .trim() entfernt Leerzeichen oder Zeilenumbrüche am Anfang/Ende
+      const rawText = e.target.result.trim();
+      const json = JSON.parse(rawText);
       
-      // Validate PVSOL structure
-      if(!json.Configuration || !json.Configuration.ModuleAreas){
-        toast('Ungültiges PVSOL-Format');
+      // ROBUSTHEIT: Prüfen, ob Configuration direkt da ist oder unter "Project" liegt
+      let configRoot = json.Configuration;
+      if(!configRoot && json.Project && json.Project.Configuration){
+        configRoot = json.Project.Configuration;
+      }
+
+      if(!configRoot || !configRoot.ModuleAreas){
+        console.error("Strukturfehler:", json); // Hilft beim Debuggen in der F12 Konsole
+        toast('Ungültiges PVSOL-Format: Konfiguration nicht gefunden');
         pendingPVSOLData = null;
         return;
       }
       
-      // Parse and show preview
+      pendingPVSOLData = json;
       const parsed = parsePVSOLData(json);
       showPVSOLPreview(parsed);
       g('pvsol-confirm-btn').disabled = false;
       
     } catch(err){
-      toast('Fehler beim Parsen: ' + err.message);
+      console.error("Parse Fehler:", err);
+      toast('Fehler beim Lesen der Datei: ' + err.message);
       pendingPVSOLData = null;
     }
   };
   reader.readAsText(file);
 }
-
 function parsePVSOLData(json){
   const plan = {};
   let totalWp = 0;
-  let projectName = '';
-  let moduleWp = 460; // Default
-  
+  let projectName = 'PVSOL Import';
+  let moduleWp = 460; 
+
+  // Root-Ebene finden (direkt oder unter Project)
+  const root = json.Project ? json.Project : json;
+  const config = root.Configuration;
+
   // Projektnamen extrahieren
-  if(json.ProjectOverview && json.ProjectOverview.ProjectData && json.ProjectOverview.ProjectData.ProjectName){
-    projectName = json.ProjectOverview.ProjectData.ProjectName;
+  if(root.ProjectOverview && root.ProjectOverview.ProjectData && root.ProjectOverview.ProjectData.ProjectName){
+    projectName = root.ProjectOverview.ProjectData.ProjectName;
   }
   
-  // Modul-Wp aus den ModuleAreas extrahieren
-  if(json.Configuration && json.Configuration.ModuleAreas && json.Configuration.ModuleAreas.length > 0){
-    const firstArea = json.Configuration.ModuleAreas[0];
+  // Modul-Wp extrahieren
+  if(config && config.ModuleAreas && config.ModuleAreas.length > 0){
+    const firstArea = config.ModuleAreas[0];
+    // Versuche Wp aus Modul-Bezeichnung zu lesen (z.B. "JAM54D40-460/LB")
     if(firstArea.ModuleData){
-      // Extrahiere Wp aus Modul-Bezeichnung wie "JAM54D40-460/LB"
-      const wpMatch = firstArea.ModuleData.match(/(\d+)W?/);
+      const wpMatch = firstArea.ModuleData.match(/(\d{3})W/i) || firstArea.ModuleData.match(/-(\d{3})\//);
       if(wpMatch){
-        const extractedWp = parseInt(wpMatch[1]);
-        if(extractedWp > 0 && extractedWp < 1000){
-          moduleWp = extractedWp;
-        }
+        moduleWp = parseInt(wpMatch[1]);
       }
     }
   }
   
-  json.Configuration.ModuleAreas.forEach(area => {
-    area.Inverters.forEach(inv => {
-      const wrNum = inv.Number;
-      const configs = inv.Configuration || [];
+  if(config && config.ModuleAreas){
+    config.ModuleAreas.forEach(area => {
+      if(!area.Inverters) return;
       
-      // Count MPPTs and inputs
-      let mpptCount = 0;
-      let inputsPerMppt = 2;
-      const mpptData = [];
-      
-      configs.forEach(config => {
-        if(config.includes('nicht belegt')) return;
+      area.Inverters.forEach(inv => {
+        const wrNum = inv.Number;
+        const configs = inv.Configuration || [];
         
-        const match = config.match(/MPP\s+(\d+):\s*(\d+)\s*x\s*(\d+)/);
-        if(match){
-          const mpptNum = parseInt(match[1]);
-          const inputCount = parseInt(match[2]);
-          const modulesPerString = parseInt(match[3]);
+        let mpptCount = 0;
+        const mpptData = [];
+        
+        configs.forEach(configStr => {
+          // Case-insensitive Prüfung auf "nicht belegt"
+          if(!configStr || configStr.toLowerCase().includes('nicht belegt')) return;
           
-          mpptCount = Math.max(mpptCount, mpptNum);
-          mpptData[mpptNum] = {
-            inputs: inputCount,
-            modules: modulesPerString
-          };
-          
-          totalWp += inputCount * modulesPerString * moduleWp;
-        }
+          // Regex verbessert: Erkennt "MPP 1: 1 x 17"
+          const match = configStr.match(/MPP\s+(\d+):\s*(\d+)\s*x\s*(\d+)/i);
+          if(match){
+            const mpptNum = parseInt(match[1]);
+            const inputCount = parseInt(match[2]);
+            const modulesPerString = parseInt(match[3]);
+            
+            mpptCount = Math.max(mpptCount, mpptNum);
+            mpptData[mpptNum] = {
+              inputs: inputCount,
+              modules: modulesPerString
+            };
+            totalWp += inputCount * modulesPerString * moduleWp;
+          }
+        });
+        
+        if(mpptCount === 0) mpptCount = 3; 
+        
+        plan[wrNum] = {
+          mppts: mpptCount,
+          inputs: 2, // Standard SMA/Huawei
+          defaultMods: 0,
+          mpptData: mpptData
+        };
       });
-      
-      if(mpptCount === 0) mpptCount = 3; // Default 3 MPPTs
-      
-      plan[wrNum] = {
-        mppts: mpptCount,
-        inputs: inputsPerMppt,
-        defaultMods: 0,
-        mpptData: mpptData
-      };
     });
-  });
+  }
   
   return { plan, totalWp, projectName, moduleWp };
 }
-
 function showPVSOLPreview(parsed){
   const preview = g('pvsol-preview-content');
   const wrCount = Object.keys(parsed.plan).length;

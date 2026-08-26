@@ -24,29 +24,16 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
-  --status-bar-height: env(safe-area-inset-top, 0px);
 }
 
-/* Sun-Mode: pure Werte für max Kontrast unter Sonnenlicht */
 body.sun-mode {
-  --bg: #ffffff;
-  --surface: #ffffff;
-  --panel: #f1f5f9;
-  --border: #cbd5e1;
-  --text: #000000;
-  --muted: #475569;
-  --accent: #00873d;
-  --accent-glow: rgba(0, 135, 61, 0.15);
-  --accent-muted: #006028;
+  --bg: #ffffff; --surface: #ffffff; --panel: #f1f5f9;
+  --border: #cbd5e1; --text: #000000; --muted: #475569;
+  --accent: #00873d; --accent-glow: rgba(0, 135, 61, 0.15); --accent-muted: #006028;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { 
-  -webkit-text-size-adjust: 100%; 
-  scroll-behavior: smooth; 
-  height: 100%; 
-  scroll-padding-top: 80px; 
-}
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; height: 100%; scroll-padding-top: 80px; }
 body {
   font-family: 'Inter', sans-serif;
   background: var(--bg);
@@ -74,6 +61,21 @@ img, svg, table { max-width: 100%; }
 .sp-inp:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
 .sp-inp-center { text-align: center; }
 .sp-inp-gak { color: var(--accent); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+.sp-inp:read-only {
+  background: var(--panel);
+  color: var(--text);
+  border-color: transparent;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+body.sun-mode .sp-inp:read-only {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+.sp-inp:read-only:focus { border-color: transparent; box-shadow: none; }
+body.sun-mode .sp-inp-gak:read-only { color: #00873d; font-weight: 800; }
 
 .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
 .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px; }
@@ -119,34 +121,12 @@ img, svg, table { max-width: 100%; }
 
 .wr-block { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 24px; }
 .wr-block.protocol-locked-block { border-color: #ef4444; }
-
-/* ============================================================
-   iOS PWA FIX: Status-Bar / Uhrzeit / Notch
-   ============================================================
-   Problem: Beim Speichern am Home-Screen (PWA) überlagert
-   iOS-Statusbar (Uhrzeit, Batterie) den Top-Bar.
-   
-   Fix:
-   1) padding-top um safe-area-inset-top
-   2) status-bar-style: "default" (Uhr dunkel) statt "black-translucent"
-   3) theme-color matched Hintergrund (Uhr wird entsprechend gefärbt)
-   4) Sun-Mode: theme-color weiß → Uhr automatisch dunkel
-*/
 .wr-head { 
-  position: sticky; 
-  top: 0; 
-  z-index: 25; 
-  display: flex; 
-  align-items: center; 
-  justify-content: space-between; 
-  gap: 8px; 
-  padding: 14px 16px; 
-  background: rgba(18, 18, 20, 0.95); 
-  backdrop-filter: blur(12px); 
-  -webkit-backdrop-filter: blur(12px); 
+  position: sticky; top: 0; z-index: 25; display: flex; 
+  align-items: center; justify-content: space-between; gap: 8px; 
+  padding: 14px 16px; background: rgba(18, 18, 20, 0.95); 
   border-bottom: 1px solid var(--border); 
-  flex-wrap: wrap; 
-  row-gap: 4px; 
+  flex-wrap: wrap; row-gap: 4px; 
 }
 .wr-head > div:first-child { flex-wrap: wrap; min-width: 0; row-gap: 4px; }
 .wr-head .wr-kpis { white-space: nowrap; }
@@ -185,37 +165,39 @@ table.mt tbody tr.mppt-header td { padding: 8px 12px; font-weight: 800; font-siz
 .sidebar-btn.red:hover { background: rgba(239,68,68,0.1); color: #ef4444; }
 .sidebar-btn .icon { font-size: 1.1rem; width: 20px; text-align:center; }
 .main-content { flex: 1; margin-left: 260px; padding: 16px; min-width: 0; }
-.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 55; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); touch-action: none; }
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 55; touch-action: none; }
 .sidebar-overlay.open { display: block; }
 
-/* ============================================================
-   MOBILE TOP-BAR: Safe-Area + iOS-Statusbar-Fix
-   ============================================================
-   PWA-Status: Apple-Statusbar bekommt eigenen padding-top
-   via safe-area-inset-top (= Notch + Statusbar, ca. 44-47px
-   auf modernen iPhones).
-*/
 .top-bar-mobile { 
-  display: none; 
-  position: sticky; 
-  top: 0; 
-  z-index: 50; 
+  display: none; position: sticky; top: 0; z-index: 50; 
   background: var(--surface); 
   padding: 10px 12px;
   padding-top: calc(10px + var(--safe-top));
   border-bottom: 1px solid var(--border); 
-  align-items: center; 
-  justify-content: space-between; 
-  margin-bottom: 16px; 
-  /* Kein backdrop-filter mehr — kostet Performance + iOS rendert's
-     unter der Statusbar falsch. Solider Hintergrund ist klarer. */
+  align-items: center; justify-content: space-between; margin-bottom: 16px; 
 }
-/* Sun-Mode: gleicher heller Hintergrund für PWA */
 body.sun-mode .top-bar-mobile { background: #ffffff; }
 
-.mobile-scroll-header { display: none; }
-.mobile-scroll-header .wr-info { font-size: 0.75rem; font-weight: 700; color: var(--accent); }
-.mobile-scroll-header .string-info { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+.role-hint-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+body.sun-mode .role-hint-banner {
+  background: #f0fdf4;
+  border-color: #00873d;
+  color: #006028;
+}
+.role-hint-banner .role-icon { font-size: 1.1rem; }
+.role-hint-banner .role-text { flex: 1; }
 
 .lock-banner {
   display: none;
@@ -236,46 +218,20 @@ body.sun-mode .top-bar-mobile { background: #ffffff; }
 .lock-banner .lock-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 220px; }
 .lock-banner .lock-icon { font-size: 1.5rem; }
 body.sun-mode .lock-banner { background: #fef2f2; border-color: #b91c1c; color: #b91c1c; }
-body.sun-mode .lock-banner .lock-info { color: #b91c1c; }
 
-body.protocol-locked .sp-inp:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  background: var(--bg);
-  color: var(--muted);
-  border-style: dashed;
-}
+body.protocol-locked .sp-inp:disabled,
 body.protocol-locked .tog:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
-body.sun-mode.protocol-locked .sp-inp:disabled {
-  background: #f1f5f9;
-  color: #64748b;
-  border-color: #cbd5e1;
-}
+body.protocol-locked .sp-inp:disabled { background: var(--bg); color: var(--muted); border-style: dashed; }
+body.sun-mode.protocol-locked .sp-inp:disabled { background: #f1f5f9; color: #64748b; border-color: #cbd5e1; }
 
 @media (max-width: 900px) {
-  .sidebar { 
-    transform: translateX(-100%); 
-    box-shadow: 4px 0 24px rgba(0,0,0,0.5); 
-    /* iOS PWA: Status-Bar über der Sidebar (sidebar geht unter top:0 los) */
-    padding-top: calc(20px + var(--safe-top));
-  }
+  .sidebar { transform: translateX(-100%); box-shadow: 4px 0 24px rgba(0,0,0,0.5); }
   .sidebar.open { transform: translateX(0); }
-  .main-content { 
-    margin-left: 0; 
-    padding: 10px; 
-    /* Safe-Area für PWA oben, damit nichts unter Statusbar verschwindet */
-    padding-top: calc(10px + var(--safe-top));
-  }
-  .top-bar-mobile { 
-    display: flex; 
-    position: sticky; 
-    top: 0; 
-    left: 0; 
-    right: 0; 
-  }
+  .main-content { margin-left: 0; padding: 10px; padding-top: calc(10px + var(--safe-top)); }
+  .top-bar-mobile { display: flex; }
   .wr-head { position: static; padding: 10px 12px; }
   .dashboard { grid-template-columns: repeat(2, 1fr); }
   table.mt, table.mt tbody, table.mt tr, table.mt td { display: block; width: 100% !important; }
@@ -295,14 +251,12 @@ body.sun-mode.protocol-locked .sp-inp:disabled {
   table.mt tbody tr.mppt-header td::before { content: ''; }
   table.mt td.col-hide-mobile { display: none !important; }
   table.mt td.col-hide-mobile::before { display: none !important; }
+  table.mt td .sp-inp:read-only { max-width: 100%; text-align: right; }
 }
 
 @media (max-width: 600px) {
   .wrap { padding: 8px 8px 140px; }
   .dashboard { grid-template-columns: 1fr; gap: 8px; }
-  .mobile-scroll-header { display: none; }
-  .mobile-scroll-header .wr-info { font-size: 0.72rem; }
-  .mobile-scroll-header .string-info { font-size: 0.66rem; }
   .kpi-card { padding: 12px; }
   .kpi-value { font-size: 1.2rem; }
   .main-tabs { gap: 4px; }
@@ -333,7 +287,7 @@ body.sun-mode.protocol-locked .sp-inp:disabled {
   .btn { padding: 8px 14px; font-size: 0.78rem; min-height: 40px; }
   .auth-card { padding: 22px 18px; border-radius: 14px; }
   .lock-banner { font-size: 0.78rem; padding: 12px 14px; }
-  .lock-banner .lock-icon { font-size: 1.2rem; }
+  .role-hint-banner { font-size: 0.72rem; padding: 8px 12px; }
 }
 
 @media (max-width: 600px) {
@@ -383,34 +337,22 @@ body.sun-mode.protocol-locked .sp-inp:disabled {
     padding: 10px 12px !important;
   }
   table.mt td[data-label="Aktiv"] .tog-wrap {
-    width: 100%;
-    max-width: 100%;
-    display: flex;
-    gap: 6px;
+    width: 100%; max-width: 100%; display: flex; gap: 6px;
   }
   table.mt td[data-label="Aktiv"] .tog {
-    flex: 1;
-    text-align: center;
-    padding: 12px;
-    font-size: 0.9rem;
-    font-weight: 800;
-    min-height: 44px;
-    border: 2px solid var(--border);
+    flex: 1; text-align: center; padding: 12px;
+    font-size: 0.9rem; font-weight: 800; min-height: 44px; border: 2px solid var(--border);
   }
   table.mt td[data-label="Aktiv"] .tog.on-ja {
-    background: var(--accent);
-    color: #000;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent);
+    background: var(--accent); color: #000;
+    border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent);
   }
   table.mt td[data-label="Aktiv"] .tog.on-nei {
-    background: transparent;
-    color: var(--muted);
+    background: transparent; color: var(--muted);
   }
   table.mt td[data-label="Module"]::before,
   table.mt td[data-label="kWp"]::before {
-    color: var(--muted);
-    font-weight: 600;
+    color: var(--muted); font-weight: 600;
   }
   table.mt td[data-label="kWp"] {
     background: var(--panel);
@@ -437,7 +379,7 @@ body.sun-mode table.mt td[data-label="Aktiv"] {
   background: #ffffff;
 }
 
-.modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px; }
+.modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; padding: 16px; }
 .modal-overlay.show { display: flex; }
 .modal-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
 .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 1; }
@@ -476,7 +418,7 @@ body.sun-mode table.mt td[data-label="Aktiv"] {
 .print-lock-stamp { display: none; }
 @media print {
   body { background: #fff !important; color: #000 !important; font-size: 8pt; }
-  .no-print, .view-bar-wrap, .mobile-fab, .sidebar, .sidebar-toggle, .top-bar-mobile, .mobile-scroll-header, .lock-banner { display: none !important; }
+  .no-print, .view-bar-wrap, .mobile-fab, .sidebar, .sidebar-toggle, .top-bar-mobile, .mobile-scroll-header, .lock-banner, .role-hint-banner { display: none !important; }
   .main-content { margin-left: 0 !important; padding: 0 !important; }
   .wr-block { border: 1px solid #cbd5e1 !important; break-inside: avoid; display: block !important; margin-bottom: 15px; }
   table.mt { width: 100%; display: table !important; }
@@ -490,16 +432,9 @@ body.sun-mode table.mt td[data-label="Aktiv"] {
   .print-cell { display: inline !important; font-weight: bold; }
   table.mt .col-hide-print { display: none !important; }
   .print-lock-stamp { 
-    display: block !important; 
-    border: 3px solid #b91c1c; 
-    padding: 14px 18px; 
-    margin: 16px 0 24px; 
-    border-radius: 8px; 
-    color: #b91c1c; 
-    font-weight: 800; 
-    text-align: center; 
-    font-size: 12pt;
-    page-break-inside: avoid;
+    display: block !important; border: 3px solid #b91c1c; padding: 14px 18px; 
+    margin: 16px 0 24px; border-radius: 8px; color: #b91c1c; 
+    font-weight: 800; text-align: center; font-size: 12pt; page-break-inside: avoid; 
   }
   .print-lock-stamp:empty { display: none !important; }
 }
@@ -517,19 +452,11 @@ body.sun-mode table.mt td[data-label="Aktiv"] {
 
 .offline-indicator { 
   position: fixed; 
-  top: calc(60px + var(--safe-top)); 
-  right: 20px; 
-  z-index: 1000; 
-  display: none; 
-  align-items: center; 
-  gap: 6px; 
-  padding: 6px 12px; 
-  background: rgba(239, 68, 68, 0.2); 
-  border: 1px solid #ef4444; 
-  border-radius: 99px; 
-  font-size: 0.7rem; 
-  font-weight: 700; 
-  color: #ef4444; 
+  top: calc(60px + var(--safe-top)); right: 20px; z-index: 1000; 
+  display: none; align-items: center; gap: 6px; 
+  padding: 6px 12px; background: rgba(239, 68, 68, 0.2); 
+  border: 1px solid #ef4444; border-radius: 99px; 
+  font-size: 0.7rem; font-weight: 700; color: #ef4444; 
 }
 .offline-indicator.offline { display: flex; }
 @media (max-width: 600px) {
@@ -583,7 +510,7 @@ body.sun-mode table.mt td[data-label="Aktiv"] {
     </div>
     <div class="modal-body">
       <div style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;line-height:1.4;">
-        Rollen: <b>Admin</b> (volle Kontrolle), <b>Planer</b> (Projekte anlegen), <b>Bauleitung</b> (sieht alle Projekte, misst nur wenn freigegeben).
+        <b>Admin:</b> alles · <b>Planer:</b> Hardware · <b>Bauleitung:</b> nur Messwerte.
       </div>
       <div id="users-list">Lade Benutzer...</div>
     </div>
@@ -621,11 +548,6 @@ body.sun-mode table.mt td[data-label="Aktiv"] {
 <div class="top-bar-mobile no-print">
   <div style="font-weight:900; font-size:1.1rem; color:var(--accent); letter-spacing:-0.05em;">SOLPRO</div>
   <button class="btn btn-ghost" onclick="toggleSidebar()" style="padding:6px 12px;">☰ Menü</button>
-</div>
-
-<div class="mobile-scroll-header no-print" id="mobile-scroll-header">
-  <div class="wr-info" id="mobile-wr-info">WR —</div>
-  <div class="string-info" id="mobile-string-info">String —</div>
 </div>
 
 <aside class="sidebar no-print" id="sidebar">
@@ -684,6 +606,9 @@ body.sun-mode table.mt td[data-label="Aktiv"] {
   <button onclick="toggleSunMode();closeSidebar();" class="sidebar-btn" id="btn-sun">
     <span class="icon">☀️</span><span class="label">Baustellen-Modus (Hell)</span>
   </button>
+  <button onclick="restorePVManFull();closeSidebar();" class="sidebar-btn role-gate-admin" style="color:#f59e0b;">
+    <span class="icon">🔧</span><span class="label">PV MAN P52 (6 WRs) wiederherstellen</span>
+  </button>
   <button onclick="factoryResetCloud();closeSidebar();" class="sidebar-btn red role-gate-planner">
     <span class="icon">🚨</span><span class="label">Matrix zurücksetzen</span>
   </button>
@@ -721,6 +646,11 @@ body.sun-mode table.mt td[data-label="Aktiv"] {
   </div>
 
   <div class="matrix-view active" id="matrix-view">
+    <div class="role-hint-banner no-print" id="role-hint-banner" style="display:none;">
+      <span class="role-icon">📋</span>
+      <span class="role-text" id="role-hint-text">Bauleitungs-Modus: Nur Messwerte editierbar.</span>
+    </div>
+
     <div class="lock-banner no-print" id="lock-banner">
       <div class="lock-info">
         <span class="lock-icon">🔒</span>
@@ -849,6 +779,7 @@ body.sun-mode table.mt td[data-label="Aktiv"] {
     </div>
   </div>
 </div>
+
 <script>
 const SB_URL = "https://rcuimtfmjkpxkazbsggj.supabase.co";
 const SB_KEY = "sb_publishable_pe8Ye20-e9az1D5MvNCB5A_8_ai7afc";
@@ -871,13 +802,8 @@ function toast(msg, ms=3000){
 
 function toggleSunMode(){
   const on = document.body.classList.toggle('sun-mode');
-  // theme-color dynamisch anpassen, damit iOS die Statusbar-Farbe matched
   let meta = document.querySelector('meta[name="theme-color"]:not([media])');
-  if(!meta){
-    meta = document.createElement('meta');
-    meta.name = 'theme-color';
-    document.head.appendChild(meta);
-  }
+  if(!meta){ meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
   meta.setAttribute('content', on ? '#ffffff' : '#09090b');
   try { localStorage.setItem('solpro_sun_mode', on ? '1' : '0'); } catch(e){}
 }
@@ -891,7 +817,6 @@ function toggleHideInactive(forceState = null){
   if(btn) btn.classList.toggle('active', hideInactive);
   g('hide-nein-text').textContent = hideInactive ? 'Alle Strings anzeigen' : 'Nur aktive Strings';
   if(forceState === null) toast(hideInactive ? 'Inaktive Strings ausgeblendet' : 'Alle Strings eingeblendet');
-  if(window.__mshScrollHandler) window.__mshScrollHandler();
 }
 
 function filterInverter(n, btn){
@@ -934,10 +859,9 @@ function renderProjectGrid(){
     grid.innerHTML = `
       <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--muted);">
         <div style="font-size:3rem; margin-bottom:16px;">📁</div>
-        <div style="font-size:1.1rem; font-weight:700; margin-bottom:8px;">Keine Projekte vorhanden</div>
-        <div style="font-size:0.85rem; margin-bottom:20px;">Lade aus der Cloud oder erstelle ein neues Projekt</div>
-        ${currentUserRole !== 'site' ? '<button class="btn btn-primary" onclick="openNewProjectModal()" style="margin:0 auto;">+ Neues Projekt</button>' : ''}
-        <div style="margin-top:12px;"><button class="btn btn-ghost" onclick="restoreDemoProject()">🔧 Demo-Projekt (PV MAN P52) wiederherstellen</button></div>
+        <div style="font-size:1.1rem; font-weight:700; margin-bottom:8px;">Keine Projekte</div>
+        ${currentUserRole !== 'site' ? '<button class="btn btn-primary" onclick="openNewProjectModal()">+ Neues Projekt</button>' : ''}
+        <div style="margin-top:12px;"><button class="btn btn-ghost" onclick="restorePVManFull()">🔧 PV MAN P52 (6 WRs) wiederherstellen</button></div>
       </div>
     `;
     return;
@@ -960,21 +884,12 @@ function renderProjectGrid(){
           ${wrCount} Wechselrichter &middot; ${wp} Wp${proj.locked ? ' &middot; <span style="color:#ef4444;font-weight:700;">gesperrt</span>' : ''}
         </div>
         <div class="project-card-stats">
-          <div class="project-card-stat">
-            <div class="project-card-stat-label">WR</div>
-            <div class="project-card-stat-value">${wrCount}</div>
-          </div>
-          <div class="project-card-stat">
-            <div class="project-card-stat-label">Wp</div>
-            <div class="project-card-stat-value">${wp}</div>
-          </div>
-          <div class="project-card-stat">
-            <div class="project-card-stat-label">MPPTs</div>
-            <div class="project-card-stat-value">${Object.keys(proj.plan || {}).filter(k => !isNaN(parseInt(k))).reduce((sum, wr) => {
-              const wrData = proj.plan[wr];
-              return sum + (Array.isArray(wrData) ? 12 : (wrData.mppts || 12));
-            }, 0)}</div>
-          </div>
+          <div class="project-card-stat"><div class="project-card-stat-label">WR</div><div class="project-card-stat-value">${wrCount}</div></div>
+          <div class="project-card-stat"><div class="project-card-stat-label">Wp</div><div class="project-card-stat-value">${wp}</div></div>
+          <div class="project-card-stat"><div class="project-card-stat-label">MPPTs</div><div class="project-card-stat-value">${Object.keys(proj.plan || {}).filter(k => !isNaN(parseInt(k))).reduce((sum, wr) => {
+            const wrData = proj.plan[wr];
+            return sum + (Array.isArray(wrData) ? 12 : (wrData.mppts || 12));
+          }, 0)}</div></div>
         </div>
       </div>
     `;
@@ -991,36 +906,24 @@ let PROJECTS = {};
 let CURRENT_PROJECT_ID = null;
 let APP_STATE = {};
 
-// === ROBUST INITIALIZATION ===
 async function initProjects(){
-  // 1) Versuche aus localStorage
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.projects) || '{}');
     PROJECTS = stored && Object.keys(stored).length > 0 ? stored : JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
-  } catch(e){ 
-    console.warn('localStorage Projekte korrupt, lade Defaults', e);
-    PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS)); 
-  }
+  } catch(e){ PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS)); }
 
-  // 2) Validiere PROJECTS
   if(!PROJECTS || Object.keys(PROJECTS).length === 0) {
     PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
   }
 
-  // 3) CURRENT_PROJECT_ID
   const storedCurr = localStorage.getItem(STORAGE_KEYS.current);
-  if(storedCurr && PROJECTS[storedCurr]) {
-    CURRENT_PROJECT_ID = storedCurr;
-  } else {
-    CURRENT_PROJECT_ID = Object.keys(PROJECTS)[0] || 'PV_MAN_P52';
-  }
+  if(storedCurr && PROJECTS[storedCurr]) CURRENT_PROJECT_ID = storedCurr;
+  else CURRENT_PROJECT_ID = Object.keys(PROJECTS)[0] || 'PV_MAN_P52';
   
-  // 4) Cloud-Sync (überschreibt ggf. PROJECTS, behält aber PV_MAN_P52 als Fallback)
   if(supabaseClient && currentUser){
     try { await fetchProjectsFromCloud(); } catch(e){ console.warn('Cloud-Fetch fehlgeschlagen', e); }
   }
   
-  // 5) Re-validate CURRENT_PROJECT_ID nach Cloud-Sync
   if(!PROJECTS[CURRENT_PROJECT_ID]) {
     CURRENT_PROJECT_ID = Object.keys(PROJECTS)[0];
     if(CURRENT_PROJECT_ID) localStorage.setItem(STORAGE_KEYS.current, CURRENT_PROJECT_ID);
@@ -1030,16 +933,132 @@ async function initProjects(){
   saveProjectsLocal();
 }
 
-function saveProjectsLocal(){
-  try { localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS)); } catch(e){}
-}
+function saveProjectsLocal(){ try { localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS)); } catch(e){} }
 
-function restoreDemoProject(){
-  if(PROJECTS['PV_MAN_P52']) return toast('Demo-Projekt existiert bereits');
-  PROJECTS['PV_MAN_P52'] = JSON.parse(JSON.stringify(DEFAULT_PROJECTS.PV_MAN_P52));
-  saveProjectsLocal();
-  selectProject('PV_MAN_P52');
-  toast('✅ Demo-Projekt wiederhergestellt');
+// === NOTFALL: PV MAN P52 mit allen 6 WRs wiederherstellen ===
+function restorePVManFull() {
+  const FULL_PV_MAN = {
+    1: [
+      { p: 1,  m: 23, g: 1, n: "Fläche A" },
+      { p: 2,  m: 23, g: 1, n: "Fläche A" },
+      { p: 3,  m: 22, g: 1, n: "Fläche A" },
+      { p: 4,  m: 22, g: 1, n: "Fläche A" },
+      { p: 5,  m: 21, g: 1, n: "Fläche A" },
+      { p: 6,  m: 21, g: 1, n: "Fläche A" },
+      { p: 7,  m: 21, g: 1, n: "Fläche A" },
+      { p: 8,  m: 21, g: 1, n: "Fläche A" },
+      { p: 9,  m: 20, g: 2, n: "Fläche A" },
+      { p: 10, m: 20, g: 2, n: "Fläche A" },
+      { p: 11, m: 21, g: 2, n: "Fläche A" },
+      { p: 12, m: 21, g: 2, n: "Fläche A" }
+    ],
+    2: [
+      { p: 13, m: 22, g: 1, n: "Fläche A" },
+      { p: 14, m: 22, g: 1, n: "Fläche A" },
+      { p: 15, m: 21, g: 1, n: "Fläche A" },
+      { p: 16, m: 21, g: 1, n: "Fläche A" },
+      { p: 17, m: 20, g: 1, n: "Fläche A" },
+      { p: 18, m: 20, g: 1, n: "Fläche A" },
+      { p: 19, m: 20, g: 1, n: "Fläche A" },
+      { p: 20, m: 20, g: 1, n: "Fläche A" },
+      { p: 21, m: 19, g: 2, n: "Fläche A" },
+      { p: 22, m: 19, g: 2, n: "Fläche A" },
+      { p: 23, m: 20, g: 2, n: "Fläche A" },
+      { p: 24, m: 20, g: 2, n: "Fläche A" }
+    ],
+    3: [
+      { p: 25, m: 21, g: 1, n: "Fläche B" },
+      { p: 26, m: 21, g: 1, n: "Fläche B" },
+      { p: 27, m: 20, g: 1, n: "Fläche B" },
+      { p: 28, m: 20, g: 1, n: "Fläche B" },
+      { p: 29, m: 19, g: 1, n: "Fläche B" },
+      { p: 30, m: 19, g: 1, n: "Fläche B" },
+      { p: 31, m: 19, g: 1, n: "Fläche B" },
+      { p: 32, m: 19, g: 1, n: "Fläche B" },
+      { p: 33, m: 18, g: 2, n: "Fläche B" },
+      { p: 34, m: 18, g: 2, n: "Fläche B" },
+      { p: 35, m: 19, g: 2, n: "Fläche B" },
+      { p: 36, m: 19, g: 2, n: "Fläche B" }
+    ],
+    4: [
+      { p: 37, m: 20, g: 1, n: "Fläche B" },
+      { p: 38, m: 20, g: 1, n: "Fläche B" },
+      { p: 39, m: 19, g: 1, n: "Fläche B" },
+      { p: 40, m: 19, g: 1, n: "Fläche B" },
+      { p: 41, m: 18, g: 1, n: "Fläche B" },
+      { p: 42, m: 18, g: 1, n: "Fläche B" },
+      { p: 43, m: 18, g: 1, n: "Fläche B" },
+      { p: 44, m: 18, g: 1, n: "Fläche B" },
+      { p: 45, m: 17, g: 2, n: "Fläche B" },
+      { p: 46, m: 17, g: 2, n: "Fläche B" },
+      { p: 47, m: 18, g: 2, n: "Fläche B" },
+      { p: 48, m: 18, g: 2, n: "Fläche B" }
+    ],
+    5: [
+      { p: 49, m: 19, g: 1, n: "Fläche C" },
+      { p: 50, m: 19, g: 1, n: "Fläche C" },
+      { p: 51, m: 18, g: 1, n: "Fläche C" },
+      { p: 52, m: 18, g: 1, n: "Fläche C" },
+      { p: 53, m: 17, g: 1, n: "Fläche C" },
+      { p: 54, m: 17, g: 1, n: "Fläche C" },
+      { p: 55, m: 17, g: 1, n: "Fläche C" },
+      { p: 56, m: 17, g: 1, n: "Fläche C" },
+      { p: 57, m: 16, g: 2, n: "Fläche C" },
+      { p: 58, m: 16, g: 2, n: "Fläche C" },
+      { p: 59, m: 17, g: 2, n: "Fläche C" },
+      { p: 60, m: 17, g: 2, n: "Fläche C" }
+    ],
+    6: [
+      { p: 61, m: 18, g: 1, n: "Fläche C" },
+      { p: 62, m: 18, g: 1, n: "Fläche C" },
+      { p: 63, m: 17, g: 1, n: "Fläche C" },
+      { p: 64, m: 17, g: 1, n: "Fläche C" },
+      { p: 65, m: 16, g: 1, n: "Fläche C" },
+      { p: 66, m: 16, g: 1, n: "Fläche C" },
+      { p: 67, m: 16, g: 1, n: "Fläche C" },
+      { p: 68, m: 16, g: 1, n: "Fläche C" },
+      { p: 69, m: 15, g: 2, n: "Fläche C" },
+      { p: 70, m: 15, g: 2, n: "Fläche C" },
+      { p: 71, m: 16, g: 2, n: "Fläche C" },
+      { p: 72, m: 16, g: 2, n: "Fläche C" }
+    ]
+  };
+
+  if(!confirm("PV MAN P52 mit allen 6 Wechselrichtern wiederherstellen?\n\nAktuelle Daten werden überschrieben. Bereits gemessene Uoc/Isc/Riso-Werte für existierende Strings bleiben erhalten.")) return;
+  
+  // Bestehende Messwerte sichern
+  const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
+  const savedMeasurements = allData['PV_MAN_P52'] || {};
+  
+  PROJECTS['PV_MAN_P52'] = {
+    id: 'PV_MAN_P52',
+    name: 'PV_MAN_P52'.replace(/_/g, ' '),
+    model_wp: 465,
+    locked: false,
+    plan: FULL_PV_MAN
+  };
+  
+  localStorage.setItem('solpro_projects_v2', JSON.stringify(PROJECTS));
+  localStorage.setItem('solpro_curr_v2', 'PV_MAN_P52');
+  CURRENT_PROJECT_ID = 'PV_MAN_P52';
+  
+  // State neu generieren, alte Messwerte übernehmen wo möglich
+  APP_STATE = generateState(FULL_PV_MAN, true);
+  Object.keys(APP_STATE).forEach(k => {
+    if(savedMeasurements[k]) {
+      APP_STATE[k] = { ...APP_STATE[k], ...savedMeasurements[k] };
+    }
+  });
+  allData['PV_MAN_P52'] = APP_STATE;
+  localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(allData));
+  
+  updateUI();
+  updateLockUI();
+  updateRoleHint();
+  
+  if(supabaseClient && currentUser) saveProjectToCloud('PV_MAN_P52');
+  
+  toast('✅ PV MAN P52 wiederhergestellt: 6 WRs, 72 Strings');
 }
 
 function getCurrentProject(){ return PROJECTS[CURRENT_PROJECT_ID] || null; }
@@ -1105,6 +1124,7 @@ function loadCurrentProjectData(allActiveByDefault = true){
   } catch(e){}
   updateUI();
   updateLockUI();
+  updateRoleHint();
 }
 
 function updateUI() {
@@ -1119,9 +1139,16 @@ function isProtocolLocked(){
   return !!(p && p.locked);
 }
 
-function canEditProtocol(){
+// === ROLLEN-BERECHTIGUNGEN ===
+function canEditMeasurement(){
   if(currentUserRole === 'admin') return true;
-  return !isProtocolLocked();
+  if(isProtocolLocked()) return false;
+  return true; // planner + site: beides true
+}
+function canEditHardware(){
+  if(currentUserRole === 'admin') return true;
+  if(currentUserRole === 'planner') return !isProtocolLocked();
+  return false; // site: niemals
 }
 
 async function toggleProtocolLock(){
@@ -1132,8 +1159,7 @@ async function toggleProtocolLock(){
   const p = getCurrentProject();
   if(!p) return;
   const willLock = !p.locked;
-  if(willLock && !confirm('Messprotokoll wirklich sperren?\n\nDanach können Bauleitung & Planer KEINE Änderungen mehr vornehmen. Nur du als Admin kannst noch editieren.')) return;
-  
+  if(willLock && !confirm('Messprotokoll wirklich sperren?\n\nDanach können Bauleitung & Planer KEINE Änderungen mehr vornehmen.')) return;
   p.locked = willLock;
   if(willLock){
     p.locked_by = currentUser ? currentUser.email : 'admin';
@@ -1144,19 +1170,18 @@ async function toggleProtocolLock(){
     p.locked_at = null;
     toast('🔓 Messprotokoll entsperrt');
   }
-  
   saveProjectsLocal();
   if(supabaseClient && currentUser){
     try { await saveProjectToCloud(CURRENT_PROJECT_ID); } catch(e){}
   }
   renderMatrix();
   updateLockUI();
+  updateRoleHint();
 }
 
 function updateLockUI(){
   const p = getCurrentProject();
   const locked = !!(p && p.locked);
-  const showLockedBody = locked && !canEditProtocol();
   
   const banner = g('lock-banner');
   if(banner){
@@ -1199,13 +1224,27 @@ function updateLockUI(){
     }
   }
   
-  document.body.classList.toggle('protocol-locked', showLockedBody);
+  document.body.classList.toggle('protocol-locked', locked && !canEditMeasurement());
+}
+
+function updateRoleHint(){
+  const banner = g('role-hint-banner');
+  if(!banner) return;
+  if(currentUserRole === 'site'){
+    banner.style.display = 'flex';
+    g('role-hint-text').textContent = isProtocolLocked()
+      ? '🔒 Protokoll gesperrt — keine Änderungen möglich.'
+      : 'Bauleitungs-Modus: Du kannst nur Messwerte (Uoc/Isc/Riso) und Bemerkungen eintragen. Hardware ist read-only.';
+  } else {
+    banner.style.display = 'none';
+  }
 }
 
 function renderMatrix(remoteOverride = null){
   const wp = getCurrentWp();
   const plan = getCurrentPlan();
-  const readonly = !canEditProtocol();
+  const canHardware = canEditHardware();
+  const canMeasure = canEditMeasurement();
   const protocolLocked = isProtocolLocked();
   
   if(remoteOverride){
@@ -1219,7 +1258,7 @@ function renderMatrix(remoteOverride = null){
   const wrKeys = Object.keys(plan).map(Number).filter(n => !isNaN(n)).sort((a,b)=>a-b);
 
   if(wrKeys.length === 0){
-    container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--muted);">Kein aktives Projekt. Bitte Projekt wählen oder neu erstellen.</div>`;
+    container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--muted);">Kein aktives Projekt.</div>`;
     return;
   }
 
@@ -1254,7 +1293,16 @@ function renderMatrix(remoteOverride = null){
            activeStrings++; totActive++;
         }
 
-        const dis = readonly ? 'disabled' : '';
+        const gakRO = !canHardware;
+        const modRO = !canHardware;
+        const togDis = !canHardware;
+        const uocRO = !canMeasure;
+        const iscRO = !canMeasure;
+        const risoRO = !canMeasure;
+        const noteRO = !canMeasure;
+
+        const roAttr = f => f ? 'readonly' : '';
+        const disAttr = f => f ? 'disabled' : '';
 
         rowsHtml += `
           <tr id="row-${id}" class="${!isJa ? 'row-nein' : ''}" data-wr="${wr}" data-mppt="${m}" data-string="${s}" data-string-id="${id}">
@@ -1264,30 +1312,35 @@ function renderMatrix(remoteOverride = null){
                  ${strLabel}
                </div>
             </td>
-            <td data-label="GAK" style="width:12%;"><input type="text" id="gak-${id}" value="${item.gak}" class="sp-inp sp-inp-center sp-inp-gak" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'gak', this.value)" ${dis}>
+            <td data-label="GAK" style="width:12%;">
+              <input type="text" id="gak-${id}" value="${item.gak}" class="sp-inp sp-inp-center sp-inp-gak" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'gak', this.value)" ${roAttr(gakRO)}>
                <span class="print-cell">${item.gak}</span>
             </td>
             <td data-label="Aktiv" class="no-print" style="width:12%;">
               <div class="tog-wrap" style="transform:scale(0.85);">
-                <button id="tja-${id}" class="tog ${isJa?'on-ja':''}" onclick="setStat('${id}','JA')" ${dis}>JA</button>
-                <button id="tnei-${id}" class="tog ${!isJa?'on-nei':''}" onclick="setStat('${id}','NEIN')" ${dis}>NEIN</button>
+                <button id="tja-${id}" class="tog ${isJa?'on-ja':''}" onclick="setStat('${id}','JA')" ${disAttr(togDis)}>JA</button>
+                <button id="tnei-${id}" class="tog ${!isJa?'on-nei':''}" onclick="setStat('${id}','NEIN')" ${disAttr(togDis)}>NEIN</button>
               </div>
             </td>
-            <td data-label="Module" style="width:8%;"><input type="number" id="mod-${id}" value="${item.mod||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'mod', this.value); updateKPIs();" ${dis}>
+            <td data-label="Module" style="width:8%;">
+              <input type="number" id="mod-${id}" value="${item.mod||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'mod', this.value); updateKPIs();" ${roAttr(modRO)}>
                <span class="print-cell" id="pm-${id}">${item.mod > 0 ? item.mod : '—'}</span>
             </td>
             <td data-label="kWp" class="pwr-cell" style="width:8%;" id="pw-${id}">${pwr}</td>
-            <td data-label="Uoc(V)" class="col-hide-print" style="width:10%;"><input type="text" inputmode="decimal" id="uoc-${id}" value="${item.uoc||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'uoc', this.value)" ${dis}>
+            <td data-label="Uoc(V)" class="col-hide-print" style="width:10%;">
+              <input type="text" inputmode="decimal" id="uoc-${id}" value="${item.uoc||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'uoc', this.value)" ${roAttr(uocRO)}>
                <span class="print-cell" id="puoc-${id}">${item.uoc||''}</span>
             </td>
-            <td data-label="Isc(A)" class="col-hide-print" style="width:10%;"><input type="text" inputmode="decimal" id="isc-${id}" value="${item.isc||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'isc', this.value)" ${dis}>
+            <td data-label="Isc(A)" class="col-hide-print" style="width:10%;">
+              <input type="text" inputmode="decimal" id="isc-${id}" value="${item.isc||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'isc', this.value)" ${roAttr(iscRO)}>
                <span class="print-cell" id="pisc-${id}">${item.isc||''}</span>
             </td>
-            <td data-label="Riso(MΩ)" class="col-hide-print" style="width:10%;"><input type="text" inputmode="decimal" id="riso-${id}" value="${item.riso||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'riso', this.value)" ${dis}>
+            <td data-label="Riso(MΩ)" class="col-hide-print" style="width:10%;">
+              <input type="text" inputmode="decimal" id="riso-${id}" value="${item.riso||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'riso', this.value)" ${roAttr(risoRO)}>
                <span class="print-cell" id="priso-${id}">${item.riso||''}</span>
             </td>
             <td data-label="Info" class="col-note" style="text-align:left; width:18%;">
-              <input type="text" id="note-${id}" value="${item.note||''}" class="sp-inp" style="text-align:left;font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'note', this.value)" ${dis}>
+              <input type="text" id="note-${id}" value="${item.note||''}" class="sp-inp" style="text-align:left;font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'note', this.value)" ${roAttr(noteRO)}>
               <span class="print-cell" id="pnote-${id}" style="font-size:7pt;color:#71717a;">${item.note||''}</span>
             </td>
           </tr>`;
@@ -1297,7 +1350,7 @@ function renderMatrix(remoteOverride = null){
     bl.innerHTML = `
       <div class="wr-head">
         <div style="display:flex;align-items:center;gap:12px;">
-          <span class="wr-num" style="cursor:pointer;" onclick="renameInverter(${wr})">${wrData.name || 'WR ' + wr} ✏️</span>
+          <span class="wr-num" style="cursor:${canHardware ? 'pointer' : 'default'};" onclick="${canHardware ? `renameInverter(${wr})` : 'void(0)'}">${wrData.name || 'WR ' + wr}${canHardware ? ' ✏️' : ''}</span>
           <span class="wr-kpis">${activeStrings} Strings &middot; ${mppts} MPPTs</span>
         </div>
         <div class="wr-kpis"><strong style="color:var(--accent);">${wrPwr.toFixed(2)} kWp</strong></div>
@@ -1325,10 +1378,8 @@ function renderMatrix(remoteOverride = null){
   buildFilterBar();
 }
 
-function initMobileScrollHeader() { return; /* deaktiviert */ }
-
 function renameInverter(wrId) {
-  if(!canEditProtocol()) return toast('🔒 Protokoll ist gesperrt - keine Änderungen möglich');
+  if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
   const plan = getCurrentPlan();
   if(!plan[wrId]) return;
   const currentName = plan[wrId].name || `WR ${wrId}`;
@@ -1351,14 +1402,22 @@ function renameInverter(wrId) {
 let cloudSyncTimeout = null;
 
 function saveData(id, field, val) {
-  if(!canEditProtocol()){
-    toast('🔒 Protokoll gesperrt - Änderung nicht möglich');
-    const inputMap = { gak:'gak', mod:'mod', uoc:'uoc', isc:'isc', riso:'riso', note:'note' };
-    const inputEl = g(`${inputMap[field]}-${id}`);
-    if(inputEl && APP_STATE[id]) inputEl.value = APP_STATE[id][field] || '';
+  if(!APP_STATE[id]) return;
+  
+  const hardwareFields = ['gak', 'mod', 'stat', 'planName'];
+  const isHardware = hardwareFields.includes(field);
+  
+  if(isHardware && !canEditHardware()){
+    toast('🔒 Hardware-Felder kannst du nicht ändern');
+    revertInput(id, field);
     return;
   }
-  if(!APP_STATE[id]) return;
+  if(!isHardware && !canEditMeasurement()){
+    toast('🔒 Protokoll gesperrt - Änderung nicht möglich');
+    revertInput(id, field);
+    return;
+  }
+  
   if(field==='mod') APP_STATE[id][field] = parseFloat(val)||0;
   else APP_STATE[id][field] = val;
   
@@ -1387,8 +1446,14 @@ function saveData(id, field, val) {
   }
 }
 
+function revertInput(id, field){
+  const inputMap = { gak:'gak', mod:'mod', uoc:'uoc', isc:'isc', riso:'riso', note:'note' };
+  const el = g(`${inputMap[field]}-${id}`);
+  if(el && APP_STATE[id]) el.value = APP_STATE[id][field] || '';
+}
+
 function setStat(id, st) {
-  if(!canEditProtocol()) return toast('🔒 Protokoll gesperrt - Änderung nicht möglich');
+  if(!canEditHardware()) return toast('🔒 Hardware-Felder kannst du nicht ändern');
   saveData(id, 'stat', st);
   const ja = g(`tja-${id}`); const nei = g(`tnei-${id}`);
   if(st==='JA'){ ja.className='tog on-ja'; nei.className='tog'; }
@@ -1417,6 +1482,7 @@ function updateKPIs(){
 }
 
 function openPVSOLModal(){
+  if(currentUserRole === 'site') return toast('🔒 Nur Planer/Admin');
   pendingPVSOLData = null;
   g('pvsol-file-input').value = '';
   g('pvsol-file-label').textContent = 'JSON-Datei auswählen';
@@ -1439,13 +1505,11 @@ function handlePVSOLFile(input){
       if (json.Configuration) configRoot = json.Configuration;
       else if (json.Project && json.Project.Configuration) configRoot = json.Project.Configuration;
       else if (json.ProjectOverview && json.ProjectOverview.Configuration) configRoot = json.ProjectOverview.Configuration;
-      if(!configRoot || !configRoot.ModuleAreas){
-        toast('Ungültiges PVSOL-Format'); pendingPVSOLData = null; return;
-      }
+      if(!configRoot || !configRoot.ModuleAreas){ toast('Ungültiges PVSOL-Format'); pendingPVSOLData = null; return; }
       pendingPVSOLData = json;
       showPVSOLPreview(parsePVSOLData(json));
       g('pvsol-confirm-btn').disabled = false;
-    } catch(err){ toast('Fehler beim Lesen: ' + err.message); pendingPVSOLData = null; }
+    } catch(err){ toast('Fehler: ' + err.message); pendingPVSOLData = null; }
   };
   reader.readAsText(file);
 }
@@ -1513,11 +1577,12 @@ async function openProjectsModal(){
   list.innerHTML = ids.map(id => {
     const proj = PROJECTS[id];
     const lockedIcon = proj.locked ? '🔒 ' : '';
+    const wrCount = Object.keys(proj.plan || {}).filter(k => !isNaN(parseInt(k))).length;
     return `
     <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--bg); border:1px solid var(--border); border-radius:12px; flex-wrap:wrap; gap:8px;">
       <div style="min-width:0; flex:1 1 140px; overflow:hidden;">
         <div style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${lockedIcon}${id === CURRENT_PROJECT_ID ? '✓ ' : ''}${proj.name}</div>
-        <div style="font-size:0.7rem;color:var(--muted);">${Object.keys(proj.plan || {}).filter(k => !isNaN(parseInt(k))).length} WR &middot; ${proj.model_wp} Wp${proj.locked ? ' &middot; <span style="color:#ef4444;">gesperrt</span>' : ''}</div>
+        <div style="font-size:0.7rem;color:var(--muted);">${wrCount} WR &middot; ${proj.model_wp} Wp${proj.locked ? ' &middot; <span style="color:#ef4444;">gesperrt</span>' : ''}</div>
       </div>
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
         <button class="btn btn-ghost" onclick="selectProject('${id}')" style="padding:6px 10px;">Öffnen</button>
@@ -1770,7 +1835,6 @@ function printWRMontagePlan(){
 async function fetchProjectsFromCloud(){
   if(!supabaseClient || !currentUser) return;
   try {
-    // FIX: Alle Rollen sehen alle Projekte (Bauleitung muss messen können!)
     const query = supabaseClient.from('pv_projects').select('id, name, config, updated_at, user_id, pruefer, modul_wp');
     const { data, error } = await query;
     if(error) { toast('❌ Cloud-Fehler: ' + error.message); return; }
@@ -1824,7 +1888,6 @@ async function saveProjectToCloud(projectId){
     const { error } = await supabaseClient.from('pv_projects').upsert(payload);
     if(syncIndicator) syncIndicator.classList.remove('syncing');
     if(error) {
-      toast('Speichern fehlgeschlagen: ' + error.message);
       const off = g('offline-indicator'); if(off) off.classList.add('offline');
     } else {
       const off = g('offline-indicator'); if(off) off.classList.remove('offline');
@@ -1937,6 +2000,7 @@ async function onAuthenticated(user){
   g('user-badge-role').textContent = roleLabels[currentUserRole] || '—';
   await initProjects();
   updateLockUI();
+  updateRoleHint();
   if(currentUserRole === 'site') toggleHideInactive(true);
 }
 

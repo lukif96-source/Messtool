@@ -131,6 +131,12 @@ table.mt tbody tr.mppt-header td { padding: 8px 12px; font-weight: 800; font-siz
 .sidebar-overlay.open { display: block; }
 
 .top-bar-mobile { display: none; position: sticky; top: 0; z-index: 50; background: rgba(18, 18, 20, 0.85); backdrop-filter: blur(12px); padding: 12px; border-bottom: 1px solid var(--border); align-items: center; justify-content: space-between; margin-bottom: 16px; }
+
+/* MOBILE SCROLL HEADER */
+.mobile-scroll-header { display: none; position: sticky; top: 60px; z-index: 45; background: rgba(18, 18, 20, 0.95); backdrop-filter: blur(12px); padding: 8px 12px; border-bottom: 1px solid var(--border); border-left: 3px solid var(--accent); }
+.mobile-scroll-header .wr-info { font-size: 0.75rem; font-weight: 700; color: var(--accent); }
+.mobile-scroll-header .string-info { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
 @media (max-width: 900px) {
   .sidebar { transform: translateX(-100%); box-shadow: 4px 0 24px rgba(0,0,0,0.5); }
   .sidebar.open { transform: translateX(0); }
@@ -147,6 +153,38 @@ table.mt tbody tr.mppt-header td { padding: 8px 12px; font-weight: 800; font-siz
   td.col-note { flex-direction: column; align-items: stretch; gap: 4px; padding: 10px 12px 12px; }
   td.col-note::before { margin-bottom: 2px; }
   td.col-note .sp-inp { max-width: 100%; text-align: left; }
+}
+
+@media (max-width: 600px) {
+  .wrap { padding: 8px 8px 140px; }
+  .dashboard { grid-template-columns: 1fr; gap: 8px; }
+  .mobile-scroll-header { display: block; }
+  .kpi-card { padding: 12px; }
+  .kpi-value { font-size: 1.2rem; }
+  .main-tabs { gap: 4px; }
+  .main-tab { font-size: 0.75rem; padding: 10px 12px; }
+  .view-bar-wrap { flex-direction: column; align-items: stretch; }
+  .wr-filter-bar { margin-bottom: 8px; }
+  .filter-toggle-btn { width: 100%; justify-content: center; }
+  .project-grid { grid-template-columns: 1fr; }
+  .project-card { padding: 12px; }
+  .wr-block { margin-bottom: 16px; }
+  .wr-head { padding: 10px 12px; }
+  .wr-num { font-size: 0.75rem; padding: 3px 8px; }
+  .wr-kpis { font-size: 0.7rem; }
+  table.mt tbody tr { margin: 8px 0; padding: 4px 0; }
+  table.mt td { padding: 6px 8px; font-size: 0.65rem; }
+  table.mt td::before { font-size: 0.65rem; }
+  .sp-inp { max-width: 100px; font-size: 0.65rem; padding: 4px 6px; }
+  .tog-wrap { transform: scale(0.75); }
+  .modal-card { max-height: 95vh; border-radius: 12px; }
+  .modal-head { padding: 12px 16px; }
+  .modal-head h2 { font-size: 1rem; }
+  .modal-body { padding: 16px; }
+  .field-radio { padding: 10px 12px; }
+  .field-radio-title { font-size: 0.85rem; }
+  .field-radio-desc { font-size: 0.68rem; }
+  .btn { padding: 6px 12px; font-size: 0.75rem; min-height: 36px; }
 }
 
 .modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px; }
@@ -187,7 +225,7 @@ table.mt tbody tr.mppt-header td { padding: 8px 12px; font-weight: 800; font-siz
 
 @media print {
   body { background: #fff !important; color: #000 !important; font-size: 8pt; }
-  .no-print, .view-bar-wrap, .mobile-fab, .sidebar, .sidebar-toggle, .top-bar-mobile { display: none !important; }
+  .no-print, .view-bar-wrap, .mobile-fab, .sidebar, .sidebar-toggle, .top-bar-mobile, .mobile-scroll-header { display: none !important; }
   .main-content { margin-left: 0 !important; padding: 0 !important; }
   .wr-block { border: 1px solid #cbd5e1 !important; break-inside: avoid; display: block !important; margin-bottom: 15px; }
   table.mt { width: 100%; display: table !important; }
@@ -206,11 +244,32 @@ table.mt tbody tr.mppt-header td { padding: 8px 12px; font-weight: 800; font-siz
 .file-upload-wrapper input[type=file] { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
 .file-upload-btn { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: var(--accent-glow); border: 2px dashed var(--accent); border-radius: 12px; color: var(--accent); font-weight: 700; cursor: pointer; transition: all 0.2s; width: 100%; justify-content: center; }
 .file-upload-btn:hover { background: var(--accent); color: #000; }
+
+/* Cloud Sync Indicator */
+.cloud-sync-indicator { position: fixed; bottom: 80px; right: 20px; z-index: 1000; display: none; align-items: center; gap: 8px; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 99px; font-size: 0.75rem; font-weight: 600; color: var(--muted); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+.cloud-sync-indicator.syncing { display: flex; }
+.cloud-sync-indicator .spinner { width: 14px; height: 14px; border: 2px solid var(--muted); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Offline Indicator */
+.offline-indicator { position: fixed; top: 70px; right: 20px; z-index: 1000; display: none; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; border-radius: 99px; font-size: 0.7rem; font-weight: 700; color: #ef4444; }
+.offline-indicator.offline { display: flex; }
 </style>
 </head>
 <body>
 
 <div id="toast"></div>
+
+<!-- CLOUD SYNC INDICATOR -->
+<div class="cloud-sync-indicator" id="cloud-sync-indicator">
+  <div class="spinner"></div>
+  <span>Sync zur Cloud...</span>
+</div>
+
+<!-- OFFLINE INDICATOR -->
+<div class="offline-indicator" id="offline-indicator">
+  <span>📡</span> <span>Offline</span>
+</div>
 
 <!-- AUTH GATE -->
 <div id="auth-gate">
@@ -286,6 +345,12 @@ table.mt tbody tr.mppt-header td { padding: 8px 12px; font-weight: 800; font-siz
 <div class="top-bar-mobile no-print">
   <div style="font-weight:900; font-size:1.1rem; color:var(--accent); letter-spacing:-0.05em;">SOLPRO</div>
   <button class="btn btn-ghost" onclick="toggleSidebar()" style="padding:6px 12px;">☰ Menü</button>
+</div>
+
+<!-- MOBILE SCROLL HEADER -->
+<div class="mobile-scroll-header no-print" id="mobile-scroll-header">
+  <div class="wr-info" id="mobile-wr-info">WR —</div>
+  <div class="string-info" id="mobile-string-info">String —</div>
 </div>
 
 <!-- SIDEBAR -->
@@ -692,7 +757,7 @@ function generateState(plan, allActiveByDefault = true){
   return result;
 }
 
-function loadCurrentProjectData(allActiveByDefault = false){
+function loadCurrentProjectData(allActiveByDefault = true){
   if(!CURRENT_PROJECT_ID) return;
   APP_STATE = generateState(getCurrentPlan(), allActiveByDefault);
   try {
@@ -766,7 +831,7 @@ function renderMatrix(remoteOverride = null){
         }
 
         rowsHtml += `
-          <tr id="row-${id}" class="${!isJa ? 'row-nein' : ''}">
+          <tr id="row-${id}" class="${!isJa ? 'row-nein' : ''}" data-wr="${wr}" data-mppt="${m}" data-string="${s}" data-string-id="${id}">
             <td data-label="Klemme" style="text-align:left; padding-left:6px; width:12%;">
                <div style="display:flex;flex-direction:column;gap:1px;">
                  <span class="string-id" style="font-size:0.7rem;">${id}</span>
@@ -800,7 +865,7 @@ function renderMatrix(remoteOverride = null){
     bl.innerHTML = `
       <div class="wr-head">
         <div style="display:flex;align-items:center;gap:12px;">
-          <span class="wr-num">${wrData.name || 'WR ' + wr}</span>
+          <span class="wr-num" style="cursor:pointer;" onclick="renameInverter(${wr})" title="Klicken zum Umbenennen">${wrData.name || 'WR ' + wr} ✏️</span>
           <span class="wr-kpis">${activeStrings} Strings &middot; ${mppts} MPPTs</span>
         </div>
         <div class="wr-kpis"><strong style="color:var(--accent);">${wrPwr.toFixed(2)} kWp</strong></div>
@@ -826,7 +891,73 @@ function renderMatrix(remoteOverride = null){
   g('d-tot').textContent = totSlots;
 
   buildFilterBar();
+  
+  // Mobile scroll header functionality
+  initMobileScrollHeader();
 }
+
+function initMobileScrollHeader() {
+  const scrollHeader = g('mobile-scroll-header');
+  if(!scrollHeader) return;
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting) {
+        const row = entry.target;
+        const wr = row.dataset.wr;
+        const mppt = row.dataset.mppt;
+        const string = row.dataset.string;
+        const stringId = row.dataset.stringId;
+        
+        const wrInfo = g('mobile-wr-info');
+        const stringInfo = g('mobile-string-info');
+        
+        if(wrInfo) wrInfo.textContent = `WR ${wr} - MPPT ${mppt}`;
+        if(stringInfo) stringInfo.textContent = `String ${stringId}`;
+      }
+    });
+  }, {
+    root: null,
+    rootMargin: '-50% 0px -50% 0px',
+    threshold: 0
+  });
+  
+  // Observe all rows
+  document.querySelectorAll('table.mt tbody tr[data-string-id]').forEach(row => {
+    observer.observe(row);
+  });
+}
+
+function renameInverter(wrId) {
+  const plan = getCurrentPlan();
+  if(!plan[wrId]) return;
+  
+  const currentName = plan[wrId].name || `WR ${wrId}`;
+  const newName = prompt('Wechselrichter umbenennen:', currentName);
+  
+  if(newName !== null && newName.trim() !== '') {
+    plan[wrId].name = newName.trim();
+    
+    // Save to projects
+    const currentProject = getCurrentProject();
+    if(currentProject) {
+      currentProject.plan = plan;
+      PROJECTS[CURRENT_PROJECT_ID] = currentProject;
+      localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS));
+      
+      // Sync to cloud if available
+      if(supabaseClient && currentUser) {
+        saveProjectToCloud(CURRENT_PROJECT_ID);
+      }
+    }
+    
+    renderMatrix();
+    buildFilterBar();
+    toast('✅ Wechselrichter umbenannt');
+  }
+}
+
+let cloudSyncTimeout = null;
 
 function saveData(id, field, val) {
   if(!APP_STATE[id]) return;
@@ -848,6 +979,14 @@ function saveData(id, field, val) {
     allData[CURRENT_PROJECT_ID] = APP_STATE;
     localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(allData));
   } catch(e){}
+  
+  // Auto-sync to cloud with debounce
+  if(supabaseClient && currentUser) {
+    clearTimeout(cloudSyncTimeout);
+    cloudSyncTimeout = setTimeout(() => {
+      saveProjectToCloud(CURRENT_PROJECT_ID);
+    }, 2000); // Sync after 2 seconds of inactivity
+  }
 }
 
 function setStat(id, st) {
@@ -1280,13 +1419,38 @@ async function saveProjectToCloud(projectId){
   if(!supabaseClient || !currentUser) return;
   const proj = PROJECTS[projectId];
   if(!proj) return;
+  
+  // Show sync indicator
+  const syncIndicator = g('cloud-sync-indicator');
+  if(syncIndicator) syncIndicator.classList.add('syncing');
+  
   try {
     const projData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
     const stateData = projData[projectId] || generateState(proj.plan);
     const payload = { id: projectId, name: proj.name, pruefer: currentUser.email, user_id: currentUser.id, modul_wp: proj.model_wp || 465, mppts: "dynamic", data: stateData, config: proj.plan, updated_at: new Date().toISOString() };
     const { error } = await supabaseClient.from('pv_projects').upsert(payload);
-    if(error) toast('Speichern fehlgeschlagen: ' + error.message); else toast('✅ In Cloud gespeichert');
-  } catch(e){ toast('Verbindungsfehler'); }
+    
+    // Hide sync indicator
+    if(syncIndicator) syncIndicator.classList.remove('syncing');
+    
+    if(error) {
+      toast('Speichern fehlgeschlagen: ' + error.message);
+      // Show offline indicator on error
+      const offlineIndicator = g('offline-indicator');
+      if(offlineIndicator) offlineIndicator.classList.add('offline');
+    } else {
+      // Hide offline indicator on success
+      const offlineIndicator = g('offline-indicator');
+      if(offlineIndicator) offlineIndicator.classList.remove('offline');
+      // Only show toast for manual sync, not auto-sync
+      if(!cloudSyncTimeout) toast('✅ In Cloud gespeichert');
+    }
+  } catch(e){ 
+    if(syncIndicator) syncIndicator.classList.remove('syncing');
+    const offlineIndicator = g('offline-indicator');
+    if(offlineIndicator) offlineIndicator.classList.add('offline');
+    toast('Verbindungsfehler'); 
+  }
 }
 
 async function pushCloudDataManually(){

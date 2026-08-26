@@ -864,8 +864,6 @@ let authMode = 'login';
 let hideInactive = false;
 let pendingPVSOLData = null;
 
-const STORAGE_KEYS = { projects: 'solpro_projects_v2', data: 'solpro_data_v2', current: 'solpro_curr_v2' };
-
 const g = id => document.getElementById(id);
 
 // All values from users, imports, local storage, and the cloud are untrusted.
@@ -914,7 +912,6 @@ function toggleSunMode(){
   let meta = document.querySelector('meta[name="theme-color"]:not([media])');
   if(!meta){ meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
   meta.setAttribute('content', on ? '#ffffff' : '#09090b');
-  try { localStorage.setItem('solpro_sun_mode', on ? '1' : '0'); } catch(e){}
 }
 function toggleSidebar(){ g('sidebar').classList.toggle('open'); g('sidebar-overlay').classList.toggle('open'); document.body.style.overflow = g('sidebar').classList.contains('open') ? 'hidden' : ''; }
 function closeSidebar(){ g('sidebar').classList.remove('open'); g('sidebar-overlay').classList.remove('open'); document.body.style.overflow = ''; }
@@ -990,7 +987,7 @@ function renderProjectGrid(){
       <div class="project-card ${isActive ? 'active' : ''}" role="button" tabindex="0" aria-label="Projekt ${esc(proj.name)} öffnen" onclick="selectProject('${id}'); switchMainTab('matrix');" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
         <div class="project-card-header">
           <div class="project-card-title">${lockedIcon}${isActive ? '✓ ' : ''}${esc(proj.name)}</div>
-          <div class="sync-status synced">☁️</div>
+          <div class="sync-status ${cloudProjectIds.has(id) ? 'synced' : 'pending'}" title="${cloudProjectIds.has(id) ? 'In der Cloud gespeichert' : 'Nur auf diesem Gerät – wird nach Anmeldung übertragen'}">${cloudProjectIds.has(id) ? '☁️' : '📱'}</div>
         </div>
         <div class="project-card-meta">
           ${wrCount} Wechselrichter &middot; ${wp} Wp${proj.locked ? ' &middot; <span style="color:#ef4444;font-weight:700;">gesperrt</span>' : ''}
@@ -1017,35 +1014,41 @@ const DEFAULT_PROJECTS = {
 let PROJECTS = {};
 let CURRENT_PROJECT_ID = null;
 let APP_STATE = {};
+let cloudProjectIds = new Set();
+let cloudFetchSucceeded = false;
 
 async function initProjects(){
-  try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.projects) || '{}');
-    PROJECTS = stored && Object.keys(stored).length > 0 ? stored : JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
-  } catch(e){ PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS)); }
+  // Supabase is the single source of truth. Browser storage is deliberately
+  // not used for projects or matrix data, so old local-only projects do not
+  // reappear on another device.
+  PROJECTS = {};
+  CURRENT_PROJECT_ID = null;
+  APP_STATE = {};
+  cloudFetchSucceeded = false;
 
-  if(!PROJECTS || Object.keys(PROJECTS).length === 0) {
-    PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
-  }
-
-  const storedCurr = localStorage.getItem(STORAGE_KEYS.current);
-  if(storedCurr && PROJECTS[storedCurr]) CURRENT_PROJECT_ID = storedCurr;
-  else CURRENT_PROJECT_ID = Object.keys(PROJECTS)[0] || 'PV_MAN_P52';
-  
   if(supabaseClient && currentUser){
     try { await fetchProjectsFromCloud(); } catch(e){ console.warn('Cloud-Fetch fehlgeschlagen', e); }
   }
-  
-  if(!PROJECTS[CURRENT_PROJECT_ID]) {
-    CURRENT_PROJECT_ID = Object.keys(PROJECTS)[0];
-    if(CURRENT_PROJECT_ID) localStorage.setItem(STORAGE_KEYS.current, CURRENT_PROJECT_ID);
-  }
-  
+
+  if(cloudFetchSucceeded) clearLegacyBrowserCache();
+  const ids = Object.keys(PROJECTS);
+  CURRENT_PROJECT_ID = ids[0] || null;
   loadCurrentProjectData();
-  saveProjectsLocal();
+  if(CURRENT_PROJECT_ID && cloudFetchSucceeded){
+    await fetchCloudDataManually(true);
+  }
 }
 
-function saveProjectsLocal(){ try { localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(PROJECTS)); } catch(e){} }
+function saveProjectsLocal(){ /* Cloud-only: kept as a compatibility no-op. */ }
+
+function clearLegacyBrowserCache(){
+  // Remove data created by older versions only after a successful cloud read.
+  // This prevents local-only projects from accumulating indefinitely.
+  try {
+    ['solpro_projects_v2', 'solpro_data_v2', 'solpro_curr_v2', 'solpro_sun_mode']
+      .forEach(key => localStorage.removeItem(key));
+  } catch(e){}
+}
 
 // === NOTFALL: PV MAN P52 mit allen 6 WRs wiederherstellen ===
 function restorePVManFull() {
@@ -1138,31 +1141,19 @@ function restorePVManFull() {
 
   if(!confirm("PV MAN P52 mit allen 6 Wechselrichtern wiederherstellen?\n\nAktuelle Daten werden überschrieben. Bereits gemessene Uoc/Isc/Riso-Werte für existierende Strings bleiben erhalten.")) return;
   
-  // Bestehende Messwerte sichern
-  const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
-  const savedMeasurements = allData['PV_MAN_P52'] || {};
-  
   PROJECTS['PV_MAN_P52'] = {
     id: 'PV_MAN_P52',
     name: 'PV_MAN_P52'.replace(/_/g, ' '),
     model_wp: 465,
     locked: false,
-    plan: FULL_PV_MAN
+    plan: FULL_PV_MAN,
+    updated_at: new Date().toISOString()
   };
   
-  localStorage.setItem('solpro_projects_v2', JSON.stringify(PROJECTS));
-  localStorage.setItem('solpro_curr_v2', 'PV_MAN_P52');
   CURRENT_PROJECT_ID = 'PV_MAN_P52';
   
-  // State neu generieren, alte Messwerte übernehmen wo möglich
+  // State neu generieren; die Cloud bleibt die einzige Datenquelle.
   APP_STATE = generateState(FULL_PV_MAN, true);
-  Object.keys(APP_STATE).forEach(k => {
-    if(savedMeasurements[k]) {
-      APP_STATE[k] = { ...APP_STATE[k], ...savedMeasurements[k] };
-    }
-  });
-  allData['PV_MAN_P52'] = APP_STATE;
-  localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(allData));
   
   updateUI();
   updateLockUI();
@@ -1237,11 +1228,6 @@ function generateState(plan, allActiveByDefault = true){
 function loadCurrentProjectData(allActiveByDefault = true){
   if(!CURRENT_PROJECT_ID || !PROJECTS[CURRENT_PROJECT_ID]) return;
   APP_STATE = generateState(getCurrentPlan(), allActiveByDefault);
-  try {
-    const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
-    const projData = allData[CURRENT_PROJECT_ID] || {};
-    Object.keys(projData).forEach(k => { if(APP_STATE[k]) APP_STATE[k] = { ...APP_STATE[k], ...projData[k] }; });
-  } catch(e){}
   updateUI();
   updateLockUI();
   updateRoleHint();
@@ -1280,7 +1266,7 @@ async function toggleProtocolLock(){
   if(!p) return;
   const willLock = !p.locked;
   if(willLock && !confirm('Messprotokoll wirklich sperren?\n\nDanach können Bauleitung & Planer KEINE Änderungen mehr vornehmen.')) return;
-  p.locked = willLock;
+   p.locked = willLock;
   if(willLock){
     p.locked_by = currentUser ? currentUser.email : 'admin';
     p.locked_at = new Date().toISOString();
@@ -1290,7 +1276,8 @@ async function toggleProtocolLock(){
     p.locked_at = null;
     toast('🔓 Messprotokoll entsperrt');
   }
-  saveProjectsLocal();
+   p.updated_at = new Date().toISOString();
+   saveProjectsLocal();
   if(supabaseClient && currentUser){
     try { await saveProjectToCloud(CURRENT_PROJECT_ID); } catch(e){}
   }
@@ -1541,7 +1528,8 @@ function renameInverter(wrId) {
     plan[wrId].name = newName.trim();
     const currentProject = getCurrentProject();
     if(currentProject) {
-      currentProject.plan = plan;
+       currentProject.plan = plan;
+       currentProject.updated_at = new Date().toISOString();
       PROJECTS[CURRENT_PROJECT_ID] = currentProject;
       saveProjectsLocal();
       if(supabaseClient && currentUser) saveProjectToCloud(CURRENT_PROJECT_ID);
@@ -1553,6 +1541,8 @@ function renameInverter(wrId) {
 }
 
 let cloudSyncTimeout = null;
+const cloudSaveQueues = new Map();
+const CLOUD_SYNC_DELAY = 600;
 
 function saveData(id, field, val) {
   if(!APP_STATE[id]) return;
@@ -1598,14 +1588,14 @@ function saveData(id, field, val) {
     const pc = g(`${printMap[field]}-${id}`);
     if(pc) pc.textContent = val || '';
   }
-  try {
-    const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
-    allData[CURRENT_PROJECT_ID] = APP_STATE;
-    localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(allData));
-  } catch(e){}
+  const localProject = getCurrentProject();
+  if(localProject){
+    localProject.updated_at = new Date().toISOString();
+    saveProjectsLocal();
+  }
   if(supabaseClient && currentUser) {
     clearTimeout(cloudSyncTimeout);
-    cloudSyncTimeout = setTimeout(() => saveProjectToCloud(CURRENT_PROJECT_ID), 2000);
+    cloudSyncTimeout = setTimeout(() => saveProjectToCloud(CURRENT_PROJECT_ID), CLOUD_SYNC_DELAY);
   }
 }
 
@@ -1749,23 +1739,16 @@ function showPVSOLPreview(parsed){
   g('pvsol-preview').style.display = 'block';
 }
 
-function confirmPVSOLImport(){
+async function confirmPVSOLImport(){
   if(!pendingPVSOLData) return;
   const parsed = parsePVSOLData(pendingPVSOLData);
   let id = parsed.projectName.replace(/[^a-zA-Z0-9]/g, '_');
   if(PROJECTS[id]) id += '_' + Date.now();
-  PROJECTS[id] = { id, name: parsed.projectName, model_wp: parsed.moduleWp || 460, locked: false, plan: parsed.plan };
+  PROJECTS[id] = { id, name: parsed.projectName, model_wp: parsed.moduleWp || 460, locked: false, plan: parsed.plan, updated_at: new Date().toISOString() };
   saveProjectsLocal();
-  // Persist the generated state before switching projects. This prevents an
-  // async cloud refresh from ever showing an empty, default matrix first.
-  try {
-    const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
-    allData[id] = generateState(parsed.plan);
-    localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(allData));
-  } catch(e){}
-  if(supabaseClient && currentUser) saveProjectToCloud(id);
+  if(supabaseClient && currentUser) await saveProjectToCloud(id);
   closePVSOLModal();
-  selectProject(id);
+  await selectProject(id);
   toast(`✅ Import erfolgreich: ${parsed.stringCount} Strings / ${parsed.moduleCount} Module`);
 }
 
@@ -1822,7 +1805,6 @@ async function debugCloudProjects(){
 
 async function selectProject(id){
   CURRENT_PROJECT_ID = id;
-  localStorage.setItem(STORAGE_KEYS.current, id);
   loadCurrentProjectData();
   if(supabaseClient && currentUser) await fetchCloudDataManually();
   if(g('projects-view').classList.contains('active')) switchMainTab('matrix');
@@ -1897,10 +1879,9 @@ async function doCreateNewProject(){
       };
     }
   }
-  PROJECTS[id] = { id, name, model_wp: wp, locked: false, plan };
+   PROJECTS[id] = { id, name, model_wp: wp, locked: false, plan, updated_at: new Date().toISOString() };
   saveProjectsLocal();
   CURRENT_PROJECT_ID = id;
-  localStorage.setItem(STORAGE_KEYS.current, id);
   closeNewProjectModal();
   loadCurrentProjectData(true);
   if(supabaseClient && currentUser) await saveProjectToCloud(id);
@@ -2034,16 +2015,18 @@ function printWRMontagePlan(){
 async function fetchProjectsFromCloud(){
   if(!supabaseClient || !currentUser) return;
   try {
-    const query = supabaseClient.from('pv_projects').select('id, name, config, updated_at, user_id, pruefer, modul_wp');
+    const query = supabaseClient.from('pv_projects').select('id, name, config, data, updated_at, user_id, pruefer, modul_wp');
     const { data, error } = await query;
     if(error) { toast('❌ Cloud-Fehler: ' + error.message); return; }
-    if(data && data.length > 0){
-      data.forEach(cloudProj => {
+    cloudFetchSucceeded = true;
+    cloudProjectIds = new Set((data || []).map(cloudProj => cloudProj.id));
+    PROJECTS = {};
+    (data || []).forEach(cloudProj => {
         const cloudConfig = cloudProj.config || {};
         const planOnly = {};
         Object.keys(cloudConfig).forEach(k => { if(k !== '_lock') planOnly[k] = cloudConfig[k]; });
         const lockMeta = cloudConfig._lock || {};
-        PROJECTS[cloudProj.id] = { 
+        const cloudProject = {
           id: cloudProj.id, 
           name: cloudProj.name || 'Unbenannt', 
           model_wp: cloudProj.modul_wp || 465, 
@@ -2051,26 +2034,25 @@ async function fetchProjectsFromCloud(){
           locked: !!lockMeta.locked,
           locked_by: lockMeta.by || null,
           locked_at: lockMeta.at || null,
-          updated_at: cloudProj.updated_at, 
+          updated_at: cloudProj.updated_at,
+          cloud_updated_at: cloudProj.updated_at,
           user_id: cloudProj.user_id 
         };
+        PROJECTS[cloudProj.id] = cloudProject;
       });
-      saveProjectsLocal();
-    }
   } catch(e){ toast('❌ Verbindungsfehler'); }
 }
 
-async function saveProjectToCloud(projectId){
-  if(!supabaseClient || !currentUser) return;
+async function saveProjectToCloudNow(projectId){
+  if(!supabaseClient || !currentUser) return false;
   const proj = PROJECTS[projectId];
-  if(!proj) return;
+  if(!proj) return false;
   
   const syncIndicator = g('cloud-sync-indicator');
   if(syncIndicator) syncIndicator.classList.add('syncing');
   
   try {
-    const projData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
-    const stateData = projData[projectId] || generateState(proj.plan);
+    const stateData = projectId === CURRENT_PROJECT_ID ? APP_STATE : generateState(proj.plan);
     const configToSave = {};
     Object.keys(proj.plan || {}).forEach(k => { if(k !== '_lock') configToSave[k] = proj.plan[k]; });
     if(proj.locked) {
@@ -2078,23 +2060,43 @@ async function saveProjectToCloud(projectId){
     } else {
       configToSave._lock = { locked: false };
     }
+    const updatedAt = new Date().toISOString();
+    proj.updated_at = updatedAt;
     const payload = { 
       id: projectId, name: proj.name, pruefer: currentUser.email, 
       user_id: currentUser.id, modul_wp: proj.model_wp || 465, 
       mppts: "dynamic", data: stateData, config: configToSave, 
-      updated_at: new Date().toISOString() 
+      updated_at: updatedAt
     };
     const { error } = await supabaseClient.from('pv_projects').upsert(payload);
     if(syncIndicator) syncIndicator.classList.remove('syncing');
     if(error) {
       const off = g('offline-indicator'); if(off) off.classList.add('offline');
+      return false;
     } else {
+      proj.cloud_updated_at = updatedAt;
+      saveProjectsLocal();
       const off = g('offline-indicator'); if(off) off.classList.remove('offline');
+      return true;
     }
   } catch(e){ 
     if(syncIndicator) syncIndicator.classList.remove('syncing');
     const off = g('offline-indicator'); if(off) off.classList.add('offline');
+    return false;
   }
+}
+
+// Serialize writes per project. iOS can suspend a tab while a previous
+// request is still running; the queue prevents a newer edit from being lost.
+function saveProjectToCloud(projectId){
+  if(!supabaseClient || !currentUser || !projectId) return Promise.resolve(false);
+  const previous = cloudSaveQueues.get(projectId) || Promise.resolve();
+  const next = previous.catch(() => {}).then(() => saveProjectToCloudNow(projectId));
+  cloudSaveQueues.set(projectId, next);
+  next.finally(() => {
+    if(cloudSaveQueues.get(projectId) === next) cloudSaveQueues.delete(projectId);
+  });
+  return next;
 }
 
 async function pushCloudDataManually(){
@@ -2102,8 +2104,7 @@ async function pushCloudDataManually(){
   const proj = getCurrentProject();
   toast('☁️ Lade hoch...');
   try {
-    const projData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
-    const stateData = projData[CURRENT_PROJECT_ID] || APP_STATE;
+    const stateData = APP_STATE;
     const configToSave = {};
     Object.keys(proj.plan || {}).forEach(k => { if(k !== '_lock') configToSave[k] = proj.plan[k]; });
     if(proj.locked) {
@@ -2120,26 +2121,29 @@ async function pushCloudDataManually(){
   } catch(e) { toast('Verbindungsfehler'); }
 }
 
-async function fetchCloudDataManually(){
+async function fetchCloudDataManually(silent = false){
   if(!supabaseClient || !CURRENT_PROJECT_ID || !currentUser) return toast('Cloud/Projekt nicht bereit');
-  toast('📥 Lade...');
+  if(!silent) toast('📥 Lade...');
   try {
     const { data, error } = await supabaseClient.from('pv_projects').select('*').eq('id', CURRENT_PROJECT_ID).single();
-    if(data && data.data) { renderMatrix(data.data); toast('✅ Stand geladen'); } 
-    else if(error) toast('Fehler: ' + error.message); 
-    else toast('Keine Daten gefunden');
-  } catch(e) { toast('Verbindungsfehler'); }
+    if(data && data.data){
+      APP_STATE = { ...generateState(getCurrentPlan(), false), ...data.data };
+      renderMatrix();
+      if(!silent) toast('✅ Stand geladen');
+    } else if(error) {
+      if(!silent) toast('Fehler: ' + error.message);
+    } else if(!silent) {
+      toast('Keine Daten gefunden');
+    }
+  } catch(e) {
+    if(!silent) toast('Verbindungsfehler');
+  }
 }
 
 async function factoryResetCloud(){
   if(currentUserRole === 'site') return toast('Nicht erlaubt');
   if(!confirm("Matrix komplett zurücksetzen?")) return;
   APP_STATE = generateState(getCurrentPlan());
-  try {
-    const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
-    allData[CURRENT_PROJECT_ID] = APP_STATE;
-    localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(allData));
-  } catch(e){}
   renderMatrix(null);
   await pushCloudDataManually();
   toast('✅ Matrix zurückgesetzt');
@@ -2178,6 +2182,30 @@ async function doLogout(){
   currentUser = null; currentUserRole = null;
   g('user-badge').style.display = 'none'; g('auth-gate').style.display = 'flex';
 }
+
+function flushCloudSync(){
+  clearTimeout(cloudSyncTimeout);
+  if(supabaseClient && currentUser && CURRENT_PROJECT_ID){
+    return saveProjectToCloud(CURRENT_PROJECT_ID);
+  }
+  return Promise.resolve(false);
+}
+
+window.addEventListener('online', () => {
+  const off = g('offline-indicator');
+  if(off) off.classList.remove('offline');
+  flushCloudSync();
+});
+window.addEventListener('offline', () => {
+  const off = g('offline-indicator');
+  if(off) off.classList.add('offline');
+});
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden') flushCloudSync();
+});
+window.addEventListener('pagehide', () => {
+  flushCloudSync();
+});
 
 async function checkSession(){
   if(!supabaseClient) return;
@@ -2245,8 +2273,6 @@ async function changeUserRole(userId, newRole){
     if(error) toast('Fehler: ' + error.message); else toast('Rolle geändert');
   } catch(e){ toast('Fehler: ' + e.message); }
 }
-
-try { if(localStorage.getItem('solpro_sun_mode') === '1') document.body.classList.add('sun-mode'); } catch(e){}
 
 window.onload = () => { checkSession(); };
 </script>

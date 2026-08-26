@@ -458,6 +458,55 @@ body.sun-mode table.mt td[data-label="Aktiv"] {
   }
   .print-lock-stamp:empty { display: none !important; }
 }
+
+/* KIS-inspired workspace: calm, dense, and audit-friendly. */
+:root {
+  --bg: #080809;
+  --surface: #0f1012;
+  --panel: #17181b;
+  --border: #2a2c31;
+  --text: #f5f7f8;
+  --muted: #9298a3;
+  --accent: #a7f34b;
+  --accent-muted: #73c22e;
+  --accent-glow: rgba(167, 243, 75, 0.13);
+}
+.sidebar { border-right-color: #292b30; }
+body:not(.sun-mode) .sidebar { background: #0c0d0f; }
+.sidebar-logo { letter-spacing: -0.07em; }
+.sidebar-subtitle, .kpi-label, .project-card-stat-label { letter-spacing: 0.08em; }
+.sidebar-btn { border-radius: 6px; }
+body:not(.sun-mode) .sidebar-btn:hover { background: #1a1c20; }
+.btn, .sp-inp, .tog-wrap, .wr-tab, .main-tab, .filter-toggle-btn { border-radius: 6px; }
+.btn-primary { color: #0b0d0a; box-shadow: none; }
+body:not(.sun-mode) .btn-ghost { background: #141519; }
+.dashboard { gap: 8px; margin-bottom: 16px; }
+.kpi-card { border-radius: 8px; padding: 14px; }
+body:not(.sun-mode) .kpi-card { background: linear-gradient(145deg, #121316, #0e0f11); }
+.kpi-value { letter-spacing: -0.045em; }
+.main-tabs { gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; }
+body:not(.sun-mode) .main-tabs { background: #111216; }
+.main-tab { border: 0; border-radius: 5px; padding: 10px 14px; }
+body:not(.sun-mode) .main-tab.active { background: #232a1a; box-shadow: inset 0 0 0 1px rgba(167,243,75,0.32); }
+.wr-filter-bar { gap: 5px; }
+.wr-tab { border-radius: 5px; padding: 8px 11px; }
+body:not(.sun-mode) .wr-tab { background: #121317; }
+.wr-block { border-radius: 10px; margin-bottom: 14px; }
+body:not(.sun-mode) .wr-block { background: #101114; }
+.wr-head { padding: 12px 14px; }
+body:not(.sun-mode) .wr-head { background: rgba(16,17,20,0.97); }
+.wr-num { border-radius: 4px; letter-spacing: -0.02em; }
+table.mt thead th { letter-spacing: 0.07em; }
+body:not(.sun-mode) table.mt thead th { background: #0b0c0e; }
+body:not(.sun-mode) table.mt td { border-bottom-color: #22242a; }
+body:not(.sun-mode) table.mt tbody tr:hover { background: #1b1e21; }
+body:not(.sun-mode) .sp-inp { background: #0a0b0d; border-color: #303238; }
+.sp-inp:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(167,243,75,0.14); }
+.scroll-context { border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; }
+.sync-status { border: 1px solid currentColor; border-radius: 4px; background: transparent; }
+.project-card { border-radius: 8px; }
+body:not(.sun-mode) .project-card { background: #111216; }
+body:not(.sun-mode) .project-card:hover { background: #15171a; transform: none; }
 .print-cell { display: none; }
 
 .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; }
@@ -1707,6 +1756,13 @@ function confirmPVSOLImport(){
   if(PROJECTS[id]) id += '_' + Date.now();
   PROJECTS[id] = { id, name: parsed.projectName, model_wp: parsed.moduleWp || 460, locked: false, plan: parsed.plan };
   saveProjectsLocal();
+  // Persist the generated state before switching projects. This prevents an
+  // async cloud refresh from ever showing an empty, default matrix first.
+  try {
+    const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
+    allData[id] = generateState(parsed.plan);
+    localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(allData));
+  } catch(e){}
   if(supabaseClient && currentUser) saveProjectToCloud(id);
   closePVSOLModal();
   selectProject(id);

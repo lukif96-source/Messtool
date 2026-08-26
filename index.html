@@ -33,7 +33,7 @@ body.sun-mode {
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; overflow-x: hidden; }
-body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: contain; overflow-x: hidden; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: contain; }
 img, svg, table { max-width: 100%; }
 
 .wrap { max-width: 1360px; margin: 0 auto; padding: 12px 12px 160px; }
@@ -597,6 +597,7 @@ function toggleHideInactive(forceState = null){
   if(btn) btn.classList.toggle('active', hideInactive);
   g('hide-nein-text').textContent = hideInactive ? 'Alle Strings anzeigen' : 'Nur aktive Strings';
   if(forceState === null) toast(hideInactive ? 'Inaktive Strings ausgeblendet' : 'Alle Strings eingeblendet');
+  if(window.__mshScrollHandler) window.__mshScrollHandler();
 }
 
 function filterInverter(n, btn){
@@ -904,33 +905,52 @@ function renderMatrix(remoteOverride = null){
 function initMobileScrollHeader() {
   const scrollHeader = g('mobile-scroll-header');
   if(!scrollHeader) return;
-  
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if(entry.isIntersecting) {
-        const row = entry.target;
-        const wr = row.dataset.wr;
-        const mppt = row.dataset.mppt;
-        const string = row.dataset.string;
-        const stringId = row.dataset.stringId;
-        
-        const wrInfo = g('mobile-wr-info');
-        const stringInfo = g('mobile-string-info');
-        
-        if(wrInfo) wrInfo.textContent = `WR ${wr} - MPPT ${mppt}`;
-        if(stringInfo) stringInfo.textContent = `String ${stringId}`;
+
+  // Kill any previous listener from an earlier render so they don't stack up
+  if(window.__mshScrollHandler) {
+    window.removeEventListener('scroll', window.__mshScrollHandler);
+  }
+
+  function updateMobileScrollHeader() {
+    if(getComputedStyle(scrollHeader).display === 'none') return;
+
+    // Anchor point = bottom edge of the sticky header itself, not the
+    // middle of the screen. That way the row shown is the one actually
+    // sitting right under the header, matching what the user sees.
+    const anchorY = scrollHeader.getBoundingClientRect().bottom + 2;
+
+    const rows = document.querySelectorAll('table.mt tbody tr[data-string-id]');
+    let current = null;
+    for(const row of rows) {
+      const rect = row.getBoundingClientRect();
+      if(rect.height === 0) continue; // hidden (e.g. "nur aktive Strings")
+      if(rect.top <= anchorY) {
+        current = row; // last row whose top has already passed the anchor
+      } else {
+        break; // rows are in document order, so we can stop here
       }
-    });
-  }, {
-    root: null,
-    rootMargin: '-50% 0px -50% 0px',
-    threshold: 0
-  });
-  
-  // Observe all rows
-  document.querySelectorAll('table.mt tbody tr[data-string-id]').forEach(row => {
-    observer.observe(row);
-  });
+    }
+    if(!current) {
+      for(const row of rows) { if(row.getBoundingClientRect().height > 0) { current = row; break; } }
+    }
+    if(!current) return;
+
+    const wrInfo = g('mobile-wr-info');
+    const stringInfo = g('mobile-string-info');
+    if(wrInfo) wrInfo.textContent = `WR ${current.dataset.wr} - MPPT ${current.dataset.mppt}`;
+    if(stringInfo) stringInfo.textContent = `String ${current.dataset.stringId}`;
+  }
+
+  let ticking = false;
+  const handler = () => {
+    if(ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { updateMobileScrollHeader(); ticking = false; });
+  };
+  window.__mshScrollHandler = handler;
+  window.addEventListener('scroll', handler, { passive: true });
+
+  updateMobileScrollHeader();
 }
 
 function renameInverter(wrId) {

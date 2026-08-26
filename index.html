@@ -93,6 +93,7 @@ body.sun-mode .sp-inp-gak:read-only { color: #00873d; font-weight: 800; }
   margin: 0 0 12px auto; padding: 8px 12px; border: 1px solid var(--accent);
   border-radius: 999px; background: var(--surface); color: var(--text);
   box-shadow: 0 6px 18px rgba(0,0,0,0.18); font-size: 0.78rem; font-weight: 800;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
 }
 .scroll-context[hidden] { display: none; }
 .scroll-context .context-label { color: var(--muted); font-weight: 600; margin-right: 5px; }
@@ -246,7 +247,11 @@ body.sun-mode.protocol-locked .sp-inp:disabled { background: #f1f5f9; color: #64
   .main-content { margin-left: 0; padding: 10px; padding-top: calc(10px + var(--safe-top)); }
   .top-bar-mobile { display: flex; }
   .wr-head { position: static; padding: 10px 12px; }
-  .scroll-context { top: calc(60px + var(--safe-top)); margin-right: 0; border-radius: 10px; }
+  .scroll-context {
+    position: fixed; top: calc(62px + var(--safe-top)); right: 10px; z-index: 52;
+    margin: 0; max-width: calc(100vw - 20px); border-radius: 10px;
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+  }
   .dashboard { grid-template-columns: repeat(2, 1fr); }
   table.mt, table.mt tbody, table.mt tr, table.mt td { display: block; width: 100% !important; }
   table.mt thead { display: none; }
@@ -270,6 +275,7 @@ body.sun-mode.protocol-locked .sp-inp:disabled { background: #f1f5f9; color: #64
 
 @media (max-width: 600px) {
   .wrap { padding: 8px 8px 140px; }
+  .scroll-context { left: 10px; right: 10px; width: auto; text-align: center; font-size: 0.76rem; }
   .dashboard { grid-template-columns: 1fr; gap: 8px; }
   .kpi-card { padding: 12px; }
   .kpi-value { font-size: 1.2rem; }
@@ -1162,8 +1168,16 @@ function generateState(plan, allActiveByDefault = true){
       const defMods = wrData.defaultMods || 0;
       for(let m=1; m<=mppts; m++){
         for(let s=1; s<=inputs; s++){
-          const isAct = defMods > 0 || allActiveByDefault;
-          result[`${wr}.${m}.${s}`] = { planName: "", gak: `GAK ${wr}`, mod: defMods || 0, stat: isAct ? "JA" : "NEIN", note: "", uoc:"", isc:"", riso:"" };
+          const imported = wrData.strings?.[m]?.[s];
+          const hasImportedStrings = !!wrData.strings;
+          const isAct = imported ? true : (hasImportedStrings ? false : (defMods > 0 || allActiveByDefault));
+          result[`${wr}.${m}.${s}`] = {
+            planName: imported?.planName || "",
+            gak: imported?.gak || `GAK ${wr}`,
+            mod: imported?.mod ?? defMods ?? 0,
+            stat: imported ? "JA" : (isAct ? "JA" : "NEIN"),
+            note: imported?.note || "", uoc:"", isc:"", riso:""
+          };
         }
       }
     }
@@ -1606,8 +1620,14 @@ function handlePVSOLFile(input){
       else if (json.Project && json.Project.Configuration) configRoot = json.Project.Configuration;
       else if (json.ProjectOverview && json.ProjectOverview.Configuration) configRoot = json.ProjectOverview.Configuration;
       if(!configRoot || !configRoot.ModuleAreas){ toast('Ungültiges PVSOL-Format'); pendingPVSOLData = null; return; }
+      const parsed = parsePVSOLData(json);
+      if(parsed.stringCount === 0){
+        toast('Keine belegten PV*SOL-Strings im Export gefunden');
+        pendingPVSOLData = null;
+        return;
+      }
       pendingPVSOLData = json;
-      showPVSOLPreview(parsePVSOLData(json));
+      showPVSOLPreview(parsed);
       g('pvsol-confirm-btn').disabled = false;
     } catch(err){ toast('Fehler: ' + err.message); pendingPVSOLData = null; }
   };
@@ -1616,35 +1636,56 @@ function handlePVSOLFile(input){
 
 function parsePVSOLData(json){
   const plan = {}; let projectName = 'PVSOL Import'; let moduleWp = 460;
+  let stringCount = 0, moduleCount = 0;
   const root = json.Project ? json.Project : json;
   const config = root.Configuration || (root.ProjectOverview ? root.ProjectOverview.Configuration : null);
   const projectData = root.ProjectOverview?.ProjectData;
   if(projectData && projectData.ProjectName) projectName = projectData.ProjectName;
-  if(config?.ModuleAreas && config.ModuleAreas.length > 0){
-    const firstArea = config.ModuleAreas[0];
-    if(firstArea.ModuleData){
-      const wpMatch = firstArea.ModuleData.match(/(\d{3})W/i) || firstArea.ModuleData.match(/-(\d{3})\//);
-      if(wpMatch) moduleWp = parseInt(wpMatch[1]);
-    }
-  }
+  const designAreas = root.ProjectOverview?.ThreeDDesign?.ModuleAreas || [];
+  const moduleDescription = designAreas.find(area => area?.ModuleData)?.ModuleData || '';
+  const wpMatch = moduleDescription.match(/(\d{3})W/i) || moduleDescription.match(/-(\d{3})\//);
+  if(wpMatch) moduleWp = parseInt(wpMatch[1], 10);
+
   if(config?.ModuleAreas){
     config.ModuleAreas.forEach(area => {
       if(!area.Inverters) return;
       area.Inverters.forEach(inv => {
-        const wrNum = inv.Number;
+        const wrNum = Number(inv.Number);
+        if(!Number.isInteger(wrNum) || wrNum < 1) return;
         const configs = inv.Configuration || [];
-        let mpptCount = 0;
+        const entry = plan[wrNum] || {
+          name: `WR ${wrNum}${inv.Description ? ` · ${inv.Description}` : ''}`,
+          mppts: 0, inputs: 1, defaultMods: 0, strings: {}
+        };
         configs.forEach(configStr => {
-          if(!configStr || typeof configStr !== 'string' || configStr.toLowerCase().includes('nicht belegt')) return;
+          if(!configStr || typeof configStr !== 'string') return;
+          const mpptMatch = configStr.match(/MPP\s+(\d+)\s*:/i);
+          if(mpptMatch) entry.mppts = Math.max(entry.mppts, Number(mpptMatch[1]));
+          if(configStr.toLowerCase().includes('nicht belegt')) return;
           const match = configStr.match(/MPP\s+(\d+):\s*(\d+)\s*x\s*(\d+)/i);
-          if(match){ mpptCount = Math.max(mpptCount, parseInt(match[1])); }
+          if(!match) return;
+          const mppt = Number(match[1]), parallelStrings = Number(match[2]), modulesPerString = Number(match[3]);
+          if(!Number.isInteger(mppt) || !Number.isInteger(parallelStrings) || !Number.isInteger(modulesPerString)) return;
+          entry.mppts = Math.max(entry.mppts, mppt);
+          entry.inputs = Math.max(entry.inputs, parallelStrings);
+          entry.strings[mppt] ||= {};
+          for(let string = 1; string <= parallelStrings; string++){
+            entry.strings[mppt][string] = {
+              planName: `PVSOL WR ${wrNum} · MPP ${mppt} · String ${string}`,
+              gak: `GAK ${wrNum}`,
+              mod: modulesPerString,
+              note: area.ModuleArea || inv.Description || ''
+            };
+            stringCount++;
+            moduleCount += modulesPerString;
+          }
         });
-        if(mpptCount === 0) mpptCount = 3;
-        plan[wrNum] = { mppts: mpptCount, inputs: 2, defaultMods: 0 };
+        if(entry.mppts === 0) entry.mppts = 1;
+        plan[wrNum] = entry;
       });
     });
   }
-  return { plan, projectName, moduleWp };
+  return { plan, projectName, moduleWp, stringCount, moduleCount };
 }
 
 function showPVSOLPreview(parsed){
@@ -1653,6 +1694,8 @@ function showPVSOLPreview(parsed){
   let html = `<div style="margin-bottom:8px;"><strong>${wrCount} Wechselrichter</strong></div>`;
   if(parsed.projectName) html += `<div style="margin-bottom:8px;"><strong>Projektname:</strong> ${esc(parsed.projectName)}</div>`;
   if(parsed.moduleWp) html += `<div style="margin-bottom:8px;"><strong>Modul:</strong> ${parsed.moduleWp} Wp</div>`;
+  html += `<div style="margin-bottom:8px;"><strong>Strings:</strong> ${parsed.stringCount || 0} &middot; <strong>Module:</strong> ${parsed.moduleCount || 0}</div>`;
+  if(parsed.moduleCount && parsed.moduleWp) html += `<div><strong>DC-Leistung:</strong> ${((parsed.moduleCount * parsed.moduleWp) / 1000).toFixed(2)} kWp</div>`;
   preview.innerHTML = html;
   g('pvsol-preview').style.display = 'block';
 }
@@ -1667,7 +1710,7 @@ function confirmPVSOLImport(){
   if(supabaseClient && currentUser) saveProjectToCloud(id);
   closePVSOLModal();
   selectProject(id);
-  toast('✅ Import erfolgreich');
+  toast(`✅ Import erfolgreich: ${parsed.stringCount} Strings / ${parsed.moduleCount} Module`);
 }
 
 async function openProjectsModal(){

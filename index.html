@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -52,6 +52,10 @@ img, svg, table { max-width: 100%; }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; cursor: pointer; border: 1px solid transparent; border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; transition: all 0.2s ease; min-height: 40px; min-width: 40px; user-select: none; }
 .btn:active { transform: scale(0.97); }
+.btn:focus-visible, .sp-inp:focus-visible, .tog:focus-visible, .wr-tab:focus-visible, .main-tab:focus-visible, .sidebar-btn:focus-visible, .project-card:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
 .btn-primary { background: var(--accent); color: #000; font-weight: 700; box-shadow: 0 4px 12px var(--accent-glow); }
 .btn-primary:hover { filter: brightness(1.1); }
 .btn-ghost { background: var(--surface); border-color: var(--border); color: var(--text); }
@@ -84,6 +88,14 @@ body.sun-mode .sp-inp-gak:read-only { color: #00873d; font-weight: 800; }
 .kpi-unit { font-size: 0.8rem; color: var(--accent); font-weight: 600; margin-left: 2px; }
 
 .view-bar-wrap { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.scroll-context {
+  position: sticky; top: 8px; z-index: 40; width: fit-content; max-width: 100%;
+  margin: 0 0 12px auto; padding: 8px 12px; border: 1px solid var(--accent);
+  border-radius: 999px; background: var(--surface); color: var(--text);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18); font-size: 0.78rem; font-weight: 800;
+}
+.scroll-context[hidden] { display: none; }
+.scroll-context .context-label { color: var(--muted); font-weight: 600; margin-right: 5px; }
 .wr-filter-bar { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex: 1; min-width: 260px; }
 .wr-filter-bar::-webkit-scrollbar { display: none; }
 .wr-tab { flex: 0 0 auto; background: var(--panel); border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; font-weight: 700; border-radius: 10px; padding: 10px 14px; cursor: pointer; min-height: 42px; scroll-snap-align: start; transition: all 0.2s; }
@@ -102,6 +114,7 @@ body.sun-mode .sp-inp-gak:read-only { color: #00873d; font-weight: 800; }
 .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 .project-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; transition: all 0.2s; cursor: pointer; }
 .project-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.project-card:focus-visible { border-color: var(--accent); }
 .project-card.active { border-color: var(--accent); background: var(--accent-glow); }
 .project-card-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; gap: 8px; }
 .project-card-title { font-weight: 700; font-size: 1rem; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -233,6 +246,7 @@ body.sun-mode.protocol-locked .sp-inp:disabled { background: #f1f5f9; color: #64
   .main-content { margin-left: 0; padding: 10px; padding-top: calc(10px + var(--safe-top)); }
   .top-bar-mobile { display: flex; }
   .wr-head { position: static; padding: 10px 12px; }
+  .scroll-context { top: calc(60px + var(--safe-top)); margin-right: 0; border-radius: 10px; }
   .dashboard { grid-template-columns: repeat(2, 1fr); }
   table.mt, table.mt tbody, table.mt tr, table.mt td { display: block; width: 100% !important; }
   table.mt thead { display: none; }
@@ -675,6 +689,10 @@ body.sun-mode table.mt td[data-label="Aktiv"] {
       </div>
     </div>
 
+    <div class="scroll-context no-print" id="scroll-context" aria-live="polite" hidden>
+      <span class="context-label">Aktuell:</span><span id="scroll-context-text">—</span>
+    </div>
+
     <div id="tables"></div>
   </div>
 
@@ -794,6 +812,42 @@ let pendingPVSOLData = null;
 const STORAGE_KEYS = { projects: 'solpro_projects_v2', data: 'solpro_data_v2', current: 'solpro_curr_v2' };
 
 const g = id => document.getElementById(id);
+
+// All values from users, imports, local storage, and the cloud are untrusted.
+// Escape them before interpolating into HTML strings; prefer textContent for new UI.
+function esc(value){
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  })[char]);
+}
+
+function normaliseNumber(field, value){
+  const raw = String(value ?? '').trim();
+  if(raw === '') return '';
+  const normalized = raw.replace(',', '.');
+  const rules = {
+    mod:  { min: 0, max: 100, integer: true, label: 'Module' },
+    uoc:  { min: 0, max: 2000, label: 'Uoc' },
+    isc:  { min: 0, max: 100, label: 'Isc' },
+    riso: { min: 0, max: 10000, label: 'Riso' }
+  };
+  const rule = rules[field];
+  if(!rule || !/^\d+(\.\d+)?$/.test(normalized)) return null;
+  const number = Number(normalized);
+  if(!Number.isFinite(number) || number < rule.min || number > rule.max || (rule.integer && !Number.isInteger(number))) return null;
+  return rule.integer ? String(number) : normalized.replace('.', ',');
+}
+
+function validationMessage(field){
+  const messages = {
+    mod: 'Module: ganze Zahl von 0 bis 100 eingeben.',
+    uoc: 'Uoc: Wert von 0 bis 2.000 V eingeben.',
+    isc: 'Isc: Wert von 0 bis 100 A eingeben.',
+    riso: 'Riso: Wert von 0 bis 10.000 MΩ eingeben.'
+  };
+  return messages[field] || 'Ungültiger Wert.';
+}
+
 let toast_t = null;
 function toast(msg, ms=3000){
   const t = g('toast'); t.textContent = msg; t.classList.add('show');
@@ -838,7 +892,7 @@ function buildFilterBar(){
   let html = `<button class="wr-tab active" data-wr="0" onclick="filterInverter(0, this)">⚡ Alle WRs (1–${wrKeys.length})</button>`;
 wrKeys.forEach(wr => { 
   const name = getCurrentPlan()[wr].name || `WR ${wr}`;
-  html += `<button class="wr-tab" data-wr="${wr}" onclick="filterInverter(${wr}, this)">${name}</button>`; 
+  html += `<button class="wr-tab" data-wr="${wr}" onclick="filterInverter(${wr}, this)">${esc(name)}</button>`; 
 });
   bar.innerHTML = html;
 }
@@ -849,6 +903,9 @@ function switchMainTab(tab){
   g(`tab-${tab}`).classList.add('active');
   g(`${tab}-view`).classList.add('active');
   if(tab === 'projects') renderProjectGrid();
+  const context = g('scroll-context');
+  if(context) context.hidden = tab !== 'matrix';
+  if(tab === 'matrix') requestAnimationFrame(updateScrollContext);
 }
 
 function renderProjectGrid(){
@@ -875,9 +932,9 @@ function renderProjectGrid(){
     const lockedIcon = proj.locked ? '🔒 ' : '';
     
     return `
-      <div class="project-card ${isActive ? 'active' : ''}" onclick="selectProject('${id}'); switchMainTab('matrix');">
+      <div class="project-card ${isActive ? 'active' : ''}" role="button" tabindex="0" aria-label="Projekt ${esc(proj.name)} öffnen" onclick="selectProject('${id}'); switchMainTab('matrix');" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
         <div class="project-card-header">
-          <div class="project-card-title">${lockedIcon}${isActive ? '✓ ' : ''}${proj.name}</div>
+          <div class="project-card-title">${lockedIcon}${isActive ? '✓ ' : ''}${esc(proj.name)}</div>
           <div class="sync-status synced">☁️</div>
         </div>
         <div class="project-card-meta">
@@ -1189,7 +1246,7 @@ function updateLockUI(){
     if(locked){
       const lockedBy = p.locked_by || 'Admin';
       const lockedAt = p.locked_at ? new Date(p.locked_at).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
-      g('lock-banner-text').innerHTML = `<strong>Messprotokoll gesperrt</strong> &middot; freigegeben durch <strong>${lockedBy}</strong> am <strong>${lockedAt}</strong>`;
+      g('lock-banner-text').innerHTML = `<strong>Messprotokoll gesperrt</strong> &middot; freigegeben durch <strong>${esc(lockedBy)}</strong> am <strong>${esc(lockedAt)}</strong>`;
       const unlockBtn = g('lock-banner-unlock');
       if(unlockBtn) unlockBtn.style.display = (currentUserRole === 'admin') ? 'inline-flex' : 'none';
     }
@@ -1218,7 +1275,7 @@ function updateLockUI(){
     if(locked){
       const lockedBy = p.locked_by || 'Admin';
       const lockedAt = p.locked_at ? new Date(p.locked_at).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
-      printStamp.innerHTML = `🔒 MESSPRTOKOLL GESPERRT &middot; Freigegeben durch <strong>${lockedBy}</strong> am <strong>${lockedAt}</strong>`;
+      printStamp.innerHTML = `🔒 MESSPROTOKOLL GESPERRT &middot; Freigegeben durch <strong>${esc(lockedBy)}</strong> am <strong>${esc(lockedAt)}</strong>`;
     } else {
       printStamp.innerHTML = '';
     }
@@ -1285,7 +1342,7 @@ function renderMatrix(remoteOverride = null){
         const item = APP_STATE[id];
         const isJa = item.stat === 'JA';
         const pwr = (isJa && item.mod > 0) ? ((item.mod * wp)/1000).toFixed(2) : '—';
-        const strLabel = item.planName ? `<span class="str-label">${item.planName}</span>` : `<span class="str-label" style="opacity:0.3;">—</span>`;
+        const strLabel = item.planName ? `<span class="str-label">${esc(item.planName)}</span>` : `<span class="str-label" style="opacity:0.3;">—</span>`;
         
         if(isJa && item.mod > 0) {
            wrMods += item.mod; totMods += item.mod;
@@ -1313,8 +1370,8 @@ function renderMatrix(remoteOverride = null){
                </div>
             </td>
             <td data-label="GAK" style="width:12%;">
-              <input type="text" id="gak-${id}" value="${item.gak}" class="sp-inp sp-inp-center sp-inp-gak" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'gak', this.value)" ${roAttr(gakRO)}>
-               <span class="print-cell">${item.gak}</span>
+               <input type="text" id="gak-${id}" value="${esc(item.gak)}" class="sp-inp sp-inp-center sp-inp-gak" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'gak', this.value)" ${roAttr(gakRO)}>
+                <span class="print-cell">${esc(item.gak)}</span>
             </td>
             <td data-label="Aktiv" class="no-print" style="width:12%;">
               <div class="tog-wrap" style="transform:scale(0.85);">
@@ -1323,25 +1380,25 @@ function renderMatrix(remoteOverride = null){
               </div>
             </td>
             <td data-label="Module" style="width:8%;">
-              <input type="number" id="mod-${id}" value="${item.mod||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'mod', this.value); updateKPIs();" ${roAttr(modRO)}>
+               <input type="number" min="0" max="100" step="1" id="mod-${id}" value="${esc(item.mod||'')}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" onchange="saveData('${id}', 'mod', this.value); updateKPIs();" ${roAttr(modRO)}>
                <span class="print-cell" id="pm-${id}">${item.mod > 0 ? item.mod : '—'}</span>
             </td>
             <td data-label="kWp" class="pwr-cell" style="width:8%;" id="pw-${id}">${pwr}</td>
             <td data-label="Uoc(V)" class="col-hide-print" style="width:10%;">
-              <input type="text" inputmode="decimal" id="uoc-${id}" value="${item.uoc||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'uoc', this.value)" ${roAttr(uocRO)}>
-               <span class="print-cell" id="puoc-${id}">${item.uoc||''}</span>
+               <input type="text" inputmode="decimal" id="uoc-${id}" value="${esc(item.uoc||'')}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" onchange="saveData('${id}', 'uoc', this.value)" ${roAttr(uocRO)}>
+                <span class="print-cell" id="puoc-${id}">${esc(item.uoc||'')}</span>
             </td>
             <td data-label="Isc(A)" class="col-hide-print" style="width:10%;">
-              <input type="text" inputmode="decimal" id="isc-${id}" value="${item.isc||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'isc', this.value)" ${roAttr(iscRO)}>
-               <span class="print-cell" id="pisc-${id}">${item.isc||''}</span>
+               <input type="text" inputmode="decimal" id="isc-${id}" value="${esc(item.isc||'')}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" onchange="saveData('${id}', 'isc', this.value)" ${roAttr(iscRO)}>
+                <span class="print-cell" id="pisc-${id}">${esc(item.isc||'')}</span>
             </td>
             <td data-label="Riso(MΩ)" class="col-hide-print" style="width:10%;">
-              <input type="text" inputmode="decimal" id="riso-${id}" value="${item.riso||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'riso', this.value)" ${roAttr(risoRO)}>
-               <span class="print-cell" id="priso-${id}">${item.riso||''}</span>
+               <input type="text" inputmode="decimal" id="riso-${id}" value="${esc(item.riso||'')}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" onchange="saveData('${id}', 'riso', this.value)" ${roAttr(risoRO)}>
+                <span class="print-cell" id="priso-${id}">${esc(item.riso||'')}</span>
             </td>
             <td data-label="Info" class="col-note" style="text-align:left; width:18%;">
-              <input type="text" id="note-${id}" value="${item.note||''}" class="sp-inp" style="text-align:left;font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'note', this.value)" ${roAttr(noteRO)}>
-              <span class="print-cell" id="pnote-${id}" style="font-size:7pt;color:#71717a;">${item.note||''}</span>
+               <input type="text" id="note-${id}" value="${esc(item.note||'')}" class="sp-inp" style="text-align:left;font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'note', this.value)" ${roAttr(noteRO)}>
+               <span class="print-cell" id="pnote-${id}" style="font-size:7pt;color:#71717a;">${esc(item.note||'')}</span>
             </td>
           </tr>`;
       }
@@ -1350,7 +1407,7 @@ function renderMatrix(remoteOverride = null){
     bl.innerHTML = `
       <div class="wr-head">
         <div style="display:flex;align-items:center;gap:12px;">
-          <span class="wr-num" style="cursor:${canHardware ? 'pointer' : 'default'};" onclick="${canHardware ? `renameInverter(${wr})` : 'void(0)'}">${wrData.name || 'WR ' + wr}${canHardware ? ' ✏️' : ''}</span>
+          <span class="wr-num" style="cursor:${canHardware ? 'pointer' : 'default'};" onclick="${canHardware ? `renameInverter(${wr})` : 'void(0)'}">${esc(wrData.name || 'WR ' + wr)}${canHardware ? ' ✏️' : ''}</span>
           <span class="wr-kpis">${activeStrings} Strings &middot; ${mppts} MPPTs</span>
         </div>
         <div class="wr-kpis"><strong style="color:var(--accent);">${wrPwr.toFixed(2)} kWp</strong></div>
@@ -1376,6 +1433,39 @@ function renderMatrix(remoteOverride = null){
   g('d-tot').textContent = totSlots;
 
   buildFilterBar();
+  setupScrollContext();
+}
+
+let scrollContextFrame = null;
+function updateScrollContext(){
+  const context = g('scroll-context');
+  const label = g('scroll-context-text');
+  if(!context || !label || !g('matrix-view').classList.contains('active')) return;
+  const anchor = context.getBoundingClientRect().bottom + 14;
+  const rows = [...document.querySelectorAll('tr[data-string-id]')]
+    .filter(row => row.offsetParent !== null)
+    .map(row => ({ row, rect: row.getBoundingClientRect() }));
+  const active = rows.find(({ rect }) => rect.bottom >= anchor) || rows[rows.length - 1];
+  if(!active){ context.hidden = true; return; }
+  const { wr, mppt, string, stringId } = active.row.dataset;
+  label.textContent = `WR ${wr} · MPPT ${mppt} · String ${string} (${stringId})`;
+  context.hidden = false;
+}
+
+function scheduleScrollContext(){
+  if(scrollContextFrame) return;
+  scrollContextFrame = requestAnimationFrame(() => {
+    scrollContextFrame = null;
+    updateScrollContext();
+  });
+}
+
+function setupScrollContext(){
+  window.removeEventListener('scroll', scheduleScrollContext);
+  window.addEventListener('scroll', scheduleScrollContext, { passive: true });
+  window.removeEventListener('resize', scheduleScrollContext);
+  window.addEventListener('resize', scheduleScrollContext);
+  requestAnimationFrame(updateScrollContext);
 }
 
 function renameInverter(wrId) {
@@ -1417,8 +1507,18 @@ function saveData(id, field, val) {
     revertInput(id, field);
     return;
   }
+
+  if(['mod', 'uoc', 'isc', 'riso'].includes(field)){
+    const normalized = normaliseNumber(field, val);
+    if(normalized === null){
+      toast(validationMessage(field));
+      revertInput(id, field);
+      return;
+    }
+    val = normalized;
+  }
   
-  if(field==='mod') APP_STATE[id][field] = parseFloat(val)||0;
+  if(field==='mod') APP_STATE[id][field] = val === '' ? 0 : Number(val);
   else APP_STATE[id][field] = val;
   
   if(field==='mod' || field==='stat') {
@@ -1551,7 +1651,7 @@ function showPVSOLPreview(parsed){
   const preview = g('pvsol-preview-content');
   const wrCount = Object.keys(parsed.plan).length;
   let html = `<div style="margin-bottom:8px;"><strong>${wrCount} Wechselrichter</strong></div>`;
-  if(parsed.projectName) html += `<div style="margin-bottom:8px;"><strong>Projektname:</strong> ${parsed.projectName}</div>`;
+  if(parsed.projectName) html += `<div style="margin-bottom:8px;"><strong>Projektname:</strong> ${esc(parsed.projectName)}</div>`;
   if(parsed.moduleWp) html += `<div style="margin-bottom:8px;"><strong>Modul:</strong> ${parsed.moduleWp} Wp</div>`;
   preview.innerHTML = html;
   g('pvsol-preview').style.display = 'block';
@@ -1581,7 +1681,7 @@ async function openProjectsModal(){
     return `
     <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--bg); border:1px solid var(--border); border-radius:12px; flex-wrap:wrap; gap:8px;">
       <div style="min-width:0; flex:1 1 140px; overflow:hidden;">
-        <div style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${lockedIcon}${id === CURRENT_PROJECT_ID ? '✓ ' : ''}${proj.name}</div>
+        <div style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${lockedIcon}${id === CURRENT_PROJECT_ID ? '✓ ' : ''}${esc(proj.name)}</div>
         <div style="font-size:0.7rem;color:var(--muted);">${wrCount} WR &middot; ${proj.model_wp} Wp${proj.locked ? ' &middot; <span style="color:#ef4444;">gesperrt</span>' : ''}</div>
       </div>
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -1787,7 +1887,7 @@ function printBlankMeasurementSheet(){
   const lockedBy = proj.locked_by || 'Admin';
   const lockedAt = proj.locked_at ? new Date(proj.locked_at).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
   const lockStampHtml = isLocked ? 
-    `<div style="margin-top:24px;padding:14px 16px;border:3px solid #b91c1c;border-radius:8px;text-align:center;color:#b91c1c;font-weight:800;font-size:11pt;background:#fef2f2;">🔒 MESSPRTOKOLL GESPERRT &middot; Freigegeben durch <strong>${lockedBy}</strong> am <strong>${lockedAt}</strong></div>` : '';
+    `<div style="margin-top:24px;padding:14px 16px;border:3px solid #b91c1c;border-radius:8px;text-align:center;color:#b91c1c;font-weight:800;font-size:11pt;background:#fef2f2;">🔒 MESSPROTOKOLL GESPERRT &middot; Freigegeben durch <strong>${esc(lockedBy)}</strong> am <strong>${esc(lockedAt)}</strong></div>` : '';
   
   let win = window.open('', '_blank');
   let pagesHtml = '';
@@ -1798,7 +1898,7 @@ function printBlankMeasurementSheet(){
     itemsForWR.forEach(id => {
       const item = APP_STATE[id];
       if(item.stat !== 'JA') return;
-      rowsHtml += `<tr><td style="font-weight:700; font-family:'JetBrains Mono', monospace; font-size:12pt; color:#16a34a;">${id}</td><td style="font-size:10pt;">${item.gak || ''}</td><td style="font-weight:700;">${item.mod || ''}</td><td><div class="chk-wrap"><div class="chk"><div class="box"></div>i.O.</div><div class="chk"><div class="box"></div>n.i.O.</div></div></td><td><div class="write-line" style="width:90%;"></div></td></tr>`;
+      rowsHtml += `<tr><td style="font-weight:700; font-family:'JetBrains Mono', monospace; font-size:12pt; color:#16a34a;">${id}</td><td style="font-size:10pt;">${esc(item.gak || '')}</td><td style="font-weight:700;">${esc(item.mod || '')}</td><td><div class="chk-wrap"><div class="chk"><div class="box"></div>i.O.</div><div class="chk"><div class="box"></div>n.i.O.</div></div></td><td><div class="write-line" style="width:90%;"></div></td></tr>`;
     });
     if(rowsHtml !== '') {
       pagesHtml += `<div class="sheet"><div class="header"><div><div class="brand">SOLPRO</div><div class="title">DC-Strangmessung / Inbetriebnahme</div></div><div class="meta"><div class="meta-row"><span>Projekt:</span> <strong>${proj.name}</strong></div><div class="meta-row"><span>Datum:</span> <strong>${dateStr}</strong></div><div class="meta-row"><span>Wechselrichter:</span> <strong>WR ${wr}</strong></div><div class="meta-row"><span>Prüfer:</span> <strong>_______________________</strong></div></div></div><div class="env-zone"><div class="env-box"><div class="env-label">Einstrahlung (W/m²)</div></div><div class="env-box"><div class="env-label">Modultemperatur (°C)</div></div><div class="env-box" style="flex: 1.5;"><div class="env-label">Eingesetztes Messgerät (Typ / S/N)</div></div></div><table><thead><tr><th style="width:10%;">Klemme</th><th style="width:18%;">GAK</th><th style="width:10%;">Mods</th><th style="width:27%;">Polarität</th><th style="width:35%;">Bemerkung</th></tr></thead><tbody>${rowsHtml}</tbody></table>${lockStampHtml}<div class="footer"><div class="sig-box"><div class="sig-line"></div><div>Ort, Datum, Unterschrift Prüfer</div></div><div class="sig-box"><div class="sig-line"></div><div>Ort, Datum, Unterschrift Bauleitung</div></div></div></div>`;
@@ -1822,7 +1922,7 @@ function printWRMontagePlan(){
       const item = APP_STATE[fullId];
       if(item.stat !== 'JA') return;
       const planName = item.planName || `STR ?`;
-      rowsHtml += `<tr><td style="padding:10px 14px;border:2px solid #334155;font-size:14pt;font-weight:800;color:#1e3a8a;">${planName}</td><td style="padding:10px 14px;border:2px solid #334155;font-size:16pt;font-weight:900;font-family:monospace;color:#15803d;background:#f0fdf4;text-align:center;">🔌 ${fullId}</td><td style="padding:10px 14px;border:2px solid #334155;font-size:13pt;font-weight:800;">${item.gak} <span style="font-size:10pt;font-weight:500;color:#475569;">(${item.mod} Mod.)</span></td></tr>`;
+      rowsHtml += `<tr><td style="padding:10px 14px;border:2px solid #334155;font-size:14pt;font-weight:800;color:#1e3a8a;">${esc(planName)}</td><td style="padding:10px 14px;border:2px solid #334155;font-size:16pt;font-weight:900;font-family:monospace;color:#15803d;background:#f0fdf4;text-align:center;">🔌 ${fullId}</td><td style="padding:10px 14px;border:2px solid #334155;font-size:13pt;font-weight:800;">${esc(item.gak)} <span style="font-size:10pt;font-weight:500;color:#475569;">(${esc(item.mod)} Mod.)</span></td></tr>`;
     });
     if(rowsHtml !== '') {
       pagesHtml += `<div style="page-break-after: always; padding-bottom: 20px;"><h1 style="background:#09090b;color:#fff;padding:12px 16px;border-radius:6px;font-size:16pt;margin:0 0 8px;">WECHSELRICHTER ${wr} &middot; KABEL-MONTAGEPLAN</h1><p style="margin:0 0 16px;font-size:10pt;color:#475569;"><strong>Bauvorhaben:</strong> ${proj.name}</p><table style="width:100%;border-collapse:collapse;text-align:left;"><thead><tr style="background:#e2e8f0;"><th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:35%;">Plan-String (SLD)</th><th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:35%;text-align:center;">WR-Klemme (Matrix)</th><th style="padding:10px 14px;border:2px solid #334155;font-size:11pt;width:30%;">GAK</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
@@ -2030,7 +2130,7 @@ async function loadAllUsers(){
     if(error){ listEl.innerHTML = `Fehler: ${error.message}`; return; }
     listEl.innerHTML = data.map(u => `
       <div class="user-row">
-        <span class="email">${u.email}${u.id === currentUser.id ? ' (du)' : ''}</span>
+        <span class="email">${esc(u.email)}${u.id === currentUser.id ? ' (du)' : ''}</span>
         <select onchange="changeUserRole('${u.id}', this.value)" ${u.id === currentUser.id ? 'disabled' : ''}>
           <option value="site" ${u.role === 'site' ? 'selected' : ''}>Bauleitung</option>
           <option value="planner" ${u.role === 'planner' ? 'selected' : ''}>Planer</option>

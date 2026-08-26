@@ -39,7 +39,7 @@ body.sun-mode {
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; height: 100%; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; height: 100%; scroll-padding-top: 60px; }
 body {
   font-family: 'Inter', sans-serif;
   background: var(--bg);
@@ -154,7 +154,7 @@ table.mt tbody tr.mppt-header td { padding: 8px 12px; font-weight: 800; font-siz
 .top-bar-mobile { display: none; position: sticky; top: 0; z-index: 50; background: rgba(18, 18, 20, 0.85); backdrop-filter: blur(12px); padding: 12px; border-bottom: 1px solid var(--border); align-items: center; justify-content: space-between; margin-bottom: 16px; }
 
 /* MOBILE SCROLL HEADER */
-.mobile-scroll-header { display: none; position: sticky; top: 60px; z-index: 45; background: rgba(18, 18, 20, 0.95); backdrop-filter: blur(12px); padding: 8px 12px; border-bottom: 1px solid var(--border); border-left: 3px solid var(--accent); }
+.mobile-scroll-header { display: none; }
 .mobile-scroll-header .wr-info { font-size: 0.75rem; font-weight: 700; color: var(--accent); }
 .mobile-scroll-header .string-info { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
 
@@ -162,8 +162,9 @@ table.mt tbody tr.mppt-header td { padding: 8px 12px; font-weight: 800; font-siz
   .sidebar { transform: translateX(-100%); box-shadow: 4px 0 24px rgba(0,0,0,0.5); }
   .sidebar.open { transform: translateX(0); }
   .main-content { margin-left: 0; padding: 10px; padding-top: calc(10px + var(--safe-top)); }
-  .top-bar-mobile { display: flex; position: sticky; top: 0; left: 0; right: 0; }
-  body.sun-mode .top-bar-mobile { background: rgba(255, 255, 255, 0.92); }
+  .top-bar-mobile { display: flex; position: sticky; top: 0; left: 0; right: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }   /* backdrop-filter teuer auf Mobile → weg */
+  body.sun-mode .top-bar-mobile { background: var(--bg); }   /* Sun-Mode: deckend statt transparent (kein blur mehr) */
+  body:not(.sun-mode) .top-bar-mobile { background: var(--surface); }
   .wr-head { position: static; padding: 10px 12px; }   /* nicht sticky auf Mobile: spart ~50px Scroll-Fläche */
   .dashboard { grid-template-columns: repeat(2, 1fr); }
   table.mt, table.mt tbody, table.mt tr, table.mt td { display: block; width: 100% !important; }
@@ -187,7 +188,7 @@ table.mt tbody tr.mppt-header td { padding: 8px 12px; font-weight: 800; font-siz
 @media (max-width: 600px) {
   .wrap { padding: 8px 8px 140px; }
   .dashboard { grid-template-columns: 1fr; gap: 8px; }
-  .mobile-scroll-header { display: block; top: 52px; padding: 6px 12px; }
+  .mobile-scroll-header { display: none; }
   .mobile-scroll-header .wr-info { font-size: 0.72rem; }
   .mobile-scroll-header .string-info { font-size: 0.66rem; }
   .kpi-card { padding: 12px; }
@@ -221,6 +222,129 @@ table.mt tbody tr.mppt-header td { padding: 8px 12px; font-weight: 800; font-siz
   /* Auth gate am iPhone kleiner & mittig */
   .auth-card { padding: 22px 18px; border-radius: 14px; }
   /* Print: nicht betroffen */
+}
+
+/* === BAUSTELLEN-MODE: Sun-Mode spezifisch auf Mobile === */
+@media (max-width: 600px) {
+  body.sun-mode .kpi-value { font-size: 1.6rem; }
+  body.sun-mode .kpi-label { font-size: 0.75rem; }
+  body.sun-mode .kpi-card { border-width: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  body.sun-mode table.mt td { font-size: 0.95rem; padding: 12px 12px; }
+  body.sun-mode table.mt td::before { font-size: 0.78rem; font-weight: 700; }
+  body.sun-mode .sp-inp { font-size: 1.05rem; padding: 10px 12px; border-width: 2px; }
+  body.sun-mode .tog { font-size: 0.9rem; padding: 10px 18px; min-height: 42px; }
+  body.sun-mode .btn { font-size: 0.9rem; padding: 10px 16px; min-height: 44px; }
+  body.sun-mode .wr-num { font-size: 0.9rem; padding: 4px 10px; }
+  body.sun-mode .wr-kpis { font-size: 0.82rem; }
+  body.sun-mode .main-tab { font-size: 0.85rem; padding: 12px 14px; }
+  body.sun-mode .filter-toggle-btn { font-size: 0.85rem; min-height: 44px; }
+  body.sun-mode .modal-head h2 { font-size: 1.15rem; }
+}
+
+/* === BAUSTELLE: Karten-Lesbarkeit (alle Modi, Mobile) === */
+@media (max-width: 600px) {
+  /* Linker Rand = Status-Ampel */
+  table.mt tbody tr[data-string-id] {
+    border-left: 5px solid var(--border);
+    position: relative;
+  }
+  table.mt tbody tr[data-string-id]:not(.row-nein) {
+    border-left-color: var(--accent);   /* grün = aktiv, Messung offen */
+  }
+  table.mt tbody tr.row-nein {
+    border-left-color: var(--muted);
+    opacity: 0.55;
+  }
+  /* Klemme + GAK als Card-Header (eigener dunklerer Hintergrund) */
+  table.mt td[data-label="Klemme"] {
+    background: var(--panel);
+    padding: 12px !important;
+    border-bottom: 1px solid var(--border);
+  }
+  table.mt td[data-label="Klemme"] .string-id { font-size: 0.95rem; }
+  table.mt td[data-label="Klemme"] .str-label { font-size: 0.7rem; margin-top: 3px; }
+  table.mt td[data-label="GAK"] {
+    background: var(--panel);
+    border-bottom: 2px solid var(--accent);
+  }
+  table.mt td[data-label="GAK"] .sp-inp { font-weight: 800; }
+  /* Aktiv-Toggle wird zum großen Status-Chip (volle Breite) */
+  table.mt td[data-label="Aktiv"] {
+    background: var(--bg);
+    border-top: 1px dashed var(--border);
+    border-bottom: 1px dashed var(--border);
+    padding: 10px 12px !important;
+  }
+  table.mt td[data-label="Aktiv"] .tog-wrap {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    gap: 6px;
+  }
+  table.mt td[data-label="Aktiv"] .tog {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    min-height: 44px;
+    border: 2px solid var(--border);
+  }
+  table.mt td[data-label="Aktiv"] .tog.on-ja {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  table.mt td[data-label="Aktiv"] .tog.on-nei {
+    background: transparent;
+    color: var(--muted);
+  }
+  /* Messwerte (Uoc/Isc/Riso) bekommen fett gedruckte Labels + Einheit-Hinweis */
+  table.mt td[data-label="Uoc(V)"]::before,
+  table.mt td[data-label="Isc(A)"]::before,
+  table.mt td[data-label="Riso(MΩ)"]::before {
+    font-weight: 800;
+    color: var(--text);
+  }
+  table.mt td[data-label="Uoc(V)"] .sp-inp,
+  table.mt td[data-label="Isc(A)"] .sp-inp,
+  table.mt td[data-label="Riso(MΩ)"] .sp-inp {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    text-align: right;
+  }
+  /* Mods + kWp: kleiner, da vorberechnet, nicht Hauptfokus */
+  table.mt td[data-label="Module"]::before,
+  table.mt td[data-label="kWp"]::before {
+    color: var(--muted);
+    font-weight: 600;
+  }
+  table.mt td[data-label="kWp"] {
+    background: var(--panel);
+  }
+  /* Note ganz unten, eigene Card-Sektion */
+  table.mt td.col-note {
+    background: var(--panel);
+    border-top: 2px solid var(--border);
+    border-bottom: none;
+    margin-top: 4px;
+  }
+  table.mt td.col-note::before {
+    font-weight: 800;
+    color: var(--text);
+  }
+}
+
+/* === Sun-Mode Override: Card-Hintergründe bleiben hell aber differenziert === */
+body.sun-mode table.mt td[data-label="Klemme"],
+body.sun-mode table.mt td[data-label="GAK"],
+body.sun-mode table.mt td.col-note,
+body.sun-mode table.mt td[data-label="kWp"] {
+  background: #f1f5f9;        /* leicht abgesetzt für Sektionen */
+}
+body.sun-mode table.mt td[data-label="Aktiv"] {
+  background: #ffffff;
 }
 
 .modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px; }
@@ -445,7 +569,7 @@ table.mt tbody tr.mppt-header td { padding: 8px 12px; font-weight: 800; font-siz
     <span class="icon">👤</span><span class="label">Benutzerverwaltung</span>
   </button>
   <button onclick="toggleSunMode();closeSidebar();" class="sidebar-btn" id="btn-sun">
-    <span class="icon">☀️</span><span class="label">Hell / Dunkel Modus</span>
+    <span class="icon">☀️</span><span class="label">Baustellen-Modus (Hell)</span>
   </button>
   <button onclick="factoryResetCloud();closeSidebar();" class="sidebar-btn red role-gate-planner">
     <span class="icon">🚨</span><span class="label">Matrix zurücksetzen</span>
@@ -621,7 +745,10 @@ function toast(msg, ms=3000){
 }
 
 // === UI TOGGLES ===
-function toggleSunMode(){ document.body.classList.toggle('sun-mode'); }
+function toggleSunMode(){
+  const on = document.body.classList.toggle('sun-mode');
+  try { localStorage.setItem('solpro_sun_mode', on ? '1' : '0'); } catch(e){}
+}
 function toggleSidebar(){ g('sidebar').classList.toggle('open'); g('sidebar-overlay').classList.toggle('open'); document.body.style.overflow = g('sidebar').classList.contains('open') ? 'hidden' : ''; }
 function closeSidebar(){ g('sidebar').classList.remove('open'); g('sidebar-overlay').classList.remove('open'); document.body.style.overflow = ''; }
 
@@ -787,8 +914,9 @@ function generateState(plan, allActiveByDefault = true){
       for(let m=1; m<=mppts; m++){
         for(let s=1; s<=inputs; s++){
           const isAct = defMods > 0 || allActiveByDefault;
+          // Fix: wenn defMods leer, dann 0 (nicht 1) — User füllt später selbst
           result[`${wr}.${m}.${s}`] = { 
-            planName: "", gak: `GAK ${wr}`, mod: isAct ? (defMods || 1) : 0, 
+            planName: "", gak: `GAK ${wr}`, mod: defMods || 0, 
             stat: isAct ? "JA" : "NEIN", note: "", uoc:"", isc:"", riso:"" 
           };
         }
@@ -892,12 +1020,18 @@ function renderMatrix(remoteOverride = null){
                <span class="print-cell" id="pm-${id}">${item.mod > 0 ? item.mod : '—'}</span>
             </td>
             <td data-label="kWp" class="pwr-cell" style="width:8%;" id="pw-${id}">${pwr}</td>
-            <td data-label="Uoc(V)" style="width:10%;"><input type="text" inputmode="decimal" id="uoc-${id}" value="${item.uoc||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'uoc', this.value)"></td>
-            <td data-label="Isc(A)" style="width:10%;"><input type="text" inputmode="decimal" id="isc-${id}" value="${item.isc||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'isc', this.value)"></td>
-            <td data-label="Riso(MΩ)" style="width:10%;"><input type="text" inputmode="decimal" id="riso-${id}" value="${item.riso||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'riso', this.value)"></td>
+            <td data-label="Uoc(V)" style="width:10%;"><input type="text" inputmode="decimal" id="uoc-${id}" value="${item.uoc||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'uoc', this.value)">
+               <span class="print-cell" id="puoc-${id}">${item.uoc||''}</span>
+            </td>
+            <td data-label="Isc(A)" style="width:10%;"><input type="text" inputmode="decimal" id="isc-${id}" value="${item.isc||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'isc', this.value)">
+               <span class="print-cell" id="pisc-${id}">${item.isc||''}</span>
+            </td>
+            <td data-label="Riso(MΩ)" style="width:10%;"><input type="text" inputmode="decimal" id="riso-${id}" value="${item.riso||''}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'riso', this.value)">
+               <span class="print-cell" id="priso-${id}">${item.riso||''}</span>
+            </td>
             <td data-label="Info" class="col-note" style="text-align:left; width:18%;">
               <input type="text" id="note-${id}" value="${item.note||''}" class="sp-inp" style="text-align:left;font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'note', this.value)">
-              <span class="print-cell" style="font-size:7pt;color:#71717a;">${item.note||''}</span>
+              <span class="print-cell" id="pnote-${id}" style="font-size:7pt;color:#71717a;">${item.note||''}</span>
             </td>
           </tr>`;
       }
@@ -938,6 +1072,10 @@ function renderMatrix(remoteOverride = null){
 }
 
 function initMobileScrollHeader() {
+  // Mobile-Scroll-Header deaktiviert: verursachte iOS-Scroll-Sprünge durch
+  // getBoundingClientRect() in scroll-Listenern. wr-head (statisch) zeigt genug Kontext.
+  return;
+  /* eslint-disable */ /* unreachable, kept for compat */
   const scrollHeader = g('mobile-scroll-header');
   if(!scrollHeader) return;
 
@@ -1038,6 +1176,13 @@ function saveData(id, field, val) {
     if(pm) pm.textContent = (isJa && APP_STATE[id].mod>0) ? APP_STATE[id].mod : '—';
   }
   
+  // Print-Spiegel: hält die .print-cell Spans synchron zum Input (sonst beim Druck leer)
+  const printMap = { uoc: 'puoc', isc: 'pisc', riso: 'priso', note: 'pnote' };
+  if(printMap[field]) {
+    const pc = g(`${printMap[field]}-${id}`);
+    if(pc) pc.textContent = val || '';
+  }
+  
   try {
     const allData = JSON.parse(localStorage.getItem(STORAGE_KEYS.data) || '{}');
     allData[CURRENT_PROJECT_ID] = APP_STATE;
@@ -1062,7 +1207,28 @@ function setStat(id, st) {
   updateKPIs();
 }
 
-function updateKPIs(){ renderMatrix(); }
+function updateKPIs(){
+  // KRITISCH: NICHT renderMatrix() aufrufen — würde den fokussierten Input zerstören
+  // (User tippt Modulanzahl → springt raus nach 1. Zeichen)
+  // Nur die 4 Dashboard-Karten aktualisieren.
+  const wp = getCurrentWp();
+  let totMods = 0, totPwr = 0, totActive = 0, totSlots = 0;
+  Object.keys(APP_STATE).forEach(id => {
+    const it = APP_STATE[id];
+    if(!it) return;
+    totSlots++;
+    if(it.stat === 'JA' && it.mod > 0) {
+      totMods += it.mod;
+      totPwr += (it.mod * wp) / 1000;
+      totActive++;
+    }
+  });
+  const dPwr = g('d-pwr'), dMods = g('d-mods'), dAct = g('d-act'), dTot = g('d-tot');
+  if(dPwr)  dPwr.textContent  = totPwr.toFixed(2);
+  if(dMods) dMods.textContent = totMods;
+  if(dAct)  dAct.textContent  = totActive;
+  if(dTot)  dTot.textContent  = totSlots;
+}
 
 // === PVSOL IMPORT LOGIC (FIXED & ROBUST) ===
 function openPVSOLModal(){
@@ -1652,6 +1818,9 @@ async function changeUserRole(userId, newRole){
     if(error) toast('Fehler: ' + error.message); else toast('Rolle geändert');
   } catch(e){ toast('Fehler: ' + e.message); }
 }
+
+// Modus-Wahl (Baustelle/Dunkel) beim Start wiederherstellen
+try { if(localStorage.getItem('solpro_sun_mode') === '1') document.body.classList.add('sun-mode'); } catch(e){}
 
 window.onload = () => { checkSession(); };
 </script>

@@ -532,6 +532,199 @@ body:not(.sun-mode) .project-card:hover { background: #15171a; transform: none; 
   .offline-indicator { top: calc(50px + var(--safe-top)); right: 12px; font-size: 0.65rem; padding: 4px 10px; }
   .cloud-sync-indicator { bottom: 70px; right: 12px; font-size: 0.7rem; padding: 6px 12px; }
 }
+
+/* ============================================================
+   RESPONSIVE VERBESSERUNGEN — Runde 2
+   ============================================================ */
+
+/* iPhone Landscape (Höhe < 500px) — kompakter, mehr auf einer Seite */
+@media (max-width: 900px) and (max-height: 500px) and (orientation: landscape) {
+  .dashboard { grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+  .kpi-card { padding: 8px 10px; }
+  .kpi-label { font-size: 0.6rem; }
+  .kpi-value { font-size: 1rem; }
+  .top-bar-mobile { padding: 6px 12px; }
+  .modal-body { padding: 12px; }
+  .modal-head { padding: 8px 12px; }
+  .modal-head h2 { font-size: 0.9rem; }
+}
+
+/* Tablet Portrait (768-900px) — Hybrid-Modus: Tabelle sichtbar, kleiner */
+@media (min-width: 768px) and (max-width: 900px) {
+  table.mt tbody tr { margin: 6px 0; }
+  table.mt td { padding: 6px 10px !important; font-size: 0.72rem; min-height: 36px; }
+  .dashboard { grid-template-columns: repeat(4, 1fr); }
+  .kpi-value { font-size: 1.2rem; }
+  .main-tab { font-size: 0.8rem; padding: 10px 12px; }
+}
+
+/* Sehr kleine Phones (iPhone SE 1st Gen = 320px) */
+@media (max-width: 380px) {
+  .wrap { padding: 6px 6px 120px; }
+  .kpi-value { font-size: 1.05rem; }
+  .kpi-label { font-size: 0.6rem; }
+  .kpi-card { padding: 10px; }
+  .main-tab { font-size: 0.7rem; padding: 8px 8px; }
+  .main-tab span { display: none; }       /* Icon-only Tabs auf Mini-Screens */
+  .top-bar-mobile > div { font-size: 0.95rem !important; }
+  .top-bar-mobile .btn { font-size: 0.7rem; padding: 6px 10px; }
+  .project-card { padding: 10px; }
+  .project-card-title { font-size: 0.9rem; }
+  .project-card-stat-value { font-size: 0.8rem; }
+  .modal-card { border-radius: 8px; }
+  .field-radio { padding: 8px 10px; }
+  .field-radio-title { font-size: 0.8rem; }
+  .field-radio-desc { font-size: 0.62rem; }
+}
+
+/* Lange Inhalte: Text-Overflow + Wortbruch (Projektname, GAK, Notizen) */
+.project-card-title, .wr-num, .string-id, .plan-label, .pwr-cell, .gak-cell {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.kpi-value, .kpi-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Form-Stacks auf Mobile: Inputs untereinander statt nebeneinander */
+@media (max-width: 600px) {
+  /* Generell: alle flex-row mit Inputs werden zu flex-column wenn zu schmal */
+  [style*="display:flex"][style*="gap:12px"] {
+    flex-wrap: wrap;
+  }
+  [style*="display:flex"][style*="gap:12px"] > [style*="flex:1"] {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+  }
+  /* Bessere Form-Layouts im Modal */
+  .field { margin-bottom: 12px; }
+  .field input, .field select, .field textarea { font-size: 1rem; min-height: 40px; }
+  /* Modal fast Full-Screen auf Mobile */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal-card {
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    max-height: 92vh;
+    max-height: 92dvh;
+  }
+  .modal-card:not([data-modal="centered"]) { animation: slideUp 0.25s ease-out; }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+}
+
+/* Modal: mittig auf Desktop, Bottom-Sheet auf Mobile (override) */
+@media (min-width: 601px) {
+  .modal-overlay { align-items: center !important; }
+  .modal-card { border-radius: 16px !important; max-height: 90vh !important; }
+}
+
+/* Touch-Targets: alle klickbaren Elemente mindestens 44px hoch (Apple HIG) */
+@media (max-width: 900px) {
+  .sidebar-btn { min-height: 44px; padding: 12px !important; }
+  .project-card { min-height: 80px; }
+  .wr-tab { min-height: 44px; padding: 12px 16px; }
+  .main-tab { min-height: 48px; }
+  .field-radio { min-height: 52px; }
+  .modal-head button { min-width: 44px; min-height: 44px; }
+  /* Touch: Hover-Effekte unterdrücken (verhindert "sticky hover" auf iOS) */
+  @media (hover: none) {
+    .btn:hover, .sidebar-btn:hover, .project-card:hover, .wr-tab:hover, .main-tab:hover { transform: none !important; filter: none !important; }
+  }
+}
+
+/* Accessibility: Sichtbarer Focus-Indikator für Tastatur-Navigation */
+*:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline-offset: 1px;
+}
+
+/* Reduced Motion: Animationen respektieren User-Präferenz */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   QUICK WINS — Auto-Save, Auto-Advance, Validation
+   ============================================================ */
+
+/* Validation: ungültige Eingaben visuell markieren */
+.sp-inp.invalid {
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+  color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+.sp-inp.invalid:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3) !important;
+}
+.sp-inp.valid {
+  border-color: var(--accent) !important;
+}
+/* Range-Hint: kleiner Text unter dem Input */
+.input-hint {
+  font-size: 0.62rem;
+  color: var(--muted);
+  margin-top: 2px;
+  text-align: right;
+  letter-spacing: 0.02em;
+}
+.input-hint.warn { color: #ef4444; }
+
+/* Auto-Save-Indikator im Top-Bar */
+.save-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--accent-glow);
+  white-space: nowrap;
+}
+.save-indicator.show { opacity: 1; }
+.save-indicator.syncing {
+  color: #eab308;
+  background: rgba(234, 179, 8, 0.15);
+  opacity: 1;
+}
+.save-indicator.saved {
+  animation: saved-pulse 1.5s ease-out;
+}
+@keyframes saved-pulse {
+  0% { transform: scale(0.85); opacity: 0; }
+  20% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.save-indicator .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+}
+.save-indicator.syncing .dot {
+  animation: pulse-dot 1s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+/* Auf Mobile: Save-Indicator unten (nicht im Top-Bar) */
+@media (max-width: 600px) {
+  .save-indicator { font-size: 0.65rem; padding: 2px 6px; }
+}
 </style>
 </head>
 <body>
@@ -615,13 +808,19 @@ body:not(.sun-mode) .project-card:hover { background: #15171a; transform: none; 
 </div>
 
 <div class="top-bar-mobile no-print">
-  <div style="font-weight:900; font-size:1.1rem; color:var(--accent); letter-spacing:-0.05em;">SOLPRO</div>
+  <div style="font-weight:900; font-size:1.1rem; color:var(--accent); letter-spacing:-0.05em;display:flex;align-items:center;gap:8px;">
+    <span>SOLPRO</span>
+    <span class="save-indicator" id="save-indicator"><span class="dot"></span><span id="save-text">Gespeichert</span></span>
+  </div>
   <button class="btn btn-ghost" onclick="toggleSidebar()" style="padding:6px 12px;">☰ Menü</button>
 </div>
 
 <aside class="sidebar no-print" id="sidebar">
   <div class="sidebar-header">
-    <div class="sidebar-logo">SOLPRO</div>
+    <div class="sidebar-logo" style="display:flex;align-items:center;gap:8px;">
+      <span>SOLPRO</span>
+      <span class="save-indicator" id="save-indicator-desktop" style="display:none;"><span class="dot"></span><span class="save-text">Gespeichert</span></span>
+    </div>
     <div class="sidebar-subtitle">Matrix Tool v2.1</div>
   </div>
 
@@ -1415,12 +1614,12 @@ function renderMatrix(remoteOverride = null){
           <tr id="row-${id}" class="${!isJa ? 'row-nein' : ''}" data-wr="${wr}" data-mppt="${m}" data-string="${s}" data-string-id="${id}">
             <td data-label="Klemme" style="text-align:left; padding-left:6px; width:12%;">
                <div style="display:flex;flex-direction:column;gap:1px;">
-                 <span class="string-id" style="font-size:0.7rem;">${id}</span>
+                 <span class="string-id" style="font-size:0.85rem;">${id}</span>
                  ${strLabel}
                </div>
             </td>
             <td data-label="GAK" style="width:12%;">
-               <input type="text" id="gak-${id}" value="${esc(item.gak)}" class="sp-inp sp-inp-center sp-inp-gak" style="font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'gak', this.value)" ${roAttr(gakRO)}>
+               <input type="text" id="gak-${id}" value="${esc(item.gak)}" class="sp-inp sp-inp-center sp-inp-gak" style="padding:3px;" oninput="saveData('${id}', 'gak', this.value)" ${roAttr(gakRO)}>
                 <span class="print-cell">${esc(item.gak)}</span>
             </td>
             <td data-label="Aktiv" class="no-print" style="width:12%;">
@@ -1430,24 +1629,24 @@ function renderMatrix(remoteOverride = null){
               </div>
             </td>
             <td data-label="Module" style="width:8%;">
-               <input type="number" min="0" max="100" step="1" id="mod-${id}" value="${esc(item.mod||'')}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" onchange="saveData('${id}', 'mod', this.value); updateKPIs();" ${roAttr(modRO)}>
+               <input type="number" min="0" max="100" step="1" id="mod-${id}" value="${esc(item.mod||'')}" class="sp-inp sp-inp-center" style="padding:3px;" onchange="saveData('${id}', 'mod', this.value); updateKPIs();" onkeydown="handleMeasureKeydown(event, '${id}', 'mod')" ${roAttr(modRO)}>
                <span class="print-cell" id="pm-${id}">${item.mod > 0 ? item.mod : '—'}</span>
             </td>
             <td data-label="kWp" class="pwr-cell" style="width:8%;" id="pw-${id}">${pwr}</td>
             <td data-label="Uoc(V)" class="col-hide-print" style="width:10%;">
-               <input type="text" inputmode="decimal" id="uoc-${id}" value="${esc(item.uoc||'')}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" onchange="saveData('${id}', 'uoc', this.value)" ${roAttr(uocRO)}>
+               <input type="text" inputmode="decimal" id="uoc-${id}" value="${esc(item.uoc||'')}" class="sp-inp sp-inp-center" style="padding:3px;" onchange="saveData('${id}', 'uoc', this.value)" onkeydown="handleMeasureKeydown(event, '${id}', 'uoc')" ${roAttr(uocRO)}>
                 <span class="print-cell" id="puoc-${id}">${esc(item.uoc||'')}</span>
             </td>
             <td data-label="Isc(A)" class="col-hide-print" style="width:10%;">
-               <input type="text" inputmode="decimal" id="isc-${id}" value="${esc(item.isc||'')}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" onchange="saveData('${id}', 'isc', this.value)" ${roAttr(iscRO)}>
+               <input type="text" inputmode="decimal" id="isc-${id}" value="${esc(item.isc||'')}" class="sp-inp sp-inp-center" style="padding:3px;" onchange="saveData('${id}', 'isc', this.value)" onkeydown="handleMeasureKeydown(event, '${id}', 'isc')" ${roAttr(iscRO)}>
                 <span class="print-cell" id="pisc-${id}">${esc(item.isc||'')}</span>
             </td>
             <td data-label="Riso(MΩ)" class="col-hide-print" style="width:10%;">
-               <input type="text" inputmode="decimal" id="riso-${id}" value="${esc(item.riso||'')}" class="sp-inp sp-inp-center" style="font-size:0.7rem;padding:3px;" onchange="saveData('${id}', 'riso', this.value)" ${roAttr(risoRO)}>
+               <input type="text" inputmode="decimal" id="riso-${id}" value="${esc(item.riso||'')}" class="sp-inp sp-inp-center" style="padding:3px;" onchange="saveData('${id}', 'riso', this.value)" onkeydown="handleMeasureKeydown(event, '${id}', 'riso')" ${roAttr(risoRO)}>
                 <span class="print-cell" id="priso-${id}">${esc(item.riso||'')}</span>
             </td>
             <td data-label="Info" class="col-note" style="text-align:left; width:18%;">
-               <input type="text" id="note-${id}" value="${esc(item.note||'')}" class="sp-inp" style="text-align:left;font-size:0.7rem;padding:3px;" oninput="saveData('${id}', 'note', this.value)" ${roAttr(noteRO)}>
+               <input type="text" id="note-${id}" value="${esc(item.note||'')}" class="sp-inp" style="text-align:left;padding:3px;" oninput="saveData('${id}', 'note', this.value)" ${roAttr(noteRO)}>
                <span class="print-cell" id="pnote-${id}" style="font-size:7pt;color:#71717a;">${esc(item.note||'')}</span>
             </td>
           </tr>`;
@@ -1544,6 +1743,67 @@ let cloudSyncTimeout = null;
 const cloudSaveQueues = new Map();
 const CLOUD_SYNC_DELAY = 600;
 
+// === Quick Win 1: Auto-Save-Indikator ===
+let _saveIndicatorTimer = null;
+function showSaveIndicator(state){
+  // state: 'saving' | 'saved' | 'syncing' | 'error'
+  const el = g('save-indicator');
+  const elD = g('save-indicator-desktop');
+  const text = el ? el.querySelector('#save-text') || el.querySelector('.save-text') : null;
+  const textD = elD ? elD.querySelector('.save-text') : null;
+  const setText = (t) => { if(text) text.textContent = t; if(textD) textD.textContent = t; };
+  if(!el && !elD) return;
+  clearTimeout(_saveIndicatorTimer);
+
+  if(state === 'saving' || state === 'syncing'){
+    if(el) { el.classList.add('show','syncing'); el.classList.remove('saved'); }
+    if(elD) { elD.classList.add('show','syncing'); elD.classList.remove('saved'); elD.style.display='inline-flex'; }
+    setText('Sync läuft…');
+  } else if(state === 'saved'){
+    if(el) { el.classList.add('show','saved'); el.classList.remove('syncing'); }
+    if(elD) { elD.classList.add('show','saved'); elD.classList.remove('syncing'); elD.style.display='inline-flex'; }
+    setText('Gespeichert');
+    _saveIndicatorTimer = setTimeout(() => {
+      if(el){ el.classList.remove('show','saved'); }
+      if(elD){ elD.classList.remove('show','saved'); }
+    }, 1500);
+  } else if(state === 'error'){
+    if(el) { el.classList.add('show'); el.classList.remove('syncing','saved'); el.style.color='#ef4444'; el.style.background='rgba(239,68,68,0.15)'; }
+    if(elD) { elD.classList.add('show'); elD.classList.remove('syncing','saved'); elD.style.color='#ef4444'; elD.style.background='rgba(239,68,68,0.15)'; elD.style.display='inline-flex'; }
+    setText('Sync-Fehler');
+  }
+}
+
+// === Quick Win 2: Auto-Advance (Enter springt zum nächsten Mess-Feld) ===
+const NEXT_FIELD = { uoc: 'isc', isc: 'riso', riso: 'note', mod: 'gak' };
+function handleMeasureKeydown(event, id, field){
+  if(event.key !== 'Enter') return;
+  event.preventDefault();
+  const next = NEXT_FIELD[field];
+  if(next){
+    const target = g(`${next}-${id}`);
+    if(target){ target.focus(); target.select?.(); return; }
+  }
+  // Kein nächstes Feld in der Zeile → zur nächsten Zeile, gleiche Spalte
+  const parts = id.split('.').map(Number);
+  // Nächste ID in der gleichen MPPT-Gruppe
+  const m = parts[1], wr = parts[0];
+  const nextRow = g(`${wr}.${m + 1}.${parts[2]}`);
+  if(nextRow){ nextRow.focus(); nextRow.select?.(); return; }
+  // Sonst erstes Feld im nächsten MPPT
+  const nextMppt = g(`${wr}.${m + 1}.1`);
+  if(nextMppt){ nextMppt.focus(); nextMppt.select?.(); }
+}
+
+// === Quick Win 3: Validation-Visual (rote Border bei out-of-range) ===
+function setInputValidity(input, isValid){
+  if(!input) return;
+  input.classList.remove('invalid','valid');
+  if(input.value === '' || input.value === null) return;     // leer = neutral
+  if(isValid) input.classList.add('valid');
+  else input.classList.add('invalid');
+}
+
 function saveData(id, field, val) {
   if(!APP_STATE[id]) return;
   
@@ -1565,6 +1825,8 @@ function saveData(id, field, val) {
     const normalized = normaliseNumber(field, val);
     if(normalized === null){
       toast(validationMessage(field));
+      const inp = g(`${field}-${id}`);
+      setInputValidity(inp, false);
       revertInput(id, field);
       return;
     }
@@ -1573,6 +1835,12 @@ function saveData(id, field, val) {
   
   if(field==='mod') APP_STATE[id][field] = val === '' ? 0 : Number(val);
   else APP_STATE[id][field] = val;
+  
+  // Validation-Visual: gültiger Wert → grüner Rand, bis nächste Eingabe
+  if(['uoc', 'isc', 'riso', 'mod'].includes(field)){
+    const inp = g(`${field}-${id}`);
+    if(inp) setInputValidity(inp, true);
+  }
   
   if(field==='mod' || field==='stat') {
     const isJa = APP_STATE[id].stat === 'JA';
@@ -1593,7 +1861,10 @@ function saveData(id, field, val) {
     localProject.updated_at = new Date().toISOString();
     saveProjectsLocal();
   }
+  // Auto-Save-Indikator
+  showSaveIndicator('saved');
   if(supabaseClient && currentUser) {
+    showSaveIndicator('syncing');
     clearTimeout(cloudSyncTimeout);
     cloudSyncTimeout = setTimeout(() => saveProjectToCloud(CURRENT_PROJECT_ID), CLOUD_SYNC_DELAY);
   }
@@ -1685,6 +1956,11 @@ function parsePVSOLData(json){
   const wpMatch = moduleDescription.match(/(\d{3})W/i) || moduleDescription.match(/-(\d{3})\//);
   if(wpMatch) moduleWp = parseInt(wpMatch[1], 10);
 
+  // Regex-Varianten
+  const RE_MPPT_LABEL = /MPP\s*T?\s*(\d+)\s*:/i;
+  // Eine String-Definition: "1 x 20" oder "2x23"
+  const RE_STRING = /(\d+)\s*[x×*]\s*(\d+)/i;
+
   if(config?.ModuleAreas){
     config.ModuleAreas.forEach(area => {
       if(!area.Inverters) return;
@@ -1696,34 +1972,82 @@ function parsePVSOLData(json){
           name: `WR ${wrNum}${inv.Description ? ` · ${inv.Description}` : ''}`,
           mppts: 0, inputs: 1, defaultMods: 0, strings: {}
         };
-        configs.forEach(configStr => {
+
+        // Schritt 1: Config-Strings zusammenfügen wenn über mehrere Zeilen aufgeteilt
+        //   PVSOL-Format: ["MPP 1: ", "1 x 20 || 1 x 20", "MPP 2: ", "1 x 20", ...]
+        //   oder single:   ["MPP 1: 1 x 21", "MPP 2: 1 x 21", ...]
+        const combined = [];
+        for(let i = 0; i < configs.length; i++){
+          const cs = (configs[i] || '').toString();
+          const labelM = cs.match(RE_MPPT_LABEL);
+          // Wenn nur Label ohne Daten → mit nächstem Eintrag zusammenfügen
+          if(labelM && (configs[i+1] !== undefined)){
+            const next = (configs[i+1] || '').toString();
+            // Nur zusammenfügen wenn der nächste Eintrag KEIN neues Label ist
+            if(!RE_MPPT_LABEL.test(next) && next.trim() !== ''){
+              combined.push(`${cs} ${next}`.trim());
+              i++;  // nächsten überspringen
+              continue;
+            }
+          }
+          combined.push(cs);
+        }
+        if(combined.length !== configs.length){
+          console.log(`[PVSOL] WR ${wrNum}: kombinierte Configs ${configs.length} → ${combined.length}`);
+        }
+
+        // Schritt 2: Gesamtzahl MPPTs des WR ermitteln
+        const invMpptFields = ['NumberOfMppts','Mppts','NumberMPPTs','MpptCount','MPPTCount','MpptNumber','NumberOfMPPTs'];
+        let actualMppts = 0;
+        for(const f of invMpptFields){
+          if(Number.isInteger(inv[f]) && inv[f] > 0){ actualMppts = Math.max(actualMppts, inv[f]); break; }
+        }
+        combined.forEach(cs => {
+          const m = cs.match(RE_MPPT_LABEL);
+          if(m) actualMppts = Math.max(actualMppts, Number(m[1]));
+        });
+        if(actualMppts === 0) actualMppts = 12;
+        entry.mppts = actualMppts;
+
+        // Schritt 3: Strings einsammeln — unterstützt "1 x 20 || 1 x 20" (2 parallele Strings)
+        combined.forEach(configStr => {
           if(!configStr || typeof configStr !== 'string') return;
-          const mpptMatch = configStr.match(/MPP\s+(\d+)\s*:/i);
-          if(mpptMatch) entry.mppts = Math.max(entry.mppts, Number(mpptMatch[1]));
-          if(configStr.toLowerCase().includes('nicht belegt')) return;
-          const match = configStr.match(/MPP\s+(\d+):\s*(\d+)\s*x\s*(\d+)/i);
-          if(!match) return;
-          const mppt = Number(match[1]), parallelStrings = Number(match[2]), modulesPerString = Number(match[3]);
-          if(!Number.isInteger(mppt) || !Number.isInteger(parallelStrings) || !Number.isInteger(modulesPerString)) return;
-          entry.mppts = Math.max(entry.mppts, mppt);
-          entry.inputs = Math.max(entry.inputs, parallelStrings);
+          if(configStr.toLowerCase().includes('nicht belegt')) return;  // leere MPPT überspringen
+          const mpptM = configStr.match(RE_MPPT_LABEL);
+          if(!mpptM) return;
+          const mppt = Number(mpptM[1]);
+          if(!Number.isInteger(mppt)) return;
+
+          // String-Definitionen rechts vom ":" einsammeln (z.B. "1 x 20 || 1 x 20")
+          const afterColon = configStr.substring(configStr.indexOf(':') + 1);
+          const segments = afterColon.split('||').map(s => s.trim()).filter(Boolean);
+
+          if(segments.length === 0) return;
+
           entry.strings[mppt] ||= {};
-          for(let string = 1; string <= parallelStrings; string++){
-            entry.strings[mppt][string] = {
-              planName: `PVSOL WR ${wrNum} · MPP ${mppt} · String ${string}`,
+          entry.inputs = Math.max(entry.inputs, segments.length);
+
+          segments.forEach((seg, idx) => {
+            const sm = seg.match(RE_STRING);
+            if(!sm) return;
+            const modulesPerString = Number(sm[2]);
+            if(!Number.isInteger(modulesPerString) || modulesPerString <= 0) return;
+            const stringNum = idx + 1;
+            entry.strings[mppt][stringNum] = {
+              planName: `PVSOL WR ${wrNum} · MPP ${mppt} · String ${stringNum}`,
               gak: `GAK ${wrNum}`,
               mod: modulesPerString,
               note: area.ModuleArea || inv.Description || ''
             };
             stringCount++;
             moduleCount += modulesPerString;
-          }
+          });
         });
-        if(entry.mppts === 0) entry.mppts = 1;
         plan[wrNum] = entry;
       });
     });
   }
+  console.log('[PVSOL] Parsed:', { plan, stringCount, moduleCount, moduleWp });
   return { plan, projectName, moduleWp, stringCount, moduleCount };
 }
 
@@ -2072,16 +2396,19 @@ async function saveProjectToCloudNow(projectId){
     if(syncIndicator) syncIndicator.classList.remove('syncing');
     if(error) {
       const off = g('offline-indicator'); if(off) off.classList.add('offline');
+      showSaveIndicator('error');
       return false;
     } else {
       proj.cloud_updated_at = updatedAt;
       saveProjectsLocal();
       const off = g('offline-indicator'); if(off) off.classList.remove('offline');
+      showSaveIndicator('saved');
       return true;
     }
   } catch(e){ 
     if(syncIndicator) syncIndicator.classList.remove('syncing');
     const off = g('offline-indicator'); if(off) off.classList.add('offline');
+    showSaveIndicator('error');
     return false;
   }
 }

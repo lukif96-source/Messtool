@@ -898,6 +898,9 @@ body.sun-mode .wr-block {
       </span>
       <span>▼</span>
     </button>
+    <button onclick="switchMainTab('projects');closeSidebar();" class="sidebar-btn" style="margin-top:6px;">
+      <span class="icon">📁</span><span class="label">Alle Projekte</span>
+    </button>
   </div>
 
   <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Import & Export</div>
@@ -1020,6 +1023,8 @@ body.sun-mode .wr-block {
       </div>
     </div>
 
+    <div id="project-group-bar" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;"></div>
+
     <div class="project-grid" id="project-grid"></div>
   </div>
 
@@ -1052,6 +1057,12 @@ body.sun-mode .wr-block {
       <div class="field">
         <label>Projektname</label>
         <input type="text" id="np-name" placeholder="z.B. Logistikzentrum Nord" class="sp-inp">
+      </div>
+      <div class="field">
+        <label>Gruppe (optional)</label>
+        <input type="text" id="np-group" placeholder="z.B. MAN" class="sp-inp" list="np-group-suggestions">
+        <datalist id="np-group-suggestions"></datalist>
+        <div style="font-size:0.7rem; color:var(--muted); margin-top:4px;">Projekte mit gleicher Gruppe (z.B. verschiedene Dächer eines Kunden) lassen sich später zusammen filtern.</div>
       </div>
       <div style="display:flex;gap:12px;margin-bottom:16px;">
         <div style="flex:1;">
@@ -1221,6 +1232,7 @@ function renderProjectGrid(){
   const ids = Object.keys(PROJECTS);
   
   if(ids.length === 0){
+    if(g('project-group-bar')) g('project-group-bar').innerHTML = '';
     grid.innerHTML = `
       <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--muted);">
         <div style="font-size:3rem; margin-bottom:16px;">📁</div>
@@ -1230,8 +1242,45 @@ function renderProjectGrid(){
     `;
     return;
   }
+
+  // ---- Gruppen-Auswahlleiste ----
+  const groupBar = g('project-group-bar');
+  if(groupBar){
+    const groupCounts = {};
+    let ungrouped = 0;
+    ids.forEach(id => {
+      const gr = PROJECTS[id].group;
+      if(gr) groupCounts[gr] = (groupCounts[gr]||0) + 1; else ungrouped++;
+    });
+    const groupNames = Object.keys(groupCounts).sort();
+    if(groupNames.length === 0){
+      groupBar.innerHTML = '';
+      currentProjectGroupFilter = '__all__';
+    } else {
+      if(currentProjectGroupFilter !== '__all__' && currentProjectGroupFilter !== '__none__' && !groupNames.includes(currentProjectGroupFilter)){
+        currentProjectGroupFilter = '__all__';
+      }
+      let chips = `<button class="wr-tab ${currentProjectGroupFilter==='__all__'?'active':''}" onclick="selectProjectGroupFilter('__all__')">Alle <span style="opacity:0.6;">(${ids.length})</span></button>`;
+      chips += groupNames.map(gr => `<button class="wr-tab ${currentProjectGroupFilter===gr?'active':''}" onclick="selectProjectGroupFilter('${esc(gr).replace(/'/g,"\\'")}')">${esc(gr)} <span style="opacity:0.6;">(${groupCounts[gr]})</span></button>`).join('');
+      if(ungrouped > 0){
+        chips += `<button class="wr-tab ${currentProjectGroupFilter==='__none__'?'active':''}" onclick="selectProjectGroupFilter('__none__')">Ohne Gruppe <span style="opacity:0.6;">(${ungrouped})</span></button>`;
+      }
+      groupBar.innerHTML = chips;
+    }
+  }
+
+  const visibleIds = ids.filter(id => {
+    if(currentProjectGroupFilter === '__all__') return true;
+    if(currentProjectGroupFilter === '__none__') return !PROJECTS[id].group;
+    return PROJECTS[id].group === currentProjectGroupFilter;
+  });
+
+  if(visibleIds.length === 0){
+    grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--muted);">Keine Projekte in dieser Gruppe.</div>`;
+    return;
+  }
   
-  grid.innerHTML = ids.map(id => {
+  grid.innerHTML = visibleIds.map(id => {
     const proj = PROJECTS[id];
     const isActive = id === CURRENT_PROJECT_ID;
     const wrCount = Object.keys(proj.plan || {}).filter(k => !isNaN(parseInt(k))).length;
@@ -1243,12 +1292,13 @@ function renderProjectGrid(){
         <div class="project-card-header">
           <div class="project-card-title">${lockedIcon}${isActive ? '✓ ' : ''}${esc(proj.name)}</div>
           <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+            ${currentUserRole !== 'site' ? `<button class="btn btn-ghost" onclick="setProjectGroup('${id}', event)" title="Gruppe zuweisen" style="min-height:28px; min-width:28px; padding:2px 6px; font-size:0.8rem;">🏷️</button>` : ''}
             ${currentUserRole !== 'site' ? `<button class="btn btn-ghost" onclick="renameProject('${id}', event)" title="Projekt umbenennen" style="min-height:28px; min-width:28px; padding:2px 6px; font-size:0.8rem;">✏️</button>` : ''}
             <div class="sync-status ${cloudProjectIds.has(id) ? 'synced' : 'pending'}" title="${cloudProjectIds.has(id) ? 'In der Cloud gespeichert' : 'Nur auf diesem Gerät – wird nach Anmeldung übertragen'}">${cloudProjectIds.has(id) ? '☁️' : '📱'}</div>
           </div>
         </div>
         <div class="project-card-meta">
-          ${wrCount} Wechselrichter &middot; ${wp} Wp${proj.locked ? ' &middot; <span style="color:#ef4444;font-weight:700;">gesperrt</span>' : ''}
+          ${proj.group ? `<span style="color:var(--accent); font-weight:700;">${esc(proj.group)}</span> &middot; ` : ''}${wrCount} Wechselrichter &middot; ${wp} Wp${proj.locked ? ' &middot; <span style="color:#ef4444;font-weight:700;">gesperrt</span>' : ''}
         </div>
         <div class="project-card-stats">
           <div class="project-card-stat"><div class="project-card-stat-label">WR</div><div class="project-card-stat-value">${wrCount}</div></div>
@@ -1274,6 +1324,7 @@ let CURRENT_PROJECT_ID = null;
 let APP_STATE = {};
 let cloudProjectIds = new Set();
 let cloudFetchSucceeded = false;
+let currentProjectGroupFilter = '__all__';
 
 async function initProjects(){
   // Supabase is the single source of truth. Browser storage is deliberately
@@ -2216,6 +2267,12 @@ async function selectProject(id){
 
 function openNewProjectModal(){
   g('np-name').value = '';
+  g('np-group').value = currentProjectGroupFilter && currentProjectGroupFilter !== '__all__' && currentProjectGroupFilter !== '__none__' ? currentProjectGroupFilter : '';
+  const groupList = g('np-group-suggestions');
+  if(groupList){
+    const groups = [...new Set(Object.values(PROJECTS).map(p => p.group).filter(Boolean))].sort();
+    groupList.innerHTML = groups.map(gr => `<option value="${esc(gr)}"></option>`).join('');
+  }
   const sel = g('np-clone-from');
   sel.innerHTML = '';
   Object.values(PROJECTS).forEach(p => {
@@ -2259,6 +2316,7 @@ function renderNPWRPlan(){
 
 async function doCreateNewProject(){
   const name = g('np-name').value.trim();
+  const group = g('np-group').value.trim();
   const wp = parseInt(g('np-wp').value)||465;
   const count = parseInt(g('np-wr-count').value)||1;
   const template = document.querySelector('input[name="np-template"]:checked').value;
@@ -2282,7 +2340,7 @@ async function doCreateNewProject(){
       };
     }
   }
-   PROJECTS[id] = { id, name, model_wp: wp, locked: false, plan, updated_at: new Date().toISOString() };
+   PROJECTS[id] = { id, name, group: group || null, model_wp: wp, locked: false, plan, updated_at: new Date().toISOString() };
   saveProjectsLocal();
   CURRENT_PROJECT_ID = id;
   closeNewProjectModal();
@@ -2343,6 +2401,59 @@ async function renameProject(id, event){
   } else {
     toast('✅ Projekt umbenannt (nur lokal)');
   }
+}
+
+async function setProjectGroup(id, event){
+  if(event) event.stopPropagation();
+  const proj = PROJECTS[id];
+  if(!proj) return;
+  if(currentUserRole === 'site') return toast('🔒 Keine Berechtigung');
+  const existingGroups = [...new Set(Object.values(PROJECTS).map(p => p.group).filter(Boolean))].sort();
+  const hint = existingGroups.length ? `\n\nVorhandene Gruppen: ${existingGroups.join(', ')}` : '';
+  const input = prompt('Gruppe für dieses Projekt (leer lassen zum Entfernen):' + hint, proj.group || '');
+  if(input === null) return; // abgebrochen
+  const trimmed = input.trim();
+  if(trimmed === (proj.group || '')) return;
+
+  const previousGroup = proj.group || null;
+  proj.group = trimmed || null;
+  proj.updated_at = new Date().toISOString();
+  saveProjectsLocal();
+
+  if(g('project-grid')) renderProjectGrid();
+  if(g('projects-modal') && g('projects-modal').classList.contains('show')) openProjectsModal();
+
+  if(supabaseClient && currentUser){
+    try {
+      // Nur die "config"-Spalte (Struktur/Plan) aktualisieren, niemals die
+      // "data"-Spalte (echte Messwerte) – dadurch ist das auch für ein
+      // gerade NICHT aktives Projekt gefahrlos.
+      const configToSave = {};
+      Object.keys(proj.plan || {}).forEach(k => { if(k !== '_lock' && k !== '_group') configToSave[k] = proj.plan[k]; });
+      configToSave._lock = proj.locked
+        ? { locked: true, by: proj.locked_by || (currentUser ? currentUser.email : null), at: proj.locked_at || new Date().toISOString() }
+        : { locked: false };
+      if(proj.group) configToSave._group = proj.group;
+
+      const { error } = await supabaseClient.from('pv_projects')
+        .update({ config: configToSave, updated_at: proj.updated_at })
+        .eq('id', id);
+      if(error) throw error;
+      toast('✅ Gruppe gespeichert');
+    } catch(e){
+      proj.group = previousGroup;
+      if(g('project-grid')) renderProjectGrid();
+      if(g('projects-modal') && g('projects-modal').classList.contains('show')) openProjectsModal();
+      toast('❌ Gruppe speichern fehlgeschlagen: ' + (e.message || 'Verbindungsfehler'));
+    }
+  } else {
+    toast('✅ Gruppe gesetzt (nur lokal)');
+  }
+}
+
+function selectProjectGroupFilter(groupKey){
+  currentProjectGroupFilter = groupKey;
+  renderProjectGrid();
 }
 
 function getAllFullIds(){
@@ -2471,11 +2582,12 @@ async function fetchProjectsFromCloud(){
     (data || []).forEach(cloudProj => {
         const cloudConfig = cloudProj.config || {};
         const planOnly = {};
-        Object.keys(cloudConfig).forEach(k => { if(k !== '_lock') planOnly[k] = cloudConfig[k]; });
+        Object.keys(cloudConfig).forEach(k => { if(k !== '_lock' && k !== '_group') planOnly[k] = cloudConfig[k]; });
         const lockMeta = cloudConfig._lock || {};
         const cloudProject = {
           id: cloudProj.id, 
           name: cloudProj.name || 'Unbenannt', 
+          group: cloudConfig._group || null,
           model_wp: cloudProj.modul_wp || 465, 
           plan: planOnly, 
           locked: !!lockMeta.locked,
@@ -2501,12 +2613,13 @@ async function saveProjectToCloudNow(projectId){
   try {
     const stateData = projectId === CURRENT_PROJECT_ID ? APP_STATE : generateState(proj.plan);
     const configToSave = {};
-    Object.keys(proj.plan || {}).forEach(k => { if(k !== '_lock') configToSave[k] = proj.plan[k]; });
+    Object.keys(proj.plan || {}).forEach(k => { if(k !== '_lock' && k !== '_group') configToSave[k] = proj.plan[k]; });
     if(proj.locked) {
       configToSave._lock = { locked: true, by: proj.locked_by || (currentUser ? currentUser.email : null), at: proj.locked_at || new Date().toISOString() };
     } else {
       configToSave._lock = { locked: false };
     }
+    if(proj.group) configToSave._group = proj.group;
     const updatedAt = new Date().toISOString();
     proj.updated_at = updatedAt;
     const payload = { 
@@ -2556,12 +2669,13 @@ async function pushCloudDataManually(){
   try {
     const stateData = APP_STATE;
     const configToSave = {};
-    Object.keys(proj.plan || {}).forEach(k => { if(k !== '_lock') configToSave[k] = proj.plan[k]; });
+    Object.keys(proj.plan || {}).forEach(k => { if(k !== '_lock' && k !== '_group') configToSave[k] = proj.plan[k]; });
     if(proj.locked) {
       configToSave._lock = { locked: true, by: proj.locked_by || currentUser.email, at: proj.locked_at || new Date().toISOString() };
     } else {
       configToSave._lock = { locked: false };
     }
+    if(proj.group) configToSave._group = proj.group;
     const { error } = await supabaseClient.from('pv_projects').upsert({ 
       id: CURRENT_PROJECT_ID, name: proj.name, pruefer: currentUser.email, 
       modul_wp: proj.model_wp || 465, mppts: "dynamic", 

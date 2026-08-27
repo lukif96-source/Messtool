@@ -1242,7 +1242,10 @@ function renderProjectGrid(){
       <div class="project-card ${isActive ? 'active' : ''}" role="button" tabindex="0" aria-label="Projekt ${esc(proj.name)} öffnen" onclick="selectProject('${id}'); switchMainTab('matrix');" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
         <div class="project-card-header">
           <div class="project-card-title">${lockedIcon}${isActive ? '✓ ' : ''}${esc(proj.name)}</div>
-          <div class="sync-status ${cloudProjectIds.has(id) ? 'synced' : 'pending'}" title="${cloudProjectIds.has(id) ? 'In der Cloud gespeichert' : 'Nur auf diesem Gerät – wird nach Anmeldung übertragen'}">${cloudProjectIds.has(id) ? '☁️' : '📱'}</div>
+          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+            ${currentUserRole !== 'site' ? `<button class="btn btn-ghost" onclick="renameProject('${id}', event)" title="Projekt umbenennen" style="min-height:28px; min-width:28px; padding:2px 6px; font-size:0.8rem;">✏️</button>` : ''}
+            <div class="sync-status ${cloudProjectIds.has(id) ? 'synced' : 'pending'}" title="${cloudProjectIds.has(id) ? 'In der Cloud gespeichert' : 'Nur auf diesem Gerät – wird nach Anmeldung übertragen'}">${cloudProjectIds.has(id) ? '☁️' : '📱'}</div>
+          </div>
         </div>
         <div class="project-card-meta">
           ${wrCount} Wechselrichter &middot; ${wp} Wp${proj.locked ? ' &middot; <span style="color:#ef4444;font-weight:700;">gesperrt</span>' : ''}
@@ -2167,6 +2170,7 @@ async function openProjectsModal(){
       </div>
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
         <button class="btn btn-ghost" onclick="selectProject('${id}')" style="padding:6px 10px;">Öffnen</button>
+        ${currentUserRole !== 'site' ? `<button class="btn btn-ghost" onclick="renameProject('${id}', event)" style="padding:6px 10px;" title="Projekt umbenennen">✏️ Umbenennen</button>` : ''}
         ${(ids.length > 1 && currentUserRole !== 'site') ? `<button class="btn btn-ghost" onclick="deleteProject('${id}')" style="padding:6px 10px; color:#ef4444; border-color:#ef4444;">Löschen</button>` : ''}
       </div>
     </div>
@@ -2295,6 +2299,50 @@ async function deleteProject(id){
   if(supabaseClient && currentUser) try { await supabaseClient.from('pv_projects').delete().eq('id', id); } catch(e){}
   openProjectsModal();
   toast('🗑️ Projekt gelöscht');
+}
+
+async function renameProject(id, event){
+  if(event) event.stopPropagation();
+  const proj = PROJECTS[id];
+  if(!proj) return;
+  if(currentUserRole === 'site') return toast('🔒 Keine Berechtigung');
+  const newName = prompt('Projekt umbenennen:', proj.name || '');
+  if(newName === null) return; // abgebrochen
+  const trimmed = newName.trim();
+  if(!trimmed) return toast('Name darf nicht leer sein');
+  if(trimmed === proj.name) return;
+
+  const previousName = proj.name;
+  proj.name = trimmed;
+  proj.updated_at = new Date().toISOString();
+  saveProjectsLocal();
+
+  // Nur die betroffenen Stellen neu zeichnen statt der ganzen Seite
+  if(g('project-grid')) renderProjectGrid();
+  if(g('projects-modal') && g('projects-modal').classList.contains('show')) openProjectsModal();
+  if(id === CURRENT_PROJECT_ID && g('sb-proj-name')) g('sb-proj-name').textContent = trimmed;
+
+  if(supabaseClient && currentUser){
+    try {
+      // Gezieltes Update NUR des Namens – niemals ein Upsert des ganzen
+      // Datensatzes, sonst würde bei einem nicht aktiven Projekt dessen
+      // echte Matrix-Daten mit einem leeren Default-Zustand überschrieben.
+      const { error } = await supabaseClient.from('pv_projects')
+        .update({ name: trimmed, updated_at: proj.updated_at })
+        .eq('id', id);
+      if(error) throw error;
+      toast('✅ Projekt umbenannt');
+    } catch(e){
+      // Cloud-Update fehlgeschlagen: lokal zurücksetzen, damit UI und Cloud
+      // nicht auseinanderlaufen
+      proj.name = previousName;
+      if(g('project-grid')) renderProjectGrid();
+      if(g('projects-modal') && g('projects-modal').classList.contains('show')) openProjectsModal();
+      toast('❌ Umbenennen fehlgeschlagen: ' + (e.message || 'Verbindungsfehler'));
+    }
+  } else {
+    toast('✅ Projekt umbenannt (nur lokal)');
+  }
 }
 
 function getAllFullIds(){

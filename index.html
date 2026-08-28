@@ -111,6 +111,182 @@ body.sun-mode .sp-inp-gak:read-only { color: #00873d; font-weight: 800; }
 .projects-view.active { display: block; }
 .matrix-view { display: none; }
 .matrix-view.active { display: block; }
+.home-view { display: none; }
+.home-view.active { display: block; }
+.anleitung-view { display: none; }
+.anleitung-view.active { display: block; }
+
+/* Dashboard (KPI-Karten) ist Matrix-spezifisch — auf anderen Tabs ausblenden */
+body.tab-home .dashboard,
+body.tab-anleitung .dashboard { display: none; }
+
+/* ====================== Home / Landing-Page ====================== */
+.home-hero {
+  margin-bottom: 20px;
+  padding: 22px 20px;
+  background: linear-gradient(135deg, var(--surface), var(--panel));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+body:not(.sun-mode) .home-hero {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(184,243,75,0.10), transparent 60%),
+    linear-gradient(145deg, #0e120e, #131913);
+  border-color: #1f241d;
+}
+.home-eyebrow { font-size: 0.7rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+.home-title { font-size: 1.6rem; font-weight: 900; color: var(--text); letter-spacing: -0.03em; margin-bottom: 4px; }
+.home-subtitle { font-size: 0.88rem; color: var(--muted); }
+
+.home-empty {
+  text-align: center;
+  padding: 36px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 20px;
+}
+body:not(.sun-mode) .home-empty { background: linear-gradient(145deg, #0e120e, #131913); border-color: #1f241d; }
+.home-empty-icon { font-size: 2.6rem; margin-bottom: 8px; }
+.home-empty h2 { font-size: 1.15rem; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.home-empty p { font-size: 0.85rem; color: var(--muted); margin-bottom: 18px; }
+.home-empty-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+.home-section { margin-bottom: 20px; }
+.home-section h2 {
+  font-size: 0.75rem; font-weight: 800; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;
+}
+.home-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+.home-section-head h2 { margin-bottom: 0; }
+.home-section-link { background: none; border: none; color: var(--muted); font-size: 0.78rem; font-weight: 700; cursor: pointer; padding: 4px 8px; font-family: inherit; }
+.home-section-link:hover { color: var(--accent); }
+
+.home-active { margin-bottom: 20px; }
+.home-active-label { font-size: 0.7rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+.home-active-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  flex-wrap: wrap;
+}
+.home-active-info { flex: 1; min-width: 200px; }
+.home-active-name { font-size: 1.1rem; font-weight: 800; color: var(--text); margin-bottom: 4px; word-break: break-word; }
+.home-active-meta { font-size: 0.78rem; color: var(--muted); }
+
+.home-recent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.home-recent-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 80px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.home-recent-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.home-recent-card.active { border-color: var(--accent); background: var(--accent-glow); }
+.home-recent-name { font-size: 0.95rem; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-recent-meta { font-size: 0.72rem; color: var(--muted); }
+
+.home-quickstart {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.home-quick-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 116px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.home-quick-card:hover { border-color: var(--accent); background: var(--panel); transform: translateY(-1px); }
+.home-quick-card:focus-visible { border-color: var(--accent); }
+.home-quick-icon { font-size: 1.6rem; line-height: 1; }
+.home-quick-title { font-size: 0.92rem; font-weight: 800; color: var(--text); }
+.home-quick-desc { font-size: 0.72rem; color: var(--muted); line-height: 1.35; }
+
+@media (max-width: 600px) {
+  .home-hero { padding: 18px 16px; }
+  .home-title { font-size: 1.35rem; }
+  .home-active-card { padding: 14px; }
+  .home-active-name { font-size: 1rem; }
+  .home-recent-grid { grid-template-columns: 1fr; }
+  .home-quickstart { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .home-quick-card { padding: 12px; min-height: 100px; }
+  .home-quick-title { font-size: 0.85rem; }
+}
+
+/* ====================== Anleitung (How-to, DE) ====================== */
+.anleitung-hero {
+  margin-bottom: 18px;
+  padding: 22px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+body:not(.sun-mode) .anleitung-hero { background: linear-gradient(145deg, #0e120e, #131913); border-color: #1f241d; }
+.anleitung-hero h1 { font-size: 1.4rem; font-weight: 900; color: var(--text); margin-bottom: 6px; letter-spacing: -0.02em; }
+.anleitung-hero p { font-size: 0.88rem; color: var(--muted); line-height: 1.5; max-width: 60ch; }
+
+.anleitung-grid { display: flex; flex-direction: column; gap: 10px; }
+.anleitung-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+.anleitung-card[open] { border-color: var(--accent); }
+.anleitung-card summary {
+  padding: 14px 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  user-select: none;
+  min-height: 48px;
+  font-family: inherit;
+}
+.anleitung-card summary::-webkit-details-marker { display: none; }
+.anleitung-card summary::after {
+  content: '▸';
+  font-size: 0.8rem;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.anleitung-card[open] summary::after { transform: rotate(90deg); color: var(--accent); }
+.anleitung-card summary:hover { background: var(--panel); }
+.anleitung-body { padding: 0 18px 18px 18px; color: var(--text); font-size: 0.88rem; line-height: 1.6; }
+.anleitung-body p { margin-bottom: 10px; color: var(--muted); }
+.anleitung-body p:last-child { margin-bottom: 0; }
+.anleitung-body ol, .anleitung-body ul { margin: 8px 0 12px 22px; color: var(--muted); }
+.anleitung-body li { margin-bottom: 6px; }
+.anleitung-body li:last-child { margin-bottom: 0; }
+.anleitung-body strong { color: var(--text); font-weight: 700; }
+.anleitung-body em { color: var(--accent); font-style: normal; font-weight: 600; }
+
+@media (max-width: 600px) {
+  .anleitung-hero { padding: 18px 16px; }
+  .anleitung-hero h1 { font-size: 1.2rem; }
+  .anleitung-card summary { font-size: 0.9rem; padding: 12px 14px; min-height: 44px; }
+  .anleitung-body { padding: 0 14px 14px 14px; font-size: 0.85rem; }
+}
 
 .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 .project-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; transition: all 0.2s; cursor: pointer; }
@@ -178,6 +354,73 @@ table.mt tbody tr.mppt-header td { padding: 8px 12px; font-weight: 800; font-siz
 .sidebar-btn:hover { background: var(--panel); color: var(--text); }
 .sidebar-btn.red:hover { background: rgba(239,68,68,0.1); color: #ef4444; }
 .sidebar-btn .icon { font-size: 1.1rem; width: 20px; text-align:center; }
+
+/* Sidebar: ausklappbarer Projektbaum */
+.sb-proj-section { margin-bottom: 16px; padding: 0 8px; }
+.sb-proj-section-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; letter-spacing: 0.06em; }
+.sb-proj-section-label .sb-proj-count { background: var(--panel); color: var(--muted); padding: 1px 7px; border-radius: 999px; font-size: 0.62rem; }
+.sb-proj-tree { display: flex; flex-direction: column; gap: 2px; }
+.sb-proj-group { display: flex; flex-direction: column; }
+.sb-proj-group-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 8px; border-radius: 6px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--muted); font-weight: 700; font-size: 0.7rem;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  width: 100%; text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+  min-height: 34px;
+}
+.sb-proj-group-head:hover { background: var(--panel); color: var(--text); }
+.sb-proj-group-head:focus-visible { background: var(--panel); color: var(--text); }
+.sb-proj-group-head .sb-chevron {
+  font-size: 0.55rem; transition: transform 0.18s ease;
+  display: inline-block; width: 10px; line-height: 1; opacity: 0.8;
+}
+.sb-proj-group.open > .sb-proj-group-head .sb-chevron { transform: rotate(90deg); }
+.sb-proj-group-head .sb-group-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-proj-group-head .sb-group-count { font-size: 0.62rem; opacity: 0.7; background: var(--bg); padding: 1px 6px; border-radius: 999px; }
+.sb-proj-group-children { display: none; flex-direction: column; gap: 1px; padding: 2px 0 4px 12px; margin-left: 6px; border-left: 1px solid var(--border); }
+.sb-proj-group.open .sb-proj-group-children { display: flex; }
+.sb-proj-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 10px; border-radius: 6px;
+  color: var(--text); font-weight: 500; font-size: 0.78rem;
+  background: transparent; border: 1px solid transparent;
+  cursor: pointer; text-align: left; width: 100%;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  min-height: 36px;
+}
+.sb-proj-item:hover { background: var(--panel); }
+.sb-proj-item:focus-visible { background: var(--panel); border-color: var(--accent); }
+.sb-proj-item.active { background: var(--accent-glow); color: var(--accent); border-color: rgba(184,243,75,0.28); font-weight: 700; }
+.sb-proj-item .sb-proj-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-proj-item .sb-proj-lock { font-size: 0.68rem; opacity: 0.85; flex-shrink: 0; }
+.sb-proj-item .sb-proj-actions { display: flex; gap: 1px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
+.sb-proj-item:hover .sb-proj-actions,
+.sb-proj-item.active .sb-proj-actions,
+.sb-proj-item:focus-within .sb-proj-actions { opacity: 1; }
+.sb-proj-mini-btn { background: transparent; border: none; padding: 2px 5px; cursor: pointer; color: var(--muted); font-size: 0.72rem; border-radius: 4px; min-width: 24px; min-height: 24px; line-height: 1; }
+.sb-proj-mini-btn:hover { background: var(--bg); color: var(--text); }
+.sb-proj-empty { padding: 12px 8px; color: var(--muted); font-size: 0.75rem; text-align: center; font-style: italic; line-height: 1.4; }
+.sb-proj-new {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin-top: 10px;
+  padding: 8px 12px; border-radius: 6px;
+  background: transparent; border: 1px dashed var(--accent);
+  color: var(--accent); font-weight: 700; font-size: 0.78rem;
+  cursor: pointer; transition: all 0.2s;
+  min-height: 38px;
+}
+.sb-proj-new:hover { background: var(--accent); color: #000; border-style: solid; }
+.sb-proj-all-link {
+  display: block; margin-top: 6px; padding: 4px 8px;
+  font-size: 0.7rem; color: var(--muted); text-align: center;
+  background: transparent; border: none; cursor: pointer;
+  font-family: inherit; width: 100%;
+}
+.sb-proj-all-link:hover { color: var(--text); }
+
 .main-content { flex: 1; margin-left: 260px; padding: 16px; min-width: 0; }
 .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 55; touch-action: none; }
 .sidebar-overlay.open { display: block; }
@@ -787,7 +1030,7 @@ body.sun-mode .wr-block {
 }
 </style>
 </head>
-<body>
+<body class="tab-home">
 
 <div id="toast"></div>
 
@@ -889,29 +1132,24 @@ body.sun-mode .wr-block {
     <span class="role-chip" id="user-badge-role">—</span>
   </div>
 
-  <div style="margin-bottom: 20px; padding: 0 8px;">
-    <label style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;font-weight:700;">Projekt</label>
-    <button onclick="openProjectsModal();closeSidebar();" class="btn btn-ghost" style="width:100%; justify-content:space-between; margin-top:4px;">
-      <span style="display:flex; align-items:center; gap:6px; min-width:0;">
-        <span id="sb-proj-lock" style="display:none; font-size:0.95rem; line-height:1;" title="Protokoll gesperrt">🔒</span>
-        <span id="sb-proj-name" style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Kein Projekt ausgewählt</span>
-      </span>
-      <span>▼</span>
-    </button>
-    <button onclick="switchMainTab('projects');closeSidebar();" class="sidebar-btn" style="margin-top:6px;">
-      <span class="icon">📁</span><span class="label">Alle Projekte</span>
-    </button>
+  <div class="sb-proj-section">
+    <div class="sb-proj-section-label">
+      <span>Projekte</span>
+      <span class="sb-proj-count" id="sb-proj-count">0</span>
+    </div>
+    <div class="sb-proj-tree" id="sb-proj-tree"></div>
+    <button onclick="openNewProjectModal();closeSidebar();" class="sb-proj-new role-gate-planner">+ Neues Projekt</button>
+    <button onclick="switchMainTab('projects');closeSidebar();" class="sb-proj-all-link">Alle Projekte verwalten →</button>
   </div>
+
+  <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Hilfe</div>
+  <button onclick="switchMainTab('anleitung');closeSidebar();" class="sidebar-btn">
+    <span class="icon">📖</span><span class="label">Anleitung</span>
+  </button>
 
   <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Import & Export</div>
   <button onclick="openPVSOLModal();closeSidebar();" class="sidebar-btn role-gate-planner">
     <span class="icon" style="color:#3b82f6;">📊</span><span class="label">PVSOL Import</span>
-  </button>
-  <button onclick="pushCloudDataManually();closeSidebar();" class="sidebar-btn">
-    <span class="icon" style="color:#3b82f6;">☁️</span><span class="label">In Cloud sichern</span>
-  </button>
-  <button onclick="fetchCloudDataManually();closeSidebar();" class="sidebar-btn">
-    <span class="icon">📥</span><span class="label">Aus Cloud laden</span>
   </button>
   <hr style="border:none; border-top:1px solid var(--border); margin: 12px 8px;">
   <button onclick="printBlankMeasurementSheet();closeSidebar();" class="sidebar-btn" style="color:var(--text); font-weight:600;">
@@ -969,11 +1207,71 @@ body.sun-mode .wr-block {
   </div>
 
   <div class="main-tabs no-print">
-    <button class="main-tab active" onclick="switchMainTab('matrix')" id="tab-matrix">📊 Matrix</button>
+    <button class="main-tab active" onclick="switchMainTab('home')" id="tab-home">🏠 Übersicht</button>
+    <button class="main-tab" onclick="switchMainTab('matrix')" id="tab-matrix">📊 Matrix</button>
     <button class="main-tab" onclick="switchMainTab('projects')" id="tab-projects">📁 Projekte</button>
+    <button class="main-tab" onclick="switchMainTab('anleitung')" id="tab-anleitung">📖 Anleitung</button>
   </div>
 
-  <div class="matrix-view active" id="matrix-view">
+  <div class="home-view active" id="home-view">
+    <div class="home-hero">
+      <div>
+        <div class="home-eyebrow">Willkommen zurück</div>
+        <h1 class="home-title">Hallo <span id="home-user-name">Anwender</span> 👋</h1>
+        <div class="home-subtitle" id="home-subtitle">PV Matrix Tool — bereit für die Baustelle</div>
+      </div>
+    </div>
+
+    <div class="home-empty" id="home-empty" style="display:none;">
+      <div class="home-empty-icon">🏗️</div>
+      <h2>Starte mit deinem ersten Projekt</h2>
+      <p>Lege ein neues PV-Projekt an oder importiere einen PVSOL-String-Plan.</p>
+      <div class="home-empty-actions">
+        <button class="btn btn-primary role-gate-planner" onclick="openNewProjectModal()">+ Neues Projekt</button>
+        <button class="btn btn-ghost role-gate-planner" onclick="openPVSOLModal()">📊 PVSOL Import</button>
+        <button class="btn btn-ghost" onclick="switchMainTab('anleitung')">📖 Anleitung lesen</button>
+      </div>
+    </div>
+
+    <div class="home-active" id="home-active" style="display:none;">
+      <div class="home-active-label">Aktuell geöffnet</div>
+      <div class="home-active-card">
+        <div class="home-active-info">
+          <div class="home-active-name" id="home-active-name">—</div>
+          <div class="home-active-meta" id="home-active-meta">—</div>
+        </div>
+        <button class="btn btn-primary" onclick="switchMainTab('matrix')">Matrix öffnen →</button>
+      </div>
+    </div>
+
+    <div class="home-section">
+      <h2>Schnellstart</h2>
+      <div class="home-quickstart">
+        <div class="home-quick-card" onclick="switchMainTab('anleitung')" role="button" tabindex="0">
+          <div class="home-quick-icon">📖</div>
+          <div class="home-quick-title">Anleitung</div>
+          <div class="home-quick-desc">Schritt für Schritt erklärt — in Deutsch</div>
+        </div>
+        <div class="home-quick-card role-gate-planner" onclick="openPVSOLModal()" role="button" tabindex="0">
+          <div class="home-quick-icon">📊</div>
+          <div class="home-quick-title">PVSOL Import</div>
+          <div class="home-quick-desc">String-Plan aus PVSOL übernehmen</div>
+        </div>
+        <div class="home-quick-card role-gate-planner" onclick="openNewProjectModal()" role="button" tabindex="0">
+          <div class="home-quick-icon">✨</div>
+          <div class="home-quick-title">Neues Projekt</div>
+          <div class="home-quick-desc">Hardware von Hand anlegen</div>
+        </div>
+        <div class="home-quick-card" onclick="switchMainTab('projects')" role="button" tabindex="0">
+          <div class="home-quick-icon">📁</div>
+          <div class="home-quick-title">Projekte</div>
+          <div class="home-quick-desc">Alle Projekte verwalten & filtern</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="matrix-view" id="matrix-view">
     <div class="role-hint-banner no-print" id="role-hint-banner" style="display:none;">
       <span class="role-icon">📋</span>
       <span class="role-text" id="role-hint-text">Bauleitungs-Modus: Nur Messwerte editierbar.</span>
@@ -1026,6 +1324,142 @@ body.sun-mode .wr-block {
     <div id="project-group-bar" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;"></div>
 
     <div class="project-grid" id="project-grid"></div>
+  </div>
+
+  <div class="anleitung-view" id="anleitung-view">
+    <div class="anleitung-hero">
+      <h1>📖 Anleitung</h1>
+      <p>Alles, was du auf der Baustelle und im Büro wissen musst — Schritt für Schritt auf Deutsch erklärt.</p>
+    </div>
+
+    <div class="anleitung-grid">
+      <details class="anleitung-card" open>
+        <summary>1. Erstes Projekt anlegen</summary>
+        <div class="anleitung-body">
+          <p>Lege für jede PV-Anlage ein eigenes Projekt an. So behältst du den Überblick und kannst Protokolle sauber zuordnen.</p>
+          <ol>
+            <li>Öffne die <strong>Übersicht</strong> oder klicke in der Sidebar auf <strong>+ Neues Projekt</strong>.</li>
+            <li>Vergib einen sprechenden Namen (z.&nbsp;B. <em>"MAN P52 Dach Süd"</em>).</li>
+            <li>Optional: ordne das Projekt einer <strong>Gruppe</strong> zu (z.&nbsp;B. Kundenname wie <em>"MAN"</em>) — mehrere Dächer desselben Kunden lassen sich so zusammenfiltern.</li>
+            <li>Wähle die Wp-Zahl pro Modul (Standard: 465).</li>
+            <li>Lege die Anzahl der Wechselrichter fest.</li>
+            <li>Definiere pro WR: Name, Anzahl MPPTs, Eingänge pro MPPT.</li>
+            <li>Klick auf <strong>Erstellen</strong>.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="anleitung-card">
+        <summary>2. PVSOL Import</summary>
+        <div class="anleitung-body">
+          <p>Du hast einen String-Plan aus PVSOL? Importiere ihn direkt — Hardware und Strings werden automatisch angelegt.</p>
+          <ol>
+            <li>Exportiere in PVSOL die <strong>JSON</strong>-Datei des String-Plans.</li>
+            <li>In der App: <strong>📊 PVSOL Import</strong> in der Sidebar oder auf der Übersicht.</li>
+            <li>Wähle die Datei aus.</li>
+            <li>Die App erkennt automatisch WR, MPPTs und Strings.</li>
+            <li>Nach dem Import landest du direkt in der Matrix.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="anleitung-card">
+        <summary>3. Matrix bearbeiten</summary>
+        <div class="anleitung-body">
+          <p>Die Matrix ist das Herzstück — hier trägst du die Messwerte ein.</p>
+          <ul>
+            <li><strong>GAK</strong> (Generatorklemmenkasten): Klemme 1, 2, 3 …</li>
+            <li><strong>Module</strong>: Anzahl Module in dem String</li>
+            <li><strong>Uoc</strong>: Leerlaufspannung in V</li>
+            <li><strong>Isc</strong>: Kurzschlussstrom in A</li>
+            <li><strong>Riso</strong>: Isolationswiderstand in MΩ</li>
+            <li><strong>Aktiv</strong>: <em>JA</em> wenn gemessen, <em>NEIN</em> wenn nicht belegt</li>
+          </ul>
+          <p>Alle Eingaben werden automatisch gespeichert und nach kurzer Verzögerung in die Cloud übertragen.</p>
+        </div>
+      </details>
+
+      <details class="anleitung-card">
+        <summary>4. Filter & Ansicht</summary>
+        <div class="anleitung-body">
+          <ul>
+            <li>Mit der <strong>WR-Filterleiste</strong> oben springst du schnell zwischen Wechselrichtern.</li>
+            <li>Mit <strong>Nur aktive Strings</strong> blendest du nicht belegte Strings aus — gut für die Baustelle.</li>
+            <li>Oben rechts erscheint beim Scrollen der <strong>scrollende Kontext</strong> — du siehst immer, in welchem Block du bist.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="anleitung-card">
+        <summary>5. Protokoll sperren</summary>
+        <div class="anleitung-body">
+          <p>Wenn die Messung abgeschlossen ist, sollte der <strong>Admin</strong> das Protokoll sperren. Danach können Planer und Bauleitung keine Werte mehr ändern — nur noch lesen.</p>
+          <ol>
+            <li>Öffne das gewünschte Projekt in der Matrix.</li>
+            <li>Klicke oben rechts auf <strong>🔓 Protokoll sperren</strong>.</li>
+            <li>Bestätige die Sperre.</li>
+            <li>Im PDF-Druck erscheint dann ein roter Stempel <em>"Protokoll gesperrt"</em>.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="anleitung-card">
+        <summary>6. Export & Druck</summary>
+        <div class="anleitung-body">
+          <p>Die Sidebar bietet mehrere Export-Optionen:</p>
+          <ul>
+            <li><strong>📝 Messblatt (PDF)</strong> — leeres Messblatt für die Baustelle</li>
+            <li><strong>📋 Montage-Plan (PDF)</strong> — der ausgefüllte Plan</li>
+            <li><strong>🏷️ GAK-Etiketten (Excel)</strong> — Etiketten zum Ausdrucken</li>
+            <li><strong>🔢 String-Nummern (Excel)</strong> — Liste aller Strings</li>
+            <li><strong>📊 Prüfprotokoll (Excel)</strong> — komplettes Protokoll</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="anleitung-card">
+        <summary>7. Cloud & Sync</summary>
+        <div class="anleitung-body">
+          <p>Die App synchronisiert automatisch mit der Supabase-Cloud. Du musst nichts manuell speichern — alle Änderungen werden nach ca. 2 Sekunden übertragen.</p>
+          <ul>
+            <li>Du arbeitest auf mehreren Geräten? Logge dich überall mit demselben Konto ein — die Projekte sind synchron.</li>
+            <li><strong>Offline?</strong> Die App speichert lokal, beim nächsten Login wird synchronisiert.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="anleitung-card">
+        <summary>8. Rollen & Rechte</summary>
+        <div class="anleitung-body">
+          <p>Es gibt drei Rollen:</p>
+          <ul>
+            <li><strong>Admin</strong> — darf alles: Projekte anlegen, löschen, Protokoll sperren/entsperren, Benutzer verwalten.</li>
+            <li><strong>Planer</strong> — darf Projekte anlegen, Hardware definieren, Messwerte eintragen, solange das Protokoll nicht gesperrt ist.</li>
+            <li><strong>Bauleitung (site)</strong> — darf nur Messwerte eintragen, keine Hardware oder Projektstruktur ändern.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="anleitung-card">
+        <summary>9. Baustellen-Modus</summary>
+        <div class="anleitung-body">
+          <p>Bei Sonnenschein auf dem Display schwer zu lesen? Schalte in der Sidebar auf <strong>☀️ Baustellen-Modus (Hell)</strong> — die App wechselt zu hellem Hintergrund mit größerer Schrift und dickeren Rändern.</p>
+        </div>
+      </details>
+
+      <details class="anleitung-card">
+        <summary>10. Tipps & Shortcuts</summary>
+        <div class="anleitung-body">
+          <ul>
+            <li>Auf dem Handy: das <strong>☰ Menü</strong> oben öffnet die Sidebar mit allen Projekten.</li>
+            <li>Projekt wechseln: einfach in der Sidebar auf eine Gruppe tippen, dann auf das gewünschte Projekt.</li>
+            <li>Beim ersten Antippen eines Eingabefelds springt der Cursor automatisch zum nächsten — schnelles Ausfüllen.</li>
+            <li>Ungültige Eingaben werden rot markiert, mit Hinweis unter dem Feld.</li>
+            <li>Die App erkennt Offline-Zustand und zeigt oben rechts ein rotes Banner.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
   </div>
 
 </div>
@@ -1218,13 +1652,20 @@ wrKeys.forEach(wr => {
 
 function switchMainTab(tab){
   document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.matrix-view, .projects-view').forEach(v => v.classList.remove('active'));
-  g(`tab-${tab}`).classList.add('active');
-  g(`${tab}-view`).classList.add('active');
+  document.querySelectorAll('.matrix-view, .projects-view, .home-view, .anleitung-view').forEach(v => v.classList.remove('active'));
+  const tabEl = g(`tab-${tab}`);
+  if(tabEl) tabEl.classList.add('active');
+  const viewEl = g(`${tab}-view`);
+  if(viewEl) viewEl.classList.add('active');
+  // Body-Klasse für Tab-spezifische Styles (Dashboard ausblenden etc.)
+  document.body.classList.remove('tab-home','tab-matrix','tab-projects','tab-anleitung');
+  document.body.classList.add('tab-' + tab);
   if(tab === 'projects') renderProjectGrid();
+  if(tab === 'home') renderHomeView();
   const context = g('scroll-context');
   if(context) context.hidden = tab !== 'matrix';
   if(tab === 'matrix') requestAnimationFrame(updateScrollContext);
+  closeSidebar();
 }
 
 function renderProjectGrid(){
@@ -1325,6 +1766,151 @@ let APP_STATE = {};
 let cloudProjectIds = new Set();
 let cloudFetchSucceeded = false;
 let currentProjectGroupFilter = '__all__';
+let sbExpandedGroups = new Set();   // Sidebar-Baum: welche Gruppen sind aufgeklappt
+
+// ====================== Sidebar: Projektbaum ======================
+function renderSidebarProjects(){
+  const tree = g('sb-proj-tree');
+  if(!tree) return;
+  const countEl = g('sb-proj-count');
+  const ids = Object.keys(PROJECTS);
+  if(countEl) countEl.textContent = String(ids.length);
+
+  if(ids.length === 0){
+    tree.innerHTML = `<div class="sb-proj-empty">Noch keine Projekte.<br>Lege dein erstes an.</div>`;
+    return;
+  }
+
+  // Projekte nach Gruppe einsortieren
+  const groups = {};
+  const ungrouped = [];
+  ids.forEach(id => {
+    const gr = PROJECTS[id].group;
+    if(gr){ if(!groups[gr]) groups[gr] = []; groups[gr].push(id); }
+    else ungrouped.push(id);
+  });
+  const sortedGroupNames = Object.keys(groups).sort((a, b) => a.localeCompare(b, 'de'));
+
+  // Gruppe des aktiven Projekts immer automatisch aufklappen
+  if(CURRENT_PROJECT_ID && PROJECTS[CURRENT_PROJECT_ID]){
+    const ag = PROJECTS[CURRENT_PROJECT_ID].group;
+    if(ag) sbExpandedGroups.add(ag);
+  }
+
+  const safeAttr = s => String(s ?? '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const sortByName = (a, b) => (PROJECTS[a].name || '').localeCompare(PROJECTS[b].name || '', 'de');
+
+  const renderGroup = (key, label, items) => {
+    if(items.length === 0) return '';
+    const open = sbExpandedGroups.has(key);
+    const children = items.sort(sortByName).map(id => renderSbProjectItem(id)).join('');
+    return `<div class="sb-proj-group ${open ? 'open' : ''}" data-group="${safeAttr(key)}">
+      <button class="sb-proj-group-head" type="button" onclick="toggleSbGroup('${safeAttr(key)}', event)" aria-expanded="${open}">
+        <span class="sb-chevron">▶</span>
+        <span class="sb-group-name">${esc(label)}</span>
+        <span class="sb-group-count">${items.length}</span>
+      </button>
+      <div class="sb-proj-group-children">${children}</div>
+    </div>`;
+  };
+
+  let html = '';
+  sortedGroupNames.forEach(gr => { html += renderGroup(gr, gr, groups[gr]); });
+  if(ungrouped.length > 0) html += renderGroup('__none__', 'Ohne Gruppe', ungrouped);
+
+  tree.innerHTML = html;
+}
+
+function renderSbProjectItem(id){
+  const proj = PROJECTS[id];
+  if(!proj) return '';
+  const isActive = id === CURRENT_PROJECT_ID;
+  const showActions = currentUserRole && currentUserRole !== 'site';
+  return `<div class="sb-proj-item ${isActive ? 'active' : ''}"
+    role="button" tabindex="0"
+    onclick="selectSbProject('${esc(id).replace(/'/g, "\\&#39;")}')"
+    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"
+    title="${esc(proj.name)}${proj.locked ? ' (Protokoll gesperrt)' : ''}">
+    ${proj.locked ? '<span class="sb-proj-lock" aria-label="gesperrt">🔒</span>' : ''}
+    <span class="sb-proj-name">${isActive ? '✓ ' : ''}${esc(proj.name)}</span>
+    ${showActions ? `<span class="sb-proj-actions">
+      <button class="sb-proj-mini-btn" type="button" onclick="renameProject('${esc(id).replace(/'/g, "\\&#39;")}', event)" title="Umbenennen" aria-label="Umbenennen">✏️</button>
+      <button class="sb-proj-mini-btn" type="button" onclick="setProjectGroup('${esc(id).replace(/'/g, "\\&#39;")}', event)" title="Gruppe" aria-label="Gruppe">🏷️</button>
+    </span>` : ''}
+  </div>`;
+}
+
+function toggleSbGroup(key, event){
+  if(event){ event.stopPropagation(); event.preventDefault(); }
+  if(sbExpandedGroups.has(key)) sbExpandedGroups.delete(key);
+  else sbExpandedGroups.add(key);
+  const grp = document.querySelector(`.sb-proj-group[data-group="${String(key).replace(/"/g, '\\"')}"]`);
+  if(grp){
+    const isOpen = grp.classList.toggle('open');
+    const head = grp.querySelector('.sb-proj-group-head');
+    if(head) head.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  }
+}
+
+async function selectSbProject(id){
+  if(id === CURRENT_PROJECT_ID){
+    closeSidebar();
+    return;
+  }
+  closeSidebar();
+  await selectProject(id);
+  // Vom Sidebar-Baum aus soll immer zur Matrix gewechselt werden
+  switchMainTab('matrix');
+}
+
+// ====================== Home / Landing-Page ======================
+function renderHomeView(){
+  const empty = g('home-empty');
+  const active = g('home-active');
+  const activeName = g('home-active-name');
+  const activeMeta = g('home-active-meta');
+  const userName = g('home-user-name');
+  const subtitle = g('home-subtitle');
+
+  if(userName){
+    const raw = (currentUser && currentUser.email) ? currentUser.email.split('@')[0] : 'Anwender';
+    userName.textContent = raw;
+  }
+  if(subtitle){
+    const h = new Date().getHours();
+    const greet = h < 11 ? 'Guten Morgen' : (h < 18 ? 'Hallo' : 'Guten Abend');
+    subtitle.textContent = `${greet} — PV Matrix Tool v2.1`;
+  }
+
+  const ids = Object.keys(PROJECTS);
+  const hasProjects = ids.length > 0;
+  if(empty) empty.style.display = hasProjects ? 'none' : 'block';
+  if(active) active.style.display = hasProjects ? 'block' : 'none';
+
+  if(hasProjects){
+    const current = getCurrentProject();
+    if(current){
+      if(activeName) activeName.textContent = current.name || '—';
+      if(activeMeta){
+        const wrCount = Object.keys(current.plan || {}).filter(k => !isNaN(parseInt(k))).length;
+        const meta = [];
+        if(current.group) meta.push(current.group);
+        meta.push(`${wrCount} WR`);
+        meta.push(`${current.model_wp || 465} Wp`);
+        if(current.locked) meta.push('gesperrt');
+        activeMeta.textContent = meta.join(' · ');
+      }
+    } else if(activeName){
+      activeName.textContent = 'Kein Projekt geöffnet';
+      if(activeMeta) activeMeta.textContent = 'Wähle ein Projekt in der Sidebar.';
+    }
+  }
+}
+
+function renderProjectUI(){
+  renderSidebarProjects();
+  renderHomeView();
+}
 
 async function initProjects(){
   // Supabase is the single source of truth. Browser storage is deliberately
@@ -1346,6 +1932,7 @@ async function initProjects(){
   if(CURRENT_PROJECT_ID && cloudFetchSucceeded){
     await fetchCloudDataManually(true);
   }
+  renderProjectUI();
 }
 
 function saveProjectsLocal(){ /* Cloud-only: kept as a compatibility no-op. */ }
@@ -1469,7 +2056,9 @@ function restorePVManFull() {
   updateRoleHint();
   
   if(supabaseClient && currentUser) saveProjectToCloud('PV_MAN_P52');
-  
+
+  renderProjectUI();
+
   toast('✅ PV MAN P52 wiederhergestellt: 6 WRs, 72 Strings');
 }
 
@@ -1543,8 +2132,6 @@ function loadCurrentProjectData(allActiveByDefault = true){
 }
 
 function updateUI() {
-  const p = getCurrentProject();
-  g('sb-proj-name').textContent = p ? p.name : '—';
   g('d-wp').textContent = getCurrentWp();
   renderMatrix();
 }
@@ -2262,6 +2849,7 @@ async function selectProject(id){
   loadCurrentProjectData();
   if(supabaseClient && currentUser) await fetchCloudDataManually();
   if(g('projects-view').classList.contains('active')) switchMainTab('matrix');
+  renderProjectUI();
   toast('Projekt geladen');
 }
 
@@ -2346,6 +2934,7 @@ async function doCreateNewProject(){
   closeNewProjectModal();
   loadCurrentProjectData(true);
   if(supabaseClient && currentUser) await saveProjectToCloud(id);
+  renderProjectUI();
   toast('✅ Projekt erstellt');
 }
 
@@ -2355,7 +2944,8 @@ async function deleteProject(id){
   delete PROJECTS[id];
   saveProjectsLocal();
   if(supabaseClient && currentUser) try { await supabaseClient.from('pv_projects').delete().eq('id', id); } catch(e){}
-  openProjectsModal();
+  if(g('projects-modal') && g('projects-modal').classList.contains('show')) openProjectsModal();
+  renderProjectUI();
   toast('🗑️ Projekt gelöscht');
 }
 
@@ -2378,7 +2968,7 @@ async function renameProject(id, event){
   // Nur die betroffenen Stellen neu zeichnen statt der ganzen Seite
   if(g('project-grid')) renderProjectGrid();
   if(g('projects-modal') && g('projects-modal').classList.contains('show')) openProjectsModal();
-  if(id === CURRENT_PROJECT_ID && g('sb-proj-name')) g('sb-proj-name').textContent = trimmed;
+  renderProjectUI();
 
   if(supabaseClient && currentUser){
     try {
@@ -2396,6 +2986,7 @@ async function renameProject(id, event){
       proj.name = previousName;
       if(g('project-grid')) renderProjectGrid();
       if(g('projects-modal') && g('projects-modal').classList.contains('show')) openProjectsModal();
+      renderProjectUI();
       toast('❌ Umbenennen fehlgeschlagen: ' + (e.message || 'Verbindungsfehler'));
     }
   } else {
@@ -2422,6 +3013,7 @@ async function setProjectGroup(id, event){
 
   if(g('project-grid')) renderProjectGrid();
   if(g('projects-modal') && g('projects-modal').classList.contains('show')) openProjectsModal();
+  renderProjectUI();
 
   if(supabaseClient && currentUser){
     try {
@@ -2444,6 +3036,7 @@ async function setProjectGroup(id, event){
       proj.group = previousGroup;
       if(g('project-grid')) renderProjectGrid();
       if(g('projects-modal') && g('projects-modal').classList.contains('show')) openProjectsModal();
+      renderProjectUI();
       toast('❌ Gruppe speichern fehlgeschlagen: ' + (e.message || 'Verbindungsfehler'));
     }
   } else {
@@ -2600,6 +3193,7 @@ async function fetchProjectsFromCloud(){
         PROJECTS[cloudProj.id] = cloudProject;
       });
   } catch(e){ toast('❌ Verbindungsfehler'); }
+  renderProjectUI();
 }
 
 async function saveProjectToCloudNow(projectId){

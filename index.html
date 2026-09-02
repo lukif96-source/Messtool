@@ -642,6 +642,116 @@ body.sun-mode table.mt td[data-label="Aktiv"] { background: #ffffff; }
 .field-radio-desc { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
 .np-wr-row { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
 
+.wr-edit-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 8px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted); font-size: 0.95rem; cursor: pointer;
+  transition: all 0.2s; min-width: 30px; min-height: 30px; padding: 0;
+  margin-left: 6px;
+}
+.wr-edit-btn:hover { background: var(--accent-glow); color: var(--accent); border-color: var(--accent); }
+.wr-edit-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Bulk-Action-Toolbar pro WR */
+.wr-bulk-bar {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+}
+body.sun-mode .wr-bulk-bar { background: #f8fafc; }
+.wr-bulk-bar .bulk-label {
+  font-size: 0.65rem; font-weight: 800; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-right: 2px;
+}
+.wr-bulk-btn {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  font-size: 0.72rem; font-weight: 700; border-radius: 6px;
+  padding: 6px 10px; cursor: pointer; min-height: 30px;
+  display: inline-flex; align-items: center; gap: 4px;
+  transition: all 0.15s; white-space: nowrap;
+}
+.wr-bulk-btn:hover { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+.wr-bulk-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.wr-bulk-btn.danger { color: #ef4444; border-color: rgba(239,68,68,0.4); }
+.wr-bulk-btn.danger:hover { background: rgba(239,68,68,0.12); border-color: #ef4444; color: #ef4444; }
+.wr-bulk-btn .bulk-kbd {
+  font-size: 0.62rem; background: var(--bg); padding: 1px 4px; border-radius: 3px;
+  margin-left: 2px; opacity: 0.7; font-family: 'JetBrains Mono', monospace;
+}
+@media (max-width: 600px) {
+  .wr-bulk-bar { padding: 6px 10px; gap: 4px; }
+  .wr-bulk-btn { font-size: 0.68rem; padding: 5px 8px; min-height: 28px; }
+  .wr-bulk-bar .bulk-label { display: none; }
+}
+
+.inv-editor-info {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px; margin-bottom: 14px;
+}
+.inv-editor-info-cell { display: flex; flex-direction: column; gap: 2px; }
+.inv-editor-info-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; }
+.inv-editor-info-value { font-size: 0.95rem; font-weight: 800; color: var(--text); font-family: 'JetBrains Mono', monospace; }
+
+.inv-editor-section {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px; margin-bottom: 12px;
+}
+.inv-editor-section-title {
+  font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+  color: var(--muted); letter-spacing: 0.06em; margin-bottom: 10px;
+}
+.inv-editor-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.inv-editor-row:last-child { margin-bottom: 0; }
+.inv-editor-row label {
+  flex: 0 0 110px; font-size: 0.78rem; font-weight: 700; color: var(--text);
+}
+.inv-editor-row .sp-inp { flex: 1; max-width: 140px; text-align: center; font-weight: 700; }
+.inv-editor-stepper { display: flex; align-items: center; gap: 4px; flex: 1; max-width: 220px; }
+.inv-editor-stepper button {
+  background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  width: 36px; height: 38px; border-radius: 8px; cursor: pointer;
+  font-size: 1.1rem; font-weight: 800; padding: 0; min-width: 36px; min-height: 38px;
+  display: flex; align-items: center; justify-content: center;
+}
+.inv-editor-stepper button:hover { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+.inv-editor-stepper button:disabled { opacity: 0.3; cursor: not-allowed; }
+.inv-editor-stepper input { text-align: center; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+
+.inv-editor-warn {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: rgba(239, 68, 68, 0.08); border: 1px solid #ef4444; border-radius: 10px;
+  padding: 10px 12px; margin-top: 10px; color: #ef4444; font-size: 0.75rem; line-height: 1.4;
+}
+body.sun-mode .inv-editor-warn { background: #fef2f2; color: #b91c1c; }
+.inv-editor-warn-icon { font-size: 1rem; flex-shrink: 0; }
+
+.inv-editor-slot-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 4px; max-height: 120px; overflow-y: auto;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px; margin-top: 8px;
+}
+.inv-editor-slot {
+  font-size: 0.65rem; font-weight: 700; text-align: center;
+  padding: 4px 2px; border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace; color: var(--muted);
+  background: var(--panel);
+}
+.inv-editor-slot.has-data { background: var(--accent-glow); color: var(--accent); }
+
+.modal-actions {
+  display: flex; gap: 8px; justify-content: flex-end;
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.modal-actions .btn-spacer { flex: 1; }
+.btn-danger {
+  background: transparent; color: #ef4444; border: 1px solid #ef4444;
+  font-weight: 700;
+}
+.btn-danger:hover { background: rgba(239, 68, 68, 0.12); }
+
 .sig-canvas-wrap { border: 2px dashed var(--border); border-radius: 12px; background: #ffffff; overflow: hidden; touch-action: none; }
 #sig-canvas { display: block; width: 100%; height: 200px; cursor: crosshair; background: #ffffff; touch-action: none; }
 .sig-signed-preview { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #ffffff; border: 1px solid var(--border); border-radius: 8px; }
@@ -1004,6 +1114,63 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
   </div>
 </div>
 
+<div id="inverter-editor-modal" class="modal-overlay" onclick="closeInverterEditor(event)">
+  <div class="modal-card" data-modal="centered" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h2>⚙️ <span id="inverter-editor-title">Wechselrichter bearbeiten</span></h2>
+      <button onclick="closeInverterEditor()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="inverter-editor-info" class="inv-editor-info"></div>
+
+      <div class="inv-editor-section">
+        <div class="inv-editor-section-title">📝 Bezeichnungen</div>
+        <div class="inv-editor-row">
+          <label for="inv-edit-name">WR-Name</label>
+          <input type="text" id="inv-edit-name" class="sp-inp" placeholder="z.B. WR 1 · SMA STP 25000" maxlength="80">
+        </div>
+      </div>
+
+      <div class="inv-editor-section">
+        <div class="inv-editor-section-title">⚡ Hardware-Konfiguration</div>
+        <div class="inv-editor-row">
+          <label for="inv-edit-mppts">Anzahl MPPTs</label>
+          <div class="inv-editor-stepper">
+            <button type="button" onclick="stepperInverterValue('inv-edit-mppts', -1, 1, 24)" aria-label="weniger MPPTs">−</button>
+            <input type="number" id="inv-edit-mppts" class="sp-inp" min="1" max="24" step="1" inputmode="numeric">
+            <button type="button" onclick="stepperInverterValue('inv-edit-mppts', 1, 1, 24)" aria-label="mehr MPPTs">+</button>
+          </div>
+        </div>
+        <div class="inv-editor-row">
+          <label for="inv-edit-inputs">Eingänge pro MPPT</label>
+          <div class="inv-editor-stepper">
+            <button type="button" onclick="stepperInverterValue('inv-edit-inputs', -1, 1, 4)" aria-label="weniger Eingänge">−</button>
+            <input type="number" id="inv-edit-inputs" class="sp-inp" min="1" max="4" step="1" inputmode="numeric">
+            <button type="button" onclick="stepperInverterValue('inv-edit-inputs', 1, 1, 4)" aria-label="mehr Eingänge">+</button>
+          </div>
+        </div>
+        <div id="inv-editor-slot-info" class="inv-editor-slot-grid"></div>
+        <div id="inv-editor-warn" hidden></div>
+      </div>
+
+      <div id="inv-editor-delete-section" class="inv-editor-section">
+        <div class="inv-editor-section-title" style="color:#ef4444;">🗑️ Gefahrenzone</div>
+        <div style="font-size:0.78rem; color:var(--muted); margin-bottom:10px; line-height:1.4;">
+          Wechselrichter komplett entfernen — alle Strings, GAK-Nummern und Messwerte dieses WR werden gelöscht.
+        </div>
+        <button type="button" class="btn btn-danger" id="inv-edit-delete-btn" onclick="confirmDeleteInverterFromEditor()">
+          🗑️ Wechselrichter löschen
+        </button>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeInverterEditor()">Abbrechen</button>
+        <button type="button" class="btn btn-primary" id="inv-edit-save-btn" onclick="saveInverterEditor()">💾 Übernehmen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="top-bar-mobile no-print">
   <div style="font-weight:900; font-size:1.1rem; color:var(--accent); letter-spacing:-0.05em;display:flex;align-items:center;gap:8px;">
     <span>SOLPRO</span>
@@ -1183,6 +1350,9 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
     <div class="view-bar-wrap no-print">
       <div class="wr-filter-bar" id="wr-filter-bar"></div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="filter-toggle-btn role-gate-planner" id="btn-add-wr" onclick="addNewInverter()" title="Neuen Wechselrichter hinzufügen">
+          <span>➕</span> <span>+ WR</span>
+        </button>
         <button class="filter-toggle-btn role-gate-admin" id="btn-protocol-lock" onclick="toggleProtocolLock()">
           <span id="protocol-lock-icon">🔓</span> <span id="protocol-lock-text">Protokoll sperren</span>
         </button>
@@ -1979,6 +2149,10 @@ function updateLockUI(){
   const signBtn = g('btn-sign');
   if(signBtn) signBtn.style.display = (!locked && canEditMeasurement()) ? 'inline-flex' : 'none';
 
+  // + WR Button: nur wenn Hardware bearbeitet werden darf
+  const addWrBtn = g('btn-add-wr');
+  if(addWrBtn) addWrBtn.style.display = canEditHardware() ? 'inline-flex' : 'none';
+
   const sbLock = g('sb-proj-lock');
   if(sbLock) sbLock.style.display = locked ? 'inline' : 'none';
   
@@ -2181,7 +2355,7 @@ function renderMatrix(remoteOverride = null){
                </div>
             </td>
             <td data-label="GAK" style="width:12%;">
-               <input type="text" id="gak-${id}" value="${esc(item.gak)}" class="sp-inp sp-inp-center sp-inp-gak" style="padding:3px;" oninput="saveData('${id}', 'gak', this.value)" ${roAttr(gakRO)}>
+               <input type="text" id="gak-${id}" value="${esc(item.gak)}" class="sp-inp sp-inp-center sp-inp-gak" style="padding:3px;" oninput="saveData('${id}', 'gak', this.value)" onkeydown="handleMeasureKeydown(event, '${id}', 'gak')" ${roAttr(gakRO)}>
                 <span class="print-cell">${esc(item.gak)}</span>
             </td>
             <td data-label="Aktiv" class="no-print" style="width:12%;">
@@ -2208,7 +2382,7 @@ function renderMatrix(remoteOverride = null){
                 <span class="print-cell" id="priso-${id}">${esc(item.riso||'')}</span>
             </td>
             <td data-label="Info" class="col-note" style="text-align:left; width:18%;">
-               <input type="text" id="note-${id}" value="${esc(item.note||'')}" class="sp-inp" style="text-align:left;padding:3px;" oninput="saveData('${id}', 'note', this.value)" ${roAttr(noteRO)}>
+               <input type="text" id="note-${id}" value="${esc(item.note||'')}" class="sp-inp" style="text-align:left;padding:3px;" oninput="saveData('${id}', 'note', this.value)" onkeydown="handleMeasureKeydown(event, '${id}', 'note')" ${roAttr(noteRO)}>
                <span class="print-cell" id="pnote-${id}" style="font-size:7pt;color:#71717a;">${esc(item.note||'')}</span>
             </td>
           </tr>`;
@@ -2218,11 +2392,21 @@ function renderMatrix(remoteOverride = null){
     bl.innerHTML = `
       <div class="wr-head">
         <div style="display:flex;align-items:center;gap:12px;">
-          <span class="wr-num" style="cursor:${canHardware ? 'pointer' : 'default'};" onclick="${canHardware ? `renameInverter(${wr})` : 'void(0)'}">${esc(wrData.name || 'WR ' + wr)}${canHardware ? ' ✏️' : ''}</span>
+          <span class="wr-num" style="cursor:${canHardware ? 'pointer' : 'default'};" onclick="${canHardware ? `openInverterEditor(${wr})` : 'void(0)'}" title="${canHardware ? 'Wechselrichter bearbeiten' : ''}">${esc(wrData.name || 'WR ' + wr)}</span>
+          ${canHardware ? `<button class="wr-edit-btn" onclick="openInverterEditor(${wr})" title="Wechselrichter bearbeiten (MPPTs, Eingänge, löschen)">⚙️</button>` : ''}
           <span class="wr-kpis">${activeStrings} Strings &middot; ${mppts} MPPTs</span>
         </div>
         <div class="wr-kpis"><strong style="color:var(--accent);">${wrPwr.toFixed(2)} kWp</strong></div>
       </div>
+      ${canHardware ? `
+      <div class="wr-bulk-bar no-print">
+        <span class="bulk-label">⚡ Bulk:</span>
+        <button class="wr-bulk-btn" onclick="bulkSetStat(${wr}, 'JA')" title="Alle Strings dieses WR auf JA">✅ Alle JA</button>
+        <button class="wr-bulk-btn" onclick="bulkSetStat(${wr}, 'NEIN')" title="Alle Strings dieses WR auf NEIN">❌ Alle NEIN</button>
+        <button class="wr-bulk-btn" onclick="bulkSetModules(${wr})" title="Modulzahl für alle aktiven Strings setzen">🔢 Module = …</button>
+        <button class="wr-bulk-btn" onclick="bulkApplyGakSchema(${wr})" title="GAK nach Schema GAK ${wr}.MPPT.Eingang setzen">🏷️ GAK-Schema</button>
+        <button class="wr-bulk-btn danger" onclick="bulkClearMeasurements(${wr})" title="Uoc/Isc/Riso/Bemerkung für diesen WR löschen">🧹 Messwerte löschen</button>
+      </div>` : ''}
       <div style="overflow-x:auto;">
         <table class="mt">
           <thead><tr>
@@ -2280,26 +2464,376 @@ function setupScrollContext(){
 }
 
 function renameInverter(wrId) {
+  // Legacy-Einstiegspunkt: leitet auf den vollwertigen Editor weiter.
+  return openInverterEditor(wrId);
+}
+
+// ========================================================
+// INVERTER EDITOR (WR / MPPT / Inputs nachträglich ändern)
+// ========================================================
+let _inverterEditorWrId = null;
+let _inverterEditorState = null;
+
+function getWrDefaultInputs(){
+  // sinnvoller Default wenn man einen neuen WR hinzufügt
+  return 2;
+}
+function getWrDefaultMppts(){
+  return 12;
+}
+
+function getMaxUsedMppt(wrId){
+  // höchste MPPT-Nummer mit echten Daten (mod>0, JA, oder Messwerte)
+  let max = 0;
+  Object.keys(APP_STATE).forEach(id => {
+    const parts = id.split('.').map(Number);
+    if(parts.length !== 3) return;
+    if(parts[0] !== Number(wrId)) return;
+    const it = APP_STATE[id];
+    if(!it) return;
+    const hasData = (it.mod && it.mod > 0) || it.stat === 'JA' || it.uoc || it.isc || it.riso;
+    if(hasData && parts[1] > max) max = parts[1];
+  });
+  return max;
+}
+function getMaxUsedInput(wrId, mppt){
+  let max = 0;
+  Object.keys(APP_STATE).forEach(id => {
+    const parts = id.split('.').map(Number);
+    if(parts.length !== 3) return;
+    if(parts[0] !== Number(wrId)) return;
+    if(parts[1] !== Number(mppt)) return;
+    const it = APP_STATE[id];
+    if(!it) return;
+    const hasData = (it.mod && it.mod > 0) || it.stat === 'JA' || it.uoc || it.isc || it.riso;
+    if(hasData && parts[2] > max) max = parts[2];
+  });
+  return max;
+}
+
+function hasSlotData(wrId, mppt, input){
+  const it = APP_STATE[`${wrId}.${mppt}.${input}`];
+  if(!it) return false;
+  return (it.mod && it.mod > 0) || it.stat === 'JA' || it.uoc || it.isc || it.riso;
+}
+
+function openInverterEditor(wrId){
   if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
   const plan = getCurrentPlan();
-  if(!plan[wrId]) return;
-  const currentName = plan[wrId].name || `WR ${wrId}`;
-  const newName = prompt('Wechselrichter umbenennen:', currentName);
-  if(newName !== null && newName.trim() !== '') {
-    plan[wrId].name = newName.trim();
-    const currentProject = getCurrentProject();
-    if(currentProject) {
-       currentProject.plan = plan;
-       currentProject.updated_at = new Date().toISOString();
-      PROJECTS[CURRENT_PROJECT_ID] = currentProject;
-      saveProjectsLocal();
-      if(supabaseClient && currentUser) saveProjectToCloud(CURRENT_PROJECT_ID);
+  const data = plan[wrId];
+  if(!data) return toast('Wechselrichter nicht gefunden');
+  if(Array.isArray(data)) return toast('Legacy-WR: bitte PVSOL-Import erneut ausführen');
+
+  _inverterEditorWrId = wrId;
+  _inverterEditorState = {
+    name: data.name || `WR ${wrId}`,
+    mppts: data.mppts || 12,
+    inputs: data.inputs || 2
+  };
+
+  g('inverter-editor-title').textContent = `WR ${wrId} bearbeiten`;
+  g('inv-edit-name').value = _inverterEditorState.name;
+  g('inv-edit-mppts').value = _inverterEditorState.mppts;
+  g('inv-edit-inputs').value = _inverterEditorState.inputs;
+
+  // Info-Box oben
+  const usedMods = countActiveModulesForWr(wrId);
+  const usedStr  = countActiveStringsForWr(wrId);
+  g('inverter-editor-info').innerHTML = `
+    <div class="inv-editor-info-cell">
+      <span class="inv-editor-info-label">WR-Nr.</span>
+      <span class="inv-editor-info-value">${wrId}</span>
+    </div>
+    <div class="inv-editor-info-cell">
+      <span class="inv-editor-info-label">Aktive Strings</span>
+      <span class="inv-editor-info-value">${usedStr}</span>
+    </div>
+    <div class="inv-editor-info-cell">
+      <span class="inv-editor-info-label">Aktive Module</span>
+      <span class="inv-editor-info-value">${usedMods}</span>
+    </div>
+    <div class="inv-editor-info-cell">
+      <span class="inv-editor-info-label">Aktuelle Slots</span>
+      <span class="inv-editor-info-value">${(data.mppts||12) * (data.inputs||2)}</span>
+    </div>`;
+
+  // Buttons je nach Rolle
+  const admin = currentUserRole === 'admin';
+  g('inv-editor-delete-section').style.display = admin ? 'block' : 'none';
+
+  refreshInverterEditorWarnings();
+  g('inverter-editor-modal').classList.add('show');
+}
+
+function countActiveStringsForWr(wrId){
+  let n = 0;
+  Object.keys(APP_STATE).forEach(id => {
+    if(id.startsWith(`${wrId}.`) && APP_STATE[id]?.stat === 'JA') n++;
+  });
+  return n;
+}
+function countActiveModulesForWr(wrId){
+  let n = 0;
+  Object.keys(APP_STATE).forEach(id => {
+    if(id.startsWith(`${wrId}.`) && APP_STATE[id]?.mod > 0) n += APP_STATE[id].mod;
+  });
+  return n;
+}
+
+function closeInverterEditor(event){
+  if(event && event.target !== event.currentTarget) return;
+  _inverterEditorWrId = null;
+  _inverterEditorState = null;
+  g('inverter-editor-modal').classList.remove('show');
+}
+
+function stepperInverterValue(inputId, delta, min, max){
+  const inp = g(inputId);
+  if(!inp) return;
+  const cur = parseInt(inp.value, 10) || 0;
+  const next = Math.max(min, Math.min(max, cur + delta));
+  inp.value = next;
+  refreshInverterEditorWarnings();
+}
+
+function refreshInverterEditorWarnings(){
+  if(!_inverterEditorState) return;
+  const wrId = _inverterEditorWrId;
+  const newMppts = parseInt(g('inv-edit-mppts').value, 10) || 0;
+  const newInputs = parseInt(g('inv-edit-inputs').value, 10) || 0;
+  _inverterEditorState.mppts = newMppts;
+  _inverterEditorState.inputs = newInputs;
+
+  // Slot-Grid Vorschau: zeigt an welche Slots Daten hätten
+  const grid = g('inv-editor-slot-info');
+  const limit = Math.min(newMppts * newInputs, 240); // hard cap Anzeige
+  let html = '';
+  for(let m = 1; m <= newMppts; m++){
+    for(let s = 1; s <= newInputs; s++){
+      if((m-1) * newInputs + s > limit) break;
+      const has = hasSlotData(wrId, m, s);
+      html += `<div class="inv-editor-slot ${has ? 'has-data' : ''}" title="MPPT ${m} · Eingang ${s}">${m}.${s}</div>`;
     }
-    renderMatrix();
-    buildFilterBar();
-    toast('✅ Wechselrichter umbenannt');
+  }
+  grid.innerHTML = html;
+
+  // Warnungen
+  const warnEl = g('inv-editor-warn');
+  const plan = getCurrentPlan();
+  const oldMppts = plan[wrId]?.mppts || 12;
+  const oldInputs = plan[wrId]?.inputs || 2;
+  const warnings = [];
+  if(newMppts < oldMppts){
+    const maxUsed = getMaxUsedMppt(wrId);
+    if(newMppts < maxUsed){
+      warnings.push(`Reduzierung von MPPT ${oldMppts} → ${newMppts} entfernt MPPT ${maxUsed}, das aktive Daten enthält. Diese Daten gehen verloren.`);
+    } else {
+      warnings.push(`MPPTs werden von ${oldMppts} auf ${newMppts} reduziert.`);
+    }
+  } else if(newMppts > oldMppts){
+    warnings.push(`MPPTs werden von ${oldMppts} auf ${newMppts} erweitert (neue Slots sind zunächst leer).`);
+  }
+  if(newInputs < oldInputs){
+    let lostMppts = [];
+    for(let m = 1; m <= newMppts; m++){
+      const maxUsedIn = getMaxUsedInput(wrId, m);
+      if(maxUsedIn > newInputs) lostMppts.push(m);
+    }
+    if(lostMppts.length){
+      warnings.push(`Reduzierung von ${oldInputs} → ${newInputs} Eingängen entfernt Eingang ${oldInputs} bei ${lostMppts.length} MPPT(s) (${lostMppts.slice(0,5).join(', ')}${lostMppts.length>5?'…':''}). Daten in diesen Slots gehen verloren.`);
+    } else {
+      warnings.push(`Eingänge werden von ${oldInputs} auf ${newInputs} reduziert.`);
+    }
+  } else if(newInputs > oldInputs){
+    warnings.push(`Eingänge werden von ${oldInputs} auf ${newInputs} erweitert (neue Slots sind zunächst leer).`);
+  }
+  if(warnings.length){
+    warnEl.innerHTML = `<div class="inv-editor-warn"><span class="inv-editor-warn-icon">⚠️</span><div>${warnings.map(w => `<div style="margin-top:2px;">${esc(w)}</div>`).join('')}</div></div>`;
+    warnEl.hidden = false;
+  } else {
+    warnEl.hidden = true;
+    warnEl.innerHTML = '';
   }
 }
+
+function saveInverterEditor(){
+  if(!_inverterEditorWrId) return;
+  const wrId = _inverterEditorWrId;
+  const plan = getCurrentPlan();
+  const data = plan[wrId];
+  if(!data) return;
+
+  const newName   = (g('inv-edit-name').value || '').trim() || `WR ${wrId}`;
+  const newMppts  = Math.max(1, Math.min(24, parseInt(g('inv-edit-mppts').value, 10) || 0));
+  const newInputs = Math.max(1, Math.min(4,  parseInt(g('inv-edit-inputs').value, 10) || 0));
+
+  const oldMppts  = data.mppts || 12;
+  const oldInputs = data.inputs || 2;
+  const shrinking = (newMppts < oldMppts) || (newInputs < oldInputs);
+
+  if(shrinking){
+    const maxUsedM = getMaxUsedMppt(wrId);
+    if(newMppts < maxUsedM){
+      if(!confirm(`⚠️ Reduzierung entfernt MPPT ${maxUsedM}, das aktive Daten enthält.\n\nDiese Daten gehen UNWIDERRUFLICH verloren.\n\nTrotzdem fortfahren?`)) return;
+    } else {
+      if(!confirm(`MPPTs/Inputs reduzieren?\n\nSlots außerhalb der neuen Grenze werden entfernt.`)) return;
+    }
+  }
+
+  data.name = newName;
+  data.mppts = newMppts;
+  data.inputs = newInputs;
+
+  // Strings-Map bereinigen (überzählige Einträge entfernen)
+  if(data.strings){
+    Object.keys(data.strings).forEach(mKey => {
+      const m = parseInt(mKey, 10);
+      if(isNaN(m) || m > newMppts) { delete data.strings[mKey]; return; }
+      const inp = data.strings[mKey];
+      if(inp && typeof inp === 'object'){
+        Object.keys(inp).forEach(sKey => {
+          const s = parseInt(sKey, 10);
+          if(isNaN(s) || s > newInputs) delete inp[sKey];
+        });
+      }
+    });
+  }
+
+  // APP_STATE neu generieren (vorhandene Messwerte bleiben erhalten)
+  regenerateAppStatePreservingMeasurements();
+
+  // Persist
+  const proj = getCurrentProject();
+  if(proj){
+    proj.plan = plan;
+    proj.updated_at = new Date().toISOString();
+    PROJECTS[CURRENT_PROJECT_ID] = proj;
+    saveProjectsLocal();
+    if(supabaseClient && currentUser) saveProjectToCloud(CURRENT_PROJECT_ID);
+  }
+
+  renderMatrix();
+  toast(shrinking ? '⚠️ Wechselrichter angepasst (Daten in entfernten Slots gelöscht)' : '✅ Wechselrichter aktualisiert');
+  closeInverterEditor();
+}
+
+function regenerateAppStatePreservingMeasurements(){
+  // Erzeugt APP_STATE neu aus dem aktuellen Plan, behält aber
+  // uoc/isc/riso/note aus den bereits existierenden Slots.
+  const plan = getCurrentPlan();
+  const oldState = { ...APP_STATE };
+  const fresh = generateState(plan, true);
+  Object.keys(fresh).forEach(id => {
+    const prev = oldState[id];
+    if(prev){
+      // Messwerte + Bemerkung beibehalten
+      if(prev.uoc)  fresh[id].uoc  = prev.uoc;
+      if(prev.isc)  fresh[id].isc  = prev.isc;
+      if(prev.riso) fresh[id].riso = prev.riso;
+      if(prev.note) fresh[id].note = prev.note;
+      // planName + gak beibehalten, wenn schon gefüllt
+      if(prev.planName) fresh[id].planName = prev.planName;
+      if(prev.gak && !/^GAK\s+\d+(\.\d+)?$/.test(prev.gak) && prev.gak !== `GAK ${id.split('.')[0]}`) fresh[id].gak = prev.gak;
+    }
+  });
+  // Slots die nicht mehr im Plan vorkommen, gehen verloren (gewollt)
+  APP_STATE = fresh;
+}
+
+function confirmDeleteInverterFromEditor(){
+  if(!_inverterEditorWrId) return;
+  if(currentUserRole !== 'admin') return toast('🔒 Nur Admins können WRs löschen');
+  const wrId = _inverterEditorWrId;
+  const plan = getCurrentPlan();
+  const data = plan[wrId];
+  if(!data) return;
+  const activeStr = countActiveStringsForWr(wrId);
+  const activeMod = countActiveModulesForWr(wrId);
+  const msg = activeStr > 0
+    ? `WR ${wrId} (${data.name || ''}) wirklich löschen?\n\n⚠️ ${activeStr} aktive Strings / ${activeMod} Module gehen verloren.\n\nDieser Schritt kann nicht rückgängig gemacht werden.`
+    : `WR ${wrId} (${data.name || ''}) wirklich löschen?`;
+  if(!confirm(msg)) return;
+  deleteInverter(wrId, true);
+  closeInverterEditor();
+}
+
+function deleteInverter(wrId, skipConfirm){
+  if(currentUserRole !== 'admin') return toast('🔒 Nur Admins können WRs löschen');
+  const plan = getCurrentPlan();
+  if(!plan[wrId]) return;
+  if(!skipConfirm){
+    if(!confirm(`WR ${wrId} wirklich löschen? Alle Strings & Messwerte dieses WR gehen verloren.`)) return;
+  }
+  delete plan[wrId];
+  // APP_STATE Slots dieses WR entfernen
+  Object.keys(APP_STATE).forEach(id => {
+    if(id.startsWith(`${wrId}.`)) delete APP_STATE[id];
+  });
+  const proj = getCurrentProject();
+  if(proj){
+    proj.plan = plan;
+    proj.updated_at = new Date().toISOString();
+    PROJECTS[CURRENT_PROJECT_ID] = proj;
+    saveProjectsLocal();
+    if(supabaseClient && currentUser) saveProjectToCloud(CURRENT_PROJECT_ID);
+  }
+  renderMatrix();
+  toast(`🗑️ WR ${wrId} gelöscht`);
+}
+
+function addNewInverter(){
+  if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
+  const plan = getCurrentPlan();
+  const wrKeys = Object.keys(plan).map(k => parseInt(k, 10)).filter(n => !isNaN(n)).sort((a,b) => a-b);
+  const nextId = wrKeys.length ? (wrKeys[wrKeys.length - 1] + 1) : 1;
+  if(nextId > 99) return toast('Maximum 99 Wechselrichter pro Projekt');
+
+  // Default-Slots: alle inaktiv (damit nicht plötzlich 24 Phantom-Strings aktiv sind)
+  const defMods = 0;
+  plan[nextId] = {
+    name: `WR ${nextId}`,
+    mppts: getWrDefaultMppts(),
+    inputs: getWrDefaultInputs(),
+    defaultMods: defMods,
+    strings: {}
+  };
+  // APP_STATE sofort initialisieren mit NEIN-Status
+  APP_STATE = generateState(plan, true);
+
+  const proj = getCurrentProject();
+  if(proj){
+    proj.plan = plan;
+    proj.updated_at = new Date().toISOString();
+    PROJECTS[CURRENT_PROJECT_ID] = proj;
+    saveProjectsLocal();
+    if(supabaseClient && currentUser) saveProjectToCloud(CURRENT_PROJECT_ID);
+  }
+  renderMatrix();
+  buildFilterBar();
+  toast(`➕ WR ${nextId} hinzugefügt`);
+  // Direkt Editor öffnen, damit der User Name/MPPTs anpassen kann
+  openInverterEditor(nextId);
+}
+
+// Live-Update der Warnung, wenn der User tippt oder Stepper benutzt
+document.addEventListener('input', (e) => {
+  if(!_inverterEditorWrId) return;
+  if(e.target && (e.target.id === 'inv-edit-mppts' || e.target.id === 'inv-edit-inputs')){
+    refreshInverterEditorWarnings();
+  }
+});
+document.addEventListener('change', (e) => {
+  if(!_inverterEditorWrId) return;
+  if(e.target && (e.target.id === 'inv-edit-mppts' || e.target.id === 'inv-edit-inputs')){
+    refreshInverterEditorWarnings();
+  }
+});
+// ESC schließt die Inverter-Editor-Modal
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape' && g('inverter-editor-modal')?.classList.contains('show')){
+    closeInverterEditor();
+  }
+});
 
 let cloudSyncTimeout = null;
 const cloudSaveQueues = new Map();
@@ -2334,21 +2868,248 @@ function showSaveIndicator(state){
   }
 }
 
-const NEXT_FIELD = { uoc: 'isc', isc: 'riso', riso: 'note', mod: 'gak' };
-function handleMeasureKeydown(event, id, field){
-  if(event.key !== 'Enter') return;
-  event.preventDefault();
-  const next = NEXT_FIELD[field];
-  if(next){
-    const target = g(`${next}-${id}`);
-    if(target){ target.focus(); target.select?.(); return; }
+// Tab-Reihenfolge durch alle Felder einer Zeile: gak → mod → uoc → isc → riso → note
+const TAB_ORDER = ['gak', 'mod', 'uoc', 'isc', 'riso', 'note'];
+function focusCellAtIndex(wrId, mppt, input, fieldIdx, selectAll = true){
+  const field = TAB_ORDER[fieldIdx];
+  const el = g(`${field}-${wrId}.${mppt}.${input}`);
+  if(!el) return false;
+  // readonly Inputs sind visuell deaktiviert: nicht hineintabben
+  if(el.readOnly) return false;
+  el.focus();
+  if(selectAll && (el.type === 'text' || el.type === 'number')){
+    try { el.select(); } catch(_) {}
   }
+  return true;
+}
+function nextCellInMatrix(wrId, mppt, input, currentField, direction = 1){
+  // Springt zum nächsten editierbaren Feld in Tab-Reihenfolge.
+  // Springt über WR-/MPPT-/Eingang-Grenzen hinweg.
+  const plan = getCurrentPlan();
+  const wrKeys = Object.keys(plan).map(Number).filter(n => !isNaN(n) && !Array.isArray(plan[n])).sort((a,b)=>a-b);
+  if(wrKeys.length === 0) return false;
+
+  // Flat-Index über alle Zellen: row = (wr * 1e6 + mppt * 100 + input)
+  const idxOf = (w, m, s) => wrKeys.indexOf(Number(w)) * 1e6 + Number(m) * 100 + Number(s);
+  const curIdx = idxOf(wrId, mppt, input);
+
+  // Versuche erst das nächste Feld in derselben Zeile
+  const fIdx = TAB_ORDER.indexOf(currentField);
+  if(direction === 1 && fIdx >= 0 && fIdx < TAB_ORDER.length - 1){
+    if(focusCellAtIndex(wrId, mppt, input, fIdx + 1)) return true;
+  }
+  if(direction === -1 && fIdx > 0){
+    if(focusCellAtIndex(wrId, mppt, input, fIdx - 1)) return true;
+  }
+
+  // Sonst: nächste/vorige Zeile (über WR + MPPT + Eingang iterieren)
+  // Bestimme aktuelle Zeilen-Position
+  const totalInputs = (plan[wrId]?.inputs) || 2;
+  let nextWr = wrId, nextMppt = mppt, nextInput = input + direction;
+  while(true){
+    if(direction === 1){
+      if(nextInput > totalInputs){ nextInput = 1; nextMppt += 1; }
+      const wrData = plan[nextWr];
+      if(!wrData || Array.isArray(wrData)) break;
+      if(nextMppt > (wrData.mppts || 12)){
+        nextMppt = 1;
+        const wIdx = wrKeys.indexOf(Number(nextWr));
+        if(wIdx < 0 || wIdx >= wrKeys.length - 1) return false;
+        nextWr = wrKeys[wIdx + 1];
+      }
+    } else {
+      if(nextInput < 1){
+        const wrData = plan[nextWr];
+        if(!wrData || Array.isArray(wrData)) break;
+        nextInput = wrData.inputs || 2;
+        nextMppt -= 1;
+        if(nextMppt < 1){
+          const wIdx = wrKeys.indexOf(Number(nextWr));
+          if(wIdx <= 0) return false;
+          nextWr = wrKeys[wIdx - 1];
+          const prevData = plan[nextWr];
+          if(!prevData || Array.isArray(prevData)) return false;
+          nextMppt = prevData.mppts || 12;
+          nextInput = prevData.inputs || 2;
+        }
+      }
+    }
+    // Versuche die aktuelle Zeile zu fokussieren (bevorzugt erstes Feld)
+    const startField = direction === 1 ? 0 : TAB_ORDER.length - 1;
+    if(focusCellAtIndex(nextWr, nextMppt, nextInput, startField)) return true;
+    // Wenn das nicht klappt (z.B. readOnly), probiere andere Felder
+    let found = false;
+    for(let delta = 0; delta < TAB_ORDER.length; delta++){
+      const tryIdx = direction === 1 ? delta : (TAB_ORDER.length - 1 - delta);
+      if(focusCellAtIndex(nextWr, nextMppt, nextInput, tryIdx)){ found = true; break; }
+    }
+    if(found) return true;
+    // Wenn gar nichts klappt, gehe zur nächsten Zeile
+    if(direction === 1){
+      nextInput += 1;
+    } else {
+      nextInput -= 1;
+    }
+  }
+}
+
+function handleMeasureKeydown(event, id, field){
+  // Enter und Tab: vorwärts; Shift+Tab: rückwärts
+  const isForward = (event.key === 'Enter') || (event.key === 'Tab' && !event.shiftKey);
+  const isBackward = event.key === 'Tab' && event.shiftKey;
+  if(!isForward && !isBackward) return;
+
+  // Beim JA/NEIN-Toggle: Enter springt zum Mod-Feld
+  if(field === 'tja' || field === 'tnei'){
+    if(event.key === 'Enter'){
+      event.preventDefault();
+      const parts = id.split('.').map(Number);
+      const target = g(`mod-${id}`);
+      if(target){ target.focus(); try{target.select();}catch(_){} }
+      return;
+    }
+    return;
+  }
+
+  // Bei Note: Shift+Tab geht zurück zu Riso, Enter springt zum nächsten String
+  if(field === 'note'){
+    if(isForward){
+      event.preventDefault();
+      const parts = id.split('.').map(Number);
+      nextCellInMatrix(parts[0], parts[1], parts[2], field, 1);
+      return;
+    }
+    if(isBackward){
+      event.preventDefault();
+      const parts = id.split('.').map(Number);
+      nextCellInMatrix(parts[0], parts[1], parts[2], field, -1);
+      return;
+    }
+  }
+
+  // Bei allen anderen Feldern: Enter / Tab triggern nächsten Schritt
+  event.preventDefault();
   const parts = id.split('.').map(Number);
-  const m = parts[1], wr = parts[0];
-  const nextRow = g(`${wr}.${m + 1}.${parts[2]}`);
-  if(nextRow){ nextRow.focus(); nextRow.select?.(); return; }
-  const nextMppt = g(`${wr}.${m + 1}.1`);
-  if(nextMppt){ nextMppt.focus(); nextMppt.select?.(); }
+  nextCellInMatrix(parts[0], parts[1], parts[2], field, isBackward ? -1 : 1);
+}
+
+// Bulk-Aktionen ============================================
+function bulkSetStat(wrId, st){
+  if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
+  const plan = getCurrentPlan();
+  const data = plan[wrId];
+  if(!data) return;
+  const mppts = data.mppts || 12;
+  const inputs = data.inputs || 2;
+  let changed = 0;
+  for(let m = 1; m <= mppts; m++){
+    for(let s = 1; s <= inputs; s++){
+      const id = `${wrId}.${m}.${s}`;
+      if(!APP_STATE[id]) continue;
+      if(APP_STATE[id].stat !== st){
+        APP_STATE[id].stat = st;
+        changed++;
+      }
+    }
+  }
+  if(changed === 0) return toast(`Bereits alles auf ${st}`);
+  bulkPersistAndRender();
+  toast(`${changed} Strings auf ${st} gesetzt`);
+}
+
+function bulkSetModules(wrId){
+  if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
+  const plan = getCurrentPlan();
+  const data = plan[wrId];
+  if(!data) return;
+  // Vorschlag: häufigster Mod-Wert oder 14
+  const count = {};
+  for(let m = 1; m <= (data.mppts||12); m++){
+    for(let s = 1; s <= (data.inputs||2); s++){
+      const it = APP_STATE[`${wrId}.${m}.${s}`];
+      if(it && it.stat === 'JA' && it.mod > 0){
+        count[it.mod] = (count[it.mod] || 0) + 1;
+      }
+    }
+  }
+  const defaultN = Object.keys(count).length ? Number(Object.entries(count).sort((a,b)=>b[1]-a[1])[0][0]) : 14;
+  const raw = prompt(`Modulzahl für alle aktiven Strings dieses WR setzen:\n\n(Vorschlag: ${defaultN} — am häufigsten verwendet)`, defaultN);
+  if(raw === null) return;
+  const n = parseInt(raw, 10);
+  if(isNaN(n) || n < 0 || n > 100) return toast('Ungültige Zahl (0–100)');
+  let changed = 0, total = 0;
+  for(let m = 1; m <= (data.mppts||12); m++){
+    for(let s = 1; s <= (data.inputs||2); s++){
+      const it = APP_STATE[`${wrId}.${m}.${s}`];
+      if(it && it.stat === 'JA'){
+        total++;
+        if(it.mod !== n){
+          it.mod = n;
+          changed++;
+        }
+      }
+    }
+  }
+  if(changed === 0) return toast(`Bereits alle ${total} aktiven Strings auf ${n}`);
+  bulkPersistAndRender();
+  toast(`${changed} aktive Strings → ${n} Module`);
+}
+
+function bulkApplyGakSchema(wrId){
+  if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
+  const plan = getCurrentPlan();
+  const data = plan[wrId];
+  if(!data) return;
+  const mppts = data.mppts || 12;
+  const inputs = data.inputs || 2;
+  let changed = 0;
+  for(let m = 1; m <= mppts; m++){
+    for(let s = 1; s <= inputs; s++){
+      const it = APP_STATE[`${wrId}.${m}.${s}`];
+      if(!it) continue;
+      const newGak = `GAK ${wrId}.${m}.${s}`;
+      if((it.gak || '').trim() === ''){
+        it.gak = newGak;
+        changed++;
+      }
+    }
+  }
+  if(changed === 0) return toast('Alle GAK bereits gesetzt');
+  bulkPersistAndRender();
+  toast(`${changed} GAK nach Schema gesetzt`);
+}
+
+function bulkClearMeasurements(wrId){
+  if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
+  const plan = getCurrentPlan();
+  const data = plan[wrId];
+  if(!data) return;
+  if(!confirm(`Messwerte (Uoc, Isc, Riso, Bemerkung) für alle Strings dieses WR löschen?`)) return;
+  let changed = 0;
+  for(let m = 1; m <= (data.mppts||12); m++){
+    for(let s = 1; s <= (data.inputs||2); s++){
+      const it = APP_STATE[`${wrId}.${m}.${s}`];
+      if(!it) continue;
+      if(it.uoc || it.isc || it.riso || it.note){
+        it.uoc = ''; it.isc = ''; it.riso = ''; it.note = '';
+        changed++;
+      }
+    }
+  }
+  if(changed === 0) return toast('Keine Messwerte zum Löschen');
+  bulkPersistAndRender();
+  toast(`🧹 ${changed} Messwerte gelöscht`);
+}
+
+function bulkPersistAndRender(){
+  const proj = getCurrentProject();
+  if(proj){
+    proj.updated_at = new Date().toISOString();
+    PROJECTS[CURRENT_PROJECT_ID] = proj;
+    saveProjectsLocal();
+    if(supabaseClient && currentUser) saveProjectToCloud(CURRENT_PROJECT_ID);
+  }
+  renderMatrix();
 }
 
 function setInputValidity(input, isValid){

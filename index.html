@@ -13,6 +13,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
@@ -823,6 +824,37 @@ body.sun-mode .wr-bulk-bar { background: #f8fafc; }
   .wr-bulk-bar .bulk-label { display: none; }
 }
 
+.bulk-dropdown {
+  position: relative; display: inline-block;
+}
+.bulk-dropdown-btn {
+  background: var(--accent-grad); color: #0b0d0a; font-weight: 800;
+  border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px; min-height: 36px;
+  transition: all 0.2s; box-shadow: 0 4px 12px rgba(184, 243, 75, 0.20);
+}
+.bulk-dropdown-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.bulk-dropdown-menu {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  min-width: 220px; z-index: 100; display: none;
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+}
+.bulk-dropdown-menu.show { display: block; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.bulk-dropdown-item {
+  padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+  font-size: 0.85rem; font-weight: 600; color: var(--text); border: none;
+  background: none; width: 100%; text-align: left; transition: background 0.15s;
+}
+.bulk-dropdown-item:hover { background: var(--panel); }
+.bulk-dropdown-item.danger { color: #ef4444; }
+.bulk-dropdown-item.danger:hover { background: rgba(239,68,68,0.12); }
+.bulk-dropdown-divider {
+  height: 1px; background: var(--border); margin: 4px 0;
+}
+
 .inv-editor-info {
   display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
   background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
@@ -1324,6 +1356,52 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
   </div>
 </div>
 
+<div id="template-modal" class="modal-overlay" onclick="closeTemplateModal(event)">
+  <div class="modal-card" data-modal="centered" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h2>📋 Projekt-Vorlagen</h2>
+      <button onclick="closeTemplateModal()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;line-height:1.4;">
+        Speichere häufig verwendete Hardware-Konfigurationen als Vorlagen für schnelles Projekt-Setup.
+      </div>
+      
+      <div class="field">
+        <label>Vorlage auswählen</label>
+        <select id="template-select" class="sp-inp" onchange="updateTemplatePreview()">
+          <option value="">-- Vorlage wählen --</option>
+        </select>
+      </div>
+      
+      <div id="template-preview" style="display:none; margin:16px 0; padding:12px; background:var(--bg); border:1px solid var(--border); border-radius:8px;">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--muted);margin-bottom:8px;">Vorlage-Details:</div>
+        <div id="template-preview-content" style="font-size:0.85rem;"></div>
+      </div>
+      
+      <div style="display:flex; gap:12px; margin-top:16px;">
+        <button onclick="applySelectedTemplate()" class="btn btn-primary" style="flex:1;" id="apply-template-btn" disabled>📋 Vorlage anwenden</button>
+        <button onclick="showSaveTemplateForm()" class="btn btn-ghost" style="flex:1;">💾 Aktuelle als Vorlage speichern</button>
+      </div>
+      
+      <div id="save-template-form" style="display:none; margin-top:16px; padding:12px; background:var(--panel); border-radius:8px;">
+        <div class="field">
+          <label>Vorlagen-Name</label>
+          <input type="text" id="new-template-name" class="sp-inp" placeholder="z.B. Dach Süd Standard">
+        </div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button onclick="saveCurrentAsTemplate()" class="btn btn-primary" style="flex:1;">Speichern</button>
+          <button onclick="hideSaveTemplateForm()" class="btn btn-ghost" style="flex:1;">Abbrechen</button>
+        </div>
+      </div>
+      
+      <div id="template-actions" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+        <button onclick="deleteSelectedTemplate()" class="btn btn-danger" style="width:100%;">🗑️ Ausgewählte Vorlage löschen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="inverter-editor-modal" class="modal-overlay" onclick="closeInverterEditor(event)">
   <div class="modal-card" data-modal="centered" onclick="event.stopPropagation()">
     <div class="modal-head">
@@ -1421,6 +1499,11 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
     <span class="icon">📖</span><span class="label">Anleitung</span>
   </button>
 
+  <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Vorlagen</div>
+  <button onclick="showTemplateModal();closeSidebar();" class="sidebar-btn role-gate-planner">
+    <span class="icon" style="color:#eab308;">📋</span><span class="label">Projekt-Vorlagen</span>
+  </button>
+
   <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Import & Export</div>
   <button onclick="openPVSOLModal();closeSidebar();" class="sidebar-btn role-gate-planner">
     <span class="icon" style="color:#3b82f6;">📊</span><span class="label">PVSOL Import</span>
@@ -1437,6 +1520,15 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
   </button>
   <button onclick="doExcel();closeSidebar();" class="sidebar-btn">
     <span class="icon">📊</span><span class="label">Prüfprotokoll (Excel)</span>
+  </button>
+  <button onclick="exportCSV();closeSidebar();" class="sidebar-btn">
+    <span class="icon" style="color:#3b82f6;">📄</span><span class="label">CSV Export</span>
+  </button>
+  <button onclick="exportPDFWithLogo();closeSidebar();" class="sidebar-btn">
+    <span class="icon" style="color:#ef4444;">📑</span><span class="label">PDF mit Logo</span>
+  </button>
+  <button onclick="exportQRCodes();closeSidebar();" class="sidebar-btn">
+    <span class="icon" style="color:#8b5cf6;">📱</span><span class="label">QR-Codes</span>
   </button>
 
   <div class="role-gate-planner" style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px; margin-top:8px;">Verwaltung</div>
@@ -2046,6 +2138,481 @@ let cloudFetchSucceeded = false;
 let currentProjectGroupFilter = '__all__';
 let sbExpandedGroups = new Set();
 
+// Template System
+let PROJECT_TEMPLATES = {};
+
+function saveProjectAsTemplate(name){
+  if(!CURRENT_PROJECT_ID || !PROJECTS[CURRENT_PROJECT_ID]) return toast('⚠️ Kein Projekt geöffnet');
+  
+  const project = PROJECTS[CURRENT_PROJECT_ID];
+  const template = {
+    name: name,
+    description: `Vorlage basierend auf ${project.name}`,
+    createdAt: new Date().toISOString(),
+    config: {
+      model_wp: project.model_wp || 465,
+      // WR-Konfiguration speichern
+      wrConfig: {}
+    }
+  };
+  
+  // WR-Konfiguration extrahieren
+  Object.keys(project.plan || {}).forEach(wrId => {
+    const wrData = project.plan[wrId];
+    if(!Array.isArray(wrData)) { // Nur moderne Konfiguration
+      template.config.wrConfig[wrId] = {
+        name: wrData.name,
+        mppts: wrData.mppts || 12,
+        inputs: wrData.inputs || 2,
+        defaultMods: wrData.defaultMods || 0
+      };
+    }
+  });
+  
+  PROJECT_TEMPLATES[name] = template;
+  localStorage.setItem('pv_matrix_templates', JSON.stringify(PROJECT_TEMPLATES));
+  
+  toast(`✅ Vorlage "${name}" gespeichert`);
+  renderTemplateOptions();
+}
+
+function loadTemplatesFromStorage(){
+  try {
+    const stored = localStorage.getItem('pv_matrix_templates');
+    if(stored) {
+      PROJECT_TEMPLATES = JSON.parse(stored);
+    }
+  } catch(e) {
+    console.warn('Templates konnten nicht geladen werden', e);
+  }
+}
+
+function showTemplateModal(){
+  renderTemplateOptions();
+  g('template-modal').classList.add('show');
+}
+
+function closeTemplateModal(e){
+  if(!e || e.target === e.currentTarget) g('template-modal').classList.remove('show');
+  hideSaveTemplateForm();
+}
+
+function updateTemplatePreview(){
+  const select = g('template-select');
+  const preview = g('template-preview');
+  const previewContent = g('template-preview-content');
+  const applyBtn = g('apply-template-btn');
+  const deleteBtn = g('template-actions');
+  
+  const selectedTemplate = select.value;
+  
+  if(!selectedTemplate || !PROJECT_TEMPLATES[selectedTemplate]) {
+    preview.style.display = 'none';
+    applyBtn.disabled = true;
+    deleteBtn.style.display = 'none';
+    return;
+  }
+  
+  const template = PROJECT_TEMPLATES[selectedTemplate];
+  preview.style.display = 'block';
+  applyBtn.disabled = false;
+  deleteBtn.style.display = 'block';
+  
+  let html = `<strong>${template.name}</strong><br>`;
+  html += `<em>${template.description}</em><br><br>`;
+  html += `Modul-Wp: ${template.config.model_wp}<br>`;
+  html += `Wechselrichter: ${Object.keys(template.config.wrConfig).length}<br>`;
+  html += `Erstellt: ${new Date(template.createdAt).toLocaleDateString('de-DE')}`;
+  
+  previewContent.innerHTML = html;
+}
+
+function applySelectedTemplate(){
+  const select = g('template-select');
+  const selectedTemplate = select.value;
+  if(!selectedTemplate) return;
+  
+  applyTemplate(selectedTemplate);
+  closeTemplateModal();
+}
+
+function showSaveTemplateForm(){
+  g('save-template-form').style.display = 'block';
+  g('new-template-name').focus();
+}
+
+function hideSaveTemplateForm(){
+  g('save-template-form').style.display = 'none';
+  g('new-template-name').value = '';
+}
+
+function saveCurrentAsTemplate(){
+  const nameInput = g('new-template-name');
+  const name = nameInput.value.trim();
+  
+  if(!name) return toast('⚠️ Bitte einen Namen eingeben');
+  
+  saveProjectAsTemplate(name);
+  hideSaveTemplateForm();
+  renderTemplateOptions();
+}
+
+function deleteSelectedTemplate(){
+  const select = g('template-select');
+  const selectedTemplate = select.value;
+  if(!selectedTemplate) return;
+  
+  deleteTemplate(selectedTemplate);
+  renderTemplateOptions();
+  updateTemplatePreview();
+}
+
+// Export-Funktionen erweitern
+function exportCSV(){
+  const project = getCurrentProject();
+  if(!project) return toast('⚠️ Kein Projekt geöffnet');
+  
+  const plan = getCurrentPlan();
+  const csvData = [];
+  
+  // Header
+  csvData.push(['WR', 'MPPT', 'String', 'GAK', 'Module', 'kWp', 'Uoc(V)', 'Isc(A)', 'Riso(MΩ)', 'Status', 'Bemerkung']);
+  
+  // Daten
+  Object.keys(plan).forEach(wrId => {
+    const wrData = plan[wrId];
+    const mppts = Array.isArray(wrData) ? 12 : (wrData.mppts || 12);
+    const inputs = Array.isArray(wrData) ? 2 : (wrData.inputs || 2);
+    
+    for(let m = 1; m <= mppts; m++){
+      for(let s = 1; s <= inputs; s++){
+        const id = `${wrId}.${m}.${s}`;
+        const item = APP_STATE[id];
+        if(!item) continue;
+        
+        const wp = getCurrentWp();
+        const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * wp)/1000).toFixed(2) : '0';
+        
+        csvData.push([
+          wrId,
+          m,
+          s,
+          item.gak || '',
+          item.mod || 0,
+          pwr,
+          item.uoc || '',
+          item.isc || '',
+          item.riso || '',
+          item.stat || '',
+          item.note || ''
+        ]);
+      }
+    }
+  });
+  
+  // CSV String erstellen
+  const csvString = csvData.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+  
+  // Download
+  const blob = new Blob(['\ufeff' + csvString], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_export.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  toast('📄 CSV exportiert');
+}
+
+function exportPDFWithLogo(){
+  const project = getCurrentProject();
+  if(!project) return toast('⚠️ Kein Projekt geöffnet');
+  
+  // Browser Print mit Logo
+  const printHeader = g('print-header');
+  if(printHeader) {
+    printHeader.style.display = 'flex';
+    g('print-project-name').textContent = project.name;
+    g('print-date').textContent = new Date().toLocaleDateString('de-DE');
+  }
+  
+  window.print();
+  
+  toast('📑 PDF generiert');
+}
+
+function generateQRCodeForString(stringId){
+  if(!window.QRCode) return null;
+  
+  try {
+    const qrContainer = document.createElement('div');
+    new QRCode(qrContainer, {
+      text: stringId,
+      width: 64,
+      height: 64,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.L
+    });
+    
+    const canvas = qrContainer.querySelector('canvas');
+    return canvas ? canvas.toDataURL() : null;
+  } catch(e) {
+    console.warn('QR Code generation failed', e);
+    return null;
+  }
+}
+
+function exportQRCodes(){
+  const project = getCurrentProject();
+  if(!project) return toast('⚠️ Kein Projekt geöffnet');
+  
+  if(!window.QRCode) return toast('⚠️ QR Code Library nicht geladen');
+  
+  const plan = getCurrentPlan();
+  const qrData = [];
+  
+  Object.keys(plan).forEach(wrId => {
+    const wrData = plan[wrId];
+    const mppts = Array.isArray(wrData) ? 12 : (wrData.mppts || 12);
+    const inputs = Array.isArray(wrData) ? 2 : (wrData.inputs || 2);
+    
+    for(let m = 1; m <= mppts; m++){
+      for(let s = 1; s <= inputs; s++){
+        const id = `${wrId}.${m}.${s}`;
+        const item = APP_STATE[id];
+        if(!item || item.stat !== 'JA') continue;
+        
+        const qrCode = generateQRCodeForString(id);
+        if(qrCode) {
+          qrData.push({
+            id: id,
+            gak: item.gak || '',
+            mod: item.mod || 0,
+            qrCode: qrCode
+          });
+        }
+      }
+    }
+  });
+  
+  if(qrData.length === 0) return toast('⚠️ Keine aktiven Strings für QR-Codes');
+  
+  // HTML für QR-Codes erstellen
+  let qrHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>QR-Codes - ${project.name}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .qr-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .qr-item { border: 1px solid #ddd; padding: 15px; text-align: center; border-radius: 8px; }
+        .qr-item img { width: 64px; height: 64px; }
+        .qr-id { font-weight: bold; margin: 10px 0 5px; }
+        .qr-details { font-size: 12px; color: #666; }
+        @media print { .qr-grid { grid-template-columns: repeat(4, 1fr); } }
+      </style>
+    </head>
+    <body>
+      <h1>QR-Codes: ${project.name}</h1>
+      <div class="qr-grid">
+  `;
+  
+  qrData.forEach(item => {
+    qrHTML += `
+      <div class="qr-item">
+        <img src="${item.qrCode}" alt="QR Code">
+        <div class="qr-id">${item.id}</div>
+        <div class="qr-details">GAK: ${item.gak}<br>Module: ${item.mod}</div>
+      </div>
+    `;
+  });
+  
+  qrHTML += `
+      </div>
+    </body>
+    </html>
+  `;
+  
+  // Download
+  const blob = new Blob([qrHTML], { type: 'text/html' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_qrcodes.html`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  toast(`📱 ${qrData.length} QR-Codes exportiert`);
+}
+
+function applyTemplate(templateName){
+  const template = PROJECT_TEMPLATES[templateName];
+  if(!template) return toast('⚠️ Vorlage nicht gefunden');
+  
+  if(!confirm(`Vorlage "${templateName}" anwenden?\n\nDies wird die aktuelle Hardware-Konfiguration ersetzen.`)) return;
+  
+  saveStateToHistory('Vorlage angewendet');
+  
+  const project = getCurrentProject();
+  if(!project) return;
+  
+  // Projekt-Konfiguration aktualisieren
+  project.model_wp = template.config.model_wp;
+  
+  // WR-Konfiguration anwenden
+  Object.keys(template.config.wrConfig).forEach(wrId => {
+    if(project.plan[wrId]) {
+      project.plan[wrId] = {
+        ...project.plan[wrId],
+        name: template.config.wrConfig[wrId].name,
+        mppts: template.config.wrConfig[wrId].mppts,
+        inputs: template.config.wrConfig[wrId].inputs,
+        defaultMods: template.config.wrConfig[wrId].defaultMods
+      };
+    }
+  });
+  
+  // Matrix neu generieren
+  loadCurrentProjectData(false);
+  renderMatrix();
+  buildFilterBar();
+  
+  toast(`✅ Vorlage "${templateName}" angewendet`);
+}
+
+function deleteTemplate(templateName){
+  if(!confirm(`Vorlage "${templateName}" wirklich löschen?`)) return;
+  
+  delete PROJECT_TEMPLATES[templateName];
+  localStorage.setItem('pv_matrix_templates', JSON.stringify(PROJECT_TEMPLATES));
+  
+  renderTemplateOptions();
+  toast(`🗑️ Vorlage "${templateName}" gelöscht`);
+}
+
+function renderTemplateOptions(){
+  const select = g('template-select');
+  if(!select) return;
+  
+  select.innerHTML = '<option value="">-- Vorlage wählen --</option>';
+  
+  Object.keys(PROJECT_TEMPLATES).sort().forEach(name => {
+    const template = PROJECT_TEMPLATES[name];
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = `${name} (${template.description})`;
+    select.appendChild(option);
+  });
+}
+
+// Undo/Redo System
+let undoStack = [];
+let redoStack = [];
+const MAX_HISTORY = 50; // Max 50 Schritte im Memory
+
+function saveStateToHistory(description = 'Änderung'){
+  if(!CURRENT_PROJECT_ID) return;
+  
+  // Deep Copy des aktuellen States
+  const stateCopy = JSON.parse(JSON.stringify(APP_STATE));
+  const projectCopy = JSON.parse(JSON.stringify(PROJECTS[CURRENT_PROJECT_ID]));
+  
+  undoStack.push({
+    state: stateCopy,
+    project: projectCopy,
+    description: description,
+    timestamp: new Date().toISOString()
+  });
+  
+  // Redo-Stack leeren bei neuer Änderung
+  redoStack = [];
+  
+  // Stack limitieren
+  if(undoStack.length > MAX_HISTORY) {
+    undoStack.shift();
+  }
+  
+  updateUndoRedoUI();
+}
+
+function performUndo(){
+  if(undoStack.length === 0) {
+    toast('↩️ Nichts zum Rückgängig machen');
+    return;
+  }
+  
+  const currentState = {
+    state: JSON.parse(JSON.stringify(APP_STATE)),
+    project: JSON.parse(JSON.stringify(PROJECTS[CURRENT_PROJECT_ID])),
+    description: 'Vorheriger Zustand',
+    timestamp: new Date().toISOString()
+  };
+  
+  const previousState = undoStack.pop();
+  redoStack.push(currentState);
+  
+  // State wiederherstellen
+  APP_STATE = previousState.state;
+  PROJECTS[CURRENT_PROJECT_ID] = previousState.project;
+  
+  renderMatrix();
+  updateKPIs();
+  updateUndoRedoUI();
+  
+  toast(`↩️ ${previousState.description} rückgängig gemacht`);
+}
+
+function performRedo(){
+  if(redoStack.length === 0) {
+    toast('↪️ Nichts zum Wiederherstellen');
+    return;
+  }
+  
+  const currentState = {
+    state: JSON.parse(JSON.stringify(APP_STATE)),
+    project: JSON.parse(JSON.stringify(PROJECTS[CURRENT_PROJECT_ID])),
+    description: 'Aktueller Zustand',
+    timestamp: new Date().toISOString()
+  };
+  
+  const nextState = redoStack.pop();
+  undoStack.push(currentState);
+  
+  // State wiederherstellen
+  APP_STATE = nextState.state;
+  PROJECTS[CURRENT_PROJECT_ID] = nextState.project;
+  
+  renderMatrix();
+  updateKPIs();
+  updateUndoRedoUI();
+  
+  toast(`↪️ ${nextState.description} wiederhergestellt`);
+}
+
+function updateUndoRedoUI(){
+  // Hier könnten wir UI-Buttons updaten, falls wir welche hinzufügen
+  // Für jetzt nur Keyboard-Shortcuts aktiv
+}
+
+// Automatisches Speichern in History bei wichtigen Änderungen
+const originalSaveData = saveData;
+saveData = function(id, field, val) {
+  originalSaveData(id, field, val);
+  
+  // Nur bei Hardware-Änderungen oder Messwerten in History speichern
+  const importantFields = ['mod', 'stat', 'gak', 'uoc', 'isc', 'riso'];
+  if(importantFields.includes(field)) {
+    saveStateToHistory(`${field} geändert`);
+  }
+};
+
 function renderSidebarProjects(){
   const tree = g('sb-proj-tree');
   if(!tree) return;
@@ -2195,6 +2762,9 @@ async function initProjects(){
   CURRENT_PROJECT_ID = null;
   APP_STATE = {};
   cloudFetchSucceeded = false;
+  
+  // Templates laden
+  loadTemplatesFromStorage();
 
   if(supabaseClient && currentUser){
     try { await fetchProjectsFromCloud(); } catch(e){ console.warn('Cloud-Fetch fehlgeschlagen', e); }
@@ -2637,11 +3207,31 @@ function renderMatrix(remoteOverride = null){
       ${canHardware ? `
       <div class="wr-bulk-bar no-print">
         <span class="bulk-label">⚡ Bulk:</span>
-        <button class="wr-bulk-btn" onclick="bulkSetStat(${wr}, 'JA')" title="Alle Strings dieses WR auf JA">✅ Alle JA</button>
-        <button class="wr-bulk-btn" onclick="bulkSetStat(${wr}, 'NEIN')" title="Alle Strings dieses WR auf NEIN">❌ Alle NEIN</button>
-        <button class="wr-bulk-btn" onclick="bulkSetModules(${wr})" title="Modulzahl für alle aktiven Strings setzen">🔢 Module = …</button>
-        <button class="wr-bulk-btn" onclick="bulkApplyGakSchema(${wr})" title="GAK nach Schema GAK ${wr}.MPPT.Eingang setzen">🏷️ GAK-Schema</button>
-        <button class="wr-bulk-btn danger" onclick="bulkClearMeasurements(${wr})" title="Uoc/Isc/Riso/Bemerkung für diesen WR löschen">🧹 Messwerte löschen</button>
+        <div class="bulk-dropdown">
+          <button class="bulk-dropdown-btn" onclick="toggleBulkDropdown(${wr})">
+            <span>⚡ Aktionen</span>
+            <span>▼</span>
+          </button>
+          <div class="bulk-dropdown-menu" id="bulk-dropdown-${wr}">
+            <button class="bulk-dropdown-item" onclick="bulkSetStat(${wr}, 'JA'); toggleBulkDropdown(${wr});">
+              <span>✅</span> <span>Alle auf JA</span>
+            </button>
+            <button class="bulk-dropdown-item" onclick="bulkSetStat(${wr}, 'NEIN'); toggleBulkDropdown(${wr});">
+              <span>❌</span> <span>Alle auf NEIN</span>
+            </button>
+            <div class="bulk-dropdown-divider"></div>
+            <button class="bulk-dropdown-item" onclick="bulkSetModules(${wr}); toggleBulkDropdown(${wr});">
+              <span>🔢</span> <span>Module setzen...</span>
+            </button>
+            <button class="bulk-dropdown-item" onclick="bulkApplyGakSchema(${wr}); toggleBulkDropdown(${wr});">
+              <span>🏷️</span> <span>GAK-Schema anwenden</span>
+            </button>
+            <div class="bulk-dropdown-divider"></div>
+            <button class="bulk-dropdown-item danger" onclick="bulkClearMeasurements(${wr}); toggleBulkDropdown(${wr});">
+              <span>🧹</span> <span>Messwerte löschen</span>
+            </button>
+          </div>
+        </div>
       </div>` : ''}
       <div style="overflow-x:auto;">
         <table class="mt">
@@ -3302,6 +3892,98 @@ function hideBulkProgress(){
   if(progress) progress.classList.remove('show');
 }
 
+function toggleBulkDropdown(wrId){
+  const dropdown = g(`bulk-dropdown-${wrId}`);
+  if(!dropdown) return;
+  
+  // Alle anderen Dropdowns schließen
+  document.querySelectorAll('.bulk-dropdown-menu').forEach(menu => {
+    if(menu.id !== `bulk-dropdown-${wrId}`) menu.classList.remove('show');
+  });
+  
+  dropdown.classList.toggle('show');
+}
+
+// Dropdown schließen wenn man außerhalb klickt
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('.bulk-dropdown')) {
+    document.querySelectorAll('.bulk-dropdown-menu').forEach(menu => {
+      menu.classList.remove('show');
+    });
+  }
+});
+
+// Keyboard Shortcuts
+document.addEventListener('keydown', (e) => {
+  // Strg+S = Speichern
+  if((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    if(CURRENT_PROJECT_ID) {
+      toast('💾 Manuelles Speichern...');
+      if(supabaseClient && currentUser) {
+        saveProjectToCloud(CURRENT_PROJECT_ID);
+      } else {
+        showSaveIndicator('pending');
+      }
+    } else {
+      toast('⚠️ Kein Projekt zum Speichern');
+    }
+  }
+  
+  // Strg+N = Neues Projekt
+  if((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    e.preventDefault();
+    if(currentUserRole !== 'site') {
+      openNewProjectModal();
+    } else {
+      toast('🔒 Keine Berechtigung für neue Projekte');
+    }
+  }
+  
+  // Strg+F = Suche
+  if((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    e.preventDefault();
+    // Fokus auf erstes Eingabefeld oder Such-Dialog
+    const firstInput = document.querySelector('input[type="text"]:not([readonly])');
+    if(firstInput) {
+      firstInput.focus();
+      firstInput.select();
+    } else {
+      toast('🔍 Kein Suchfeld verfügbar');
+    }
+  }
+  
+  // Esc = Modals schließen
+  if(e.key === 'Escape') {
+    // Alle offenen Modals schließen
+    document.querySelectorAll('.modal-overlay.show').forEach(modal => {
+      modal.classList.remove('show');
+    });
+    
+    // Dropdowns schließen
+    document.querySelectorAll('.bulk-dropdown-menu').forEach(menu => {
+      menu.classList.remove('show');
+    });
+    
+    // Sidebar schließen auf Mobile
+    if(window.innerWidth <= 900) {
+      closeSidebar();
+    }
+  }
+  
+  // Strg+Z = Undo
+  if((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+    e.preventDefault();
+    performUndo();
+  }
+  
+  // Strg+Y oder Strg+Shift+Z = Redo
+  if((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+    e.preventDefault();
+    performRedo();
+  }
+});
+
 function bulkSetStat(wrId, st){
   if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
   const plan = getCurrentPlan();
@@ -3334,6 +4016,7 @@ function bulkSetStat(wrId, st){
     
     hideBulkProgress();
     if(changed === 0) return toast(`Bereits alles auf ${st}`);
+    saveStateToHistory(`Alle Strings auf ${st} gesetzt`);
     bulkPersistAndRender();
     toast(`${changed} Strings auf ${st} gesetzt`);
   }, 100);
@@ -3359,22 +4042,43 @@ function bulkSetModules(wrId){
   if(raw === null) return;
   const n = parseInt(raw, 10);
   if(isNaN(n) || n < 0 || n > 100) return toast('Ungültige Zahl (0–100)');
+  
   let changed = 0, total = 0;
   for(let m = 1; m <= (data.mppts||12); m++){
     for(let s = 1; s <= (data.inputs||2); s++){
       const it = APP_STATE[`${wrId}.${m}.${s}`];
       if(it && it.stat === 'JA'){
         total++;
-        if(it.mod !== n){
-          it.mod = n;
-          changed++;
-        }
       }
     }
   }
-  if(changed === 0) return toast(`Bereits alle ${total} aktiven Strings auf ${n}`);
-  bulkPersistAndRender();
-  toast(`${changed} aktive Strings → ${n} Module`);
+  
+  showBulkProgress(`Module auf ${n} setzen...`, 0, total);
+  
+  setTimeout(() => {
+    let current = 0;
+    for(let m = 1; m <= (data.mppts||12); m++){
+      for(let s = 1; s <= (data.inputs||2); s++){
+        const it = APP_STATE[`${wrId}.${m}.${s}`];
+        if(it && it.stat === 'JA'){
+          if(it.mod !== n){
+            it.mod = n;
+            changed++;
+          }
+          current++;
+          if(current % 5 === 0) {
+            showBulkProgress(`Module auf ${n} setzen...`, current, total);
+          }
+        }
+      }
+    }
+    
+    hideBulkProgress();
+    if(changed === 0) return toast(`Bereits alle ${total} aktiven Strings auf ${n}`);
+    saveStateToHistory(`Module auf ${n} gesetzt`);
+    bulkPersistAndRender();
+    toast(`${changed} aktive Strings → ${n} Module`);
+  }, 100);
 }
 
 function bulkApplyGakSchema(wrId){
@@ -3384,21 +4088,35 @@ function bulkApplyGakSchema(wrId){
   if(!data) return;
   const mppts = data.mppts || 12;
   const inputs = data.inputs || 2;
+  const total = mppts * inputs;
   let changed = 0;
-  for(let m = 1; m <= mppts; m++){
-    for(let s = 1; s <= inputs; s++){
-      const it = APP_STATE[`${wrId}.${m}.${s}`];
-      if(!it) continue;
-      const newGak = `GAK ${wrId}.${m}.${s}`;
-      if((it.gak || '').trim() === ''){
-        it.gak = newGak;
-        changed++;
+  
+  showBulkProgress('GAK-Schema anwenden...', 0, total);
+  
+  setTimeout(() => {
+    let current = 0;
+    for(let m = 1; m <= mppts; m++){
+      for(let s = 1; s <= inputs; s++){
+        const it = APP_STATE[`${wrId}.${m}.${s}`];
+        if(!it) continue;
+        const newGak = `GAK ${wrId}.${m}.${s}`;
+        if((it.gak || '').trim() === ''){
+          it.gak = newGak;
+          changed++;
+        }
+        current++;
+        if(current % 5 === 0) {
+          showBulkProgress('GAK-Schema anwenden...', current, total);
+        }
       }
     }
-  }
-  if(changed === 0) return toast('Alle GAK bereits gesetzt');
-  bulkPersistAndRender();
-  toast(`${changed} GAK nach Schema gesetzt`);
+    
+    hideBulkProgress();
+    if(changed === 0) return toast('Alle GAK bereits gesetzt');
+    saveStateToHistory('GAK-Schema angewendet');
+    bulkPersistAndRender();
+    toast(`${changed} GAK nach Schema gesetzt`);
+  }, 100);
 }
 
 function bulkClearMeasurements(wrId){
@@ -3407,28 +4125,48 @@ function bulkClearMeasurements(wrId){
   const data = plan[wrId];
   if(!data) return;
   if(!confirm(`Messwerte (Uoc, Isc, Riso, Bemerkung) für alle Strings dieses WR löschen?`)) return;
+  
+  const mppts = data.mppts || 12;
+  const inputs = data.inputs || 2;
+  const total = mppts * inputs;
   let changed = 0;
-  for(let m = 1; m <= (data.mppts||12); m++){
-    for(let s = 1; s <= (data.inputs||2); s++){
-      const it = APP_STATE[`${wrId}.${m}.${s}`];
-      if(!it) continue;
-      if(it.uoc || it.isc || it.riso || it.note){
-        it.uoc = ''; it.isc = ''; it.riso = ''; it.note = '';
-        changed++;
+  
+  showBulkProgress('Messwerte löschen...', 0, total);
+  
+  setTimeout(() => {
+    let current = 0;
+    for(let m = 1; m <= mppts; m++){
+      for(let s = 1; s <= inputs; s++){
+        const it = APP_STATE[`${wrId}.${m}.${s}`];
+        if(!it) continue;
+        if(it.uoc || it.isc || it.riso || it.note){
+          it.uoc = ''; it.isc = ''; it.riso = ''; it.note = '';
+          changed++;
+        }
+        current++;
+        if(current % 5 === 0) {
+          showBulkProgress('Messwerte löschen...', current, total);
+        }
       }
     }
-  }
-  if(changed === 0) return toast('Keine Messwerte zum Löschen');
-  bulkPersistAndRender();
-  toast(`🧹 ${changed} Messwerte gelöscht`);
+    
+    hideBulkProgress();
+    if(changed === 0) return toast('Keine Messwerte zum Löschen');
+    saveStateToHistory('Messwerte gelöscht');
+    bulkPersistAndRender();
+    toast(`🧹 ${changed} Messwerte gelöscht`);
+  }, 100);
 }
 
 async function bulkClearAllNotes(){
   if(!canEditMeasurement()) return toast('🔒 Keine Berechtigung — Protokoll ist gesperrt');
   const plan = getCurrentPlan();
   if(!plan) return;
+  if(!confirm('Bemerkungen bei ALLEN Strings im gesamten Projekt löschen?')) return;
+  
   // 1) Erst zählen, ohne etwas zu verändern
   const ids = [];
+  let total = 0;
   Object.keys(plan).forEach(wrId => {
     const data = plan[wrId];
     const mppts = data.mppts || 12;
@@ -3437,35 +4175,47 @@ async function bulkClearAllNotes(){
       for(let s = 1; s <= inputs; s++){
         const id = `${wrId}.${m}.${s}`;
         const it = APP_STATE[id];
-        if(it && it.note) ids.push(id);
+        if(it && it.note && it.note.trim() !== ''){
+          ids.push(id);
+          total++;
+        }
       }
     }
   });
-  if(ids.length === 0) return toast('Keine Bemerkungen vorhanden');
-  if(!confirm(`${ids.length} Bemerkung(en) im gesamten Projekt wirklich löschen?\n\nBetrifft alle Wechselrichter. Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
-  // 2) Jetzt wirklich löschen
-  ids.forEach(id => { APP_STATE[id].note = ''; });
-  const btn = g('btn-clear-notes');
-  if(btn){ btn.disabled = true; btn.style.opacity = '0.6'; }
-  toast('🔄 Lösche Bemerkungen …');
-  // Bewusst auf den Cloud-Save WARTEN: erst wenn er wirklich durch ist, gilt die
-  // Aktion als erledigt. Sonst kann ein zwischenzeitlicher Cloud-Fetch (z.B. beim
-  // erneuten Öffnen des Projekts) den alten Stand mit den Bemerkungen zurückholen.
-  const synced = await bulkPersistAndRender();
-  if(btn){ btn.disabled = false; btn.style.opacity = ''; }
-  toast(synced
-    ? `🧹 ${ids.length} Bemerkung(en) gelöscht`
-    : `⚠️ ${ids.length} Bemerkung(en) lokal gelöscht — Sync fehlgeschlagen, bitte Verbindung prüfen und Seite NICHT neu laden`);
+  if(total === 0) return toast('Keine Bemerkungen zum Löschen');
+  
+  showBulkProgress('Bemerkungen löschen...', 0, total);
+  
+  // Verzögerte Ausführung für UI-Update
+  setTimeout(() => {
+    let current = 0;
+    ids.forEach(id => {
+      if(APP_STATE[id]){
+        APP_STATE[id].note = '';
+      }
+      current++;
+      if(current % 5 === 0) {
+        showBulkProgress('Bemerkungen löschen...', current, total);
+      }
+    });
+    
+    hideBulkProgress();
+    saveStateToHistory('Alle Bemerkungen gelöscht');
+    bulkPersistAndRender();
+    toast(`🧹 ${total} Bemerkungen gelöscht`);
+  }, 100);
 }
 
-async function bulkPersistAndRender(){
+function bulkPersistAndRender(){
   const proj = getCurrentProject();
   let synced = true;
   if(proj){
     proj.updated_at = new Date().toISOString();
     PROJECTS[CURRENT_PROJECT_ID] = proj;
     saveProjectsLocal();
-    if(supabaseClient && currentUser) synced = await saveProjectToCloud(CURRENT_PROJECT_ID);
+    if(supabaseClient && currentUser) {
+      saveProjectToCloud(CURRENT_PROJECT_ID);
+    }
   }
   renderMatrix();
   return synced;

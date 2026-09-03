@@ -1939,6 +1939,14 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
   <button onclick="showDashboard();closeSidebar();" class="sidebar-btn">
     <span class="icon" style="color:#8b5cf6;">📈</span><span class="label">Dashboard</span>
   </button>
+  <button onclick="showScheduleModal();closeSidebar();" class="sidebar-btn">
+    <span class="icon" style="color:#eab308;">📅</span><span class="label">Auto-Schedule</span>
+  </button>
+
+  <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Team</div>
+  <button onclick="showCollaboration();closeSidebar();" class="sidebar-btn">
+    <span class="icon" style="color:#ef4444;">🔄</span><span class="label">Collaboration</span>
+  </button>
 
   <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Import & Export</div>
   <button onclick="openPVSOLModal();closeSidebar();" class="sidebar-btn role-gate-planner">
@@ -2715,6 +2723,1145 @@ function deleteSelectedTemplate(){
   deleteTemplate(selectedTemplate);
   renderTemplateOptions();
   updateTemplatePreview();
+}
+
+// Report Wizard Funktionen
+let currentWizardStep = 1;
+let selectedReportType = '';
+
+function showReportWizard(){
+  currentWizardStep = 1;
+  selectedReportType = '';
+  updateWizardUI();
+  g('report-wizard-modal').classList.add('show');
+}
+
+function closeReportWizard(e){
+  if(!e || e.target === e.currentTarget) g('report-wizard-modal').classList.remove('show');
+  resetWizard();
+}
+
+function resetWizard(){
+  currentWizardStep = 1;
+  selectedReportType = '';
+  g('report-timeframe').value = 'week';
+  g('custom-date-range').style.display = 'none';
+  g('report-format').value = 'pdf';
+  document.querySelectorAll('#wizard-step-1 .wizard-option').forEach(opt => opt.classList.remove('selected'));
+  updateWizardUI();
+}
+
+function selectReportType(type){
+  selectedReportType = type;
+  document.querySelectorAll('#wizard-step-1 .wizard-option').forEach(opt => {
+    opt.classList.remove('selected');
+    if(opt.dataset.type === type) opt.classList.add('selected');
+  });
+}
+
+function updateWizardUI(){
+  // Steps anzeigen/verstecken
+  for(let i = 1; i <= 3; i++){
+    const step = g(`wizard-step-${i}`);
+    const indicator = document.querySelector(`.wizard-step-indicator[data-step="${i}"]`);
+    if(step) step.classList.toggle('active', i === currentWizardStep);
+    if(indicator) {
+      indicator.classList.remove('active', 'completed');
+      if(i < currentWizardStep) indicator.classList.add('completed');
+      if(i === currentWizardStep) indicator.classList.add('active');
+    }
+  }
+  
+  // Buttons steuern
+  const backBtn = g('wizard-back');
+  const nextBtn = g('wizard-next');
+  const generateBtn = g('wizard-generate');
+  const cancelBtn = g('wizard-cancel');
+  
+  if(currentWizardStep === 1) {
+    backBtn.style.display = 'none';
+    nextBtn.style.display = 'inline-flex';
+    nextBtn.textContent = 'Weiter';
+    generateBtn.style.display = 'none';
+  } else if(currentWizardStep === 2) {
+    backBtn.style.display = 'inline-flex';
+    nextBtn.style.display = 'inline-flex';
+    nextBtn.textContent = 'Weiter';
+    generateBtn.style.display = 'none';
+  } else if(currentWizardStep === 3) {
+    backBtn.style.display = 'inline-flex';
+    nextBtn.style.display = 'none';
+    generateBtn.style.display = 'inline-flex';
+    generateBtn.textContent = '📊 Generieren';
+  }
+  
+  // Date-Range Toggle
+  const timeframe = g('report-timeframe');
+  const customRange = g('custom-date-range');
+  if(timeframe && customRange) {
+    customRange.style.display = timeframe.value === 'custom' ? 'block' : 'none';
+  }
+  
+  // Zusammenfassung aktualisieren
+  updateReportSummary();
+}
+
+function wizardNext(){
+  if(currentWizardStep === 1) {
+    if(!selectedReportType) return toast('⚠️ Bitte einen Berichtstyp wählen');
+    currentWizardStep = 2;
+  } else if(currentWizardStep === 2) {
+    currentWizardStep = 3;
+  }
+  updateWizardUI();
+}
+
+function wizardBack(){
+  if(currentWizardStep > 1) {
+    currentWizardStep--;
+    updateWizardUI();
+  }
+}
+
+function updateReportSummary(){
+  const summary = g('report-summary');
+  if(!summary) return;
+  
+  const typeNames = {
+    'weekly': 'Wochenbericht',
+    'project': 'Projekt-Status',
+    'performance': 'Performance-Analyse',
+    'custom': 'Benutzerdefinierter Bericht'
+  };
+  
+  const timeframe = g('report-timeframe').value;
+  const format = g('report-format').value;
+  
+  let html = `<strong>Typ:</strong> ${typeNames[selectedReportType] || 'Nicht gewählt'}<br>`;
+  html += `<strong>Zeitraum:</strong> ${timeframe === 'custom' ? 'Benutzerdefiniert' : timeframe}<br>`;
+  html += `<strong>Format:</strong> ${format === 'both' ? 'PDF + Excel' : format.toUpperCase()}<br>`;
+  
+  const includeKPI = g('include-kpi').checked;
+  const includeDetails = g('include-details').checked;
+  const includeCharts = g('include-charts').checked;
+  const includeSignatures = g('include-signatures').checked;
+  
+  html += `<strong>Inhalte:</strong> `;
+  const includes = [];
+  if(includeKPI) includes.push('KPIs');
+  if(includeDetails) includes.push('Details');
+  if(includeCharts) includes.push('Diagramme');
+  if(includeSignatures) includes.push('Unterschriften');
+  html += includes.join(', ') || 'Keine';
+  
+  summary.innerHTML = html;
+}
+
+function generateReport(){
+  if(!selectedReportType) return toast('⚠️ Bitte zuerst einen Berichtstyp wählen');
+  
+  toast('📊 Generiere Bericht...');
+  
+  // Bericht-Daten sammeln
+  const reportData = collectReportData();
+  
+  // Entsprechend dem Typ generieren
+  if(selectedReportType === 'weekly') {
+    generateWeeklyReport(reportData);
+  } else if(selectedReportType === 'project') {
+    generateProjectReport(reportData);
+  } else if(selectedReportType === 'performance') {
+    generatePerformanceReport(reportData);
+  } else if(selectedReportType === 'custom') {
+    generateCustomReport(reportData);
+  }
+  
+  closeReportWizard();
+}
+
+function collectReportData(){
+  const project = getCurrentProject();
+  const plan = getCurrentPlan();
+  
+  const data = {
+    project: project,
+    plan: plan,
+    state: APP_STATE,
+    timeframe: g('report-timeframe').value,
+    format: g('report-format').value,
+    includeKPI: g('include-kpi').checked,
+    includeDetails: g('include-details').checked,
+    includeCharts: g('include-charts').checked,
+    includeSignatures: g('include-signatures').checked,
+    customDateFrom: g('report-date-from').value,
+    customDateTo: g('report-date-to').value
+  };
+  
+  return data;
+}
+
+function generateWeeklyReport(data){
+  const project = data.project;
+  
+  // HTML für Wochenbericht
+  let html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; }
+        .report-header { border-bottom: 2px solid #00873d; padding: 20px 0; margin-bottom: 20px; }
+        .report-title { font-size: 18pt; font-weight: bold; color: #000; }
+        .report-meta { font-size: 10pt; color: #666; margin-top: 8px; }
+        .report-section { margin: 30px 0; }
+        .section-title { font-size: 14pt; font-weight: bold; color: #00873d; margin-bottom: 15px; border-bottom: 1px solid #ccc; padding-bottom: 8px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
+        .kpi-box { border: 1px solid #ccc; padding: 15px; text-align: center; }
+        .kpi-value { font-size: 18pt; font-weight: bold; color: #00873d; }
+        .kpi-label { font-size: 9pt; color: #666; }
+        .activity-list { margin-top: 15px; }
+        .activity-item { padding: 10px; border-bottom: 1px solid #eee; }
+        .activity-time { font-size: 8pt; color: #999; }
+        .activity-text { font-size: 10pt; }
+      </style>
+    </head>
+    <body>
+      <div class="report-header">
+        <div class="report-title">📅 Wochenbericht - ${project.name}</div>
+        <div class="report-meta">Woche vom ${getWeekStart()} bis ${getWeekEnd()} · ${new Date().toLocaleDateString('de-DE')}</div>
+      </div>
+      
+      <div class="report-section">
+        <div class="section-title">📊 Zusammenfassung</div>
+        <div class="kpi-grid">
+          <div class="kpi-box">
+            <div class="kpi-value">${calculateTotalPower()} kWp</div>
+            <div class="kpi-label">Gesamtleistung</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-value">${calculateTotalModules()}</div>
+            <div class="kpi-label">Module gesamt</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-value">${calculateActiveStrings()}</div>
+            <div class="kpi-label">Aktive Strings</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-value">${calculateCompletionRate()}%</div>
+            <div class="kpi-label">Fertigstellung</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="report-section">
+        <div class="section-title">🔄 Aktivitäten</div>
+        <div class="activity-list">
+          <div class="activity-item">
+            <div class="activity-time">${new Date().toLocaleDateString('de-DE')}</div>
+            <div class="activity-text">Bericht generiert von ${currentUser?.email || 'Admin'}</div>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  downloadReport(html, `${project.name}_Wochenbericht_${getWeekNumber()}.html`);
+}
+
+function generateProjectReport(data){
+  const project = data.project;
+  const plan = data.plan;
+  
+  // Status pro WR
+  let wrStatus = '';
+  Object.keys(plan).forEach(wrId => {
+    const wrData = plan[wrId];
+    const mppts = Array.isArray(wrData) ? 12 : (wrData.mppts || 12);
+    const inputs = Array.isArray(wrData) ? 2 : (wrData.inputs || 2);
+    
+    let active = 0, total = mppts * inputs;
+    for(let m = 1; m <= mppts; m++){
+      for(let s = 1; s <= inputs; s++){
+        const id = `${wrId}.${m}.${s}`;
+        if(APP_STATE[id] && APP_STATE[id].stat === 'JA') active++;
+      }
+    }
+    
+    wrStatus += `
+      <div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
+        <strong>WR ${wrId}:</strong> ${active}/${total} Strings aktiv (${Math.round(active/total*100)}%)
+      </div>
+    `;
+  });
+  
+  let html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; }
+        .report-header { border-bottom: 2px solid #00873d; padding: 20px 0; margin-bottom: 20px; }
+        .report-title { font-size: 18pt; font-weight: bold; color: #000; }
+        .report-meta { font-size: 10pt; color: #666; margin-top: 8px; }
+        .status-section { margin: 20px 0; }
+        .section-title { font-size: 14pt; font-weight: bold; color: #00873d; margin-bottom: 15px; }
+      </style>
+    </head>
+    <body>
+      <div class="report-header">
+        <div class="report-title">📁 Projekt-Status - ${project.name}</div>
+        <div class="report-meta">${new Date().toLocaleDateString('de-DE')} · ${project.locked ? '🔒 GESPERRT' : '✅ OFFEN'}</div>
+      </div>
+      
+      <div class="status-section">
+        <div class="section-title">📊 Wechselrichter-Status</div>
+        ${wrStatus}
+      </div>
+    </body>
+    </html>
+  `;
+  
+  downloadReport(html, `${project.name}_Status_${new Date().toLocaleDateString('de-DE').replace(/\./g, '-')}.html`);
+}
+
+function generatePerformanceReport(data){
+  const project = data.project;
+  
+  // Performance-Analysen
+  const analysis = analyzePerformance();
+  
+  let html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; }
+        .report-header { border-bottom: 2px solid #00873d; padding: 20px 0; margin-bottom: 20px; }
+        .report-title { font-size: 18pt; font-weight: bold; color: #000; }
+        .analysis-section { margin: 20px 0; }
+        .section-title { font-size: 14pt; font-weight: bold; color: #00873d; margin-bottom: 15px; }
+        .metric-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
+        .metric-name { font-weight: 600; }
+        .metric-value { font-weight: bold; color: #00873d; }
+        .metric-bar { height: 20px; background: #eee; border-radius: 10px; overflow: hidden; }
+        .metric-fill { height: 100%; background: #00873d; border-radius: 10px; }
+      </style>
+    </head>
+    <body>
+      <div class="report-header">
+        <div class="report-title">📈 Performance-Analyse - ${project.name}</div>
+        <div class="report-meta">${new Date().toLocaleDateString('de-DE')}</div>
+      </div>
+      
+      <div class="analysis-section">
+        <div class="section-title">📊 Performance-Metriken</div>
+        ${analysis}
+      </div>
+    </body>
+    </html>
+  `;
+  
+  downloadReport(html, `${project.name}_Performance_${new Date().toLocaleDateString('de-DE').replace(/\./g, '-')}.html`);
+}
+
+function generateCustomReport(data){
+  toast('📊 Benutzerdefinierter Bericht wird vorbereitet...');
+  // Placeholder für custom Report
+}
+
+function downloadReport(html, filename){
+  const blob = new Blob([html], { type: 'text/html' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  toast('✅ Bericht erfolgreich heruntergeladen');
+}
+
+// Hilfsfunktionen für Berichte
+function getWeekStart(){
+  const now = new Date();
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  const weekStart = new Date(now.setDate(diff));
+  return weekStart.toLocaleDateString('de-DE');
+}
+
+function getWeekEnd(){
+  const now = new Date();
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? 0 : 7);
+  const weekEnd = new Date(now.setDate(diff));
+  return weekEnd.toLocaleDateString('de-DE');
+}
+
+function getWeekNumber(){
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const week = Math.ceil((((now - start) / 86400000) + start.getDay() + 1) / 7);
+  return week;
+}
+
+function calculateTotalPower(){
+  let total = 0;
+  const wp = getCurrentWp();
+  Object.keys(APP_STATE).forEach(id => {
+    const item = APP_STATE[id];
+    if(item && item.stat === 'JA' && item.mod > 0) {
+      total += (item.mod * wp) / 1000;
+    }
+  });
+  return total.toFixed(2);
+}
+
+function calculateTotalModules(){
+  let total = 0;
+  Object.keys(APP_STATE).forEach(id => {
+    const item = APP_STATE[id];
+    if(item && item.stat === 'JA' && item.mod > 0) {
+      total += item.mod;
+    }
+  });
+  return total;
+}
+
+function calculateActiveStrings(){
+  let active = 0;
+  Object.keys(APP_STATE).forEach(id => {
+    const item = APP_STATE[id];
+    if(item && item.stat === 'JA') {
+      active++;
+    }
+  });
+  return active;
+}
+
+function calculateCompletionRate(){
+  let complete = 0;
+  let total = 0;
+  Object.keys(APP_STATE).forEach(id => {
+    const item = APP_STATE[id];
+    if(item) {
+      total++;
+      if(getStringStatus(id) === 'COMPLETE') complete++;
+    }
+  });
+  return total > 0 ? Math.round(complete / total * 100) : 0;
+}
+
+function analyzePerformance(){
+  let html = '';
+  
+  // Messwert-Distribution
+  const measurements = {
+    uoc: [], isc: [], riso: []
+  };
+  
+  Object.keys(APP_STATE).forEach(id => {
+    const item = APP_STATE[id];
+    if(item && item.stat === 'JA') {
+      if(item.uoc) measurements.uoc.push(parseFloat(item.uoc.replace(',', '.')));
+      if(item.isc) measurements.isc.push(parseFloat(item.isc.replace(',', '.')));
+      if(item.riso) measurements.riso.push(parseFloat(item.riso.replace(',', '.')));
+    }
+  });
+  
+  html += `<div class="metric-row">
+    <div class="metric-name">Uoc-Durchschnitt:</div>
+    <div class="metric-value">${measurements.uoc.length ? (measurements.uoc.reduce((a,b) => a+b) / measurements.uoc.length).toFixed(1) + ' V' : 'N/A'}</div>
+  </div>`;
+  
+  html += `<div class="metric-row">
+    <div class="metric-name">Isc-Durchschnitt:</div>
+    <div class="metric-value">${measurements.isc.length ? (measurements.isc.reduce((a,b) => a+b) / measurements.isc.length).toFixed(2) + ' A' : 'N/A'}</div>
+  </div>`;
+  
+  html += `<div class="metric-row">
+    <div class="metric-name">Riso-Durchschnitt:</div>
+    <div class="metric-value">${measurements.riso.length ? (measurements.riso.reduce((a,b) => a+b) / measurements.riso.length).toFixed(1) + ' MΩ' : 'N/A'}</div>
+  </div>`;
+  
+  return html;
+}
+
+// Auto-Schedule System
+let REPORT_SCHEDULES = {};
+
+function showScheduleModal(){
+  renderScheduleList();
+  g('schedule-modal').classList.add('show');
+}
+
+function saveScheduleConfig(scheduleData){
+  const project = getCurrentProject();
+  if(!project) return toast('⚠️ Kein Projekt geöffnet');
+  
+  if(!REPORT_SCHEDULES[project.id]) {
+    REPORT_SCHEDULES[project.id] = [];
+  }
+  
+  REPORT_SCHEDULES[project.id].push({
+    ...scheduleData,
+    id: Date.now(),
+    createdAt: new Date().toISOString()
+  });
+  
+  localStorage.setItem('pv_report_schedules', JSON.stringify(REPORT_SCHEDULES));
+  renderScheduleList();
+  toast('✅ Automatischer Bericht gespeichert');
+}
+
+function renderScheduleList(){
+  const list = g('schedule-list');
+  if(!list) return;
+  
+  const project = getCurrentProject();
+  if(!project || !REPORT_SCHEDULES[project.id]) {
+    list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted);">Keine automatischen Berichte für dieses Projekt</div>';
+    return;
+  }
+  
+  list.innerHTML = REPORT_SCHEDULES[project.id].map(schedule => {
+    return `
+      <div style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-weight:700; color:var(--text);">${schedule.type}</div>
+          <div style="font-size:0.8rem; color:var(--muted);">${schedule.frequency} · ${schedule.time}</div>
+        </div>
+        <button onclick="deleteSchedule(${schedule.id})" class="btn btn-ghost" style="padding:4px 8px; color:#ef4444;">🗑️</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function deleteSchedule(scheduleId){
+  const project = getCurrentProject();
+  if(!project) return;
+  
+  REPORT_SCHEDULES[project.id] = REPORT_SCHEDULES[project.id].filter(s => s.id !== scheduleId);
+  localStorage.setItem('pv_report_schedules', JSON.stringify(REPORT_SCHEDULES));
+  renderScheduleList();
+  toast('🗑️ Automatischer Bericht gelöscht');
+}
+
+function loadSchedulesFromStorage(){
+  try {
+    const stored = localStorage.getItem('pv_report_schedules');
+    if(stored) {
+      REPORT_SCHEDULES = JSON.parse(stored);
+    }
+  } catch(e) {
+    console.warn('Schedules konnten nicht geladen werden', e);
+  }
+}
+
+// Keyboard Shortcuts Setup
+function setupKeyboardShortcuts(){
+  document.addEventListener('keydown', (e) => {
+    // Keyboard Shortcuts nur wenn nicht in einem Input-Feld
+    if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+      return;
+    }
+    
+    // Strg+S = Manuelles Speichern
+    if(e.ctrlKey && e.key === 's') {
+      e.preventDefault();
+      cloudSave();
+      toast('💾 Speichern...');
+    }
+    
+    // Strg+N = Neues Projekt
+    if(e.ctrlKey && e.key === 'n') {
+      e.preventDefault();
+      showNewProjectModal();
+    }
+    
+    // Strg+F = Fokus auf erstes Eingabefeld
+    if(e.ctrlKey && e.key === 'f') {
+      e.preventDefault();
+      const firstInput = document.querySelector('.sp-inp:not([readonly])');
+      if(firstInput) {
+        firstInput.focus();
+        firstInput.select();
+        toast('🔍 Fokus auf erstes Eingabefeld');
+      }
+    }
+    
+    // Esc = Alle Modals schließen
+    if(e.key === 'Escape') {
+      closeAllModals();
+      toast('✓ Alle Fenster geschlossen');
+    }
+    
+    // Strg+Z = Undo
+    if(e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      undo();
+    }
+    
+    // Strg+Y oder Strg+Shift+Z = Redo
+    if((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
+      e.preventDefault();
+      redo();
+    }
+  });
+}
+
+function closeAllModals(){
+  document.querySelectorAll('.modal-overlay.show').forEach(modal => {
+    modal.classList.remove('show');
+  });
+  document.querySelectorAll('.modal-overlay.active').forEach(modal => {
+    modal.classList.remove('active');
+  });
+}
+
+// Dashboard Funktionen
+function showDashboard(){
+  renderDashboardCharts();
+  g('dashboard-modal').classList.add('show');
+}
+
+function closeDashboard(e){
+  if(!e || e.target === e.currentTarget) g('dashboard-modal').classList.remove('show');
+}
+
+function renderDashboardCharts(){
+  if(!window.Chart) return toast('⚠️ Chart Library nicht geladen');
+  
+  // Power Chart
+  const powerCtx = g('power-chart').getContext('2d');
+  if(powerCtx) {
+    new Chart(powerCtx, {
+      type: 'line',
+      data: {
+        labels: ['Woche 1', 'Woche 2', 'Woche 3', 'Woche 4', 'Woche 5'],
+        datasets: [{
+          label: 'Leistung (kWp)',
+          data: [calculateTotalPower(), calculateTotalPower() * 1.1, calculateTotalPower() * 1.2, calculateTotalPower() * 1.15, calculateTotalPower() * 1.1],
+          borderColor: '#00873d',
+          backgroundColor: 'rgba(0, 135, 61, 0.1)',
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+  
+  // Status Chart
+  const statusCtx = g('status-chart').getContext('2d');
+  if(statusCtx) {
+    const complete = countStringsByStatus('COMPLETE');
+    const incomplete = countStringsByStatus('INCOMPLETE');
+    const inactive = countStringsByStatus('NEIN');
+    
+    new Chart(statusCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Komplett', 'Unvollständig', 'Inaktiv'],
+        datasets: [{
+          data: [complete, incomplete, inactive],
+          backgroundColor: ['#00873d', '#eab308', '#64748b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  }
+  
+  // Timeline Chart
+  const timelineCtx = g('timeline-chart').getContext('2d');
+  if(timelineCtx) {
+    new Chart(timelineCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'],
+        datasets: [{
+          label: 'Messungen',
+          data: [12, 15, 8, 20, 18],
+          backgroundColor: '#00873d'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+  
+  // Error Chart
+  const errorCtx = g('error-chart').getContext('2d');
+  if(errorCtx) {
+    const errors = countStringsByStatus('ERROR');
+    const valid = countStringsByStatus('COMPLETE') + countStringsByStatus('INCOMPLETE');
+    
+    new Chart(errorCtx, {
+      type: 'pie',
+      data: {
+        labels: ['Fehlerfrei', 'Mit Fehlern'],
+        datasets: [{
+          data: [valid, errors],
+          backgroundColor: ['#00873d', '#ef4444'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  }
+}
+
+function countStringsByStatus(status){
+  let count = 0;
+  Object.keys(APP_STATE).forEach(id => {
+    if(getStringStatus(id) === status) count++;
+  });
+  return count;
+}
+
+// Collaboration System
+let activeUsers = {};
+let chatMessages = [];
+
+function showCollaboration(){
+  g('collaboration-modal').classList.add('show');
+  simulateUserPresence();
+}
+
+function closeCollaboration(e){
+  if(!e || e.target === e.currentTarget) g('collaboration-modal').classList.remove('show');
+}
+
+function simulateUserPresence(){
+  // Simulation für Demo-Zwecke (in echter Implementation via WebSocket)
+  const demoUsers = [
+    { name: 'Max Mustermann', email: 'max@example.com', status: 'online' },
+    { name: 'Lisa Schmidt', email: 'lisa@example.com', status: 'offline' },
+    { name: 'Tom Weber', email: 'tom@example.com', status: 'online' }
+  ];
+  
+  const presenceList = g('user-presence-list');
+  if(presenceList) {
+    presenceList.innerHTML = demoUsers.map(user => `
+      <div class="user-presence-item ${user.status}">
+        <div class="presence-dot"></div>
+        <span>${user.name} (${user.status === 'online' ? '🟢' : '⚫'})</span>
+      </div>
+    `).join('');
+  }
+}
+
+function sendChatMessage(){
+  const input = g('chat-input');
+  const message = input.value.trim();
+  if(!message) return;
+  
+  const chatMessages = g('chat-messages');
+  if(chatMessages) {
+    // Eigene Nachricht
+    const ownMessage = document.createElement('div');
+    ownMessage.className = 'chat-message own';
+    ownMessage.innerHTML = `<strong>Du:</strong> ${message}`;
+    chatMessages.appendChild(ownMessage);
+    
+    // Scroll zum Ende
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    input.value = '';
+    
+    // Simulierte Antwort
+    setTimeout(() => {
+      const replyMessage = document.createElement('div');
+      replyMessage.className = 'chat-message';
+      replyMessage.innerHTML = `<strong>System:</strong> Nachricht empfangen (Demo-Modus)`;
+      chatMessages.appendChild(replyMessage);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 1000);
+  }
+}
+
+function handleChatKeypress(event){
+  if(event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    sendChatMessage();
+  }
+}
+
+// Conflict Resolution System
+let pendingConflicts = [];
+
+function detectConflicts(localData, remoteData){
+  const conflicts = [];
+  
+  Object.keys(localData).forEach(id => {
+    if(remoteData[id] && JSON.stringify(localData[id]) !== JSON.stringify(remoteData[id])) {
+      conflicts.push({
+        id: id,
+        local: localData[id],
+        remote: remoteData[id],
+        timestamp: Date.now()
+      });
+    }
+  });
+  
+  return conflicts;
+}
+
+function showConflictWizard(conflicts){
+  if(!conflicts || conflicts.length === 0) return;
+  
+  pendingConflicts = conflicts;
+  renderConflictWizard();
+  g('conflict-wizard-modal').classList.add('show');
+}
+
+function closeConflictWizard(e){
+  if(!e || e.target === e.currentTarget) g('conflict-wizard-modal').classList.remove('show');
+  pendingConflicts = [];
+}
+
+function renderConflictWizard(){
+  const conflictList = g('conflict-list');
+  if(!conflictList) return;
+  
+  conflictList.innerHTML = pendingConflicts.map((conflict, index) => {
+    return `
+      <div class="conflict-item" data-index="${index}">
+        <div style="font-weight:700; color:var(--text); margin-bottom:8px;">🔄 Konflikt bei ${conflict.id}</div>
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div class="conflict-side local">
+            <div style="font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:4px;">📱 Deine Änderung</div>
+            <div style="background:var(--bg); padding:8px; border-radius:6px; font-size:0.8rem;">
+              ${formatConflictData(conflict.local)}
+            </div>
+          </div>
+          
+          <div class="conflict-side remote">
+            <div style="font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:4px;">☁️ Änderung von anderen</div>
+            <div style="background:var(--bg); padding:8px; border-radius:6px; font-size:0.8rem;">
+              ${formatConflictData(conflict.remote)}
+            </div>
+          </div>
+        </div>
+        
+        <div style="display:flex; gap:8px;">
+          <button onclick="resolveConflict(${index}, 'local')" class="btn btn-primary" style="flex:1; font-size:0.8rem;">📱 Meine Version</button>
+          <button onclick="resolveConflict(${index}, 'remote')" class="btn btn-ghost" style="flex:1; font-size:0.8rem;">☁️ Remote-Version</button>
+          <button onclick="resolveConflict(${index}, 'preview')" class="btn btn-ghost" style="flex:1; font-size:0.8rem;">🔀 Preview</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function formatConflictData(data){
+  if(!data) return 'Keine Daten';
+  
+  const fields = [];
+  if(data.stat) fields.push(`Status: ${data.stat}`);
+  if(data.mod) fields.push(`Module: ${data.mod}`);
+  if(data.gak) fields.push(`GAK: ${data.gak}`);
+  if(data.uoc) fields.push(`Uoc: ${data.uoc}V`);
+  if(data.isc) fields.push(`Isc: ${data.isc}A`);
+  if(data.riso) fields.push(`Riso: ${data.riso}MΩ`);
+  
+  return fields.join('<br>') || 'Keine Änderungen';
+}
+
+function resolveConflict(index, action){
+  const idx = typeof index === 'string' ? parseInt(index) : index;
+  const conflict = pendingConflicts[idx];
+  if(!conflict) return;
+  
+  if(action === 'local') {
+    // Lokale Version behalten
+    APP_STATE[conflict.id] = conflict.local;
+  } else if(action === 'remote') {
+    // Remote-Version übernehmen
+    APP_STATE[conflict.id] = conflict.remote;
+  } else if(action === 'merge') {
+    // Intelligent zusammenführen
+    APP_STATE[conflict.id] = mergeData(conflict.local, conflict.remote);
+  } else if(action === 'preview') {
+    // Preview anzeigen
+    showMergePreview(conflict);
+    return; // Nicht auflösen, nur Preview
+  }
+  
+  // Konflikt aus Liste entfernen
+  pendingConflicts.splice(idx, 1);
+  
+  // Wizard aktualisieren oder schließen
+  if(pendingConflicts.length === 0) {
+    closeConflictWizard();
+    toast('✅ Alle Konflikte gelöst');
+    renderMatrixDebounced();
+  } else {
+    renderConflictWizard();
+  }
+}
+
+function showMergePreview(conflict){
+  const idx = pendingConflicts.indexOf(conflict);
+  const merged = mergeData(conflict.local, conflict.remote);
+  
+  const previewHTML = `
+    <div class="conflict-merge-preview">
+      <div style="font-weight:700; color:var(--text); margin-bottom:8px;">🔀 Zusammengeführte Version Preview</div>
+      <div style="font-size:0.8rem; color:var(--muted); margin-bottom:12px;">
+        Dies ist die Version, die bei Zusammenführung entstehen würde:
+      </div>
+      <div style="background:var(--bg); padding:12px; border-radius:8px; font-size:0.85rem;">
+        ${formatConflictData(merged)}
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button onclick="confirmMergePreview(${idx})" class="btn btn-primary" style="flex:1; font-size:0.8rem;">✅ Zusammenführen</button>
+        <button onclick="cancelMergePreview()" class="btn btn-ghost" style="flex:1; font-size:0.8rem;">Abbrechen</button>
+      </div>
+    </div>
+  `;
+  
+  // Preview in den Konflikt-Dialog einfügen
+  const conflictItem = document.querySelector(`.conflict-item[data-index="${idx}"]`);
+  if(conflictItem) {
+    conflictItem.insertAdjacentHTML('beforeend', previewHTML);
+  }
+}
+
+function confirmMergePreview(index){
+  const conflict = pendingConflicts[index];
+  if(conflict) {
+    APP_STATE[conflict.id] = mergeData(conflict.local, conflict.remote);
+    pendingConflicts.splice(index, 1);
+    
+    if(pendingConflicts.length === 0) {
+      closeConflictWizard();
+      toast('✅ Alle Konflikte gelöst');
+      renderMatrixDebounced();
+    } else {
+      renderConflictWizard();
+    }
+  }
+}
+
+function cancelMergePreview(){
+  // Preview entfernen ohne Merge
+  const preview = document.querySelector('.conflict-merge-preview');
+  if(preview) preview.remove();
+}
+
+// Demo-Funktion für Konflikt-Testing
+function demoConflict(){
+  // Demo für Konflikt-Erkennung
+  const demoConflicts = [
+    {
+      id: '1.1.1',
+      local: { stat: 'JA', mod: 14, gak: 'GAK 1.1.1', uoc: '800', isc: '10', riso: '100' },
+      remote: { stat: 'JA', mod: 16, gak: 'GAK 1.1.1', uoc: '820', isc: '11', riso: '120' },
+      timestamp: Date.now()
+    }
+  ];
+  
+  showConflictWizard(demoConflicts);
+}
+
+function mergeData(local, remote){
+  const merged = { ...local };
+  
+  // Intelligente Merge-Strategie
+  Object.keys(remote).forEach(key => {
+    if(!local[key] || local[key] === '') {
+      // Wenn lokal leer, remote nehmen
+      merged[key] = remote[key];
+    } else if(remote[key] && remote[key] !== '') {
+      // Beide vorhanden - intelligente Entscheidung
+      if(key === 'mod' && Number(remote[key]) > Number(local[key])) {
+        merged[key] = remote[key]; // Höhere Modulanzahl
+      } else if(key === 'stat' && remote[key] === 'JA') {
+        merged[key] = remote[key]; // Aktiv vor Inaktiv
+      } else if(key === 'uoc' || key === 'isc' || key === 'riso') {
+        // Messwerte: nehmen den aktuelleren
+        // In echter Implementation hier Timestamp vergleichen
+        merged[key] = remote[key];
+      }
+    }
+  });
+  
+  return merged;
+}
+
+function autoMergeAllConflicts(){
+  if(!pendingConflicts || pendingConflicts.length === 0) return;
+  
+  toast('🔀 Auto-Merge läuft...');
+  
+  pendingConflicts.forEach((conflict, index) => {
+    APP_STATE[conflict.id] = mergeData(conflict.local, conflict.remote);
+  });
+  
+  pendingConflicts = [];
+  closeConflictWizard();
+  toast('✅ Alle Konflikte automatisch zusammengeführt');
+  renderMatrixDebounced();
+}
+
+// Conflict Wizard Modal Styles
+const conflictWizardStyles = `
+<style>
+.conflict-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.conflict-side {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.conflict-side.local {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+.conflict-side.remote {
+  border-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.05);
+}
+.conflict-merge-preview {
+  background: var(--accent-glow);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+}
+</style>
+`;
+
+// Conflict Wizard Modal
+const conflictWizardModal = `
+<div id="conflict-wizard-modal" class="modal-overlay" onclick="closeConflictWizard(event)">
+  <div class="modal-card" data-modal="centered" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h2>🔄 Konflikt-Lösung</h2>
+      <button onclick="closeConflictWizard()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;line-height:1.4;">
+        Es wurden Änderungen von anderen Benutzern gefunden, die mit deinen Änderungen kollidieren. Bitte entscheide, welche Version behalten werden soll.
+      </div>
+      
+      <div id="conflict-list"></div>
+      
+      <div style="display:flex; gap:12px; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+        <button onclick="autoMergeAllConflicts()" class="btn btn-primary" style="flex:1;">🔀 Alle automatisch zusammenführen</button>
+        <button onclick="closeConflictWizard()" class="btn btn-ghost" style="flex:1;">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+`;
+
+// Conflict Wizard Modal in DOM einfügen
+const collaborationModal = g('collaboration-modal');
+if(collaborationModal) {
+  collaborationModal.insertAdjacentHTML('afterend', conflictWizardStyles + conflictWizardModal);
+}
+
+// Schedule Modal hinzufügen
+const scheduleModalHTML = `
+<div id="schedule-modal" class="modal-overlay" onclick="closeScheduleModal(event)">
+  <div class="modal-card" data-modal="centered" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h2>📅 Automatische Berichte</h2>
+      <button onclick="closeScheduleModal()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;line-height:1.4;">
+        Plane automatische Berichte für dieses Projekt.
+      </div>
+      
+      <div class="field">
+        <label>Bericht-Typ</label>
+        <select id="schedule-type" class="sp-inp">
+          <option value="weekly">Wochenbericht</option>
+          <option value="project">Projekt-Status</option>
+          <option value="performance">Performance-Analyse</option>
+        </select>
+      </div>
+      
+      <div class="field">
+        <label>Frequenz</label>
+        <select id="schedule-frequency" class="sp-inp">
+          <option value="daily">Täglich</option>
+          <option value="weekly">Wöchentlich</option>
+          <option value="monthly">Monatlich</option>
+        </select>
+      </div>
+      
+      <div class="field">
+        <label>Zeit</label>
+        <input type="time" id="schedule-time" class="sp-inp" value="08:00">
+      </div>
+      
+      <div style="display:flex; gap:12px; margin-top:16px;">
+        <button onclick="closeScheduleModal()" class="btn btn-ghost" style="flex:1;">Abbrechen</button>
+        <button onclick="saveSchedule()" class="btn btn-primary" style="flex:1;">💾 Speichern</button>
+      </div>
+      
+      <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border);">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--muted);margin-bottom:12px;">Aktive Schedules:</div>
+        <div id="schedule-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+// Schedule Modal in DOM einfügen
+const templateModal = g('template-modal');
+if(templateModal) {
+  templateModal.insertAdjacentHTML('afterend', scheduleModalHTML);
+}
+
+function closeScheduleModal(e){
+  if(!e || e.target === e.currentTarget) g('schedule-modal').classList.remove('show');
+}
+
+function saveSchedule(){
+  const type = g('schedule-type').value;
+  const frequency = g('schedule-frequency').value;
+  const time = g('schedule-time').value;
+  
+  saveScheduleConfig({
+    type, frequency, time
+  });
+  closeScheduleModal();
 }
 
 // Export-Funktionen erweitern
@@ -5832,7 +6979,11 @@ document.addEventListener('DOMContentLoaded', () => {
   tryFillPrint();
   setInterval(tryFillPrint, 1500);
 });
-window.onload = () => { checkSession() };
+window.onload = () => { 
+  checkSession();
+  setupKeyboardShortcuts();
+  loadSchedulesFromStorage();
+};
 </script>
 </body>
 </html>

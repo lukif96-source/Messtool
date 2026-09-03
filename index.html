@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
-<title>SOLPRO | PV Matrix Tool v2.2 â€” KISS + QR-Etiketten</title>
+<title>SOLPRO | PV Matrix Tool v2.2 — KISS + QR-Etiketten</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -4205,16 +4205,16 @@ function exportPDFWithLogo(){
 }
 
 function openQrLabelModal(){
-  if(!window.QRCode) return toast('âš ï¸ QR-Library nicht geladen');
+  if(!window.QRCode) return toast('⚠️ QR-Library nicht geladen');
   const project = getCurrentProject();
-  if(!project || !project.plan) return toast('âš ï¸ Kein Projekt geÃ¶ffnet');
+  if(!project || !project.plan) return toast('⚠️ Kein Projekt geöffnet');
   const sel = g('qr-wr-select');
   if(!sel) return;
   const wrKeys = Object.keys(project.plan).map(Number).filter(n => !isNaN(n) && !Array.isArray(project.plan[n])).sort((a,b)=>a-b);
-  if(wrKeys.length === 0) return toast('âš ï¸ Keine Wechselrichter im Projekt');
+  if(wrKeys.length === 0) return toast('⚠️ Keine Wechselrichter im Projekt');
   sel.innerHTML = '<option value="all">Alle Wechselrichter</option>' + wrKeys.map(w => {
     const name = project.plan[w]?.name || ('WR ' + w);
-    return `<option value="${w}">${name} (${project.plan[w]?.mppts || 12}Ã—${project.plan[w]?.inputs || 2})</option>`;
+    return `<option value="${w}">${name} (${project.plan[w]?.mppts || 12}×${project.plan[w]?.inputs || 2})</option>`;
   }).join('');
   sel.value = wrKeys.length === 1 ? String(wrKeys[0]) : 'all';
   g('qr-label-modal').classList.add('show');
@@ -4255,7 +4255,7 @@ function renderQrLabels(){
     }
   });
   if(labels.length === 0){
-    preview.innerHTML = '<div style="text-align:center; padding:30px; color:var(--muted);">Keine Strings zum Drucken. Aktiviere Strings oder aktiviere â€žLeere Slots inkludieren".</div>';
+    preview.innerHTML = '<div style="text-align:center; padding:30px; color:var(--muted);">Keine Strings zum Drucken. Aktiviere Strings oder aktiviere „Leere Slots inkludieren".</div>';
     return;
   }
   const wp = getCurrentWp();
@@ -4263,14 +4263,14 @@ function renderQrLabels(){
   let html = `<div class="qr-label-sheet qr-label-modal-content ${sheetClass}">`;
   labels.forEach(l => {
     const qrSrc = l.isActive ? generateQRCodeForString(l.id) : null;
-    const pwr = (l.item && l.item.mod > 0) ? ((l.item.mod * wp)/1000).toFixed(2) : 'â€”';
+    const pwr = (l.item && l.item.mod > 0) ? ((l.item.mod * wp)/1000).toFixed(2) : '—';
     const gak = (l.item && l.item.gak) ? l.item.gak : `GAK ${l.wrId}.${l.m}.${l.s}`;
     html += `
       <div class="qr-label ${fmt}">
-        ${qrSrc ? `<img class="qr-label-qr" src="${qrSrc}" alt="QR">` : '<div class="qr-label-qr" style="background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#999;font-size:0.55rem;">â€”</div>'}
+        ${qrSrc ? `<img class="qr-label-qr" src="${qrSrc}" alt="QR">` : '<div class="qr-label-qr" style="background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#999;font-size:0.55rem;">—</div>'}
         <div class="qr-label-info">
           <div class="qr-label-gak">${gak}</div>
-          <div class="qr-label-meta">WR${l.wrId} Â· MPPT ${l.m}/${mpptsOrTotal(project, l.wrId)} Â· ${l.item && l.item.mod > 0 ? l.item.mod + ' Mod' : 'â€”'} Â· ${pwr} kWp</div>
+          <div class="qr-label-meta">WR${l.wrId} · MPPT ${l.m}/${mpptsOrTotal(project, l.wrId)} · ${l.item && l.item.mod > 0 ? l.item.mod + ' Mod' : '—'} · ${pwr} kWp</div>
           <div class="qr-label-proj">${esc(project.name || 'PV-Projekt')}</div>
         </div>
       </div>`;
@@ -6282,12 +6282,12 @@ function updateKPIs(){
   const pwrMeta = g('d-pwr-meta');
   if(pwrMeta){
     pwrMeta.textContent = planPwr > 0
-      ? ${totPwr.toFixed(2)} /  kWp Soll
-      : ${totActive} von  Strings aktiv;
+      ? `${totPwr.toFixed(2)} / ${planPwr} kWp Soll`
+      : `${totActive} von ${totSlots} Strings aktiv`;
   }
   const modsMeta = g('d-mods-meta');
   if(modsMeta){
-    modsMeta.textContent = totActive > 0 ? â‰ˆ  Module : 'â€”';
+    modsMeta.textContent = totActive > 0 ? `≈ ${totMods} Module` : '—';
   }
   // Mini-Bars im Strings-KPI
   const totalForBars = Math.max(totSlots, 1);

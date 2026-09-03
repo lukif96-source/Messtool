@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
-<title>SOLPRO | PV Matrix Tool v2.1</title>
+<title>SOLPRO | PV Matrix Tool v2.2 â€” KISS + QR-Etiketten</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -162,6 +162,28 @@ body.sun-mode .sp-inp-gak:read-only { color: #00873d; font-weight: 800; }
 
 .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
 .kpi-card {
+  position: relative;
+}
+.kpi-card.kpi-primary { box-shadow: 0 4px 16px rgba(184, 243, 75, 0.08); }
+.kpi-card.kpi-primary::before {
+  content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 2px;
+  background: var(--accent-grad); border-radius: 0 0 2px 2px; opacity: 0.6;
+}
+.kpi-progress {
+  margin-top: 10px; height: 6px; background: var(--glass-2); border-radius: 99px;
+  overflow: hidden; position: relative; display: flex;
+}
+.kpi-progress-bar {
+  height: 100%; background: var(--accent-grad); border-radius: 99px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.kpi-progress-mini { gap: 1px; height: 6px; }
+.kpi-progress-complete { background: var(--accent); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-incomplete { background: var(--warn); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-inactive { background: var(--glass-3); height: 100%; transition: width 0.4s ease; }
+.kpi-meta { font-size: 0.7rem; color: var(--muted); margin-top: 6px; font-weight: 600; }
+.kpi-sep { color: var(--muted); font-size: 0.9rem; font-weight: 500; margin: 0 2px; }
+.kpi-card { /* duplicate anchor for previous edit */
   background: var(--surface); border: 1px solid var(--glass-border); border-radius: 14px;
   padding: 16px; display: flex; flex-direction: column; gap: 4px;
   backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
@@ -624,7 +646,29 @@ body.sun-mode.protocol-locked .sp-inp:disabled { background: #f1f5f9; color: #64
   .wrap { padding: 8px 8px 140px; }
   .scroll-context { left: 10px; right: 10px; width: auto; text-align: center; font-size: 0.76rem; }
   .dashboard { grid-template-columns: 1fr; gap: 8px; }
-  .kpi-card { padding: 12px; }
+  .kpi-card {
+  position: relative;
+}
+.kpi-card.kpi-primary { box-shadow: 0 4px 16px rgba(184, 243, 75, 0.08); }
+.kpi-card.kpi-primary::before {
+  content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 2px;
+  background: var(--accent-grad); border-radius: 0 0 2px 2px; opacity: 0.6;
+}
+.kpi-progress {
+  margin-top: 10px; height: 6px; background: var(--glass-2); border-radius: 99px;
+  overflow: hidden; position: relative; display: flex;
+}
+.kpi-progress-bar {
+  height: 100%; background: var(--accent-grad); border-radius: 99px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.kpi-progress-mini { gap: 1px; height: 6px; }
+.kpi-progress-complete { background: var(--accent); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-incomplete { background: var(--warn); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-inactive { background: var(--glass-3); height: 100%; transition: width 0.4s ease; }
+.kpi-meta { font-size: 0.7rem; color: var(--muted); margin-top: 6px; font-weight: 600; }
+.kpi-sep { color: var(--muted); font-size: 0.9rem; font-weight: 500; margin: 0 2px; }
+.kpi-card { /* duplicate anchor for previous edit */ padding: 12px; }
   .kpi-value { font-size: 1.2rem; }
   .main-tabs { gap: 4px; }
   .main-tab { font-size: 0.75rem; padding: 10px 12px; }
@@ -660,7 +704,29 @@ body.sun-mode.protocol-locked .sp-inp:disabled { background: #f1f5f9; color: #64
 @media (max-width: 600px) {
   body.sun-mode .kpi-value { font-size: 1.6rem; }
   body.sun-mode .kpi-label { font-size: 0.75rem; }
-  body.sun-mode .kpi-card { border-width: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  body.sun-mode .kpi-card {
+  position: relative;
+}
+.kpi-card.kpi-primary { box-shadow: 0 4px 16px rgba(184, 243, 75, 0.08); }
+.kpi-card.kpi-primary::before {
+  content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 2px;
+  background: var(--accent-grad); border-radius: 0 0 2px 2px; opacity: 0.6;
+}
+.kpi-progress {
+  margin-top: 10px; height: 6px; background: var(--glass-2); border-radius: 99px;
+  overflow: hidden; position: relative; display: flex;
+}
+.kpi-progress-bar {
+  height: 100%; background: var(--accent-grad); border-radius: 99px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.kpi-progress-mini { gap: 1px; height: 6px; }
+.kpi-progress-complete { background: var(--accent); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-incomplete { background: var(--warn); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-inactive { background: var(--glass-3); height: 100%; transition: width 0.4s ease; }
+.kpi-meta { font-size: 0.7rem; color: var(--muted); margin-top: 6px; font-weight: 600; }
+.kpi-sep { color: var(--muted); font-size: 0.9rem; font-weight: 500; margin: 0 2px; }
+.kpi-card { /* duplicate anchor for previous edit */ border-width: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
   body.sun-mode table.mt td { font-size: 0.95rem; padding: 12px 12px; }
   body.sun-mode table.mt td::before { font-size: 0.78rem; font-weight: 700; }
   body.sun-mode .sp-inp { font-size: 1.05rem; padding: 10px 12px; border-width: 2px; }
@@ -756,6 +822,7 @@ body.sun-mode table.mt td[data-label="Aktiv"] { background: #ffffff; }
 }
 .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 1; }
 .modal-head h2 { font-size: 1.1rem; font-weight: 700; }
+
 .modal-body { padding: 20px; }
 
 #auth-gate { position: fixed; inset: 0; z-index: 5000; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; padding-top: calc(20px + var(--safe-top)); padding-bottom: calc(20px + var(--safe-bottom)); }
@@ -857,7 +924,20 @@ body.sun-mode .wr-bulk-bar { background: #f8fafc; }
   height: 1px; background: var(--border); margin: 4px 0;
 }
 
-.mini-map {
+/* wr-progress bar - replaces bulky mini-map */
+.wr-progress-bar {
+  display: flex; height: 6px; margin: 0 14px; border-radius: 99px; overflow: hidden;
+  background: var(--glass-2);
+}
+.wr-progress-complete { background: var(--accent); transition: width 0.3s ease; }
+.wr-progress-incomplete { background: var(--warn); transition: width 0.3s ease; }
+.wr-progress-inactive { background: var(--glass-3); transition: width 0.3s ease; }
+.wr-progress-legend {
+  display: flex; gap: 14px; padding: 6px 14px 8px; font-size: 0.7rem;
+  color: var(--muted); font-weight: 600;
+}
+.wr-progress-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.mini-map { /* legacy - jetzt durch wr-progress ersetzt, ausgeblendet */
   display: grid; gap: 2px; margin-top: 8px; padding: 8px;
   background: var(--bg); border-radius: 8px; border: 1px solid var(--border);
 }
@@ -1007,6 +1087,87 @@ body.sun-mode .wr-bulk-bar { background: #f8fafc; }
   max-height: 600px;
   overflow-y: auto;
   scroll-behavior: smooth;
+}
+
+/* Print Styles für sauberen Druck */
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  
+  .sidebar, .sidebar-btn, .kpi-container, .no-print {
+    display: none !important;
+  }
+  
+  .main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .wr-block {
+    page-break-inside: avoid;
+    margin: 10px 0;
+    border: 1px solid #000;
+    padding: 8px;
+  }
+  
+  .wr-head {
+    background: #f5f5f5 !important;
+    padding: 6px;
+    border-bottom: 1px solid #000;
+    margin-bottom: 8px;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+  }
+  
+  th, td {
+    border: 1px solid #000;
+    padding: 4px;
+    text-align: center;
+  }
+  
+  th {
+    background: #e8e8e8 !important;
+    font-weight: bold;
+  }
+  
+  .row-complete {
+    background: #f0fdf4 !important;
+  }
+  
+  .row-incomplete {
+    background: #fffbeb !important;
+  }
+  
+  .row-error {
+    background: #fef2f2 !important;
+  }
+  
+  .row-nein {
+    opacity: 0.3;
+  }
+  
+  .string-id {
+    font-weight: bold;
+    color: #000;
+  }
+  
+  /* Druck-Header */
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+  
+  /* Keine Hintergründe im Druck außer explizit gesetzt */
+  .matrix-virtual-scroll {
+    max-height: none !important;
+    overflow: visible !important;
+  }
 }
 
 .matrix-virtual-row {
@@ -1224,8 +1385,52 @@ body:not(.sun-mode) .sidebar-btn:hover { background: #171c16; }
 .btn-primary { color: #0b0d0a; box-shadow: none; }
 body:not(.sun-mode) .btn-ghost { background: #121612; }
 .dashboard { gap: 8px; margin-bottom: 16px; }
-.kpi-card { border-radius: 8px; padding: 14px; }
-body:not(.sun-mode) .kpi-card { background: linear-gradient(145deg, #111611, #0c0f0c); }
+.kpi-card {
+  position: relative;
+}
+.kpi-card.kpi-primary { box-shadow: 0 4px 16px rgba(184, 243, 75, 0.08); }
+.kpi-card.kpi-primary::before {
+  content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 2px;
+  background: var(--accent-grad); border-radius: 0 0 2px 2px; opacity: 0.6;
+}
+.kpi-progress {
+  margin-top: 10px; height: 6px; background: var(--glass-2); border-radius: 99px;
+  overflow: hidden; position: relative; display: flex;
+}
+.kpi-progress-bar {
+  height: 100%; background: var(--accent-grad); border-radius: 99px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.kpi-progress-mini { gap: 1px; height: 6px; }
+.kpi-progress-complete { background: var(--accent); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-incomplete { background: var(--warn); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-inactive { background: var(--glass-3); height: 100%; transition: width 0.4s ease; }
+.kpi-meta { font-size: 0.7rem; color: var(--muted); margin-top: 6px; font-weight: 600; }
+.kpi-sep { color: var(--muted); font-size: 0.9rem; font-weight: 500; margin: 0 2px; }
+.kpi-card { /* duplicate anchor for previous edit */ border-radius: 8px; padding: 14px; }
+body:not(.sun-mode) .kpi-card {
+  position: relative;
+}
+.kpi-card.kpi-primary { box-shadow: 0 4px 16px rgba(184, 243, 75, 0.08); }
+.kpi-card.kpi-primary::before {
+  content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 2px;
+  background: var(--accent-grad); border-radius: 0 0 2px 2px; opacity: 0.6;
+}
+.kpi-progress {
+  margin-top: 10px; height: 6px; background: var(--glass-2); border-radius: 99px;
+  overflow: hidden; position: relative; display: flex;
+}
+.kpi-progress-bar {
+  height: 100%; background: var(--accent-grad); border-radius: 99px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.kpi-progress-mini { gap: 1px; height: 6px; }
+.kpi-progress-complete { background: var(--accent); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-incomplete { background: var(--warn); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-inactive { background: var(--glass-3); height: 100%; transition: width 0.4s ease; }
+.kpi-meta { font-size: 0.7rem; color: var(--muted); margin-top: 6px; font-weight: 600; }
+.kpi-sep { color: var(--muted); font-size: 0.9rem; font-weight: 500; margin: 0 2px; }
+.kpi-card { /* duplicate anchor for previous edit */ background: linear-gradient(145deg, #111611, #0c0f0c); }
 .kpi-value { letter-spacing: -0.045em; }
 .main-tabs { gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; }
 body:not(.sun-mode) .main-tabs { background: #0f120f; }
@@ -1278,7 +1483,29 @@ body:not(.sun-mode) .project-card:hover { background: #171d16; transform: none; 
 
 @media (max-width: 900px) and (max-height: 500px) and (orientation: landscape) {
   .dashboard { grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
-  .kpi-card { padding: 8px 10px; }
+  .kpi-card {
+  position: relative;
+}
+.kpi-card.kpi-primary { box-shadow: 0 4px 16px rgba(184, 243, 75, 0.08); }
+.kpi-card.kpi-primary::before {
+  content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 2px;
+  background: var(--accent-grad); border-radius: 0 0 2px 2px; opacity: 0.6;
+}
+.kpi-progress {
+  margin-top: 10px; height: 6px; background: var(--glass-2); border-radius: 99px;
+  overflow: hidden; position: relative; display: flex;
+}
+.kpi-progress-bar {
+  height: 100%; background: var(--accent-grad); border-radius: 99px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.kpi-progress-mini { gap: 1px; height: 6px; }
+.kpi-progress-complete { background: var(--accent); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-incomplete { background: var(--warn); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-inactive { background: var(--glass-3); height: 100%; transition: width 0.4s ease; }
+.kpi-meta { font-size: 0.7rem; color: var(--muted); margin-top: 6px; font-weight: 600; }
+.kpi-sep { color: var(--muted); font-size: 0.9rem; font-weight: 500; margin: 0 2px; }
+.kpi-card { /* duplicate anchor for previous edit */ padding: 8px 10px; }
   .kpi-label { font-size: 0.6rem; }
   .kpi-value { font-size: 1rem; }
   .top-bar-mobile { padding: 6px 12px; }
@@ -1299,7 +1526,29 @@ body:not(.sun-mode) .project-card:hover { background: #171d16; transform: none; 
   .wrap { padding: 6px 6px 120px; }
   .kpi-value { font-size: 1.05rem; }
   .kpi-label { font-size: 0.6rem; }
-  .kpi-card { padding: 10px; }
+  .kpi-card {
+  position: relative;
+}
+.kpi-card.kpi-primary { box-shadow: 0 4px 16px rgba(184, 243, 75, 0.08); }
+.kpi-card.kpi-primary::before {
+  content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 2px;
+  background: var(--accent-grad); border-radius: 0 0 2px 2px; opacity: 0.6;
+}
+.kpi-progress {
+  margin-top: 10px; height: 6px; background: var(--glass-2); border-radius: 99px;
+  overflow: hidden; position: relative; display: flex;
+}
+.kpi-progress-bar {
+  height: 100%; background: var(--accent-grad); border-radius: 99px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.kpi-progress-mini { gap: 1px; height: 6px; }
+.kpi-progress-complete { background: var(--accent); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-incomplete { background: var(--warn); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-inactive { background: var(--glass-3); height: 100%; transition: width 0.4s ease; }
+.kpi-meta { font-size: 0.7rem; color: var(--muted); margin-top: 6px; font-weight: 600; }
+.kpi-sep { color: var(--muted); font-size: 0.9rem; font-weight: 500; margin: 0 2px; }
+.kpi-card { /* duplicate anchor for previous edit */ padding: 10px; }
   .main-tab { font-size: 0.7rem; padding: 8px 8px; }
   .main-tab span { display: none; }
   .top-bar-mobile > div { font-size: 0.95rem !important; }
@@ -1456,7 +1705,29 @@ body:not(.sun-mode) .sidebar { box-shadow: 14px 0 34px rgba(0,0,0,0.16); }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: #091006; font-weight: 800; }
 .btn-primary:hover { background: #c8ff68; border-color: #c8ff68; filter: none; }
 .btn-ghost { border-color: var(--border); }
-.kpi-card { position: relative; overflow: hidden; }
+.kpi-card {
+  position: relative;
+}
+.kpi-card.kpi-primary { box-shadow: 0 4px 16px rgba(184, 243, 75, 0.08); }
+.kpi-card.kpi-primary::before {
+  content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 2px;
+  background: var(--accent-grad); border-radius: 0 0 2px 2px; opacity: 0.6;
+}
+.kpi-progress {
+  margin-top: 10px; height: 6px; background: var(--glass-2); border-radius: 99px;
+  overflow: hidden; position: relative; display: flex;
+}
+.kpi-progress-bar {
+  height: 100%; background: var(--accent-grad); border-radius: 99px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.kpi-progress-mini { gap: 1px; height: 6px; }
+.kpi-progress-complete { background: var(--accent); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-incomplete { background: var(--warn); height: 100%; transition: width 0.4s ease; }
+.kpi-progress-inactive { background: var(--glass-3); height: 100%; transition: width 0.4s ease; }
+.kpi-meta { font-size: 0.7rem; color: var(--muted); margin-top: 6px; font-weight: 600; }
+.kpi-sep { color: var(--muted); font-size: 0.9rem; font-weight: 500; margin: 0 2px; }
+.kpi-card { /* duplicate anchor for previous edit */ position: relative; overflow: hidden; }
 body:not(.sun-mode) .kpi-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: var(--accent); opacity: 0.7; }
 .kpi-label { font-size: 0.62rem; }
 .kpi-value { font-size: 1.6rem; }
@@ -2117,9 +2388,9 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
         <button class="filter-toggle-btn" id="btn-hide-nein" onclick="toggleHideInactive(null)">
           <span>👁️</span> <span id="hide-nein-text">Nur aktive Strings</span>
         </button>
-        <button class="filter-toggle-btn" id="btn-clear-notes" onclick="bulkClearAllNotes()" title="Löscht die Bemerkung bei jedem String im ganzen Projekt" style="border-color:#ef4444;color:#ef4444;">
-          <span>🧹</span> <span>Alle Bemerkungen löschen</span>
-        </button>
+        <!-- btn-clear-notes entfernt: war zu destruktiv fuer Toolbar; 
+             Funktion bulkClearAllNotes() bleibt fuer zukuenftige Nutzung erhalten -->
+
       </div>
     </div>
 
@@ -3928,109 +4199,100 @@ function exportPDFWithLogo(){
   const project = getCurrentProject();
   if(!project) return toast('⚠️ Kein Projekt geöffnet');
   
-  if(!window.html2pdf) return toast('⚠️ PDF Library nicht geladen');
-  
-  toast('📑 Generiere PDF...');
-  
-  // PDF-Inhalt erstellen
-  const element = g('matrix-view');
-  if(!element) return toast('⚠️ Matrix nicht gefunden');
-  
-  // Temporäres Layout für PDF
-  const originalDisplay = element.style.display;
-  element.style.display = 'block';
-  
-  // PDF-Konfiguration
-  const opt = {
-    margin: [8, 8, 8, 8],
-    filename: `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_Protokoll.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { 
-      scale: 2,
-      useCORS: true,
-      letterRendering: true,
-      logging: false
-    },
-    jsPDF: { 
-      unit: 'mm', 
-      format: 'a4', 
-      orientation: 'landscape' 
-    },
-    pagebreak: { mode: 'avoid-all', before: '.page-break' }
-  };
-  
-  // Header für PDF (OHNE LOGO)
-  const headerHTML = `
-    <div style="padding: 8px 12px; border-bottom: 2px solid #00873d; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; background: #fff;">
-      <div>
-        <strong style="font-size: 16pt; color: #0c0f0c; font-weight: 900;">${project.name}</strong>
-        <div style="font-size: 9pt; color: #333; margin-top: 4px;">${new Date().toLocaleDateString('de-DE')} · PV Matrix Tool v2.1</div>
-      </div>
-      <div style="text-align: right;">
-        <div style="font-size: 9pt; color: #333; font-weight: 700;">${project.locked ? '🔒 GESPERRT' : '✅ OFFEN'}</div>
-        ${project.signature ? '<div style="font-size: 8pt; color: #00873d; font-weight: 700; margin-top: 2px;">✍️ Unterschrieben</div>' : ''}
-      </div>
-    </div>
-  `;
-  
-  // Matrix-HTML kopieren und anpassen
-  const matrixHTML = element.innerHTML;
-  
-  // Vollständiges HTML-Dokument für PDF
-  const pdfContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; color: #000; }
-        table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-        th, td { border: 1px solid #333; padding: 6px 4px; text-align: center; font-size: 9pt; }
-        th { background: #f5f5f5; font-weight: bold; color: #000; }
-        tr:nth-child(even) { background: #fafafa; }
-        .wr-block { margin: 16px 0; border: 2px solid #333; padding: 12px; page-break-inside: avoid; }
-        .wr-head { background: #e8e8e8; padding: 10px; border-bottom: 2px solid #333; margin-bottom: 12px; font-weight: bold; }
-        .kpi-card { display: inline-block; border: 1px solid #333; padding: 8px 12px; margin: 4px; min-width: 80px; }
-        .kpi-value { font-size: 11pt; font-weight: bold; color: #00873d; }
-        .kpi-label { font-size: 7pt; color: #666; }
-        .no-print { display: none !important; }
-        .row-nein { opacity: 0.3; }
-        .row-complete { background: #f0fdf4; }
-        .row-incomplete { background: #fffbeb; }
-        .row-error { background: #fef2f2; }
-        .string-id { font-weight: bold; color: #00873d; }
-        .print-cell { display: none !important; }
-      </style>
-    </head>
-    <body>
-      ${headerHTML}
-      <div style="padding: 8px;">
-        ${matrixHTML}
-      </div>
-    </body>
-    </html>
-  `;
-  
-  // Temporäres Element für PDF-Generierung
-  const tempDiv = document.createElement('div');
-  tempDiv.style.position = 'fixed';
-  tempDiv.style.left = '-9999px';
-  tempDiv.style.top = '0';
-  tempDiv.style.width = '210mm'; // A4 width
-  tempDiv.innerHTML = pdfContent;
-  document.body.appendChild(tempDiv);
-  
-  // PDF generieren
-  html2pdf().set(opt).from(tempDiv).save().then(() => {
-    document.body.removeChild(tempDiv);
-    element.style.display = originalDisplay;
-    toast('✅ PDF erfolgreich exportiert (ohne Logo)');
-  }).catch(err => {
-    console.error('PDF-Export fehlgeschlagen', err);
-    document.body.removeChild(tempDiv);
-    element.style.display = originalDisplay;
-    toast('❌ PDF-Export fehlgeschlagen');
+  // Einfache Browser-Print Funktion statt komplexer PDF-Generierung
+  window.print();
+  toast('📑 Druckdialog geöffnet');
+}
+
+function openQrLabelModal(){
+  if(!window.QRCode) return toast('âš ï¸ QR-Library nicht geladen');
+  const project = getCurrentProject();
+  if(!project || !project.plan) return toast('âš ï¸ Kein Projekt geÃ¶ffnet');
+  const sel = g('qr-wr-select');
+  if(!sel) return;
+  const wrKeys = Object.keys(project.plan).map(Number).filter(n => !isNaN(n) && !Array.isArray(project.plan[n])).sort((a,b)=>a-b);
+  if(wrKeys.length === 0) return toast('âš ï¸ Keine Wechselrichter im Projekt');
+  sel.innerHTML = '<option value="all">Alle Wechselrichter</option>' + wrKeys.map(w => {
+    const name = project.plan[w]?.name || ('WR ' + w);
+    return `<option value="${w}">${name} (${project.plan[w]?.mppts || 12}Ã—${project.plan[w]?.inputs || 2})</option>`;
+  }).join('');
+  sel.value = wrKeys.length === 1 ? String(wrKeys[0]) : 'all';
+  g('qr-label-modal').classList.add('show');
+  renderQrLabels();
+}
+function closeQrLabelModal(e){
+  if(e && e.target !== e.currentTarget) return;
+  g('qr-label-modal').classList.remove('show');
+}
+function renderQrLabels(){
+  const sel = g('qr-wr-select');
+  const fmtSel = g('qr-format-select');
+  const onlyActive = g('qr-only-active').checked;
+  const includeEmpty = g('qr-include-empty').checked;
+  const preview = g('qr-label-preview');
+  if(!sel || !fmtSel || !preview) return;
+  const project = getCurrentProject();
+  if(!project) return;
+  const fmt = fmtSel.value;
+  const wrFilter = sel.value;
+  const wps = project.model_wp || 465;
+  const labels = [];
+  const wrKeys = Object.keys(project.plan).map(Number).filter(n => !isNaN(n) && !Array.isArray(project.plan[n])).sort((a,b)=>a-b);
+  wrKeys.forEach(wrId => {
+    if(wrFilter !== 'all' && String(wrId) !== wrFilter) return;
+    const wrData = project.plan[wrId];
+    const mppts = wrData.mppts || 12;
+    const inputs = wrData.inputs || 2;
+    for(let m = 1; m <= mppts; m++){
+      for(let s = 1; s <= inputs; s++){
+        const id = `${wrId}.${m}.${s}`;
+        const it = APP_STATE[id];
+        const isActive = it && it.stat === 'JA';
+        if(onlyActive && !isActive) continue;
+        if(!isActive && !includeEmpty) continue;
+        labels.push({ wrId, m, s, id, item: it, isActive });
+      }
+    }
   });
+  if(labels.length === 0){
+    preview.innerHTML = '<div style="text-align:center; padding:30px; color:var(--muted);">Keine Strings zum Drucken. Aktiviere Strings oder aktiviere â€žLeere Slots inkludieren".</div>';
+    return;
+  }
+  const wp = getCurrentWp();
+  const sheetClass = 'qr-label-sheet ' + fmt;
+  let html = `<div class="qr-label-sheet qr-label-modal-content ${sheetClass}">`;
+  labels.forEach(l => {
+    const qrSrc = l.isActive ? generateQRCodeForString(l.id) : null;
+    const pwr = (l.item && l.item.mod > 0) ? ((l.item.mod * wp)/1000).toFixed(2) : 'â€”';
+    const gak = (l.item && l.item.gak) ? l.item.gak : `GAK ${l.wrId}.${l.m}.${l.s}`;
+    html += `
+      <div class="qr-label ${fmt}">
+        ${qrSrc ? `<img class="qr-label-qr" src="${qrSrc}" alt="QR">` : '<div class="qr-label-qr" style="background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#999;font-size:0.55rem;">â€”</div>'}
+        <div class="qr-label-info">
+          <div class="qr-label-gak">${gak}</div>
+          <div class="qr-label-meta">WR${l.wrId} Â· MPPT ${l.m}/${mpptsOrTotal(project, l.wrId)} Â· ${l.item && l.item.mod > 0 ? l.item.mod + ' Mod' : 'â€”'} Â· ${pwr} kWp</div>
+          <div class="qr-label-proj">${esc(project.name || 'PV-Projekt')}</div>
+        </div>
+      </div>`;
+  });
+  html += '</div>';
+  preview.innerHTML = html;
+}
+function mpptsOrTotal(project, wrId){
+  const d = project.plan[wrId];
+  return (d && d.mppts) ? d.mppts : 12;
+}
+function printQrLabels(){
+  const preview = g('qr-label-preview');
+  if(!preview) return;
+  const win = window.open('', '_blank');
+  const styleNodes = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map(s => s.outerHTML).join('');
+  win.document.write(`<!DOCTYPE html><html><head>${styleNodes}<style>body { background: white; padding: 0; }</style></head><body>${preview.innerHTML}</body></html>`);
+  win.document.close();
+  setTimeout(() => { win.focus(); win.print(); }, 300);
+}
+function exportQrLabelsPdf(){
+  printQrLabels();
 }
 
 function generateQRCodeForString(stringId){
@@ -4900,7 +5162,7 @@ function renderMatrix(remoteOverride = null){
         </div>
         <div class="wr-kpis"><strong style="color:var(--accent);">${wrPwr.toFixed(2)} kWp</strong></div>
       </div>
-      ${mppts >= 6 ? generateMiniMap(wr, mppts, inputs) : ''}
+      ${mppts >= 6 ? generateWrProgress(wr, mppts, inputs) : ''}
       ${canHardware ? `
       <div class="wr-bulk-bar no-print">
         <span class="bulk-label">⚡ Bulk:</span>
@@ -4997,109 +5259,7 @@ function generateGakSuggestions(wr, mppts, inputs){
   return options;
 }
 
-function generateMiniMap(wrId, mppts, inputs){
-  let html = `<div class="mini-map wr-${mppts >= 8 ? 'large' : (mppts >= 4 ? 'medium' : 'small')}">`;
-  
-  for(let m = 1; m <= mppts; m++){
-    for(let s = 1; s <= inputs; s++){
-      const id = `${wrId}.${m}.${s}`;
-      const item = APP_STATE[id];
-      const status = item ? getStringStatus(id) : 'NEIN';
-      const isManual = item && item._manualChange;
-      
-      let cellClass = 'inactive';
-      if(status === 'COMPLETE') cellClass = 'complete';
-      else if(status === 'INCOMPLETE') cellClass = 'incomplete';
-      else if(status === 'ERROR') cellClass = 'error';
-      
-      if(isManual) cellClass += ' manual';
-      
-      const tooltip = item ? 
-        `${id}<br>GAK: ${item.gak || '-'}<br>Mod: ${item.mod || 0}<br>Status: ${status}` : 
-        `${id}<br>Leer`;
-      
-      html += `
-        <div class="mini-map-cell ${cellClass}" onclick="focusStringCell('${id}')" title="Klick um zur Zelle zu springen">
-          <span class="mini-map-tooltip">${tooltip}</span>
-          <span>${s}</span>
-        </div>
-      `;
-    }
-  }
-  
-  html += '</div>';
-  return html;
-}
-
-function focusStringCell(id){
-  const row = g(`row-${id}`);
-  if(row) {
-    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    row.style.animation = 'highlight 1s ease';
-    setTimeout(() => row.style.animation = '', 1000);
-  }
-  
-  // Fokus auf erstes Eingabefeld in der Zeile
-  const firstInput = row.querySelector('input:not([readonly])');
-  if(firstInput) {
-    firstInput.focus();
-    firstInput.select();
-  }
-}
-
-function renameInverter(wrId) {
-  // Legacy-Einstiegspunkt: leitet auf den vollwertigen Editor weiter.
-  return openInverterEditor(wrId);
-}
-
-// ========================================================
-// INVERTER EDITOR (WR / MPPT / Inputs nachträglich ändern)
-// ========================================================
-let _inverterEditorWrId = null;
-let _inverterEditorState = null;
-
-function getWrDefaultInputs(){
-  // sinnvoller Default wenn man einen neuen WR hinzufügt
-  return 2;
-}
-function getWrDefaultMppts(){
-  return 12;
-}
-
-function getMaxUsedMppt(wrId){
-  // höchste MPPT-Nummer mit echten Daten (mod>0, JA, oder Messwerte)
-  let max = 0;
-  Object.keys(APP_STATE).forEach(id => {
-    const parts = id.split('.').map(Number);
-    if(parts.length !== 3) return;
-    if(parts[0] !== Number(wrId)) return;
-    const it = APP_STATE[id];
-    if(!it) return;
-    const hasData = (it.mod && it.mod > 0) || it.stat === 'JA' || it.uoc || it.isc || it.riso;
-    if(hasData && parts[1] > max) max = parts[1];
-  });
-  return max;
-}
-function getMaxUsedInput(wrId, mppt){
-  let max = 0;
-  Object.keys(APP_STATE).forEach(id => {
-    const parts = id.split('.').map(Number);
-    if(parts.length !== 3) return;
-    if(parts[0] !== Number(wrId)) return;
-    if(parts[1] !== Number(mppt)) return;
-    const it = APP_STATE[id];
-    if(!it) return;
-    const hasData = (it.mod && it.mod > 0) || it.stat === 'JA' || it.uoc || it.isc || it.riso;
-    if(hasData && parts[2] > max) max = parts[2];
-  });
-  return max;
-}
-
-function hasSlotData(wrId, mppt, input){
-  const it = APP_STATE[`${wrId}.${mppt}.${input}`];
-  if(!it) return false;
-  return (it.mod && it.mod > 0) || it.stat === 'JA' || it.uoc || it.isc || it.riso;
-}
+function generateMiniMap(wrId, mppts, inputs){ return generateWrProgress(wrId, mppts, inputs); }
 
 // String-Status: 'NEIN' = inaktiv, 'INCOMPLETE' = aktiv aber Messwerte fehlen,
 // 'COMPLETE' = aktiv + Mod > 0 + Uoc/Isc/Riso alle gefüllt, 'ERROR' = ungültige Werte
@@ -6083,22 +6243,69 @@ function setStat(id, st) {
 
 function updateKPIs(){
   const wp = getCurrentWp();
-  let totMods = 0, totPwr = 0, totActive = 0, totSlots = 0;
+  let totMods = 0, totPwr = 0, totActive = 0, totComplete = 0, totIncomplete = 0, totInactive = 0, totSlots = 0;
   Object.keys(APP_STATE).forEach(id => {
     const it = APP_STATE[id];
     if(!it) return;
     totSlots++;
-    if(it.stat === 'JA' && it.mod > 0) {
-      totMods += it.mod;
-      totPwr += (it.mod * wp) / 1000;
+    const status = getStringStatus(id);
+    if(status === 'COMPLETE') {
+      totComplete++;
       totActive++;
+      if(it.mod > 0) { totMods += it.mod; totPwr += (it.mod * wp) / 1000; }
+    } else if(status === 'INCOMPLETE') {
+      totIncomplete++;
+      totActive++;
+      if(it.mod > 0) { totMods += it.mod; totPwr += (it.mod * wp) / 1000; }
+    } else {
+      totInactive++;
     }
   });
-  const dPwr = g('d-pwr'), dMods = g('d-mods'), dAct = g('d-act'), dTot = g('d-tot');
+  const dPwr = g('d-pwr'), dMods = g('d-mods'), dAct = g('d-act'), dTot = g('d-tot'), dWp = g('d-wp');
   if(dPwr)  dPwr.textContent  = totPwr.toFixed(2);
   if(dMods) dMods.textContent = totMods;
   if(dAct)  dAct.textContent  = totActive;
   if(dTot)  dTot.textContent  = totSlots;
+  if(dWp)   dWp.textContent   = wp;
+  // Progress-Bar kWp vs Ziel (PVSOL-Plan, falls vorhanden)
+  const proj = getCurrentProject();
+  const planPwr = (proj && proj.plan_pwr) ? proj.plan_pwr : 0;
+  const pwrBar = g('d-pwr-bar');
+  if(pwrBar){
+    if(planPwr > 0){
+      const pct = Math.min(100, (totPwr / planPwr) * 100);
+      pwrBar.style.width = pct + '%';
+    } else {
+      pwrBar.style.width = totActive > 0 ? '100%' : '0%';
+    }
+  }
+  const pwrMeta = g('d-pwr-meta');
+  if(pwrMeta){
+    pwrMeta.textContent = planPwr > 0
+      ? ${totPwr.toFixed(2)} /  kWp Soll
+      : ${totActive} von  Strings aktiv;
+  }
+  const modsMeta = g('d-mods-meta');
+  if(modsMeta){
+    modsMeta.textContent = totActive > 0 ? â‰ˆ  Module : 'â€”';
+  }
+  // Mini-Bars im Strings-KPI
+  const totalForBars = Math.max(totSlots, 1);
+  const cBar = g('d-act-bar-complete');
+  const iBar = g('d-act-bar-incomplete');
+  const nBar = g('d-act-bar-inactive');
+  if(cBar) cBar.style.width = (totComplete / totalForBars * 100) + '%';
+  if(iBar) iBar.style.width = (totIncomplete / totalForBars * 100) + '%';
+  if(nBar) nBar.style.width = (totInactive / totalForBars * 100) + '%';
+  const cCount = g('d-act-complete'), iCount = g('d-act-incomplete'), nCount = g('d-act-inactive');
+  if(cCount) cCount.textContent = totComplete;
+  if(iCount) iCount.textContent = totIncomplete;
+  if(nCount) nCount.textContent = totInactive;
+  // Warn-Counter
+  const warnCount = g('d-warn-count');
+  const warnMeta = g('d-warn-meta');
+  if(warnCount) warnCount.textContent = totIncomplete;
+  if(warnMeta) warnMeta.style.display = totIncomplete > 0 ? 'flex' : 'none';
 }
 
 function openPVSOLModal(){

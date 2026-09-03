@@ -15,6 +15,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
@@ -890,6 +891,112 @@ body.sun-mode .wr-bulk-bar { background: #f8fafc; }
 }
 .mini-map-cell:hover .mini-map-tooltip { display: block; }
 
+/* Report Wizard Styles */
+.report-wizard {
+  max-width: 600px; margin: 0 auto;
+}
+.wizard-step {
+  display: none; animation: fadeIn 0.3s ease;
+}
+.wizard-step.active { display: block; }
+.wizard-step h2 {
+  font-size: 1.2rem; font-weight: 800; color: var(--text);
+  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+.wizard-progress {
+  display: flex; justify-content: space-between; margin-bottom: 24px;
+  position: relative;
+}
+.wizard-progress::before {
+  content: ''; position: absolute; top: 50%; left: 0; right: 0;
+  height: 2px; background: var(--border); transform: translateY(-50%);
+  z-index: 0;
+}
+.wizard-step-indicator {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--surface); border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.85rem; color: var(--muted);
+  z-index: 1; position: relative;
+}
+.wizard-step-indicator.active {
+  background: var(--accent); border-color: var(--accent); color: #000;
+}
+.wizard-step-indicator.completed {
+  background: var(--accent); border-color: var(--accent); color: #000;
+}
+.wizard-options {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px; margin-bottom: 20px;
+}
+.wizard-option {
+  background: var(--bg); border: 2px solid var(--border);
+  border-radius: 12px; padding: 16px; cursor: pointer;
+  transition: all 0.2s; text-align: center;
+}
+.wizard-option:hover { border-color: var(--accent); background: var(--accent-glow); }
+.wizard-option.selected {
+  border-color: var(--accent); background: var(--accent-glow);
+  box-shadow: 0 0 0 3px rgba(184, 243, 75, 0.2);
+}
+.wizard-option-icon { font-size: 2rem; margin-bottom: 8px; }
+.wizard-option-title { font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.wizard-option-desc { font-size: 0.8rem; color: var(--muted); }
+
+/* Dashboard Styles */
+.dashboard-container {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px; margin-bottom: 24px;
+}
+.dashboard-chart {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px;
+}
+.dashboard-chart h3 {
+  font-size: 0.9rem; font-weight: 700; color: var(--text);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.chart-container {
+  position: relative; height: 200px;
+}
+
+/* Collaboration Styles */
+.collaboration-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px; margin-bottom: 16px;
+}
+.user-presence-list {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.user-presence-item {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg); padding: 6px 10px; border-radius: 20px;
+  font-size: 0.8rem; font-weight: 600;
+}
+.user-presence-item.online { border-color: var(--accent); }
+.user-presence-item.offline { border-color: var(--muted); opacity: 0.6; }
+.presence-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted);
+}
+.user-presence-item.online .presence-dot { background: var(--accent); }
+.chat-panel {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; height: 300px; display: flex; flex-direction: column;
+}
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 12px;
+}
+.chat-message {
+  margin-bottom: 8px; padding: 8px 12px; border-radius: 8px;
+  background: var(--panel); font-size: 0.85rem;
+}
+.chat-message.own { background: var(--accent-glow); border: 1px solid var(--accent); }
+.chat-input-area {
+  padding: 8px; border-top: 1px solid var(--border);
+  display: flex; gap: 8px;
+}
+
 @keyframes highlight {
   0% { background: var(--accent-glow); }
   100% { background: transparent; }
@@ -1494,6 +1601,189 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
   </div>
 </div>
 
+<div id="report-wizard-modal" class="modal-overlay" onclick="closeReportWizard(event)">
+  <div class="modal-card report-wizard" data-modal="centered" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h2>📊 Bericht-Wizard</h2>
+      <button onclick="closeReportWizard()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="wizard-progress">
+        <div class="wizard-step-indicator active" data-step="1">1</div>
+        <div class="wizard-step-indicator" data-step="2">2</div>
+        <div class="wizard-step-indicator" data-step="3">3</div>
+      </div>
+      
+      <!-- Step 1: Bericht-Typ -->
+      <div class="wizard-step active" id="wizard-step-1">
+        <h2>📋 Welchen Bericht möchtest du?</h2>
+        <div class="wizard-options">
+          <div class="wizard-option" onclick="selectReportType('weekly')" data-type="weekly">
+            <div class="wizard-option-icon">📅</div>
+            <div class="wizard-option-title">Wochenbericht</div>
+            <div class="wizard-option-desc">Übersicht über alle Aktivitäten dieser Woche</div>
+          </div>
+          <div class="wizard-option" onclick="selectReportType('project')" data-type="project">
+            <div class="wizard-option-icon">📁</div>
+            <div class="wizard-option-title">Projekt-Status</div>
+            <div class="wizard-option-desc">Detaillierter Status für aktuelles Projekt</div>
+          </div>
+          <div class="wizard-option" onclick="selectReportType('performance')" data-type="performance">
+            <div class="wizard-option-icon">📈</div>
+            <div class="wizard-option-title">Performance</div>
+            <div class="wizard-option-desc">Messwert-Analysen und Trends</div>
+          </div>
+          <div class="wizard-option" onclick="selectReportType('custom')" data-type="custom">
+            <div class="wizard-option-icon">⚙️</div>
+            <div class="wizard-option-title">Benutzerdefiniert</div>
+            <div class="wizard-option-desc">Eigene Parameter wählen</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Step 2: Parameter -->
+      <div class="wizard-step" id="wizard-step-2">
+        <h2>⚙️ Bericht-Parameter</h2>
+        <div class="field">
+          <label>Zeitraum</label>
+          <select id="report-timeframe" class="sp-inp">
+            <option value="today">Heute</option>
+            <option value="week">Diese Woche</option>
+            <option value="month">Dieser Monat</option>
+            <option value="custom">Benutzerdefiniert</option>
+          </select>
+        </div>
+        <div class="field" id="custom-date-range" style="display:none;">
+          <label>Von - Bis</label>
+          <div style="display:flex; gap:8px;">
+            <input type="date" id="report-date-from" class="sp-inp">
+            <input type="date" id="report-date-to" class="sp-inp">
+          </div>
+        </div>
+        <div class="field">
+          <label>Format</label>
+          <select id="report-format" class="sp-inp">
+            <option value="pdf">PDF</option>
+            <option value="excel">Excel</option>
+            <option value="both">Beides</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Inhalte</label>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <label class="field-radio selected">
+              <input type="checkbox" checked id="include-kpi"> KPIs und Zusammenfassung
+            </label>
+            <label class="field-radio">
+              <input type="checkbox" checked id="include-details"> Detaillierte Messwerte
+            </label>
+            <label class="field-radio">
+              <input type="checkbox" id="include-charts"> Diagramme und Graphen
+            </label>
+            <label class="field-radio">
+              <input type="checkbox" id="include-signatures"> Unterschriften und Sperren
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Step 3: Generierung -->
+      <div class="wizard-step" id="wizard-step-3">
+        <h2>🎉 Bericht generieren</h2>
+        <div style="text-align:center; padding:20px;">
+          <div style="font-size:3rem; margin-bottom:16px;">📊</div>
+          <div style="font-size:1.1rem; color:var(--muted); margin-bottom:20px;">
+            Dein Bericht ist bereit!
+          </div>
+          <div style="background:var(--bg); padding:16px; border-radius:12px; margin-bottom:16px;">
+            <div style="font-size:0.9rem; font-weight:700; margin-bottom:8px;">Zusammenfassung:</div>
+            <div id="report-summary" style="font-size:0.85rem; color:var(--muted);">
+              Wähle oben deine Parameter...
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-actions">
+        <button onclick="closeReportWizard()" class="btn btn-ghost" id="wizard-cancel">Abbrechen</button>
+        <button onclick="wizardBack()" class="btn btn-ghost" id="wizard-back" style="display:none;">Zurück</button>
+        <button onclick="wizardNext()" class="btn btn-primary" id="wizard-next">Weiter</button>
+        <button onclick="generateReport()" class="btn btn-primary" id="wizard-generate" style="display:none;">📊 Generieren</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="dashboard-modal" class="modal-overlay" onclick="closeDashboard(event)">
+  <div class="modal-card" data-modal="centered" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h2>📈 Projekt-Dashboard</h2>
+      <button onclick="closeDashboard()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="dashboard-container">
+        <div class="dashboard-chart">
+          <h3>⚡ Leistungstrend</h3>
+          <div class="chart-container">
+            <canvas id="power-chart"></canvas>
+          </div>
+        </div>
+        <div class="dashboard-chart">
+          <h3>📊 String-Status</h3>
+          <div class="chart-container">
+            <canvas id="status-chart"></canvas>
+          </div>
+        </div>
+        <div class="dashboard-chart">
+          <h3>⏱️ Fortschritt Timeline</h3>
+          <div class="chart-container">
+            <canvas id="timeline-chart"></canvas>
+          </div>
+        </div>
+        <div class="dashboard-chart">
+          <h3>🎯 Fehlerquote</h3>
+          <div class="chart-container">
+            <canvas id="error-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="collaboration-modal" class="modal-overlay" onclick="closeCollaboration(event)">
+  <div class="modal-card" data-modal="centered" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h2>🔄 Echtzeit-Collaboration</h2>
+      <button onclick="closeCollaboration()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="collaboration-panel">
+        <h3>👥 Team-Aktivität</h3>
+        <div class="user-presence-list" id="user-presence-list">
+          <div class="user-presence-item online">
+            <div class="presence-dot"></div>
+            <span>Du (Online)</span>
+          </div>
+        </div>
+        
+        <h3>💬 Team-Chat</h3>
+        <div class="chat-panel">
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-message">
+              <strong>System:</strong> Willkommen im Team-Chat für dieses Projekt.
+            </div>
+          </div>
+          <div class="chat-input-area">
+            <input type="text" id="chat-input" class="sp-inp" placeholder="Nachricht eingeben..." onkeypress="handleChatKeypress(event)">
+            <button onclick="sendChatMessage()" class="btn btn-primary">Senden</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="template-modal" class="modal-overlay" onclick="closeTemplateModal(event)">
   <div class="modal-card" data-modal="centered" onclick="event.stopPropagation()">
     <div class="modal-head">
@@ -1640,6 +1930,14 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
   <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Vorlagen</div>
   <button onclick="showTemplateModal();closeSidebar();" class="sidebar-btn role-gate-planner">
     <span class="icon" style="color:#eab308;">📋</span><span class="label">Projekt-Vorlagen</span>
+  </button>
+
+  <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Berichte</div>
+  <button onclick="showReportWizard();closeSidebar();" class="sidebar-btn">
+    <span class="icon" style="color:#3b82f6;">📊</span><span class="label">Bericht-Wizard</span>
+  </button>
+  <button onclick="showDashboard();closeSidebar();" class="sidebar-btn">
+    <span class="icon" style="color:#8b5cf6;">📈</span><span class="label">Dashboard</span>
   </button>
 
   <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Import & Export</div>
@@ -2497,13 +2795,14 @@ function exportPDFWithLogo(){
   
   // PDF-Konfiguration
   const opt = {
-    margin: [10, 10, 10, 10],
+    margin: [8, 8, 8, 8],
     filename: `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_Protokoll.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { 
       scale: 2,
       useCORS: true,
-      letterRendering: true
+      letterRendering: true,
+      logging: false
     },
     jsPDF: { 
       unit: 'mm', 
@@ -2513,17 +2812,16 @@ function exportPDFWithLogo(){
     pagebreak: { mode: 'avoid-all', before: '.page-break' }
   };
   
-  // Header für PDF
+  // Header für PDF (OHNE LOGO)
   const headerHTML = `
-    <div style="padding: 10px; border-bottom: 2px solid #b8f34b; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+    <div style="padding: 8px 12px; border-bottom: 2px solid #00873d; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; background: #fff;">
       <div>
-        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoYAAAI6CAYAAAC6gol3AAAACXBIWXMAAC4jAAAuIwF4pT92AAAgAElEQVR4nOzdT1bb2Pb28afeVX3yGwGuEUC13KCBagThtmjimoBD2QOIMwA7xBMo03SryAhKNNygVTCCMiN44xHU29BWIoRtZFvSOUf6ftZiJZDE3gHLerTPH/3n33//FcoxnkzfSTp94699Gw76j3XUA+Bt48m0I6nzxl97HA7636qvBgDc+g/BcLvxZBpJyga+U/tcks5LeponSelJZ2kf3yQ9iiAJ7GzNcRtl/riM43al5PiUOGYBNAjBUC86felHx349clhWXnoielRyAoolLYeD/tJhTYAzueO2k/m9L8fts5LAGNuvjwRGAL5rZTAcT6anSjoIkZITybHLeg6UBsbYfn0kLKKJMsdt+muox+29MscsxysAn7QiGOaCYCR/OgpVWSk56cRKTjyxy2KAfbTouH3Wj+P1jrmMAFxqbDAcT6YXki4UdmehTPf6ceJhOAvesaHhSBy3T5LuxLEKwIFGBcNMGLxQc7sLZUg7iunJhw4FnLAwmB6z7x2X46NnJcfpjJAIoA7BB0MbburZB2FwP0+SZpJiTj6og13E9UQY3AUhEUDlggyGmS7DtaQTx+U0DScfVIKLuFKlF3MzOv5+sa2S/nJdxxs+DQf9kesi4KeggqFtRHstTix1SUPiDSsnsa/xZNpTcsyWte8nXrpVcoxyIecBgiFCF0QwtEA4knTltpJWo0OBwqyrf20fXMTV417J8TlzXUibEQwROq+DIYHQW1+VnIDuXBcCv3DMeuFZ0o24iHOCYIjQeRkMObkE41k/uohLt6XAJY5ZL62UBMQbAmJ9CIYInVfBkOGnoNFFbCECYRAIiDUiGCJ03gRD277iRu3d1LYpGMZqAbuIuxGBMCQrSdfMQawWwRChcx4MreNwI/Yza5qVkmFmVjQ3CF39RniW1ONWmdUgGCJ0/3X55OPJ9FrJzeQJhc1zJOmDpH/Gk+nM9rBDwKyr/yjpowiFITuW9Nd4Mo3twhwAvvvJxZNa12EmAmFbXEm6Gk+m95JGdCrCYuFhJvYhbJpzJRdun8T8QwCm9o6htdmXIhS20bl+dCoi18XgbePJdCTpHxEKm+yjpEeOSQBSzR1DO8l8rPM54aU0INJB9JSFhBtxy8m2SIeXvyqZf0j3EGipWjqG48n03XgyvROhEC/RQfSQXcD9JUJhG72XtLT5pABaqPKOoc1PuhMnGWxGB9EDtkBoJo7VtjuS9Od4Mr1Vsr0N3UOgRSrtGNqJ5lGcaFBMtoPIKuYa2Q4Bf4tjFT9cKZl7yLEItEhlwdDeTGKxrQV2dy7pb9vmpuO6mCbLTPP47LoWeOlYybF47boQAPWoJBiOJ9Oeku4DoRCHuFKyncbItjhCiTIdfXYIwFs+jyfTO45DoPlKD4YWCv8o+3HRah+VTIjvuS6kKTIXb9yCEkW9F0PLQOOVGgxtJRuhEFU4kvTHeDJlv7UDjSfTmThOsZ9jSTEXaUBzlRYMMysagSqdKFmgcsf8w93YfMJHJUP0wL7Si7SR60IAlK+UYMhCEziQDmuNXBcSgswxyqpjlOWjLRBj3iHQIAcHQ3tTuBOhEPU7UnJyWjK8vBmhEBW6UjK0TDgEGqKMjuGdmMAOt9LbebFqMsfmgsXiwg3VOVESDjuuCwFwuIOC4XgyvVGy5xzgg/R2Xuy5phc7BBAKUbUTsWIZaIS9g6GtQP5QYi1AGY6U7LnW6g4G20bBgSMlnUPCIRCwvYKhDdfNyi0FKFVrT06EQjhEOAQCt2/HkMUm8N1oOOgvXRdRN0IhPEA4BAK2czC0+VvMK4TP7oeD/o3rIupGKIRHCIdAoHYKhjaEPKqmFKA0PdcF1I1QCA8RDoEA7doxvBFDyPDbp7YNIRCH0/D" style="height: 30px; width: auto; margin-right: 20px;">
-        <strong style="font-size: 14pt; color: #0c0f0c;">${project.name}</strong>
-        <div style="font-size: 8pt; color: #444;">${new Date().toLocaleDateString('de-DE')} · PV Matrix Tool v2.1</div>
+        <strong style="font-size: 16pt; color: #0c0f0c; font-weight: 900;">${project.name}</strong>
+        <div style="font-size: 9pt; color: #333; margin-top: 4px;">${new Date().toLocaleDateString('de-DE')} · PV Matrix Tool v2.1</div>
       </div>
       <div style="text-align: right;">
-        <div style="font-size: 8pt; color: #444;">${project.locked ? '🔒 GESPERRT' : '✅ OFFEN'}</div>
-        ${project.signature ? '<div style="font-size: 7pt; color: #00873d;">✍️ Unterschrieben</div>' : ''}
+        <div style="font-size: 9pt; color: #333; font-weight: 700;">${project.locked ? '🔒 GESPERRT' : '✅ OFFEN'}</div>
+        ${project.signature ? '<div style="font-size: 8pt; color: #00873d; font-weight: 700; margin-top: 2px;">✍️ Unterschrieben</div>' : ''}
       </div>
     </div>
   `;
@@ -2539,25 +2837,27 @@ function exportPDFWithLogo(){
       <meta charset="UTF-8">
       <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; color: #000; }
-        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-        th, td { border: 1px solid #94a3b8; padding: 4px; text-align: center; font-size: 8pt; }
-        th { background: #eee; font-weight: bold; }
-        tr:nth-child(even) { background: #f9f9f9; }
-        .wr-block { margin: 20px 0; border: 1px solid #ccc; padding: 10px; }
-        .wr-head { background: #f5f5f5; padding: 8px; border-bottom: 1px solid #ccc; margin-bottom: 10px; }
-        .kpi-card { display: inline-block; border: 1px solid #ccc; padding: 8px; margin: 5px; min-width: 100px; }
-        .kpi-value { font-size: 12pt; font-weight: bold; color: #00873d; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+        th, td { border: 1px solid #333; padding: 6px 4px; text-align: center; font-size: 9pt; }
+        th { background: #f5f5f5; font-weight: bold; color: #000; }
+        tr:nth-child(even) { background: #fafafa; }
+        .wr-block { margin: 16px 0; border: 2px solid #333; padding: 12px; page-break-inside: avoid; }
+        .wr-head { background: #e8e8e8; padding: 10px; border-bottom: 2px solid #333; margin-bottom: 12px; font-weight: bold; }
+        .kpi-card { display: inline-block; border: 1px solid #333; padding: 8px 12px; margin: 4px; min-width: 80px; }
+        .kpi-value { font-size: 11pt; font-weight: bold; color: #00873d; }
         .kpi-label { font-size: 7pt; color: #666; }
         .no-print { display: none !important; }
         .row-nein { opacity: 0.3; }
         .row-complete { background: #f0fdf4; }
         .row-incomplete { background: #fffbeb; }
         .row-error { background: #fef2f2; }
+        .string-id { font-weight: bold; color: #00873d; }
+        .print-cell { display: none !important; }
       </style>
     </head>
     <body>
       ${headerHTML}
-      <div style="padding: 10px;">
+      <div style="padding: 8px;">
         ${matrixHTML}
       </div>
     </body>
@@ -2569,6 +2869,7 @@ function exportPDFWithLogo(){
   tempDiv.style.position = 'fixed';
   tempDiv.style.left = '-9999px';
   tempDiv.style.top = '0';
+  tempDiv.style.width = '210mm'; // A4 width
   tempDiv.innerHTML = pdfContent;
   document.body.appendChild(tempDiv);
   
@@ -2576,7 +2877,7 @@ function exportPDFWithLogo(){
   html2pdf().set(opt).from(tempDiv).save().then(() => {
     document.body.removeChild(tempDiv);
     element.style.display = originalDisplay;
-    toast('✅ PDF erfolgreich exportiert');
+    toast('✅ PDF erfolgreich exportiert (ohne Logo)');
   }).catch(err => {
     console.error('PDF-Export fehlgeschlagen', err);
     document.body.removeChild(tempDiv);

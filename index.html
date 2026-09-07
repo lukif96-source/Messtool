@@ -16,6 +16,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
@@ -4669,11 +4670,13 @@ function exportCSV(){
   const project = getCurrentProject();
   if(!project) return toast('⚠️ Kein Projekt geöffnet');
   
+  if(!window.QRCode) return toast('⚠️ QR Library nicht geladen');
+  
   const plan = getCurrentPlan();
   const csvData = [];
   
-  // Header mit QR-Link
-  csvData.push(['String-ID', 'QR-Scan-Link', 'GAK', 'Module', 'kWp', 'Uoc(V)', 'Isc(A)', 'Riso(MΩ)', 'Status', 'Bemerkung']);
+  // Header mit QR-Code Base64 und Projekt-ID
+  csvData.push(['String-ID', 'Projekt-ID', 'QR-Code(Base64)', 'GAK', 'Module', 'kWp', 'Uoc(V)', 'Isc(A)', 'Riso(MΩ)', 'Status', 'Bemerkung']);
   
   // Daten
   Object.keys(plan).forEach(wrId => {
@@ -4687,15 +4690,36 @@ function exportCSV(){
         const item = APP_STATE[id];
         if(!item) continue;
         
-        // QR-Scan-Link (verlinkt auf gleiche Seite mit String-ID)
-        const qrLink = `${window.location.origin}${window.location.pathname}#${id}`;
+        // QR-Code mit Projekt-ID und String-ID für eindeutige Zuordnung
+        const qrContent = `${project.id}:${id}`;
+        
+        // QR-Code als Base64 generieren (ohne Data-URL Präfix)
+        let qrCodeBase64 = '';
+        try {
+          const qrContainer = document.createElement('div');
+          new QRCode(qrContainer, {
+            text: qrContent,
+            width: 200,
+            height: 200,
+            colorDark: "#000000",
+            colorLight: "#ffffff"
+          });
+          
+          const canvas = qrContainer.querySelector('canvas');
+          if(canvas) {
+            qrCodeBase64 = canvas.toDataURL('image/png').split(',')[1]; // Nur Base64 ohne Präfix
+          }
+        } catch(e) {
+          console.warn('QR Code generation failed for', id, e);
+        }
         
         const wp = getCurrentWp();
         const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * wp)/1000).toFixed(2) : '0';
         
         csvData.push([
           id,
-          qrLink,
+          project.id,
+          qrCodeBase64,
           item.gak || '',
           item.mod || 0,
           pwr,
@@ -4717,23 +4741,55 @@ function exportCSV(){
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
   link.setAttribute('href', url);
-  link.setAttribute('download', `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_QR-Export.csv`);
+  link.setAttribute('download', `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_QR-Codes.csv`);
   link.style.visibility = 'hidden';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   
-  toast('📄 CSV mit QR-Links exportiert - Links können gescannt werden!');
+  toast('📄 CSV mit QR-Code Base64 exportiert (mit Projekt-ID)');
 }
 
 function exportExcelWithQRCodes(){
   const project = getCurrentProject();
   if(!project) return toast('⚠️ Kein Projekt geöffnet');
   
-  const plan = getCurrentPlan();
-  const excelData = [];
+  if(!window.QRCode) return toast('⚠️ QR Library nicht geladen');
   
-  // Daten für Excel
+  if(!window.ExcelJS) return toast('⚠️ ExcelJS Library nicht geladen');
+  
+  const plan = getCurrentPlan();
+  
+  // Excel Workbook erstellen
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('QR-Codes');
+  
+  // Header
+  worksheet.columns = [
+    { header: 'String-ID', key: 'stringId', width: 12 },
+    { header: 'QR-Code', key: 'qrCode', width: 30 },
+    { header: 'GAK', key: 'gak', width: 15 },
+    { header: 'Module', key: 'module', width: 8 },
+    { header: 'Uoc(V)', key: 'uoc', width: 10 },
+    { header: 'Isc(A)', key: 'isc', width: 10 },
+    { header: 'Riso(MΩ)', key: 'riso', width: 10 },
+    { header: 'Status', key: 'status', width: 10 },
+    { header: 'kWp', key: 'kwp', width: 10 },
+    { header: 'Bemerkung', key: 'note', width: 30 }
+  ];
+  
+  // Header Styling
+  worksheet.getRow(1).font = { bold: true, size: 12 };
+  worksheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF4CAF50' }
+  };
+  worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+  
+  let rowIndex = 2;
+  
+  // Daten und QR-Codes
   Object.keys(plan).forEach(wrId => {
     const wrData = plan[wrId];
     const mppts = Array.isArray(wrData) ? 12 : (wrData.mppts || 12);
@@ -4745,50 +4801,83 @@ function exportExcelWithQRCodes(){
         const item = APP_STATE[id];
         if(!item) continue;
         
-        // URL für QR-Scan
-        const qrLink = `${window.location.origin}${window.location.pathname}#${id}`;
+        // QR-Code mit Projekt-ID für eindeutige Zuordnung
+        const qrContent = `${project.id}:${id}`;
+        
+        // QR-Code als Canvas generieren
+        let qrCanvas = null;
+        try {
+          const qrContainer = document.createElement('div');
+          new QRCode(qrContainer, {
+            text: qrContent,
+            width: 200,
+            height: 200,
+            colorDark: "#000000",
+            colorLight: "#ffffff"
+          });
+          
+          qrCanvas = qrContainer.querySelector('canvas');
+        } catch(e) {
+          console.warn('QR Code generation failed for', id, e);
+        }
         
         const wp = getCurrentWp();
         const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * wp)/1000).toFixed(2) : '0';
         
-        excelData.push({
-          'String-ID': id,
-          'QR-Scan-Link': qrLink,
-          'GAK': item.gak || '',
-          'Module': item.mod || 0,
-          'Uoc(V)': item.uoc || '',
-          'Isc(A)': item.isc || '',
-          'Riso(MΩ)': item.riso || '',
-          'Status': item.stat || '',
-          'kWp': pwr,
-          'Bemerkung': item.note || ''
+        // Zeile hinzufügen
+        const row = worksheet.addRow({
+          stringId: id,
+          gak: item.gak || '',
+          module: item.mod || 0,
+          uoc: item.uoc || '',
+          isc: item.isc || '',
+          riso: item.riso || '',
+          status: item.stat || '',
+          kwp: pwr,
+          note: item.note || ''
         });
+        
+        // QR-Code als Bild einbetten
+        if(qrCanvas) {
+          const imageId = workbook.addImage({
+            base64: qrCanvas.toDataURL('image/png'),
+            extension: 'png',
+          });
+          
+          // QR-Code in Zelle einfügen
+          worksheet.addImage(imageId, {
+            tl: { col: 1, row: rowIndex - 1 },
+            br: { col: 2, row: rowIndex }
+          });
+          
+          // String-Name unter QR-Code
+          const stringNameCell = worksheet.getCell(`A${rowIndex}`);
+          stringNameCell.value = id;
+          stringNameCell.alignment = { vertical: 'top', horizontal: 'center' };
+          stringNameCell.font = { bold: true, size: 10 };
+        }
+        
+        // Zeilenhöhe für QR-Code erhöhen
+        row.height = 80;
+        
+        rowIndex++;
       }
     }
   });
   
-  // Excel Worksheet erstellen
-  const worksheet = XLSX.utils.json_to_sheet(excelData);
-  
-  // Spaltenbreiten anpassen
-  worksheet['!cols'] = [
-    { wch: 12 }, // String-ID
-    { wch: 50 }, // QR-Scan-Link
-    { wch: 15 }, // GAK
-    { wch: 8 },  // Module
-    { wch: 10 }, // Uoc
-    { wch: 10 }, // Isc
-    { wch: 10 }, // Riso
-    { wch: 10 }, // Status
-    { wch: 10 }, // kWp
-    { wch: 30 }  // Bemerkung
-  ];
-  
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "QR-Codes");
-  XLSX.writeFile(workbook, `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_QR-Excel.xlsx`);
-  
-  toast('📊 Excel mit QR-Links exportiert - Links sind klickbar!');
+  // Excel exportieren
+  workbook.xlsx.writeBuffer().then(buffer => {
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_QR-Codes.xlsx`;
+    link.click();
+    
+    toast('📊 Excel mit echten QR-Code-Bildern exportiert');
+  }).catch(err => {
+    console.error('Excel export error:', err);
+    toast('❌ Excel Export fehlgeschlagen');
+  });
 }
 
 function exportPDFWithLogo(){
@@ -7922,7 +8011,62 @@ window.onload = () => {
   checkSession();
   setupKeyboardShortcuts();
   loadSchedulesFromStorage();
+  handleUrlOnLoad(); // QR-Link Handling beim Laden
 };
+
+// QR-Link Handling beim Seitenaufruf
+function handleUrlOnLoad(){
+  const hash = window.location.hash;
+  if(hash && hash.startsWith('#')){
+    const stringId = hash.substring(1); // #1.1.1 → 1.1.1
+    
+    // Prüfen ob gültige String-ID (Format: X.Y.Z)
+    if(stringId.match(/^\d+\.\d+\.\d+$/)){
+      console.log('QR-Link erkannt:', stringId);
+      
+      // Kurze Zeit warten bis DOM geladen
+      setTimeout(() => {
+        autoSelectString(stringId);
+      }, 300);
+    }
+  }
+}
+
+// Automatische String-Auswahl bei QR-Scan
+function autoSelectString(stringId){
+  // Matrix-Ansicht sicherstellen
+  if(!document.body.classList.contains('tab-matrix')){
+    switchMainTab('matrix');
+  }
+  
+  // Kurze Zeit warten bis Matrix geladen
+  setTimeout(() => {
+    const row = g(`row-${stringId}`);
+    if(row) {
+      // Zeile highlighten und scrollen
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.style.animation = 'highlight 1s ease';
+      
+      // Eingabefelder fokussieren
+      const firstInput = row.querySelector('input:not([readonly])');
+      if(firstInput) {
+        firstInput.focus();
+        firstInput.select();
+      }
+      
+      // Visual Feedback
+      row.style.background = 'var(--accent-glow)';
+      setTimeout(() => {
+        row.style.background = '';
+      }, 2000);
+      
+      toast(`🎯 String ${stringId} automatisch ausgewählt (QR-Scan)`);
+    } else {
+      console.warn('String nicht gefunden:', stringId);
+      toast(`⚠️ String ${stringId} nicht gefunden`);
+    }
+  }, 500);
+}
 </script>
 </body>
 </html>

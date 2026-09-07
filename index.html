@@ -16,7 +16,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
@@ -1227,8 +1226,9 @@ body.sun-mode .wr-bulk-bar { background: #f8fafc; }
   body {
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 10pt;
-    line-height: 1.2;
+    font-size: 11pt;
+    line-height: 1.3;
+    font-family: 'Arial', 'Helvetica', sans-serif !important;
   }
   
   /* Alle nicht-druckbaren Elemente ausblenden */
@@ -1265,135 +1265,182 @@ body.sun-mode .wr-bulk-bar { background: #f8fafc; }
   }
   
   .wrap {
-    padding: 0 !important;
+    padding: 10mm !important;
     max-width: 100% !important;
   }
   
-  /* Wechselrichter-Blöcke */
+  /* Professioneller Header für Druck */
+  .matrix-view::before {
+    content: '';
+    display: block;
+    text-align: center;
+    margin-bottom: 10mm;
+    padding-bottom: 5mm;
+    border-bottom: 2px solid #000;
+  }
+  
+  /* Wechselrichter-Blöcke - Professionelles Styling */
   .wr-block {
     page-break-inside: avoid;
-    margin: 8px 0;
+    margin: 8mm 0;
     border: 2px solid #000;
-    padding: 8px;
-    border-radius: 0;
+    padding: 6mm;
+    border-radius: 4px;
     background: #ffffff !important;
     box-shadow: none !important;
   }
   
   .wr-head {
-    background: #f5f5f5 !important;
-    padding: 6px 8px;
+    background: #f0f0f0 !important;
+    padding: 4mm 6mm;
     border-bottom: 2px solid #000;
-    margin-bottom: 8px;
-    color: #000 !important;
+    margin-bottom: 5mm;
+    color: #000000 !important;
+    font-size: 12pt;
+    font-weight: bold;
   }
   
   .wr-num {
-    background: #000 !important;
-    color: #fff !important;
+    background: #000000 !important;
+    color: #ffffff !important;
     border: 1px solid #000;
+    padding: 2mm 4mm;
+    font-size: 10pt;
+    font-weight: bold;
+    border-radius: 2px;
   }
   
-  /* Tabellen */
+  /* Professionelle Tabellen */
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 8pt;
+    font-size: 9pt;
     table-layout: fixed;
+    border: 2px solid #000;
   }
   
   th, td {
     border: 1px solid #000;
-    padding: 3px 4px;
+    padding: 3mm 4mm;
     text-align: center;
     vertical-align: middle;
   }
   
   th {
-    background: #e8e8e8 !important;
+    background: #e0e0e0 !important;
     font-weight: bold;
-    color: #000 !important;
+    color: #000000 !important;
     border: 1px solid #000;
-    font-size: 7pt;
+    font-size: 8pt;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 4mm 3mm;
   }
   
-  /* Zeilen-Status im Druck */
+  /* Zeilen-Status im Druck - Professionelle Farben */
   .row-complete {
     background: #f0fdf4 !important;
+    border-left: 4px solid #00873d !important;
   }
   
   .row-incomplete {
     background: #fffbeb !important;
+    border-left: 4px solid #f59e0b !important;
   }
   
   .row-error {
     background: #fef2f2 !important;
+    border-left: 4px solid #ef4444 !important;
   }
   
   .row-nein {
-    opacity: 0.4;
+    opacity: 0.5;
     background: #f9f9f9 !important;
+    text-decoration: line-through;
   }
   
-  /* Wichtige Text-Elemente */
+  /* Wichtige Text-Elemente - Professionelle Typografie */
   .string-id {
     font-weight: bold;
     color: #000000 !important;
-    font-size: 8pt;
+    font-size: 10pt;
+    font-family: 'Courier New', monospace !important;
   }
   
   .str-label {
     color: #666666 !important;
-    font-size: 7pt;
+    font-size: 8pt;
+    font-weight: normal;
   }
   
   .pwr-cell {
     font-weight: bold;
     color: #000000 !important;
-    font-size: 8pt;
+    font-size: 10pt;
+    font-family: 'Courier New', monospace !important;
   }
   
-  /* Eingabefelder im Druck */
+  /* Eingabefelder im Druck - Professionelles Styling */
   .sp-inp {
-    border: 1px solid #ccc;
-    background: #fff !important;
-    color: #000 !important;
-    font-size: 8pt;
-    padding: 2px 4px;
+    border: 1px solid #999;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 9pt;
+    padding: 2mm 3mm;
+    border-radius: 2px;
   }
   
   .sp-inp:read-only {
-    background: #f9f9f9 !important;
-    color: #333 !important;
-    border: 1px solid #ddd;
+    background: #f5f5f5 !important;
+    color: #333333 !important;
+    border: 1px solid #ccc;
+    font-style: italic;
   }
   
   .sp-inp-gak {
     color: #000000 !important;
     font-weight: bold;
+    font-size: 10pt;
+    background: #f0fdf4 !important;
+    border: 2px solid #00873d !important;
   }
   
-  /* Toggle im Druck */
+  /* Toggle im Druck - Professionelle Checkboxen */
   .tog {
-    border: 1px solid #000;
-    background: #fff !important;
-    color: #000 !important;
+    border: 2px solid #000;
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 2mm 4mm;
+    font-weight: bold;
+    border-radius: 2px;
   }
   
   .tog.on-ja {
-    background: #000 !important;
-    color: #fff !important;
+    background: #000000 !important;
+    color: #ffffff !important;
   }
   
-  /* Seiten-Einstellungen */
+  .tog.on-nein {
+    background: #ef4444 !important;
+    color: #ffffff !important;
+  }
+  
+  /* Seiten-Einstellungen - Professionell */
   @page {
     size: A4 landscape;
     margin: 8mm;
   }
   
   @page :first {
-    margin-top: 5mm;
+    margin-top: 10mm;
+  }
+  
+  @page :left {
+    margin-right: 8mm;
+  }
+  
+  @page :right {
+    margin-left: 8mm;
   }
   
   /* Keine Überlauf-Elemente im Druck */
@@ -1417,7 +1464,7 @@ body.sun-mode .wr-bulk-bar { background: #f8fafc; }
   .kpi-card {
     border: 1px solid #000;
     box-shadow: none !important;
-    background: #fff !important;
+    background: #ffffff !important;
   }
   
   /* Matrix-Ansicht sicherstellen */
@@ -1436,6 +1483,25 @@ body.sun-mode .wr-bulk-bar { background: #f8fafc; }
   
   body.tab-matrix .matrix-view {
     display: block !important;
+  }
+  
+  /* Professionelle Spaltenbreiten */
+  table.mt col:nth-child(1) { width: 10%; } /* String-ID */
+  table.mt col:nth-child(2) { width: 12%; } /* GAK */
+  table.mt col:nth-child(3) { width: 8%; }  /* Module */
+  table.mt col:nth-child(4) { width: 10%; } /* Uoc */
+  table.mt col:nth-child(5) { width: 10%; } /* Isc */
+  table.mt col:nth-child(6) { width: 10%; } /* Riso */
+  table.mt col:nth-child(7) { width: 8%; }  /* Status */
+  table.mt col:nth-child(8) { width: 32%; } /* Info */
+  
+  /* Footer mit Seitenzahl */
+  @page {
+    @bottom-center {
+      content: "Seite " counter(page) " von " counter(pages);
+      font-size: 9pt;
+      color: #666;
+    }
   }
 }
 
@@ -2788,7 +2854,10 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
     <span class="icon" style="color:#ef4444;">📑</span><span class="label">PDF (ohne Logo)</span>
   </button>
   <button onclick="exportQRCodes();closeSidebar();" class="sidebar-btn">
-    <span class="icon" style="color:#8b5cf6;">📱</span><span class="label">QR-Codes (Bilder)</span>
+    <span class="icon" style="color:#8b5cf6;">📱</span><span class="label">QR-Codes (Strings)</span>
+  </button>
+  <button onclick="exportGAKLabels();closeSidebar();" class="sidebar-btn">
+    <span class="icon" style="color:#f59e0b;">🏷️</span><span class="label">GAK-Etiketten (WR)</span>
   </button>
 
   <div class="role-gate-planner" style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px; margin-top:8px;">Verwaltung</div>
@@ -4310,11 +4379,15 @@ function handleChatKeypress(event){
   }
 }
 
-// Conflict Resolution System
+// Conflict Resolution System - DEAKTIVIERT für lokale Verwendung
 let pendingConflicts = [];
 let pendingConflictProjectId = null;
+let conflictDetectionEnabled = false; // Konflikt-Erkennung deaktiviert
 
 function detectConflicts(localData, remoteData){
+  // Konflikt-Erkennung deaktiviert - keine Konflikte für lokale Änderungen
+  if(!conflictDetectionEnabled) return [];
+  
   const conflicts = [];
   
   Object.keys(localData).forEach(id => {
@@ -4332,6 +4405,8 @@ function detectConflicts(localData, remoteData){
 }
 
 function showConflictWizard(conflicts){
+  // Konflikt-Wizard nur anzeigen wenn aktiviert
+  if(!conflictDetectionEnabled) return;
   if(!conflicts || conflicts.length === 0) return;
   
   pendingConflicts = conflicts;
@@ -4670,13 +4745,11 @@ function exportCSV(){
   const project = getCurrentProject();
   if(!project) return toast('⚠️ Kein Projekt geöffnet');
   
-  if(!window.QRCode) return toast('⚠️ QR Library nicht geladen');
-  
   const plan = getCurrentPlan();
   const csvData = [];
   
-  // Header mit QR-Code Base64 und Projekt-ID
-  csvData.push(['String-ID', 'Projekt-ID', 'QR-Code(Base64)', 'GAK', 'Module', 'kWp', 'Uoc(V)', 'Isc(A)', 'Riso(MΩ)', 'Status', 'Bemerkung']);
+  // Header mit QR-Link (einfach und zuverlässig)
+  csvData.push(['String-ID', 'QR-Scan-Link', 'GAK', 'Module', 'kWp', 'Uoc(V)', 'Isc(A)', 'Riso(MΩ)', 'Status', 'Bemerkung']);
   
   // Daten
   Object.keys(plan).forEach(wrId => {
@@ -4690,36 +4763,15 @@ function exportCSV(){
         const item = APP_STATE[id];
         if(!item) continue;
         
-        // QR-Code mit Projekt-ID und String-ID für eindeutige Zuordnung
-        const qrContent = `${project.id}:${id}`;
-        
-        // QR-Code als Base64 generieren (ohne Data-URL Präfix)
-        let qrCodeBase64 = '';
-        try {
-          const qrContainer = document.createElement('div');
-          new QRCode(qrContainer, {
-            text: qrContent,
-            width: 200,
-            height: 200,
-            colorDark: "#000000",
-            colorLight: "#ffffff"
-          });
-          
-          const canvas = qrContainer.querySelector('canvas');
-          if(canvas) {
-            qrCodeBase64 = canvas.toDataURL('image/png').split(',')[1]; // Nur Base64 ohne Präfix
-          }
-        } catch(e) {
-          console.warn('QR Code generation failed for', id, e);
-        }
+        // Einfacher QR-Link (ohne Komplexität)
+        const qrLink = `${window.location.origin}${window.location.pathname}#${id}`;
         
         const wp = getCurrentWp();
         const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * wp)/1000).toFixed(2) : '0';
         
         csvData.push([
           id,
-          project.id,
-          qrCodeBase64,
+          qrLink,
           item.gak || '',
           item.mod || 0,
           pwr,
@@ -4741,55 +4793,23 @@ function exportCSV(){
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
   link.setAttribute('href', url);
-  link.setAttribute('download', `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_QR-Codes.csv`);
+  link.setAttribute('download', `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_QR-Export.csv`);
   link.style.visibility = 'hidden';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   
-  toast('📄 CSV mit QR-Code Base64 exportiert (mit Projekt-ID)');
+  toast('📄 CSV mit QR-Links exportiert');
 }
 
 function exportExcelWithQRCodes(){
   const project = getCurrentProject();
   if(!project) return toast('⚠️ Kein Projekt geöffnet');
   
-  if(!window.QRCode) return toast('⚠️ QR Library nicht geladen');
-  
-  if(!window.ExcelJS) return toast('⚠️ ExcelJS Library nicht geladen');
-  
   const plan = getCurrentPlan();
+  const excelData = [];
   
-  // Excel Workbook erstellen
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('QR-Codes');
-  
-  // Header
-  worksheet.columns = [
-    { header: 'String-ID', key: 'stringId', width: 12 },
-    { header: 'QR-Code', key: 'qrCode', width: 30 },
-    { header: 'GAK', key: 'gak', width: 15 },
-    { header: 'Module', key: 'module', width: 8 },
-    { header: 'Uoc(V)', key: 'uoc', width: 10 },
-    { header: 'Isc(A)', key: 'isc', width: 10 },
-    { header: 'Riso(MΩ)', key: 'riso', width: 10 },
-    { header: 'Status', key: 'status', width: 10 },
-    { header: 'kWp', key: 'kwp', width: 10 },
-    { header: 'Bemerkung', key: 'note', width: 30 }
-  ];
-  
-  // Header Styling
-  worksheet.getRow(1).font = { bold: true, size: 12 };
-  worksheet.getRow(1).fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FF4CAF50' }
-  };
-  worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
-  
-  let rowIndex = 2;
-  
-  // Daten und QR-Codes
+  // Daten für Excel (einfach und zuverlässig)
   Object.keys(plan).forEach(wrId => {
     const wrData = plan[wrId];
     const mppts = Array.isArray(wrData) ? 12 : (wrData.mppts || 12);
@@ -4801,83 +4821,50 @@ function exportExcelWithQRCodes(){
         const item = APP_STATE[id];
         if(!item) continue;
         
-        // QR-Code mit Projekt-ID für eindeutige Zuordnung
-        const qrContent = `${project.id}:${id}`;
-        
-        // QR-Code als Canvas generieren
-        let qrCanvas = null;
-        try {
-          const qrContainer = document.createElement('div');
-          new QRCode(qrContainer, {
-            text: qrContent,
-            width: 200,
-            height: 200,
-            colorDark: "#000000",
-            colorLight: "#ffffff"
-          });
-          
-          qrCanvas = qrContainer.querySelector('canvas');
-        } catch(e) {
-          console.warn('QR Code generation failed for', id, e);
-        }
+        // Einfacher QR-Link
+        const qrLink = `${window.location.origin}${window.location.pathname}#${id}`;
         
         const wp = getCurrentWp();
         const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * wp)/1000).toFixed(2) : '0';
         
-        // Zeile hinzufügen
-        const row = worksheet.addRow({
-          stringId: id,
-          gak: item.gak || '',
-          module: item.mod || 0,
-          uoc: item.uoc || '',
-          isc: item.isc || '',
-          riso: item.riso || '',
-          status: item.stat || '',
-          kwp: pwr,
-          note: item.note || ''
+        excelData.push({
+          'String-ID': id,
+          'QR-Scan-Link': qrLink,
+          'GAK': item.gak || '',
+          'Module': item.mod || 0,
+          'Uoc(V)': item.uoc || '',
+          'Isc(A)': item.isc || '',
+          'Riso(MΩ)': item.riso || '',
+          'Status': item.stat || '',
+          'kWp': pwr,
+          'Bemerkung': item.note || ''
         });
-        
-        // QR-Code als Bild einbetten
-        if(qrCanvas) {
-          const imageId = workbook.addImage({
-            base64: qrCanvas.toDataURL('image/png'),
-            extension: 'png',
-          });
-          
-          // QR-Code in Zelle einfügen
-          worksheet.addImage(imageId, {
-            tl: { col: 1, row: rowIndex - 1 },
-            br: { col: 2, row: rowIndex }
-          });
-          
-          // String-Name unter QR-Code
-          const stringNameCell = worksheet.getCell(`A${rowIndex}`);
-          stringNameCell.value = id;
-          stringNameCell.alignment = { vertical: 'top', horizontal: 'center' };
-          stringNameCell.font = { bold: true, size: 10 };
-        }
-        
-        // Zeilenhöhe für QR-Code erhöhen
-        row.height = 80;
-        
-        rowIndex++;
       }
     }
   });
   
-  // Excel exportieren
-  workbook.xlsx.writeBuffer().then(buffer => {
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_QR-Codes.xlsx`;
-    link.click();
-    
-    toast('📊 Excel mit echten QR-Code-Bildern exportiert');
-  }).catch(err => {
-    console.error('Excel export error:', err);
-    toast('❌ Excel Export fehlgeschlagen');
-  });
+  // Excel Worksheet erstellen
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+  
+  // Spaltenbreiten anpassen
+  worksheet['!cols'] = [
+    { wch: 12 }, // String-ID
+    { wch: 50 }, // QR-Scan-Link
+    { wch: 15 }, // GAK
+    { wch: 8 },  // Module
+    { wch: 10 }, // Uoc
+    { wch: 10 }, // Isc
+    { wch: 10 }, // Riso
+    { wch: 10 }, // Status
+    { wch: 10 }, // kWp
+    { wch: 30 }  // Bemerkung
+  ];
+  
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "QR-Codes");
+  XLSX.writeFile(workbook, `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_QR-Export.xlsx`);
+  
+  toast('📊 Excel mit QR-Links exportiert');
 }
 
 function exportPDFWithLogo(){
@@ -5114,6 +5101,90 @@ function exportQRCodes(){
   document.body.removeChild(link);
   
   toast(`📱 ${qrData.length} QR-Codes exportiert`);
+}
+
+function exportGAKLabels(){
+  const project = getCurrentProject();
+  if(!project) return toast('⚠️ Kein Projekt geöffnet');
+  
+  if(!window.QRCode) return toast('⚠️ QR Library nicht geladen');
+  
+  const plan = getCurrentPlan();
+  const wrKeys = Object.keys(plan).map(Number).filter(n => !isNaN(n) && !Array.isArray(plan[n])).sort((a,b)=>a-b);
+  
+  if(wrKeys.length === 0) return toast('⚠️ Keine Wechselrichter im Projekt');
+  
+  // Etiketten-HTML generieren
+  let labelsHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>GAK-Etiketten - ${project.name}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .label-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .label-item { border: 2px solid #000; padding: 15px; text-align: center; page-break-inside: avoid; }
+        .label-item img { width: 150px; height: 150px; margin: 10px auto; display: block; }
+        .label-name { font-size: 14px; font-weight: bold; margin-bottom: 10px; }
+        .label-details { font-size: 11px; margin-top: 10px; }
+        .label-meta { font-size: 10px; color: #666; margin-top: 5px; }
+        @media print { .label-grid { grid-template-columns: repeat(2, 1fr); } }
+      </style>
+    </head>
+    <body>
+      <h1 style="text-align: center;">GAK-Etiketten für Wechselrichter - ${project.name}</h1>
+      <div class="label-grid">
+  `;
+  
+  wrKeys.forEach(wrId => {
+    const wrData = plan[wrId];
+    const wrName = wrData?.name || ('WR ' + wrId);
+    const wrGAK = wrData?.gak || '';
+    
+    // QR-Code für WR generieren
+    const qrContainer = document.createElement('div');
+    new QRCode(qrContainer, {
+      text: `WR:${wrId}:${project.id}`,
+      width: 150,
+      height: 150,
+      colorDark: "#000000",
+      colorLight: "#ffffff"
+    });
+    
+    const canvas = qrContainer.querySelector('canvas');
+    const qrDataURL = canvas ? canvas.toDataURL('image/png') : '';
+    
+    labelsHTML += `
+      <div class="label-item">
+        <div class="label-name">${wrName}</div>
+        <div style="font-size: 12px; margin-bottom: 5px;">WR-ID: ${wrId}</div>
+        ${qrDataURL ? `<img src="${qrDataURL}">` : ''}
+        <div class="label-details">
+          <strong>GAK:</strong> ${wrGAK || 'Nicht zugewiesen'}
+        </div>
+        <div class="label-meta">
+          MPPTs: ${wrData?.mppts || 12} | Inputs: ${wrData?.inputs || 2}
+        </div>
+      </div>
+    `;
+  });
+  
+  labelsHTML += `
+      </div>
+      <div style="text-align: center; margin-top: 20px;">
+        <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Drucken</button>
+        <button onclick="window.close()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; margin-left: 10px;">Schließen</button>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  // Temporäres Fenster für Etiketten erstellen
+  const labelWindow = window.open('', '_blank');
+  labelWindow.document.write(labelsHTML);
+  labelWindow.document.close();
+  
+  toast('🏷️ GAK-Etiketten für Wechselrichter generiert');
 }
 
 function applyTemplate(templateName){
@@ -7742,11 +7813,9 @@ async function saveProjectToCloudNow(projectId){
   try {
     const stateData = projectId === CURRENT_PROJECT_ID ? APP_STATE : generateState(proj.plan);
 
-    // Echte Konflikterkennung (ersetzt die alte Demo-Funktion): prüfen, ob sich der
-    // Cloud-Stand seit unserem letzten bekannten Sync verändert hat — z.B. weil ein
-    // anderes Gerät zwischenzeitlich gespeichert hat. Nur relevant für das gerade
-    // offene Projekt, weil nur dafür echte lokale Daten zum Vergleichen vorliegen.
-    if(projectId === CURRENT_PROJECT_ID && proj.cloud_updated_at){
+    // Konflikt-Erkennung deaktiviert für lokale Verwendung
+    // Nur relevant wenn echte Cloud-Collaboration aktiv ist
+    if(conflictDetectionEnabled && projectId === CURRENT_PROJECT_ID && proj.cloud_updated_at){
       try {
         const { data: remoteRow } = await supabaseClient.from('pv_projects').select('updated_at, data').eq('id', projectId).single();
         if(remoteRow && remoteRow.updated_at && remoteRow.updated_at !== proj.cloud_updated_at){

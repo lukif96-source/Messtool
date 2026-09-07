@@ -2778,13 +2778,16 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
     <span class="icon">📊</span><span class="label">Prüfprotokoll (Excel)</span>
   </button>
   <button onclick="exportCSV();closeSidebar();" class="sidebar-btn">
-    <span class="icon" style="color:#3b82f6;">📄</span><span class="label">CSV Export</span>
+    <span class="icon" style="color:#3b82f6;">📄</span><span class="label">CSV mit QR-Links</span>
+  </button>
+  <button onclick="exportExcelWithQRCodes();closeSidebar();" class="sidebar-btn">
+    <span class="icon" style="color:#16a34a;">📊</span><span class="label">Excel mit QR-Links</span>
   </button>
   <button onclick="exportPDFWithLogo();closeSidebar();" class="sidebar-btn">
-    <span class="icon" style="color:#ef4444;">📑</span><span class="label">PDF mit Logo</span>
+    <span class="icon" style="color:#ef4444;">📑</span><span class="label">PDF (ohne Logo)</span>
   </button>
   <button onclick="exportQRCodes();closeSidebar();" class="sidebar-btn">
-    <span class="icon" style="color:#8b5cf6;">📱</span><span class="label">QR-Codes</span>
+    <span class="icon" style="color:#8b5cf6;">📱</span><span class="label">QR-Codes (Bilder)</span>
   </button>
 
   <div class="role-gate-planner" style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px; margin-top:8px;">Verwaltung</div>
@@ -4669,8 +4672,8 @@ function exportCSV(){
   const plan = getCurrentPlan();
   const csvData = [];
   
-  // Header
-  csvData.push(['WR', 'MPPT', 'String', 'GAK', 'Module', 'kWp', 'Uoc(V)', 'Isc(A)', 'Riso(MΩ)', 'Status', 'Bemerkung']);
+  // Header mit QR-Link
+  csvData.push(['String-ID', 'QR-Scan-Link', 'GAK', 'Module', 'kWp', 'Uoc(V)', 'Isc(A)', 'Riso(MΩ)', 'Status', 'Bemerkung']);
   
   // Daten
   Object.keys(plan).forEach(wrId => {
@@ -4684,13 +4687,15 @@ function exportCSV(){
         const item = APP_STATE[id];
         if(!item) continue;
         
+        // QR-Scan-Link (verlinkt auf gleiche Seite mit String-ID)
+        const qrLink = `${window.location.origin}${window.location.pathname}#${id}`;
+        
         const wp = getCurrentWp();
         const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * wp)/1000).toFixed(2) : '0';
         
         csvData.push([
-          wrId,
-          m,
-          s,
+          id,
+          qrLink,
           item.gak || '',
           item.mod || 0,
           pwr,
@@ -4712,13 +4717,78 @@ function exportCSV(){
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
   link.setAttribute('href', url);
-  link.setAttribute('download', `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_export.csv`);
+  link.setAttribute('download', `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_QR-Export.csv`);
   link.style.visibility = 'hidden';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   
-  toast('📄 CSV exportiert');
+  toast('📄 CSV mit QR-Links exportiert - Links können gescannt werden!');
+}
+
+function exportExcelWithQRCodes(){
+  const project = getCurrentProject();
+  if(!project) return toast('⚠️ Kein Projekt geöffnet');
+  
+  const plan = getCurrentPlan();
+  const excelData = [];
+  
+  // Daten für Excel
+  Object.keys(plan).forEach(wrId => {
+    const wrData = plan[wrId];
+    const mppts = Array.isArray(wrData) ? 12 : (wrData.mppts || 12);
+    const inputs = Array.isArray(wrData) ? 2 : (wrData.inputs || 2);
+    
+    for(let m = 1; m <= mppts; m++){
+      for(let s = 1; s <= inputs; s++){
+        const id = `${wrId}.${m}.${s}`;
+        const item = APP_STATE[id];
+        if(!item) continue;
+        
+        // URL für QR-Scan
+        const qrLink = `${window.location.origin}${window.location.pathname}#${id}`;
+        
+        const wp = getCurrentWp();
+        const pwr = (item.stat === 'JA' && item.mod > 0) ? ((item.mod * wp)/1000).toFixed(2) : '0';
+        
+        excelData.push({
+          'String-ID': id,
+          'QR-Scan-Link': qrLink,
+          'GAK': item.gak || '',
+          'Module': item.mod || 0,
+          'Uoc(V)': item.uoc || '',
+          'Isc(A)': item.isc || '',
+          'Riso(MΩ)': item.riso || '',
+          'Status': item.stat || '',
+          'kWp': pwr,
+          'Bemerkung': item.note || ''
+        });
+      }
+    }
+  });
+  
+  // Excel Worksheet erstellen
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+  
+  // Spaltenbreiten anpassen
+  worksheet['!cols'] = [
+    { wch: 12 }, // String-ID
+    { wch: 50 }, // QR-Scan-Link
+    { wch: 15 }, // GAK
+    { wch: 8 },  // Module
+    { wch: 10 }, // Uoc
+    { wch: 10 }, // Isc
+    { wch: 10 }, // Riso
+    { wch: 10 }, // Status
+    { wch: 10 }, // kWp
+    { wch: 30 }  // Bemerkung
+  ];
+  
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "QR-Codes");
+  XLSX.writeFile(workbook, `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_QR-Excel.xlsx`);
+  
+  toast('📊 Excel mit QR-Links exportiert - Links sind klickbar!');
 }
 
 function exportPDFWithLogo(){

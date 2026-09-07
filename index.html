@@ -6853,8 +6853,10 @@ function printBlankMeasurementSheet(){
     : `<div class="sig-box"><div class="sig-line"></div><div>Ort, Datum, Unterschrift Prüfer</div></div>`;
 
   let win = window.open('', '_blank');
-  let pagesHtml = '';
   const wrKeys = Object.keys(proj.plan || {}).map(Number).filter(n => !isNaN(n)).sort((a,b)=>a-b);
+
+  // Erst alle Seiten mit Inhalt sammeln, damit wir "Seite X von Y" kennen bevor wir rendern.
+  const pageEntries = [];
   wrKeys.forEach(wr => {
     let rowsHtml = '';
     const itemsForWR = getAllFullIds().filter(k => k.startsWith(`${wr}.`));
@@ -6871,9 +6873,16 @@ function printBlankMeasurementSheet(){
         <td>${valOrLine(item.note, '90%')}</td>
       </tr>`;
     });
-    if(rowsHtml !== '') {
-      pagesHtml += `<div class="sheet"><div class="header"><div><div class="brand">SOLPRO</div><div class="title">DC-Strangmessung / Inbetriebnahme</div></div><div class="meta"><div class="meta-row"><span>Projekt:</span> <strong>${proj.name}</strong></div><div class="meta-row"><span>Datum:</span> <strong>${dateStr}</strong></div><div class="meta-row"><span>Wechselrichter:</span> <strong>WR ${wr}</strong></div><div class="meta-row"><span>Prüfer:</span> <strong>_______________________</strong></div></div></div><div class="env-zone"><div class="env-box"><div class="env-label">Einstrahlung (W/m²)</div></div><div class="env-box"><div class="env-label">Modultemperatur (°C)</div></div><div class="env-box" style="flex: 1.5;"><div class="env-label">Eingesetztes Messgerät (Typ / S/N)</div></div></div><table><thead><tr><th style="width:10%;">Klemme</th><th style="width:14%;">GAK</th><th style="width:7%;">Mods</th><th style="width:12%;">Uoc (V)</th><th style="width:12%;">Isc (A)</th><th style="width:13%;">Riso (MΩ)</th><th style="width:32%;">Bemerkung</th></tr></thead><tbody>${rowsHtml}</tbody></table>${lockStampHtml}<div class="footer">${pruferSigBoxHtml}<div class="sig-box"><div class="sig-line"></div><div>Ort, Datum, Unterschrift Bauleitung</div></div></div></div>`;
-    }
+    if(rowsHtml !== '') pageEntries.push({ wr, rowsHtml });
+  });
+
+  let pagesHtml = '';
+  pageEntries.forEach((entry, idx) => {
+    const { wr, rowsHtml } = entry;
+    const pageNumHtml = pageEntries.length > 1
+      ? `<div style="text-align:right;font-size:8pt;color:#a1a1aa;margin-top:4px;">Seite ${idx + 1} von ${pageEntries.length}</div>`
+      : '';
+    pagesHtml += `<div class="sheet"><div class="header"><div><div class="brand">SOLPRO</div><div class="title">DC-Strangmessung / Inbetriebnahme</div></div><div class="meta"><div class="meta-row"><span>Projekt:</span> <strong>${proj.name}</strong></div><div class="meta-row"><span>Datum:</span> <strong>${dateStr}</strong></div><div class="meta-row"><span>Wechselrichter:</span> <strong>WR ${wr}</strong></div><div class="meta-row"><span>Prüfer:</span> <strong>_______________________</strong></div></div></div><div class="env-zone"><div class="env-box"><div class="env-label">Einstrahlung (W/m²)</div></div><div class="env-box"><div class="env-label">Modultemperatur (°C)</div></div><div class="env-box" style="flex: 1.5;"><div class="env-label">Eingesetztes Messgerät (Typ / S/N)</div></div></div><table><thead><tr><th style="width:10%;">Klemme</th><th style="width:14%;">GAK</th><th style="width:7%;">Mods</th><th style="width:12%;">Uoc (V)</th><th style="width:12%;">Isc (A)</th><th style="width:13%;">Riso (MΩ)</th><th style="width:32%;">Bemerkung</th></tr></thead><tbody>${rowsHtml}</tbody></table>${lockStampHtml}<div class="footer">${pruferSigBoxHtml}<div class="sig-box"><div class="sig-line"></div><div>Ort, Datum, Unterschrift Bauleitung</div></div></div>${pageNumHtml}</div>`;
   });
   if(pagesHtml === '') { toast('Keine aktiven Strings!'); win.close(); return; }
   
@@ -6883,6 +6892,16 @@ function printBlankMeasurementSheet(){
 
 async function fetchProjectsFromCloud(){
   if(!supabaseClient || !currentUser) return;
+  // KRITISCH: Erst noch ausstehende lokale Änderungen wirklich in die Cloud
+  // schreiben (der debounced Auto-Save wartet sonst noch bis zu CLOUD_SYNC_DELAY
+  // ms), und einen bereits laufenden Speichervorgang abwarten. Sonst überschreibt
+  // dieser Fetch frische, noch nicht synchronisierte Eingaben mit dem alten
+  // Cloud-Stand — z.B. wenn man kurz nach dem Ändern der Modulzahl auf
+  // "Aktualisieren" klickt.
+  clearTimeout(cloudSyncTimeout);
+  if(CURRENT_PROJECT_ID){
+    try { await saveProjectToCloud(CURRENT_PROJECT_ID); } catch(e){}
+  }
   try {
     const query = supabaseClient.from('pv_projects').select('id, name, config, data, updated_at, user_id, pruefer, modul_wp');
     const { data, error } = await query;

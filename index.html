@@ -1248,7 +1248,11 @@ body.sun-mode .wr-bulk-bar { background: #f8fafc; }
   .anleitung-hero,
   .project-grid,
   .home-section,
-  .wr-filter-bar {
+  .wr-filter-bar,
+  .brand-logo,
+  .sidebar-logo,
+  .print-logo,
+  .print-header {
     display: none !important;
   }
   
@@ -4721,6 +4725,12 @@ function exportPDFWithLogo(){
   const project = getCurrentProject();
   if(!project) return toast('⚠️ Kein Projekt geöffnet');
 
+  // Alle Logos ausblenden für Druck
+  document.querySelectorAll('.brand-logo, .print-logo, .sidebar-logo').forEach(el => {
+    el.style.display = 'none !important';
+  });
+
+  // Projekt-Informationen setzen
   g('print-project-name').textContent = project.name || 'Unbenanntes Projekt';
   const now = new Date();
   const dateStr = now.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' })
@@ -4734,17 +4744,18 @@ function exportPDFWithLogo(){
     lockStamp.textContent = '';
   }
 
+  // Sicherstellen dass Matrix-Ansicht aktiv ist
   if(!document.body.classList.contains('tab-matrix')){
     switchMainTab('matrix');
   }
 
+  // Alle Modals schließen
   document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
   closeSidebar();
 
-  setTimeout(() => {
-    window.print();
-    toast('📑 Druckdialog geöffnet');
-  }, 150);
+  // Druckdialog sofort öffnen
+  window.print();
+  toast('📑 Druckdialog geöffnet (ohne Logo)');
 }
 
 function openQrLabelModal(){

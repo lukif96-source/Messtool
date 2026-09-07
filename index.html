@@ -4871,9 +4871,10 @@ function exportPDFWithLogo(){
   const project = getCurrentProject();
   if(!project) return toast('⚠️ Kein Projekt geöffnet');
 
-  // Alle Logos ausblenden für Druck
-  document.querySelectorAll('.brand-logo, .print-logo, .sidebar-logo').forEach(el => {
-    el.style.display = 'none !important';
+  // Alle Logos komplett ausblenden für Druck
+  document.querySelectorAll('.brand-logo, .print-logo, .sidebar-logo, .auth-logo, .top-bar-logo').forEach(el => {
+    el.style.display = 'none';
+    el.style.visibility = 'hidden';
   });
 
   // Projekt-Informationen setzen
@@ -4899,7 +4900,7 @@ function exportPDFWithLogo(){
   document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
   closeSidebar();
 
-  // Druckdialog sofort öffnen
+  // Druckdialog SOFORT öffnen (keine Verzögerung)
   window.print();
   toast('📑 Druckdialog geöffnet (ohne Logo)');
 }

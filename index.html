@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
-<title>SOLPRO | PV Messtool</title>
+<title>SOLPRO | PV Matrix Tool v2.2 — KISS</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -3481,9 +3481,9 @@ function renderMatrix(remoteOverride = null){
           ${canHardware ? `<button class="wr-edit-btn" onclick="openInverterEditor(${wr})" title="Wechselrichter bearbeiten (MPPTs, Eingänge, löschen)">⚙️</button>` : (canRename ? `<button class="wr-edit-btn" onclick="renameInverterQuick(${wr})" title="Wechselrichter-Namen ändern">✏️</button>` : '')}
           <span class="wr-kpis">${activeStrings} Strings &middot; ${mppts} MPPTs</span>
         </div>
-        <div class="wr-kpis"><strong style="color:var(--accent);">${wrPwr.toFixed(2)} kWp</strong></div>
+        <div class="wr-kpis"><strong id="wr-pwr-${wr}" style="color:var(--accent);">${wrPwr.toFixed(2)} kWp</strong></div>
       </div>
-      ${mppts >= 6 ? generateWrProgress(wr, mppts, inputs) : ''}
+      <div id="wr-progress-wrap-${wr}">${mppts >= 6 ? generateWrProgress(wr, mppts, inputs) : ''}</div>
       ${canHardware ? `
       <div class="wr-bulk-bar no-print">
         <span class="bulk-label">⚡ Bulk:</span>
@@ -4585,6 +4585,26 @@ function setInputValidity(input, isValid){
   else input.classList.add('invalid');
 }
 
+function updateWrHeaderLive(wrId){
+  const plan = getCurrentPlan();
+  const data = plan[wrId];
+  if(!data) return;
+  const mppts = data.mppts || 12;
+  const inputs = data.inputs || 2;
+  const wp = getCurrentWp();
+  let wrPwr = 0;
+  for(let m = 1; m <= mppts; m++){
+    for(let s = 1; s <= inputs; s++){
+      const it = APP_STATE[`${wrId}.${m}.${s}`];
+      if(it && it.stat === 'JA' && it.mod > 0) wrPwr += (it.mod * wp) / 1000;
+    }
+  }
+  const pwrEl = g(`wr-pwr-${wrId}`);
+  if(pwrEl) pwrEl.textContent = wrPwr.toFixed(2) + ' kWp';
+  const progressWrap = g(`wr-progress-wrap-${wrId}`);
+  if(progressWrap && mppts >= 6) progressWrap.innerHTML = generateWrProgress(wrId, mppts, inputs);
+}
+
 function saveData(id, field, val) {
   if(!APP_STATE[id]) return;
   
@@ -4632,16 +4652,25 @@ function saveData(id, field, val) {
     setTimeout(() => inp.classList.remove('changed'), 2000);
   }
   
-  if(field==='mod' || field==='stat') {
+  if(['mod', 'stat', 'uoc', 'isc', 'riso'].includes(field)) {
     const isJa = APP_STATE[id].stat === 'JA';
     const row = g(`row-${id}`);
     const pw = g(`pw-${id}`);
     const pm = g(`pm-${id}`);
-    if(row) row.className = row.className.replace('row-nein','') + (!isJa ? ' row-nein' : '');
+    if(row){
+      // Zeilen-Highlight (komplett/unvollständig/Fehler/inaktiv) live neu bewerten,
+      // statt dafür einen kompletten Tabellen-Neuaufbau zu brauchen — der hat bisher
+      // nur nach erfolgreichem Cloud-Save gefeuert und damit nur "wenn Internet da
+      // ist" zum Hochspringen der Seite geführt (Tastatur klappt beim Neuaufbau zu).
+      row.classList.remove('row-nein', 'row-incomplete', 'row-error', 'row-complete');
+      const status = getStringStatus(id);
+      const cls = status === 'NEIN' ? 'row-nein' : (status === 'INCOMPLETE' ? 'row-incomplete' : (status === 'ERROR' ? 'row-error' : 'row-complete'));
+      row.classList.add(cls);
+    }
     if(pw) pw.textContent = (isJa && APP_STATE[id].mod>0) ? ((APP_STATE[id].mod * getCurrentWp())/1000).toFixed(2) : '—';
     if(pm) pm.textContent = (isJa && APP_STATE[id].mod>0) ? APP_STATE[id].mod : '—';
     updateKPIs(); // KPIs immer aktualisieren bei Modul- oder Statusänderungen
-    renderMatrixDebounced(); // Debounced Rendering für Performance
+    updateWrHeaderLive(id.split('.')[0]); // Nur das eigene WR-Köpfchen aktualisieren — kein Tabellen-Neuaufbau nötig
   }
   const printMap = { uoc: 'puoc', isc: 'pisc', riso: 'priso', note: 'pnote' };
   if(printMap[field]) {
@@ -4657,7 +4686,7 @@ function saveData(id, field, val) {
   if(supabaseClient && currentUser) {
     showSaveIndicator('syncing');
     clearTimeout(cloudSyncTimeout);
-    cloudSyncTimeout = setTimeout(() => saveProjectToCloud(CURRENT_PROJECT_ID), CLOUD_SYNC_DELAY);
+    cloudSyncTimeout = setTimeout(() => saveProjectToCloud(CURRENT_PROJECT_ID, true), CLOUD_SYNC_DELAY);
   } else {
     showSaveIndicator('pending');
   }
@@ -5399,7 +5428,7 @@ async function fetchProjectsFromCloud(){
   renderProjectUI();
 }
 
-async function saveProjectToCloudNow(projectId){
+async function saveProjectToCloudNow(projectId, skipRender){
   if(!supabaseClient || !currentUser) return false;
   const proj = PROJECTS[projectId];
   if(!proj) return false;
@@ -5438,7 +5467,7 @@ async function saveProjectToCloudNow(projectId){
       saveProjectsLocal();
       const off = g('offline-indicator'); if(off) off.classList.remove('offline');
       showSaveIndicator('saved');
-      renderMatrixDebounced(); // Debounced nach Cloud-Save
+      if(!skipRender) renderMatrixDebounced(); // Debounced nach Cloud-Save
       return true;
     }
   } catch(e){ 
@@ -5449,10 +5478,10 @@ async function saveProjectToCloudNow(projectId){
   }
 }
 
-function saveProjectToCloud(projectId){
+function saveProjectToCloud(projectId, skipRender){
   if(!supabaseClient || !currentUser || !projectId) return Promise.resolve(false);
   const previous = cloudSaveQueues.get(projectId) || Promise.resolve();
-  const next = previous.catch(() => {}).then(() => saveProjectToCloudNow(projectId));
+  const next = previous.catch(() => {}).then(() => saveProjectToCloudNow(projectId, skipRender));
   cloudSaveQueues.set(projectId, next);
   next.finally(() => {
     if(cloudSaveQueues.get(projectId) === next) cloudSaveQueues.delete(projectId);

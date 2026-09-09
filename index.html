@@ -13,7 +13,6 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
@@ -228,21 +227,81 @@ body.tab-projects .dashboard,
 body.tab-anleitung .dashboard { display: none; }
 
 .home-hero {
-  margin-bottom: 20px;
-  padding: 22px 20px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 18px;
+  padding: 30px 26px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;
   background: linear-gradient(135deg, var(--surface), var(--panel));
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 20px;
 }
 body:not(.sun-mode) .home-hero {
   background:
-    radial-gradient(circle at 100% 0%, rgba(184,243,75,0.10), transparent 60%),
-    linear-gradient(145deg, #0e120e, #131913);
-  border-color: #1f241d;
+    radial-gradient(120% 140% at 100% 0%, rgba(184,243,75,0.16), transparent 55%),
+    radial-gradient(90% 120% at 0% 100%, rgba(184,243,75,0.05), transparent 60%),
+    linear-gradient(150deg, #10150f, #0a0d0a);
+  border-color: #232a20;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 20px 40px -24px rgba(0,0,0,0.7);
 }
-.home-eyebrow { font-size: 0.7rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
-.home-title { font-size: 1.6rem; font-weight: 900; color: var(--text); letter-spacing: -0.03em; margin-bottom: 4px; }
-.home-subtitle { font-size: 0.88rem; color: var(--muted); }
+body.sun-mode .home-hero {
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(127,189,53,0.14), transparent 55%),
+    linear-gradient(150deg, #ffffff, #f3f6ee);
+  box-shadow: 0 10px 30px -18px rgba(60,80,20,0.28);
+}
+.home-hero-glow {
+  position: absolute; top: -40%; right: -10%; width: 340px; height: 340px;
+  background: radial-gradient(circle, var(--accent-glow), transparent 70%);
+  filter: blur(20px); pointer-events: none; opacity: 0.9;
+}
+.home-hero-content { position: relative; z-index: 1; }
+.home-eyebrow { font-size: 0.68rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.16em; margin-bottom: 8px; }
+.home-title { font-size: 2rem; font-weight: 900; color: var(--text); letter-spacing: -0.035em; margin-bottom: 6px; line-height: 1.05; }
+.home-subtitle { font-size: 0.9rem; color: var(--muted); }
+.home-hero-badge {
+  position: relative; z-index: 1;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 99px;
+  font-size: 0.78rem; font-weight: 800;
+  background: var(--accent-glow); border: 1px solid var(--accent); color: var(--accent);
+  white-space: nowrap;
+}
+.home-hero-badge-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 var(--accent); animation: badgePulse 2.4s ease-out infinite; }
+.home-hero-badge[data-state="done"] { background: rgba(34,197,94,0.14); border-color: #22c55e; color: #22c55e; }
+.home-hero-badge[data-state="done"] .home-hero-badge-dot { background: #22c55e; animation: none; }
+.home-hero-badge[data-state="progress"] { background: var(--warn-soft, rgba(245,158,11,0.12)); border-color: var(--warn, #f59e0b); color: var(--warn, #f59e0b); }
+.home-hero-badge[data-state="progress"] .home-hero-badge-dot { background: var(--warn, #f59e0b); }
+.home-hero-badge[data-state="idle"] { background: var(--panel); border-color: var(--border); color: var(--muted); }
+.home-hero-badge[data-state="idle"] .home-hero-badge-dot { background: var(--muted); animation: none; }
+@keyframes badgePulse {
+  0% { box-shadow: 0 0 0 0 rgba(184,243,75,0.5); }
+  70% { box-shadow: 0 0 0 7px rgba(184,243,75,0); }
+  100% { box-shadow: 0 0 0 0 rgba(184,243,75,0); }
+}
+
+.home-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;
+}
+.home-stat {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+body:not(.sun-mode) .home-stat { background: linear-gradient(160deg, #10140f, #0c0f0b); border-color: #1e241c; }
+.home-stat:hover { transform: translateY(-2px); border-color: var(--accent); }
+.home-stat-icon {
+  font-size: 1.3rem; width: 44px; height: 44px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-glow); border-radius: 12px;
+}
+.home-stat-body { min-width: 0; }
+.home-stat-value { font-size: 1.5rem; font-weight: 900; color: var(--text); letter-spacing: -0.03em; line-height: 1.1; }
+.home-stat-unit { font-size: 0.8rem; font-weight: 700; color: var(--muted); margin-left: 3px; }
+.home-stat-label { font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-top: 1px; }
 
 .home-empty {
   text-align: center;
@@ -271,16 +330,25 @@ body:not(.sun-mode) .home-empty { background: linear-gradient(145deg, #0e120e, #
 .home-active { margin-bottom: 20px; }
 .home-active-label { font-size: 0.7rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
 .home-active-card {
+  position: relative; overflow: hidden;
   display: flex; align-items: center; gap: 14px;
-  padding: 16px 18px;
+  padding: 20px 22px;
   background: var(--accent-glow);
   border: 1px solid var(--accent);
-  border-radius: 14px;
+  border-radius: 18px;
   flex-wrap: wrap;
 }
-.home-active-info { flex: 1; min-width: 200px; }
-.home-active-name { font-size: 1.1rem; font-weight: 800; color: var(--text); margin-bottom: 4px; word-break: break-word; }
-.home-active-meta { font-size: 0.78rem; color: var(--muted); }
+body:not(.sun-mode) .home-active-card {
+  background: radial-gradient(120% 160% at 0% 0%, rgba(184,243,75,0.14), transparent 60%), linear-gradient(150deg, #11160f, #0c100b);
+}
+.home-active-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent); }
+.home-active-info { flex: 1; min-width: 200px; padding-left: 6px; }
+.home-active-name { font-size: 1.25rem; font-weight: 900; color: var(--text); margin-bottom: 4px; word-break: break-word; letter-spacing: -0.02em; }
+.home-active-meta { font-size: 0.8rem; color: var(--muted); }
+.home-active-progress { margin-top: 12px; }
+.home-active-progress-bar { height: 8px; border-radius: 99px; background: var(--glass-2, rgba(255,255,255,0.08)); overflow: hidden; }
+.home-active-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-muted, #7fbd35), var(--accent)); border-radius: 99px; transition: width 0.5s cubic-bezier(0.22,1,0.36,1); }
+.home-active-progress-text { font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-top: 6px; }
 
 .home-recent-grid {
   display: grid;
@@ -308,30 +376,43 @@ body:not(.sun-mode) .home-empty { background: linear-gradient(145deg, #0e120e, #
   gap: 12px;
 }
 .home-quick-card {
+  position: relative; overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 18px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
   min-height: 116px;
   display: flex; flex-direction: column; gap: 6px;
 }
-.home-quick-card:hover { border-color: var(--accent); background: var(--panel); transform: translateY(-1px); }
+body:not(.sun-mode) .home-quick-card { background: linear-gradient(160deg, #10140f, #0c0f0b); border-color: #1e241c; }
+.home-quick-card::after {
+  content: ''; position: absolute; inset: 0; border-radius: 16px; pointer-events: none;
+  background: radial-gradient(90% 90% at 100% 0%, var(--accent-glow), transparent 60%);
+  opacity: 0; transition: opacity 0.2s ease;
+}
+.home-quick-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+.home-quick-card:hover::after { opacity: 1; }
 .home-quick-card:focus-visible { border-color: var(--accent); }
-.home-quick-icon { font-size: 1.6rem; line-height: 1; }
-.home-quick-title { font-size: 0.92rem; font-weight: 800; color: var(--text); }
-.home-quick-desc { font-size: 0.72rem; color: var(--muted); line-height: 1.35; }
+.home-quick-icon { font-size: 1.7rem; line-height: 1; position: relative; z-index: 1; }
+.home-quick-title { font-size: 0.95rem; font-weight: 800; color: var(--text); position: relative; z-index: 1; }
+.home-quick-desc { font-size: 0.72rem; color: var(--muted); line-height: 1.35; position: relative; z-index: 1; }
 
 @media (max-width: 600px) {
-  .home-hero { padding: 18px 16px; }
-  .home-title { font-size: 1.35rem; }
-  .home-active-card { padding: 14px; }
-  .home-active-name { font-size: 1rem; }
+  .home-hero { padding: 22px 18px; }
+  .home-title { font-size: 1.6rem; }
+  .home-hero-badge { order: -1; }
+  .home-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .home-stat { padding: 13px; gap: 10px; }
+  .home-stat-icon { width: 38px; height: 38px; font-size: 1.1rem; }
+  .home-stat-value { font-size: 1.3rem; }
+  .home-active-card { padding: 16px; }
+  .home-active-name { font-size: 1.1rem; }
   .home-recent-grid { grid-template-columns: 1fr; }
   .home-quickstart { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .home-quick-card { padding: 12px; min-height: 100px; }
-  .home-quick-title { font-size: 0.85rem; }
+  .home-quick-card { padding: 14px; min-height: 104px; }
+  .home-quick-title { font-size: 0.88rem; }
 }
 
 .anleitung-hero {
@@ -1914,10 +1995,46 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
 
   <div class="home-view active" id="home-view">
     <div class="home-hero">
-      <div>
+      <div class="home-hero-glow"></div>
+      <div class="home-hero-content">
         <div class="home-eyebrow">Willkommen zurück</div>
-        <h1 class="home-title">Hallo <span id="home-user-name">Anwender</span> 👋</h1>
+        <h1 class="home-title">Hallo <span id="home-user-name">Anwender</span></h1>
         <div class="home-subtitle" id="home-subtitle">PV Matrix Tool — bereit für die Baustelle</div>
+      </div>
+      <div class="home-hero-badge" id="home-hero-badge">
+        <span class="home-hero-badge-dot"></span>
+        <span id="home-hero-badge-text">Bereit</span>
+      </div>
+    </div>
+
+    <div class="home-stats" id="home-stats">
+      <div class="home-stat">
+        <div class="home-stat-icon">📁</div>
+        <div class="home-stat-body">
+          <div class="home-stat-value" id="home-stat-projects">0</div>
+          <div class="home-stat-label">Projekte</div>
+        </div>
+      </div>
+      <div class="home-stat">
+        <div class="home-stat-icon">⚡</div>
+        <div class="home-stat-body">
+          <div class="home-stat-value" id="home-stat-kwp">0<span class="home-stat-unit">kWp</span></div>
+          <div class="home-stat-label">Gesamtleistung aktiv</div>
+        </div>
+      </div>
+      <div class="home-stat">
+        <div class="home-stat-icon">✅</div>
+        <div class="home-stat-body">
+          <div class="home-stat-value" id="home-stat-done">0</div>
+          <div class="home-stat-label">Strings fertig</div>
+        </div>
+      </div>
+      <div class="home-stat">
+        <div class="home-stat-icon">🕓</div>
+        <div class="home-stat-body">
+          <div class="home-stat-value" id="home-stat-open">0</div>
+          <div class="home-stat-label">Strings offen</div>
+        </div>
       </div>
     </div>
 
@@ -1935,9 +2052,14 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
     <div class="home-active" id="home-active" style="display:none;">
       <div class="home-active-label">Aktuell geöffnet</div>
       <div class="home-active-card">
+        <div class="home-active-accent"></div>
         <div class="home-active-info">
           <div class="home-active-name" id="home-active-name">—</div>
           <div class="home-active-meta" id="home-active-meta">—</div>
+          <div class="home-active-progress" id="home-active-progress">
+            <div class="home-active-progress-bar"><div class="home-active-progress-fill" id="home-active-progress-fill"></div></div>
+            <div class="home-active-progress-text" id="home-active-progress-text"></div>
+          </div>
         </div>
         <button class="btn btn-primary" onclick="switchMainTab('matrix')">Matrix öffnen →</button>
       </div>
@@ -2952,13 +3074,38 @@ function renderHomeView(){
   if(subtitle){
     const h = new Date().getHours();
     const greet = h < 11 ? 'Guten Morgen' : (h < 18 ? 'Hallo' : 'Guten Abend');
-    subtitle.textContent = `${greet} — PV Matrix Tool v2.1`;
+    subtitle.textContent = `${greet} — bereit für die Baustelle`;
   }
 
   const ids = Object.keys(PROJECTS);
   const hasProjects = ids.length > 0;
   if(empty) empty.style.display = hasProjects ? 'none' : 'block';
   if(active) active.style.display = hasProjects ? 'block' : 'none';
+
+  // Live-Kennzahlen für das Dashboard berechnen (aus dem aktuell geladenen Projekt)
+  let done = 0, open = 0, kwp = 0;
+  const wp = getCurrentWp();
+  Object.keys(APP_STATE).forEach(id => {
+    const st = getStringStatus(id);
+    if(st === 'COMPLETE'){ done++; const it = APP_STATE[id]; if(it && it.mod>0) kwp += (it.mod*wp)/1000; }
+    else if(st === 'INCOMPLETE'){ open++; const it = APP_STATE[id]; if(it && it.mod>0) kwp += (it.mod*wp)/1000; }
+  });
+  const setTxt = (elId, val) => { const el = g(elId); if(el) el.textContent = val; };
+  setTxt('home-stat-projects', ids.length);
+  const kwpEl = g('home-stat-kwp');
+  if(kwpEl) kwpEl.innerHTML = `${kwp.toFixed(1)}<span class="home-stat-unit">kWp</span>`;
+  setTxt('home-stat-done', done);
+  setTxt('home-stat-open', open);
+
+  // Hero-Status-Badge
+  const badge = g('home-hero-badge');
+  const badgeText = g('home-hero-badge-text');
+  if(badge && badgeText){
+    if(!hasProjects){ badge.dataset.state='idle'; badgeText.textContent='Kein Projekt'; }
+    else if(open === 0 && done > 0){ badge.dataset.state='done'; badgeText.textContent='Alles gemessen'; }
+    else if(open > 0){ badge.dataset.state='progress'; badgeText.textContent=`${open} offen`; }
+    else { badge.dataset.state='ready'; badgeText.textContent='Bereit'; }
+  }
 
   if(hasProjects){
     const current = getCurrentProject();
@@ -2970,12 +3117,22 @@ function renderHomeView(){
         if(current.group) meta.push(current.group);
         meta.push(`${wrCount} WR`);
         meta.push(`${current.model_wp || 465} Wp`);
-        if(current.locked) meta.push('gesperrt');
+        if(current.locked) meta.push('🔒 gesperrt');
         activeMeta.textContent = meta.join(' · ');
       }
+      // Fortschrittsbalken im "Aktuell geöffnet"-Kärtchen
+      const total = done + open;
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      const fill = g('home-active-progress-fill');
+      const ptext = g('home-active-progress-text');
+      const pwrap = g('home-active-progress');
+      if(pwrap) pwrap.style.display = total > 0 ? 'block' : 'none';
+      if(fill) fill.style.width = pct + '%';
+      if(ptext) ptext.textContent = total > 0 ? `${done} von ${total} Strings fertig · ${pct}%` : '';
     } else if(activeName){
       activeName.textContent = 'Kein Projekt geöffnet';
       if(activeMeta) activeMeta.textContent = 'Wähle ein Projekt in der Sidebar.';
+      const pwrap = g('home-active-progress'); if(pwrap) pwrap.style.display = 'none';
     }
   }
 }
@@ -3483,7 +3640,7 @@ function renderMatrix(remoteOverride = null){
         </div>
         <div class="wr-kpis"><strong id="wr-pwr-${wr}" style="color:var(--accent);">${wrPwr.toFixed(2)} kWp</strong></div>
       </div>
-      <div id="wr-progress-wrap-${wr}">${mppts >= 6 ? generateWrProgress(wr, mppts, inputs) : ''}</div>
+      <div id="wr-progress-wrap-${wr}">${generateWrProgress(wr, mppts, inputs)}</div>
       ${canHardware ? `
       <div class="wr-bulk-bar no-print">
         <span class="bulk-label">⚡ Bulk:</span>
@@ -4602,7 +4759,7 @@ function updateWrHeaderLive(wrId){
   const pwrEl = g(`wr-pwr-${wrId}`);
   if(pwrEl) pwrEl.textContent = wrPwr.toFixed(2) + ' kWp';
   const progressWrap = g(`wr-progress-wrap-${wrId}`);
-  if(progressWrap && mppts >= 6) progressWrap.innerHTML = generateWrProgress(wrId, mppts, inputs);
+  if(progressWrap) progressWrap.innerHTML = generateWrProgress(wrId, mppts, inputs);
 }
 
 function saveData(id, field, val) {
@@ -5686,7 +5843,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 window.onload = () => { 
   checkSession();
-  setupKeyboardShortcuts();
 };
 </script>
 </body>

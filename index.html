@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
-<title>SOLPRO | PV Matrix Tool v2.2 — KISS</title>
+<title>SOLPRO | PV Messtool</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -970,112 +970,6 @@ body.sun-mode .wr-bulk-bar { background: #f8fafc; }
 }
 .mini-map-cell:hover .mini-map-tooltip { display: block; }
 
-/* Report Wizard Styles */
-.report-wizard {
-  max-width: 600px; margin: 0 auto;
-}
-.wizard-step {
-  display: none; animation: fadeIn 0.3s ease;
-}
-.wizard-step.active { display: block; }
-.wizard-step h2 {
-  font-size: 1.2rem; font-weight: 800; color: var(--text);
-  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
-}
-.wizard-progress {
-  display: flex; justify-content: space-between; margin-bottom: 24px;
-  position: relative;
-}
-.wizard-progress::before {
-  content: ''; position: absolute; top: 50%; left: 0; right: 0;
-  height: 2px; background: var(--border); transform: translateY(-50%);
-  z-index: 0;
-}
-.wizard-step-indicator {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: var(--surface); border: 2px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 0.85rem; color: var(--muted);
-  z-index: 1; position: relative;
-}
-.wizard-step-indicator.active {
-  background: var(--accent); border-color: var(--accent); color: #000;
-}
-.wizard-step-indicator.completed {
-  background: var(--accent); border-color: var(--accent); color: #000;
-}
-.wizard-options {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px; margin-bottom: 20px;
-}
-.wizard-option {
-  background: var(--bg); border: 2px solid var(--border);
-  border-radius: 12px; padding: 16px; cursor: pointer;
-  transition: all 0.2s; text-align: center;
-}
-.wizard-option:hover { border-color: var(--accent); background: var(--accent-glow); }
-.wizard-option.selected {
-  border-color: var(--accent); background: var(--accent-glow);
-  box-shadow: 0 0 0 3px rgba(184, 243, 75, 0.2);
-}
-.wizard-option-icon { font-size: 2rem; margin-bottom: 8px; }
-.wizard-option-title { font-weight: 700; color: var(--text); margin-bottom: 4px; }
-.wizard-option-desc { font-size: 0.8rem; color: var(--muted); }
-
-/* Dashboard Styles */
-.dashboard-container {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px; margin-bottom: 24px;
-}
-.dashboard-chart {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 16px;
-}
-.dashboard-chart h3 {
-  font-size: 0.9rem; font-weight: 700; color: var(--text);
-  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
-}
-.chart-container {
-  position: relative; height: 200px;
-}
-
-/* Collaboration Styles */
-.collaboration-panel {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 16px; margin-bottom: 16px;
-}
-.user-presence-list {
-  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
-}
-.user-presence-item {
-  display: flex; align-items: center; gap: 6px;
-  background: var(--bg); padding: 6px 10px; border-radius: 20px;
-  font-size: 0.8rem; font-weight: 600;
-}
-.user-presence-item.online { border-color: var(--accent); }
-.user-presence-item.offline { border-color: var(--muted); opacity: 0.6; }
-.presence-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--muted);
-}
-.user-presence-item.online .presence-dot { background: var(--accent); }
-.chat-panel {
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: 12px; height: 300px; display: flex; flex-direction: column;
-}
-.chat-messages {
-  flex: 1; overflow-y: auto; padding: 12px;
-}
-.chat-message {
-  margin-bottom: 8px; padding: 8px 12px; border-radius: 8px;
-  background: var(--panel); font-size: 0.85rem;
-}
-.chat-message.own { background: var(--accent-glow); border: 1px solid var(--accent); }
-.chat-input-area {
-  padding: 8px; border-top: 1px solid var(--border);
-  display: flex; gap: 8px;
-}
-
 @keyframes highlight {
   0% { background: var(--accent-glow); }
   100% { background: transparent; }
@@ -1353,7 +1247,6 @@ body:not(.sun-mode) .kpi-card {
 .kpi-progress-inactive { background: var(--glass-3); height: 100%; transition: width 0.4s ease; }
 .kpi-meta { font-size: 0.7rem; color: var(--muted); margin-top: 6px; font-weight: 600; }
 .kpi-sep { color: var(--muted); font-size: 0.9rem; font-weight: 500; margin: 0 2px; }
-.kpi-card { /* duplicate anchor for previous edit */ background: linear-gradient(145deg, #111611, #0c0f0c); }
 .kpi-value { letter-spacing: -0.045em; }
 .main-tabs { gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; }
 body:not(.sun-mode) .main-tabs { background: #0f120f; }
@@ -1795,192 +1688,6 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
   </div>
 </div>
 
-<div id="report-wizard-modal" class="modal-overlay" onclick="closeReportWizard(event)">
-  <div class="modal-card report-wizard" data-modal="centered" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <h2>📊 Bericht-Wizard</h2>
-      <button onclick="closeReportWizard()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="wizard-progress">
-        <div class="wizard-step-indicator active" data-step="1">1</div>
-        <div class="wizard-step-indicator" data-step="2">2</div>
-        <div class="wizard-step-indicator" data-step="3">3</div>
-      </div>
-      
-      <!-- Step 1: Bericht-Typ -->
-      <div class="wizard-step active" id="wizard-step-1">
-        <h2>📋 Welchen Bericht möchtest du?</h2>
-        <div class="wizard-options">
-          <div class="wizard-option" onclick="selectReportType('weekly')" data-type="weekly">
-            <div class="wizard-option-icon">📅</div>
-            <div class="wizard-option-title">Wochenbericht</div>
-            <div class="wizard-option-desc">Übersicht über alle Aktivitäten dieser Woche</div>
-          </div>
-          <div class="wizard-option" onclick="selectReportType('project')" data-type="project">
-            <div class="wizard-option-icon">📁</div>
-            <div class="wizard-option-title">Projekt-Status</div>
-            <div class="wizard-option-desc">Detaillierter Status für aktuelles Projekt</div>
-          </div>
-          <div class="wizard-option" onclick="selectReportType('performance')" data-type="performance">
-            <div class="wizard-option-icon">📈</div>
-            <div class="wizard-option-title">Performance</div>
-            <div class="wizard-option-desc">Messwert-Analysen und Trends</div>
-          </div>
-          <div class="wizard-option" onclick="selectReportType('custom')" data-type="custom">
-            <div class="wizard-option-icon">⚙️</div>
-            <div class="wizard-option-title">Benutzerdefiniert</div>
-            <div class="wizard-option-desc">Eigene Parameter wählen</div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Step 2: Parameter -->
-      <div class="wizard-step" id="wizard-step-2">
-        <h2>⚙️ Bericht-Parameter</h2>
-        <div class="field">
-          <label>Zeitraum</label>
-          <select id="report-timeframe" class="sp-inp">
-            <option value="today">Heute</option>
-            <option value="week">Diese Woche</option>
-            <option value="month">Dieser Monat</option>
-            <option value="custom">Benutzerdefiniert</option>
-          </select>
-        </div>
-        <div class="field" id="custom-date-range" style="display:none;">
-          <label>Von - Bis</label>
-          <div style="display:flex; gap:8px;">
-            <input type="date" id="report-date-from" class="sp-inp">
-            <input type="date" id="report-date-to" class="sp-inp">
-          </div>
-        </div>
-        <div class="field">
-          <label>Format</label>
-          <select id="report-format" class="sp-inp">
-            <option value="pdf">PDF</option>
-            <option value="excel">Excel</option>
-            <option value="both">Beides</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Inhalte</label>
-          <div style="display:flex; flex-direction:column; gap:8px;">
-            <label class="field-radio selected">
-              <input type="checkbox" checked id="include-kpi"> KPIs und Zusammenfassung
-            </label>
-            <label class="field-radio">
-              <input type="checkbox" checked id="include-details"> Detaillierte Messwerte
-            </label>
-            <label class="field-radio">
-              <input type="checkbox" id="include-charts"> Diagramme und Graphen
-            </label>
-            <label class="field-radio">
-              <input type="checkbox" id="include-signatures"> Unterschriften und Sperren
-            </label>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Step 3: Generierung -->
-      <div class="wizard-step" id="wizard-step-3">
-        <h2>🎉 Bericht generieren</h2>
-        <div style="text-align:center; padding:20px;">
-          <div style="font-size:3rem; margin-bottom:16px;">📊</div>
-          <div style="font-size:1.1rem; color:var(--muted); margin-bottom:20px;">
-            Dein Bericht ist bereit!
-          </div>
-          <div style="background:var(--bg); padding:16px; border-radius:12px; margin-bottom:16px;">
-            <div style="font-size:0.9rem; font-weight:700; margin-bottom:8px;">Zusammenfassung:</div>
-            <div id="report-summary" style="font-size:0.85rem; color:var(--muted);">
-              Wähle oben deine Parameter...
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="modal-actions">
-        <button onclick="closeReportWizard()" class="btn btn-ghost" id="wizard-cancel">Abbrechen</button>
-        <button onclick="wizardBack()" class="btn btn-ghost" id="wizard-back" style="display:none;">Zurück</button>
-        <button onclick="wizardNext()" class="btn btn-primary" id="wizard-next">Weiter</button>
-        <button onclick="generateReport()" class="btn btn-primary" id="wizard-generate" style="display:none;">📊 Generieren</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="dashboard-modal" class="modal-overlay" onclick="closeDashboard(event)">
-  <div class="modal-card" data-modal="centered" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <h2>📈 Projekt-Dashboard</h2>
-      <button onclick="closeDashboard()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="dashboard-container">
-        <div class="dashboard-chart">
-          <h3>⚡ Leistungstrend</h3>
-          <div class="chart-container">
-            <canvas id="power-chart"></canvas>
-          </div>
-        </div>
-        <div class="dashboard-chart">
-          <h3>📊 String-Status</h3>
-          <div class="chart-container">
-            <canvas id="status-chart"></canvas>
-          </div>
-        </div>
-        <div class="dashboard-chart">
-          <h3>⏱️ Fortschritt Timeline</h3>
-          <div class="chart-container">
-            <canvas id="timeline-chart"></canvas>
-          </div>
-        </div>
-        <div class="dashboard-chart">
-          <h3>🎯 Fehlerquote</h3>
-          <div class="chart-container">
-            <canvas id="error-chart"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="collaboration-modal" class="modal-overlay" onclick="closeCollaboration(event)">
-  <div class="modal-card" data-modal="centered" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <h2>👥 Team</h2>
-      <button onclick="closeCollaboration()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
-    </div>
-    <div class="modal-body">
-      <div style="background:var(--warn-soft, rgba(245,158,11,0.1)); border:1px solid var(--warn, #f59e0b); border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:0.78rem; color:var(--text);">
-        ℹ️ Live-Status anderer Nutzer und Chat sind aktuell <strong>nicht mit anderen Geräten verbunden</strong> — diese Funktion ist in Vorbereitung. Für Absprachen bitte weiterhin Telefon/Messenger nutzen.
-      </div>
-      <div class="collaboration-panel">
-        <h3>👥 Dein Status</h3>
-        <div class="user-presence-list" id="user-presence-list">
-          <div class="user-presence-item online">
-            <div class="presence-dot"></div>
-            <span>Du (Online)</span>
-          </div>
-        </div>
-        
-        <h3>📝 Notiz (nur lokal, nicht geteilt)</h3>
-        <div class="chat-panel">
-          <div class="chat-messages" id="chat-messages">
-            <div class="chat-message">
-              <strong>Hinweis:</strong> Was du hier einträgst, sehen andere nicht — das ist nur ein Merkzettel für dich in dieser Sitzung.
-            </div>
-          </div>
-          <div class="chat-input-area">
-            <input type="text" id="chat-input" class="sp-inp" placeholder="Persönliche Notiz eingeben..." onkeypress="handleChatKeypress(event)">
-            <button onclick="sendChatMessage()" class="btn btn-primary">Merken</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <div id="template-modal" class="modal-overlay" onclick="closeTemplateModal(event)">
   <div class="modal-card" data-modal="centered" onclick="event.stopPropagation()">
     <div class="modal-head">
@@ -2129,22 +1836,6 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
     <span class="icon" style="color:#eab308;">📋</span><span class="label">Projekt-Vorlagen</span>
   </button>
 
-  <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Berichte</div>
-  <button onclick="showReportWizard();closeSidebar();" class="sidebar-btn">
-    <span class="icon" style="color:#3b82f6;">📊</span><span class="label">Bericht-Wizard</span>
-  </button>
-  <button onclick="showDashboard();closeSidebar();" class="sidebar-btn">
-    <span class="icon" style="color:#8b5cf6;">📈</span><span class="label">Dashboard</span>
-  </button>
-  <button onclick="showScheduleModal();closeSidebar();" class="sidebar-btn">
-    <span class="icon" style="color:#eab308;">📅</span><span class="label">Auto-Schedule</span>
-  </button>
-
-  <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Team</div>
-  <button onclick="showCollaboration();closeSidebar();" class="sidebar-btn">
-    <span class="icon" style="color:#ef4444;">🔄</span><span class="label">Collaboration</span>
-  </button>
-
   <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Import & Export</div>
   <button onclick="openPVSOLModal();closeSidebar();" class="sidebar-btn role-gate-planner">
     <span class="icon" style="color:#3b82f6;">📊</span><span class="label">PVSOL Import</span>
@@ -2208,8 +1899,8 @@ body.sun-mode .kpi-card, body.sun-mode .project-card, body.sun-mode .wr-block {
       <div class="kpi-label">Strings belegt</div>
       <div class="kpi-value"><span id="d-act">0</span> <span style="font-size:1rem;color:var(--muted);font-weight:500;">/ <span id="d-tot">0</span></span></div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Modulstärke</div>
+    <div class="kpi-card role-gate-planner" id="kpi-wp-card" onclick="editModuleWp()" style="cursor:pointer;" title="Modulleistung bearbeiten">
+      <div class="kpi-label">Modulstärke <span style="opacity:.5;">✏️</span></div>
       <div class="kpi-value"><span id="d-wp">465</span><span class="kpi-unit">Wp</span></div>
     </div>
   </div>
@@ -2920,849 +2611,6 @@ function deleteSelectedTemplate(){
   updateTemplatePreview();
 }
 
-// Report Wizard Funktionen
-let currentWizardStep = 1;
-let selectedReportType = '';
-
-function showReportWizard(){
-  currentWizardStep = 1;
-  selectedReportType = '';
-  updateWizardUI();
-  g('report-wizard-modal').classList.add('show');
-}
-
-function closeReportWizard(e){
-  if(!e || e.target === e.currentTarget) g('report-wizard-modal').classList.remove('show');
-  resetWizard();
-}
-
-function resetWizard(){
-  currentWizardStep = 1;
-  selectedReportType = '';
-  g('report-timeframe').value = 'week';
-  g('custom-date-range').style.display = 'none';
-  g('report-format').value = 'pdf';
-  document.querySelectorAll('#wizard-step-1 .wizard-option').forEach(opt => opt.classList.remove('selected'));
-  updateWizardUI();
-}
-
-function selectReportType(type){
-  selectedReportType = type;
-  document.querySelectorAll('#wizard-step-1 .wizard-option').forEach(opt => {
-    opt.classList.remove('selected');
-    if(opt.dataset.type === type) opt.classList.add('selected');
-  });
-}
-
-function updateWizardUI(){
-  // Steps anzeigen/verstecken
-  for(let i = 1; i <= 3; i++){
-    const step = g(`wizard-step-${i}`);
-    const indicator = document.querySelector(`.wizard-step-indicator[data-step="${i}"]`);
-    if(step) step.classList.toggle('active', i === currentWizardStep);
-    if(indicator) {
-      indicator.classList.remove('active', 'completed');
-      if(i < currentWizardStep) indicator.classList.add('completed');
-      if(i === currentWizardStep) indicator.classList.add('active');
-    }
-  }
-  
-  // Buttons steuern
-  const backBtn = g('wizard-back');
-  const nextBtn = g('wizard-next');
-  const generateBtn = g('wizard-generate');
-  const cancelBtn = g('wizard-cancel');
-  
-  if(currentWizardStep === 1) {
-    backBtn.style.display = 'none';
-    nextBtn.style.display = 'inline-flex';
-    nextBtn.textContent = 'Weiter';
-    generateBtn.style.display = 'none';
-  } else if(currentWizardStep === 2) {
-    backBtn.style.display = 'inline-flex';
-    nextBtn.style.display = 'inline-flex';
-    nextBtn.textContent = 'Weiter';
-    generateBtn.style.display = 'none';
-  } else if(currentWizardStep === 3) {
-    backBtn.style.display = 'inline-flex';
-    nextBtn.style.display = 'none';
-    generateBtn.style.display = 'inline-flex';
-    generateBtn.textContent = '📊 Generieren';
-  }
-  
-  // Date-Range Toggle
-  const timeframe = g('report-timeframe');
-  const customRange = g('custom-date-range');
-  if(timeframe && customRange) {
-    customRange.style.display = timeframe.value === 'custom' ? 'block' : 'none';
-  }
-  
-  // Zusammenfassung aktualisieren
-  updateReportSummary();
-}
-
-function wizardNext(){
-  if(currentWizardStep === 1) {
-    if(!selectedReportType) return toast('⚠️ Bitte einen Berichtstyp wählen');
-    currentWizardStep = 2;
-  } else if(currentWizardStep === 2) {
-    currentWizardStep = 3;
-  }
-  updateWizardUI();
-}
-
-function wizardBack(){
-  if(currentWizardStep > 1) {
-    currentWizardStep--;
-    updateWizardUI();
-  }
-}
-
-function updateReportSummary(){
-  const summary = g('report-summary');
-  if(!summary) return;
-  
-  const typeNames = {
-    'weekly': 'Wochenbericht',
-    'project': 'Projekt-Status',
-    'performance': 'Performance-Analyse',
-    'custom': 'Benutzerdefinierter Bericht'
-  };
-  
-  const timeframe = g('report-timeframe').value;
-  const format = g('report-format').value;
-  
-  let html = `<strong>Typ:</strong> ${typeNames[selectedReportType] || 'Nicht gewählt'}<br>`;
-  html += `<strong>Zeitraum:</strong> ${timeframe === 'custom' ? 'Benutzerdefiniert' : timeframe}<br>`;
-  html += `<strong>Format:</strong> ${format === 'both' ? 'PDF + Excel' : format.toUpperCase()}<br>`;
-  
-  const includeKPI = g('include-kpi').checked;
-  const includeDetails = g('include-details').checked;
-  const includeCharts = g('include-charts').checked;
-  const includeSignatures = g('include-signatures').checked;
-  
-  html += `<strong>Inhalte:</strong> `;
-  const includes = [];
-  if(includeKPI) includes.push('KPIs');
-  if(includeDetails) includes.push('Details');
-  if(includeCharts) includes.push('Diagramme');
-  if(includeSignatures) includes.push('Unterschriften');
-  html += includes.join(', ') || 'Keine';
-  
-  summary.innerHTML = html;
-}
-
-function generateReport(){
-  if(!selectedReportType) return toast('⚠️ Bitte zuerst einen Berichtstyp wählen');
-  
-  toast('📊 Generiere Bericht...');
-  
-  // Bericht-Daten sammeln
-  const reportData = collectReportData();
-  
-  // Entsprechend dem Typ generieren
-  if(selectedReportType === 'weekly') {
-    generateWeeklyReport(reportData);
-  } else if(selectedReportType === 'project') {
-    generateProjectReport(reportData);
-  } else if(selectedReportType === 'performance') {
-    generatePerformanceReport(reportData);
-  } else if(selectedReportType === 'custom') {
-    generateCustomReport(reportData);
-  }
-  
-  closeReportWizard();
-}
-
-function collectReportData(){
-  const project = getCurrentProject();
-  const plan = getCurrentPlan();
-  
-  const data = {
-    project: project,
-    plan: plan,
-    state: APP_STATE,
-    timeframe: g('report-timeframe').value,
-    format: g('report-format').value,
-    includeKPI: g('include-kpi').checked,
-    includeDetails: g('include-details').checked,
-    includeCharts: g('include-charts').checked,
-    includeSignatures: g('include-signatures').checked,
-    customDateFrom: g('report-date-from').value,
-    customDateTo: g('report-date-to').value
-  };
-  
-  return data;
-}
-
-function generateWeeklyReport(data){
-  const project = data.project;
-  
-  // HTML für Wochenbericht
-  let html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; }
-        .report-header { border-bottom: 2px solid #00873d; padding: 20px 0; margin-bottom: 20px; }
-        .report-title { font-size: 18pt; font-weight: bold; color: #000; }
-        .report-meta { font-size: 10pt; color: #666; margin-top: 8px; }
-        .report-section { margin: 30px 0; }
-        .section-title { font-size: 14pt; font-weight: bold; color: #00873d; margin-bottom: 15px; border-bottom: 1px solid #ccc; padding-bottom: 8px; }
-        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
-        .kpi-box { border: 1px solid #ccc; padding: 15px; text-align: center; }
-        .kpi-value { font-size: 18pt; font-weight: bold; color: #00873d; }
-        .kpi-label { font-size: 9pt; color: #666; }
-        .activity-list { margin-top: 15px; }
-        .activity-item { padding: 10px; border-bottom: 1px solid #eee; }
-        .activity-time { font-size: 8pt; color: #999; }
-        .activity-text { font-size: 10pt; }
-      </style>
-    </head>
-    <body>
-      <div class="report-header">
-        <div class="report-title">📅 Wochenbericht - ${project.name}</div>
-        <div class="report-meta">Woche vom ${getWeekStart()} bis ${getWeekEnd()} · ${new Date().toLocaleDateString('de-DE')}</div>
-      </div>
-      
-      <div class="report-section">
-        <div class="section-title">📊 Zusammenfassung</div>
-        <div class="kpi-grid">
-          <div class="kpi-box">
-            <div class="kpi-value">${calculateTotalPower()} kWp</div>
-            <div class="kpi-label">Gesamtleistung</div>
-          </div>
-          <div class="kpi-box">
-            <div class="kpi-value">${calculateTotalModules()}</div>
-            <div class="kpi-label">Module gesamt</div>
-          </div>
-          <div class="kpi-box">
-            <div class="kpi-value">${calculateActiveStrings()}</div>
-            <div class="kpi-label">Aktive Strings</div>
-          </div>
-          <div class="kpi-box">
-            <div class="kpi-value">${calculateCompletionRate()}%</div>
-            <div class="kpi-label">Fertigstellung</div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="report-section">
-        <div class="section-title">🔄 Aktivitäten</div>
-        <div class="activity-list">
-          <div class="activity-item">
-            <div class="activity-time">${new Date().toLocaleDateString('de-DE')}</div>
-            <div class="activity-text">Bericht generiert von ${currentUser?.email || 'Admin'}</div>
-          </div>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-  
-  downloadReport(html, `${project.name}_Wochenbericht_${getWeekNumber()}.html`);
-}
-
-function generateProjectReport(data){
-  const project = data.project;
-  const plan = data.plan;
-  
-  // Status pro WR
-  let wrStatus = '';
-  Object.keys(plan).forEach(wrId => {
-    const wrData = plan[wrId];
-    const mppts = Array.isArray(wrData) ? 12 : (wrData.mppts || 12);
-    const inputs = Array.isArray(wrData) ? 2 : (wrData.inputs || 2);
-    
-    let active = 0, total = mppts * inputs;
-    for(let m = 1; m <= mppts; m++){
-      for(let s = 1; s <= inputs; s++){
-        const id = `${wrId}.${m}.${s}`;
-        if(APP_STATE[id] && APP_STATE[id].stat === 'JA') active++;
-      }
-    }
-    
-    wrStatus += `
-      <div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
-        <strong>WR ${wrId}:</strong> ${active}/${total} Strings aktiv (${Math.round(active/total*100)}%)
-      </div>
-    `;
-  });
-  
-  let html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; }
-        .report-header { border-bottom: 2px solid #00873d; padding: 20px 0; margin-bottom: 20px; }
-        .report-title { font-size: 18pt; font-weight: bold; color: #000; }
-        .report-meta { font-size: 10pt; color: #666; margin-top: 8px; }
-        .status-section { margin: 20px 0; }
-        .section-title { font-size: 14pt; font-weight: bold; color: #00873d; margin-bottom: 15px; }
-      </style>
-    </head>
-    <body>
-      <div class="report-header">
-        <div class="report-title">📁 Projekt-Status - ${project.name}</div>
-        <div class="report-meta">${new Date().toLocaleDateString('de-DE')} · ${project.locked ? '🔒 GESPERRT' : '✅ OFFEN'}</div>
-      </div>
-      
-      <div class="status-section">
-        <div class="section-title">📊 Wechselrichter-Status</div>
-        ${wrStatus}
-      </div>
-    </body>
-    </html>
-  `;
-  
-  downloadReport(html, `${project.name}_Status_${new Date().toLocaleDateString('de-DE').replace(/\./g, '-')}.html`);
-}
-
-function generatePerformanceReport(data){
-  const project = data.project;
-  
-  // Performance-Analysen
-  const analysis = analyzePerformance();
-  
-  let html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; }
-        .report-header { border-bottom: 2px solid #00873d; padding: 20px 0; margin-bottom: 20px; }
-        .report-title { font-size: 18pt; font-weight: bold; color: #000; }
-        .analysis-section { margin: 20px 0; }
-        .section-title { font-size: 14pt; font-weight: bold; color: #00873d; margin-bottom: 15px; }
-        .metric-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
-        .metric-name { font-weight: 600; }
-        .metric-value { font-weight: bold; color: #00873d; }
-        .metric-bar { height: 20px; background: #eee; border-radius: 10px; overflow: hidden; }
-        .metric-fill { height: 100%; background: #00873d; border-radius: 10px; }
-      </style>
-    </head>
-    <body>
-      <div class="report-header">
-        <div class="report-title">📈 Performance-Analyse - ${project.name}</div>
-        <div class="report-meta">${new Date().toLocaleDateString('de-DE')}</div>
-      </div>
-      
-      <div class="analysis-section">
-        <div class="section-title">📊 Performance-Metriken</div>
-        ${analysis}
-      </div>
-    </body>
-    </html>
-  `;
-  
-  downloadReport(html, `${project.name}_Performance_${new Date().toLocaleDateString('de-DE').replace(/\./g, '-')}.html`);
-}
-
-function generateCustomReport(data){
-  toast('📊 Benutzerdefinierter Bericht wird vorbereitet...');
-  // Placeholder für custom Report
-}
-
-function downloadReport(html, filename){
-  const blob = new Blob([html], { type: 'text/html' });
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  
-  toast('✅ Bericht erfolgreich heruntergeladen');
-}
-
-// Hilfsfunktionen für Berichte
-function getWeekStart(){
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  const weekStart = new Date(now.setDate(diff));
-  return weekStart.toLocaleDateString('de-DE');
-}
-
-function getWeekEnd(){
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? 0 : 7);
-  const weekEnd = new Date(now.setDate(diff));
-  return weekEnd.toLocaleDateString('de-DE');
-}
-
-function getWeekNumber(){
-  const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 1);
-  const week = Math.ceil((((now - start) / 86400000) + start.getDay() + 1) / 7);
-  return week;
-}
-
-function calculateTotalPower(){
-  let total = 0;
-  const wp = getCurrentWp();
-  Object.keys(APP_STATE).forEach(id => {
-    const item = APP_STATE[id];
-    if(item && item.stat === 'JA' && item.mod > 0) {
-      total += (item.mod * wp) / 1000;
-    }
-  });
-  return total.toFixed(2);
-}
-
-function calculateTotalModules(){
-  let total = 0;
-  Object.keys(APP_STATE).forEach(id => {
-    const item = APP_STATE[id];
-    if(item && item.stat === 'JA' && item.mod > 0) {
-      total += item.mod;
-    }
-  });
-  return total;
-}
-
-function calculateActiveStrings(){
-  let active = 0;
-  Object.keys(APP_STATE).forEach(id => {
-    const item = APP_STATE[id];
-    if(item && item.stat === 'JA') {
-      active++;
-    }
-  });
-  return active;
-}
-
-function calculateCompletionRate(){
-  let complete = 0;
-  let total = 0;
-  Object.keys(APP_STATE).forEach(id => {
-    const item = APP_STATE[id];
-    if(item) {
-      total++;
-      if(getStringStatus(id) === 'COMPLETE') complete++;
-    }
-  });
-  return total > 0 ? Math.round(complete / total * 100) : 0;
-}
-
-function analyzePerformance(){
-  let html = '';
-  
-  // Messwert-Distribution
-  const measurements = {
-    uoc: [], isc: [], riso: []
-  };
-  
-  Object.keys(APP_STATE).forEach(id => {
-    const item = APP_STATE[id];
-    if(item && item.stat === 'JA') {
-      if(item.uoc) measurements.uoc.push(parseFloat(item.uoc.replace(',', '.')));
-      if(item.isc) measurements.isc.push(parseFloat(item.isc.replace(',', '.')));
-      if(item.riso) measurements.riso.push(parseFloat(item.riso.replace(',', '.')));
-    }
-  });
-  
-  html += `<div class="metric-row">
-    <div class="metric-name">Uoc-Durchschnitt:</div>
-    <div class="metric-value">${measurements.uoc.length ? (measurements.uoc.reduce((a,b) => a+b) / measurements.uoc.length).toFixed(1) + ' V' : 'N/A'}</div>
-  </div>`;
-  
-  html += `<div class="metric-row">
-    <div class="metric-name">Isc-Durchschnitt:</div>
-    <div class="metric-value">${measurements.isc.length ? (measurements.isc.reduce((a,b) => a+b) / measurements.isc.length).toFixed(2) + ' A' : 'N/A'}</div>
-  </div>`;
-  
-  html += `<div class="metric-row">
-    <div class="metric-name">Riso-Durchschnitt:</div>
-    <div class="metric-value">${measurements.riso.length ? (measurements.riso.reduce((a,b) => a+b) / measurements.riso.length).toFixed(1) + ' MΩ' : 'N/A'}</div>
-  </div>`;
-  
-  return html;
-}
-
-// Auto-Schedule System
-let REPORT_SCHEDULES = {};
-
-function showScheduleModal(){
-  renderScheduleList();
-  g('schedule-modal').classList.add('show');
-}
-
-function saveScheduleConfig(scheduleData){
-  const project = getCurrentProject();
-  if(!project) return toast('⚠️ Kein Projekt geöffnet');
-  
-  if(!REPORT_SCHEDULES[project.id]) {
-    REPORT_SCHEDULES[project.id] = [];
-  }
-  
-  REPORT_SCHEDULES[project.id].push({
-    ...scheduleData,
-    id: Date.now(),
-    createdAt: new Date().toISOString()
-  });
-  
-  localStorage.setItem('pv_report_schedules', JSON.stringify(REPORT_SCHEDULES));
-  renderScheduleList();
-  toast('✅ Erinnerung gespeichert');
-}
-
-function renderScheduleList(){
-  const list = g('schedule-list');
-  if(!list) return;
-  
-  const project = getCurrentProject();
-  if(!project || !REPORT_SCHEDULES[project.id]) {
-    list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted);">Keine automatischen Berichte für dieses Projekt</div>';
-    return;
-  }
-  
-  list.innerHTML = REPORT_SCHEDULES[project.id].map(schedule => {
-    return `
-      <div style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div style="font-weight:700; color:var(--text);">${schedule.type}</div>
-          <div style="font-size:0.8rem; color:var(--muted);">${schedule.frequency} · ${schedule.time}</div>
-        </div>
-        <button onclick="deleteSchedule(${schedule.id})" class="btn btn-ghost" style="padding:4px 8px; color:#ef4444;">🗑️</button>
-      </div>
-    `;
-  }).join('');
-}
-
-function deleteSchedule(scheduleId){
-  const project = getCurrentProject();
-  if(!project) return;
-  
-  REPORT_SCHEDULES[project.id] = REPORT_SCHEDULES[project.id].filter(s => s.id !== scheduleId);
-  localStorage.setItem('pv_report_schedules', JSON.stringify(REPORT_SCHEDULES));
-  renderScheduleList();
-  toast('🗑️ Erinnerung gelöscht');
-}
-
-function loadSchedulesFromStorage(){
-  try {
-    const stored = localStorage.getItem('pv_report_schedules');
-    if(stored) {
-      REPORT_SCHEDULES = JSON.parse(stored);
-    }
-  } catch(e) {
-    console.warn('Schedules konnten nicht geladen werden', e);
-  }
-}
-
-// Keyboard Shortcuts Setup
-function setupKeyboardShortcuts(){
-  document.addEventListener('keydown', (e) => {
-    // Keyboard Shortcuts nur wenn nicht in einem Input-Feld
-    if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-      return;
-    }
-    
-    // Strg+S = Manuelles Speichern
-    if(e.ctrlKey && e.key === 's') {
-      e.preventDefault();
-      pushCloudDataManually();
-    }
-    
-    // Strg+N = Neues Projekt
-    if(e.ctrlKey && e.key === 'n') {
-      e.preventDefault();
-      openNewProjectModal();
-    }
-    
-    // Strg+F = Fokus auf erstes Eingabefeld
-    if(e.ctrlKey && e.key === 'f') {
-      e.preventDefault();
-      const firstInput = document.querySelector('.sp-inp:not([readonly])');
-      if(firstInput) {
-        firstInput.focus();
-        firstInput.select();
-        toast('🔍 Fokus auf erstes Eingabefeld');
-      }
-    }
-    
-    // Esc = Alle Modals schließen
-    if(e.key === 'Escape') {
-      closeAllModals();
-      toast('✓ Alle Fenster geschlossen');
-    }
-    
-    // Strg+Z = Undo
-    if(e.ctrlKey && e.key === 'z' && !e.shiftKey) {
-      e.preventDefault();
-      undo();
-    }
-    
-    // Strg+Y oder Strg+Shift+Z = Redo
-    if((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
-      e.preventDefault();
-      redo();
-    }
-  });
-}
-
-function closeAllModals(){
-  document.querySelectorAll('.modal-overlay.show').forEach(modal => {
-    modal.classList.remove('show');
-  });
-  document.querySelectorAll('.modal-overlay.active').forEach(modal => {
-    modal.classList.remove('active');
-  });
-}
-
-// Dashboard Funktionen
-function showDashboard(){
-  renderDashboardCharts();
-  g('dashboard-modal').classList.add('show');
-}
-
-function closeDashboard(e){
-  if(!e || e.target === e.currentTarget) g('dashboard-modal').classList.remove('show');
-}
-
-function renderDashboardCharts(){
-  if(!window.Chart) return toast('⚠️ Chart Library nicht geladen');
-  
-  // Power Chart
-  const powerCtx = g('power-chart').getContext('2d');
-  if(powerCtx) {
-    new Chart(powerCtx, {
-      type: 'line',
-      data: {
-        labels: ['Woche 1', 'Woche 2', 'Woche 3', 'Woche 4', 'Woche 5'],
-        datasets: [{
-          label: 'Leistung (kWp)',
-          data: [calculateTotalPower(), calculateTotalPower() * 1.1, calculateTotalPower() * 1.2, calculateTotalPower() * 1.15, calculateTotalPower() * 1.1],
-          borderColor: '#00873d',
-          backgroundColor: 'rgba(0, 135, 61, 0.1)',
-          tension: 0.4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } }
-      }
-    });
-  }
-  
-  // Status Chart
-  const statusCtx = g('status-chart').getContext('2d');
-  if(statusCtx) {
-    const complete = countStringsByStatus('COMPLETE');
-    const incomplete = countStringsByStatus('INCOMPLETE');
-    const inactive = countStringsByStatus('NEIN');
-    
-    new Chart(statusCtx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Komplett', 'Unvollständig', 'Inaktiv'],
-        datasets: [{
-          data: [complete, incomplete, inactive],
-          backgroundColor: ['#00873d', '#eab308', '#64748b'],
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } }
-      }
-    });
-  }
-  
-  // Timeline Chart
-  const timelineCtx = g('timeline-chart').getContext('2d');
-  if(timelineCtx) {
-    new Chart(timelineCtx, {
-      type: 'bar',
-      data: {
-        labels: ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'],
-        datasets: [{
-          label: 'Messungen',
-          data: [12, 15, 8, 20, 18],
-          backgroundColor: '#00873d'
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } }
-      }
-    });
-  }
-  
-  // Error Chart
-  const errorCtx = g('error-chart').getContext('2d');
-  if(errorCtx) {
-    const errors = countStringsByStatus('ERROR');
-    const valid = countStringsByStatus('COMPLETE') + countStringsByStatus('INCOMPLETE');
-    
-    new Chart(errorCtx, {
-      type: 'pie',
-      data: {
-        labels: ['Fehlerfrei', 'Mit Fehlern'],
-        datasets: [{
-          data: [valid, errors],
-          backgroundColor: ['#00873d', '#ef4444'],
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } }
-      }
-    });
-  }
-}
-
-function countStringsByStatus(status){
-  let count = 0;
-  Object.keys(APP_STATE).forEach(id => {
-    if(getStringStatus(id) === status) count++;
-  });
-  return count;
-}
-
-// Collaboration System
-let activeUsers = {};
-let chatMessages = [];
-
-function showCollaboration(){
-  g('collaboration-modal').classList.add('show');
-  simulateUserPresence();
-}
-
-function closeCollaboration(e){
-  if(!e || e.target === e.currentTarget) g('collaboration-modal').classList.remove('show');
-}
-
-function simulateUserPresence(){
-  // Ehrliche Anzeige: aktuell keine echte Geräte-übergreifende Synchronisation
-  // vorhanden, daher wird nur der wirklich eingeloggte Nutzer gezeigt statt
-  // erfundener Namen.
-  const presenceList = g('user-presence-list');
-  if(presenceList) {
-    const email = currentUser ? currentUser.email : 'Unbekannt';
-    presenceList.innerHTML = `
-      <div class="user-presence-item online">
-        <div class="presence-dot"></div>
-        <span>Du (${esc(email)}) 🟢</span>
-      </div>
-    `;
-  }
-}
-
-function sendChatMessage(){
-  const input = g('chat-input');
-  const message = input.value.trim();
-  if(!message) return;
-  
-  const chatMessages = g('chat-messages');
-  if(chatMessages) {
-    // Nur lokale Notiz — es gibt (noch) keine echte Übertragung an andere Geräte,
-    // daher hier bewusst KEINE simulierte "Antwort" mehr, die das vortäuschen würde.
-    const ownMessage = document.createElement('div');
-    ownMessage.className = 'chat-message own';
-    ownMessage.innerHTML = `<strong>Du:</strong> ${esc(message)}`;
-    chatMessages.appendChild(ownMessage);
-    
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-    input.value = '';
-  }
-}
-
-function handleChatKeypress(event){
-  if(event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault();
-    sendChatMessage();
-  }
-}
-
-// Schedule Modal hinzufügen
-const scheduleModalHTML = `
-<div id="schedule-modal" class="modal-overlay" onclick="closeScheduleModal(event)">
-  <div class="modal-card" data-modal="centered" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <h2>📅 Berichts-Erinnerungen</h2>
-      <button onclick="closeScheduleModal()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
-    </div>
-    <div class="modal-body">
-      <div style="background:var(--warn-soft, rgba(245,158,11,0.1)); border:1px solid var(--warn, #f59e0b); border-radius:8px; padding:10px 12px; margin-bottom:16px; font-size:0.78rem; color:var(--text);">
-        ℹ️ Das ist eine <strong>Merkliste</strong>, kein automatischer Versand — es gibt (noch) keinen Server, der Berichte selbstständig verschickt. Die Zeit/Frequenz dient nur dir als Erinnerung, wann du den Bericht manuell erstellen solltest.
-      </div>
-      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;line-height:1.4;">
-        Erinnerung für Berichte zu diesem Projekt anlegen.
-      </div>
-      
-      <div class="field">
-        <label>Bericht-Typ</label>
-        <select id="schedule-type" class="sp-inp">
-          <option value="weekly">Wochenbericht</option>
-          <option value="project">Projekt-Status</option>
-          <option value="performance">Performance-Analyse</option>
-        </select>
-      </div>
-      
-      <div class="field">
-        <label>Frequenz</label>
-        <select id="schedule-frequency" class="sp-inp">
-          <option value="daily">Täglich</option>
-          <option value="weekly">Wöchentlich</option>
-          <option value="monthly">Monatlich</option>
-        </select>
-      </div>
-      
-      <div class="field">
-        <label>Zeit</label>
-        <input type="time" id="schedule-time" class="sp-inp" value="08:00">
-      </div>
-      
-      <div style="display:flex; gap:12px; margin-top:16px;">
-        <button onclick="closeScheduleModal()" class="btn btn-ghost" style="flex:1;">Abbrechen</button>
-        <button onclick="saveSchedule()" class="btn btn-primary" style="flex:1;">💾 Speichern</button>
-      </div>
-      
-      <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border);">
-        <div style="font-size:0.75rem;font-weight:700;color:var(--muted);margin-bottom:12px;">Deine Erinnerungen:</div>
-        <div id="schedule-list"></div>
-      </div>
-    </div>
-  </div>
-</div>
-`;
-
-// Schedule Modal in DOM einfügen
-const templateModal = g('template-modal');
-if(templateModal) {
-  templateModal.insertAdjacentHTML('afterend', scheduleModalHTML);
-}
-
-function closeScheduleModal(e){
-  if(!e || e.target === e.currentTarget) g('schedule-modal').classList.remove('show');
-}
-
-function saveSchedule(){
-  const type = g('schedule-type').value;
-  const frequency = g('schedule-frequency').value;
-  const time = g('schedule-time').value;
-  
-  saveScheduleConfig({
-    type, frequency, time
-  });
-  closeScheduleModal();
-}
-
 // Export-Funktionen erweitern
 function exportCSV(){
   const project = getCurrentProject();
@@ -4178,6 +3026,28 @@ function getCurrentPlan(){
 }
 function getCurrentWp(){ return getCurrentProject() ? (getCurrentProject().model_wp || 465) : 465; }
 
+async function editModuleWp(){
+  if(!canEditHardware()) return toast('🔒 Keine Berechtigung — nur Planer/Admin');
+  const proj = getCurrentProject();
+  if(!proj) return toast('Kein Projekt geöffnet');
+  const input = prompt('Modulleistung in Wp:', proj.model_wp || 465);
+  if(input === null) return;
+  const wp = parseInt(input, 10);
+  if(!wp || wp <= 0 || wp > 1000) return toast('Bitte eine gültige Wp-Zahl zwischen 1 und 1000 eingeben');
+  proj.model_wp = wp;
+  proj.updated_at = new Date().toISOString();
+  saveProjectsLocal();
+  g('d-wp').textContent = wp;
+  renderMatrix();
+  if(supabaseClient && currentUser){
+    toast('🔄 Speichere...');
+    const synced = await saveProjectToCloud(CURRENT_PROJECT_ID);
+    toast(synced ? '✅ Wp aktualisiert' : '⚠️ Nur lokal gespeichert — Sync fehlgeschlagen');
+  } else {
+    toast('✅ Wp aktualisiert (nur lokal)');
+  }
+}
+
 function generateState(plan, allActiveByDefault = true){
   const result = {};
   if(!plan) return result;
@@ -4474,7 +3344,19 @@ function updateRoleHint(){
 let renderMatrixTimeout = null;
 function renderMatrixDebounced(remoteOverride = null, delay = 100){
   clearTimeout(renderMatrixTimeout);
-  renderMatrixTimeout = setTimeout(() => renderMatrix(remoteOverride), delay);
+  renderMatrixTimeout = setTimeout(() => {
+    const active = document.activeElement;
+    const tables = g('tables');
+    // Auf dem Handy: NICHT neu aufbauen, während gerade ein Feld fokussiert ist —
+    // das zerstört das Eingabefeld, wodurch die Bildschirmtastatur zuklappt und
+    // die Seite sichtbar "springt", selbst wenn wir die Scrollposition restaurieren.
+    // Stattdessen einmalig warten, bis das Feld tatsächlich verlassen wird.
+    if(active && tables && tables.contains(active) && (active.tagName === 'INPUT' || active.tagName === 'SELECT')){
+      active.addEventListener('blur', () => renderMatrix(remoteOverride), { once: true });
+      return;
+    }
+    renderMatrix(remoteOverride);
+  }, delay);
 }
 
 function renderMatrix(remoteOverride = null){
@@ -4656,8 +3538,15 @@ function renderMatrix(remoteOverride = null){
   // Scrollposition wiederherstellen — sonst springt die Ansicht bei jedem
   // erfolgreichen Auto-Save (nur mit Internetverbindung möglich) nach oben,
   // weil die Seite beim Neuaufbau kurz sehr klein wird und der Browser den
-  // Scroll-Stand dabei zurücksetzt.
-  requestAnimationFrame(() => window.scrollTo(0, _savedScrollY));
+  // Scroll-Stand dabei zurücksetzt. Auf dem iPhone klappt beim Neuaufbau oft
+  // gerade die Bildschirmtastatur zu — Safari verschiebt die Ansicht dabei noch
+  // eine Weile lang selbst nach, daher hier mehrfach nachkorrigieren statt nur
+  // einmal.
+  const _restoreScroll = () => window.scrollTo(0, _savedScrollY);
+  requestAnimationFrame(_restoreScroll);
+  setTimeout(_restoreScroll, 60);
+  setTimeout(_restoreScroll, 180);
+  setTimeout(_restoreScroll, 350);
 }
 
 let scrollContextFrame = null;
@@ -6077,7 +4966,20 @@ async function debugCloudProjects(){
   } catch(e){}
 }
 
+// KRITISCH: Beim Wechsel des offenen Projekts wird APP_STATE gleich mit dem neuen
+// Projekt überschrieben. Der debounced Auto-Save (CLOUD_SYNC_DELAY) liest aber erst
+// beim Feuern nach, welches Projekt gerade aktuell ist — wechselt man vorher, geht
+// die letzte Änderung am ALTEN Projekt sonst lautlos verloren. Deshalb hier zuerst
+// sichern, bevor CURRENT_PROJECT_ID sich ändert.
+async function flushPendingProjectEdits(){
+  clearTimeout(cloudSyncTimeout);
+  if(CURRENT_PROJECT_ID && supabaseClient && currentUser){
+    try { await saveProjectToCloud(CURRENT_PROJECT_ID); } catch(e){}
+  }
+}
+
 async function selectProject(id){
+  await flushPendingProjectEdits();
   CURRENT_PROJECT_ID = id;
   loadCurrentProjectData();
   if(supabaseClient && currentUser) await fetchCloudDataManually();
@@ -6136,6 +5038,7 @@ function renderNPWRPlan(){
 }
 
 async function doCreateNewProject(){
+  await flushPendingProjectEdits();
   const name = g('np-name').value.trim();
   const group = g('np-group').value.trim();
   const wp = parseInt(g('np-wp').value)||465;
@@ -6755,7 +5658,6 @@ document.addEventListener('DOMContentLoaded', () => {
 window.onload = () => { 
   checkSession();
   setupKeyboardShortcuts();
-  loadSchedulesFromStorage();
 };
 </script>
 </body>

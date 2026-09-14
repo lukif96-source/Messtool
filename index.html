@@ -1687,6 +1687,355 @@ body.sun-mode table.mt td, body.sun-mode table.mt th { border-color: rgba(17,24,
 body.sun-mode .btn { box-shadow: 0 1px 2px rgba(17,24,17,0.05); }
 body.sun-mode .btn-primary { box-shadow: 0 2px 10px -2px rgba(0,163,74,0.35); }
 body.sun-mode .btn-ghost { box-shadow: none; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   V3 DESIGN-LAYER (Review 09/2026)
+   Letzte Kaskadenstufe. Überschreibt gezielt, statt oben einzugreifen.
+   Zwei vollwertige Themes:
+     • body.sun-mode  → "Baustelle": harter Kontrast, flach, sonnentauglich
+     • body (default) → "Cockpit":  tiefes Dunkel, Neon-Akzent, Glow
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Tokens: Cockpit (dunkel) ───────────────────────────────────────────── */
+:root {
+  --bg: #060807; --surface: #0d1110; --panel: #121816;
+  --border: rgba(255,255,255,0.10); --text: #eef4ef; --muted: #8b9a8f;
+  --accent: #9dff3c; --accent-muted: #6fc22a; --accent-glow: rgba(157,255,60,0.20);
+  --accent-ink: #060807;
+  --crit: #ff4d4d; --crit-soft: rgba(255,77,77,0.14); --crit-line: rgba(255,77,77,0.55);
+  --warn: #ffb020; --warn-soft: rgba(255,176,32,0.13); --warn-line: rgba(255,176,32,0.50);
+  --ok: #4ade80; --ok-soft: rgba(74,222,128,0.12);
+  --field-bg: #0a0e0c; --field-bg-hover: #10160f;
+  --field-border: rgba(255,255,255,0.12); --field-border-focus: var(--accent);
+  --field-glow: 0 0 0 3px rgba(157,255,60,0.22);
+  --accent-grad: linear-gradient(135deg, #9dff3c 0%, #62b41f 100%);
+  --shadow-1: 0 1px 2px rgba(0,0,0,0.5);
+  --shadow-2: 0 8px 28px rgba(0,0,0,0.55);
+  --radius: 12px;
+  --row-h: 46px;
+}
+
+/* ── Tokens: Baustelle (hell, maximaler Kontrast) ───────────────────────── */
+body.sun-mode {
+  --bg: #eef1ef; --surface: #ffffff; --panel: #f7f9f7;
+  --border: rgba(9,15,10,0.14); --text: #070b08; --muted: #4d584f;
+  --accent: #00762f; --accent-muted: #005a23; --accent-glow: rgba(0,118,47,0.14);
+  --accent-ink: #ffffff;
+  --crit: #c81e1e; --crit-soft: #fde8e8; --crit-line: #c81e1e;
+  --warn: #a85800; --warn-soft: #fff3e0; --warn-line: #a85800;
+  --ok: #0f7a37; --ok-soft: #e7f6ec;
+  --field-bg: #ffffff; --field-bg-hover: #f2f5f2;
+  --field-border: rgba(9,15,10,0.26); --field-border-focus: var(--accent);
+  --field-glow: 0 0 0 3px rgba(0,118,47,0.20);
+  --accent-grad: linear-gradient(135deg, #00873a 0%, #00622a 100%);
+  --shadow-1: 0 1px 2px rgba(9,15,10,0.07);
+  --shadow-2: 0 10px 30px rgba(9,15,10,0.12);
+}
+
+/* Flächen: im Hell-Modus bewusst flach, kein Glas, keine Verläufe */
+body.sun-mode::before { background: none; }
+body:not(.sun-mode)::before {
+  background:
+    radial-gradient(70% 55% at 15% -5%, rgba(157,255,60,0.07), transparent 70%),
+    radial-gradient(45% 45% at 95% 100%, rgba(157,255,60,0.05), transparent 70%);
+}
+
+/* ── Typografie ─────────────────────────────────────────────────────────── */
+body { letter-spacing: -0.011em; }
+/* Zahlen laufen spaltentreu – entscheidend für eine Messtabelle */
+.kpi-value, .pwr-cell, .wr-kpis, .project-card-stat-value, .home-stat-value,
+table.mt td, table.mt th, .sp-inp, .pc-prog-txt, .kpi-strip-val {
+  font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+}
+.kpi-value, .home-stat-value { letter-spacing: -0.04em; font-weight: 800; }
+.kpi-label, .home-stat-label, .project-card-stat-label, table.mt th {
+  text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn {
+  border-radius: 10px; font-weight: 650; box-shadow: var(--shadow-1);
+  background: var(--field-bg); border: 1px solid var(--field-border); color: var(--text);
+  transition: background .15s ease, border-color .15s ease, transform .1s ease, box-shadow .15s ease;
+}
+.btn:hover { background: var(--field-bg-hover); border-color: var(--accent); }
+.btn-primary {
+  background: var(--accent-grad); color: var(--accent-ink); font-weight: 800;
+  border-color: transparent; box-shadow: 0 4px 14px var(--accent-glow);
+}
+.btn-primary:hover { filter: brightness(1.08); box-shadow: 0 8px 22px var(--accent-glow); }
+body:not(.sun-mode) .btn-primary { text-shadow: none; }
+.btn:focus-visible, .sp-inp:focus-visible, .tog:focus-visible, .wr-tab:focus-visible,
+.main-tab:focus-visible, .sidebar-btn:focus-visible, .project-card:focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 2px;
+}
+
+/* ── Eingabefelder ──────────────────────────────────────────────────────── */
+.sp-inp { box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.sp-inp:focus {
+  border-color: var(--field-border-focus); box-shadow: var(--field-glow);
+  background: var(--surface);
+}
+/* Messwerte monospaced: Ziffern sind auf einen Blick vergleichbar */
+table.mt td[data-label="Uoc(V)"] .sp-inp,
+table.mt td[data-label="Isc(A)"] .sp-inp,
+table.mt td[data-label="Riso(MΩ)"] .sp-inp,
+table.mt td[data-label="Module"] .sp-inp {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 700; font-size: 0.95rem; letter-spacing: -0.02em;
+}
+
+/* ── KPI-Karten ─────────────────────────────────────────────────────────── */
+.kpi-card {
+  border-radius: var(--radius); box-shadow: var(--shadow-1);
+  border: 1px solid var(--border); background: var(--surface);
+  position: relative; overflow: hidden;
+}
+.kpi-card::after {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--accent); opacity: .85;
+}
+body:not(.sun-mode) .kpi-card { background: linear-gradient(160deg, #0f1512, #0a0e0c); }
+
+/* ── Tabelle: dichter, klarer, klebriger Kopf ───────────────────────────── */
+table.mt thead th {
+  position: sticky; top: 0; z-index: 3;
+  background: var(--panel); color: var(--muted);
+  font-size: 0.68rem; padding: 9px 8px;
+  border-bottom: 2px solid var(--border);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+body.sun-mode table.mt thead th { background: #e9ede9; color: #3b453e; }
+table.mt td { padding: 5px 7px; border-bottom: 1px solid var(--border); }
+table.mt tbody tr { transition: background .12s ease; }
+table.mt tbody tr.mppt-header td {
+  font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
+  font-weight: 800; color: var(--muted); padding: 6px 8px;
+}
+/* Status-Kante links – kräftiger als bisher.
+   Die Flächentönung wird dagegen bewusst stark zurückgenommen: die Zeile
+   sagt "fertig/offen", die Zelle sagt "Grenzwert verletzt". Zwei kräftige
+   Farbflächen übereinander würden den Grenzwert-Alarm schlucken. */
+table.mt tbody tr.row-complete, table.mt tbody tr.row-incomplete,
+table.mt tbody tr.row-error, table.mt tbody tr.row-nein {
+  background: transparent; border-left: 0;
+}
+table.mt tbody tr.row-complete   { box-shadow: inset 4px 0 0 var(--ok); }
+table.mt tbody tr.row-incomplete { box-shadow: inset 4px 0 0 var(--warn); background: var(--warn-soft); }
+table.mt tbody tr.row-error      { box-shadow: inset 4px 0 0 var(--crit); }
+table.mt tbody tr.row-nein       { box-shadow: inset 4px 0 0 transparent; opacity: .5; }
+body:not(.sun-mode) table.mt tbody tr.row-incomplete { background: rgba(255,176,32,0.055); }
+
+/* Aktive Zeile beim Tastatur-Durchlauf klar markieren */
+table.mt tbody tr.row-focus { background: var(--accent-glow) !important; }
+table.mt tbody tr.row-focus td:first-child { font-weight: 800; }
+
+/* ── Grenzwert-Alarm in der Zelle ───────────────────────────────────────── */
+.sp-inp.val-warn {
+  border-color: var(--warn-line) !important; background: var(--warn-soft) !important;
+  color: var(--warn) !important; font-weight: 800 !important;
+}
+.sp-inp.val-crit {
+  border-color: var(--crit-line) !important; background: var(--crit-soft) !important;
+  color: var(--crit) !important; font-weight: 800 !important;
+  animation: valPulse 1.4s ease-in-out 2;
+}
+@keyframes valPulse {
+  0%,100% { box-shadow: 0 0 0 0 transparent; }
+  50%     { box-shadow: 0 0 0 4px var(--crit-soft); }
+}
+@media (prefers-reduced-motion: reduce) { .sp-inp.val-crit { animation: none; } }
+.flag-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px; padding: 0 5px; margin-left: 6px;
+  border-radius: 6px; font-size: 0.7rem; font-weight: 900; cursor: help;
+  vertical-align: middle; line-height: 1;
+}
+.flag-badge.warn { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn-line); }
+.flag-badge.crit { background: var(--crit-soft); color: var(--crit); border: 1px solid var(--crit-line); }
+
+/* Auffälligkeiten-Leiste über der Tabelle */
+.alarm-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 12px; margin: 0 0 8px; border-radius: 10px;
+  font-size: 0.8rem; font-weight: 600;
+  background: var(--panel); border: 1px solid var(--border); color: var(--muted);
+}
+.alarm-bar.has-crit { background: var(--crit-soft); border-color: var(--crit-line); color: var(--crit); }
+.alarm-bar.has-warn { background: var(--warn-soft); border-color: var(--warn-line); color: var(--warn); }
+.alarm-bar .ab-jump {
+  margin-left: auto; border: 1px solid currentColor; background: transparent;
+  color: inherit; border-radius: 8px; padding: 5px 10px; font-weight: 800;
+  cursor: pointer; font-size: 0.75rem; min-height: 32px;
+}
+.alarm-bar .ab-jump:hover { background: rgba(127,127,127,0.12); }
+
+/* ── Theme-Umschalter ───────────────────────────────────────────────────── */
+.theme-switch {
+  display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px;
+  background: var(--panel); border: 1px solid var(--border);
+}
+.theme-switch button {
+  border: 0; background: transparent; color: var(--muted); cursor: pointer;
+  font: inherit; font-size: 0.75rem; font-weight: 700; padding: 6px 11px;
+  border-radius: 7px; min-height: 34px; display: inline-flex; align-items: center; gap: 5px;
+  transition: background .15s ease, color .15s ease;
+}
+.theme-switch button.active { background: var(--accent); color: var(--accent-ink); }
+.theme-switch button:not(.active):hover { color: var(--text); background: var(--field-bg-hover); }
+
+/* ── Projektkarten ──────────────────────────────────────────────────────── */
+.project-card {
+  border-radius: var(--radius); box-shadow: var(--shadow-1);
+  border: 1px solid var(--border); background: var(--surface);
+}
+.project-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-2); }
+.project-card.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent), var(--shadow-1); }
+.project-card-title {
+  white-space: normal; overflow: visible; text-overflow: clip;
+  font-size: 1.02rem; line-height: 1.25; letter-spacing: -0.02em;
+}
+.project-card-header { align-items: flex-start; }
+
+/* Fortschrittsbalken auf der Karte */
+.pc-prog { margin-top: 12px; }
+.pc-prog-track {
+  height: 7px; border-radius: 99px; overflow: hidden;
+  background: var(--field-bg); border: 1px solid var(--border);
+  display: flex;
+}
+.pc-prog-fill { height: 100%; background: var(--accent); transition: width .3s ease; }
+.pc-prog-fill.crit { background: var(--crit); }
+.pc-prog-txt {
+  display: flex; justify-content: space-between; gap: 8px;
+  margin-top: 5px; font-size: 0.72rem; font-weight: 700; color: var(--muted);
+}
+.pc-prog-txt .done { color: var(--accent); }
+.pc-prog-txt .flags { color: var(--crit); }
+
+/* Überlaufmenü statt vier Icon-Buttons */
+.pc-menu-wrap { position: relative; flex-shrink: 0; }
+.pc-menu-btn {
+  border: 1px solid var(--field-border); background: var(--field-bg); color: var(--text);
+  border-radius: 8px; width: 32px; height: 32px; cursor: pointer;
+  font-size: 1rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+}
+.pc-menu-btn:hover { border-color: var(--accent); }
+.pc-menu {
+  display: none; position: absolute; right: 0; top: 36px; z-index: 40;
+  min-width: 208px; padding: 5px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-2);
+}
+.pc-menu.show { display: block; }
+.pc-menu button {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  border: 0; background: transparent; color: var(--text); cursor: pointer;
+  font: inherit; font-size: 0.83rem; font-weight: 600; text-align: left;
+  padding: 9px 10px; border-radius: 7px; min-height: 40px;
+}
+.pc-menu button:hover { background: var(--field-bg-hover); }
+.pc-menu button.danger { color: var(--crit); }
+
+/* Projekt-Suche */
+.proj-search-wrap { position: relative; flex: 1 1 220px; max-width: 340px; }
+.proj-search-wrap::before {
+  content: '🔍'; position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+  font-size: 0.85rem; opacity: .6; pointer-events: none;
+}
+.proj-search { padding-left: 34px !important; }
+
+/* ── Mobile: Messfläche zuerst ──────────────────────────────────────────── */
+.kpi-strip { display: none; }
+.matrix-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 900px) {
+  /* KPI-Karten auf der Matrix durch kompakte Sticky-Leiste ersetzen */
+  body.tab-matrix .dashboard { display: none; }
+  body.tab-matrix .kpi-strip {
+    display: flex; gap: 0; position: sticky; top: 0; z-index: 30;
+    margin: 0 0 8px; border-radius: 10px; overflow: hidden;
+    background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-1);
+  }
+  .kpi-strip-item {
+    flex: 1; min-width: 0; padding: 7px 4px; text-align: center;
+    border-right: 1px solid var(--border);
+  }
+  .kpi-strip-item:last-child { border-right: 0; }
+  .kpi-strip-val { display: block; font-size: 0.98rem; font-weight: 800; letter-spacing: -0.03em; }
+  .kpi-strip-lbl {
+    display: block; font-size: 0.56rem; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--muted); font-weight: 700; margin-top: 1px;
+  }
+  .kpi-strip-item.is-crit .kpi-strip-val { color: var(--crit); }
+
+  /* Aktionen zusammenklappen statt vier gestapelte Vollbreit-Buttons */
+  .matrix-actions { display: none; }
+  .matrix-actions.open { display: flex; flex-direction: column; gap: 8px; }
+  .matrix-actions.open .btn { width: 100%; }
+  .actions-toggle { display: inline-flex !important; width: 100%; }
+
+  /* Tabellenkopf klebt unter der KPI-Leiste */
+  table.mt thead th { top: 42px; }
+  html { scroll-padding-top: 110px; }
+
+  /* ── Messzeile als kompakte Karte ────────────────────────────────────────
+     Vorher stapelte jede Zelle als eigene volle Zeile — ein String füllte
+     den halben Bildschirm. Jetzt liegen die drei Messwerte nebeneinander,
+     so wie sie auch am Messgerät abgelesen werden. Reines CSS-Grid,
+     die DOM-Struktur bleibt identisch (Druck/Export unberührt). */
+  table.mt tbody tr[data-string-id] {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-areas:
+      "klemme klemme aktiv"
+      "gak    gak    mods"
+      "uoc    isc    riso"
+      "note   note   note";
+    gap: 7px 8px; padding: 10px 11px; margin: 9px 0;
+  }
+  table.mt tbody tr[data-string-id] > td {
+    display: flex; flex-direction: column; align-items: stretch;
+    justify-content: flex-start; text-align: left;
+    border-bottom: 0; padding: 0 !important; min-height: 0; gap: 2px;
+  }
+  table.mt tbody tr[data-string-id] > td::before {
+    content: attr(data-label);
+    font-size: 0.57rem; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--muted); font-weight: 800; flex: 0 0 auto;
+  }
+  table.mt tbody tr[data-string-id] > td[data-label="Klemme"] { grid-area: klemme; }
+  table.mt tbody tr[data-string-id] > td[data-label="GAK"]    { grid-area: gak; }
+  table.mt tbody tr[data-string-id] > td[data-label="Aktiv"]  { grid-area: aktiv; align-items: flex-end; }
+  table.mt tbody tr[data-string-id] > td[data-label="Module"] { grid-area: mods; }
+  table.mt tbody tr[data-string-id] > td[data-label="Uoc(V)"] { grid-area: uoc; }
+  table.mt tbody tr[data-string-id] > td[data-label="Isc(A)"] { grid-area: isc; }
+  table.mt tbody tr[data-string-id] > td[data-label="Riso(MΩ)"] { grid-area: riso; }
+  table.mt tbody tr[data-string-id] > td.col-note { grid-area: note; }
+  /* kWp ist rein abgeleitet und steht im WR-Kopf — am Handy kostet es nur Platz */
+  table.mt tbody tr[data-string-id] > td[data-label="kWp"] { display: none !important; }
+  /* Klemme trägt die String-ID selbst, braucht kein Extra-Label */
+  table.mt tbody tr[data-string-id] > td[data-label="Klemme"]::before,
+  table.mt tbody tr[data-string-id] > td[data-label="Aktiv"]::before { display: none; }
+  table.mt tbody tr[data-string-id] > td[data-label="Klemme"] .string-id { font-size: 1rem; }
+
+  table.mt tbody tr[data-string-id] .sp-inp {
+    max-width: 100% !important; width: 100%; text-align: center;
+    min-height: 46px; font-size: 1.02rem;
+  }
+  table.mt tbody tr[data-string-id] td.col-note .sp-inp { text-align: left; font-size: 0.9rem; min-height: 40px; }
+  table.mt tbody tr[data-string-id] .tog-wrap { transform: none; }
+  table.mt tbody tr[data-string-id] .tog { padding: 7px 12px; min-height: 38px; font-size: 0.78rem; }
+}
+@media (min-width: 901px) { .actions-toggle { display: none !important; } }
+
+/* Fokussierte Zelle nie hinter dem Sticky-Kopf verstecken */
+table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
+
+/* ── Drucklayout unangetastet lassen ────────────────────────────────────── */
+@media print {
+  .theme-switch, .alarm-bar, .kpi-strip, .pc-menu, .actions-toggle { display: none !important; }
+  table.mt thead th { position: static; }
+  .sp-inp.val-warn, .sp-inp.val-crit { background: #fff !important; color: #000 !important; }
+}
 </style>
 </head>
 <body class="tab-home sun-mode"><div class="print-header">
@@ -1753,6 +2102,22 @@ body.sun-mode .btn-ghost { box-shadow: none; }
         <b>Admin:</b> alles · <b>Planer:</b> Hardware · <b>Bauleitung:</b> nur Messwerte.
       </div>
       <div id="users-list">Lade Benutzer...</div>
+    </div>
+  </div>
+</div>
+
+<div id="assign-modal" class="modal-overlay" onclick="closeAssignModal(event)">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h2>👥 Bauleitung zuweisen</h2>
+      <button onclick="closeAssignModal()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;line-height:1.4;">
+        Projekt: <b id="assign-project-name">–</b><br>
+        Nur zugewiesene Bauleitung-Accounts können dieses Projekt sehen und bearbeiten. Admin &amp; Planer sehen weiterhin immer alle Projekte.
+      </div>
+      <div id="assign-list">Lade Benutzer...</div>
     </div>
   </div>
 </div>
@@ -1944,6 +2309,15 @@ body.sun-mode .btn-ghost { box-shadow: none; }
     <span class="role-chip" id="user-badge-role">—</span>
   </div>
 
+  <!-- Theme-Umschalter: Baustelle = harter Kontrast fuer Sonne,
+       Cockpit = dunkel fuers Buero. Auswahl wird gemerkt. -->
+  <div style="margin: 0 8px 12px;">
+    <div class="theme-switch" role="group" aria-label="Darstellung wählen" style="width:100%;">
+      <button type="button" id="theme-btn-sun" class="active" style="flex:1;justify-content:center;" onclick="setTheme('sun')" title="Heller Modus mit hartem Kontrast — für die Baustelle bei Sonne">☀️ Baustelle</button>
+      <button type="button" id="theme-btn-dark" style="flex:1;justify-content:center;" onclick="setTheme('dark')" title="Dunkler Modus — fürs Büro">🌙 Cockpit</button>
+    </div>
+  </div>
+
   <div class="sb-proj-section">
     <div class="sb-proj-section-label">
       <span>Projekte</span>
@@ -1983,9 +2357,6 @@ body.sun-mode .btn-ghost { box-shadow: none; }
   </button>
   <button onclick="exportCSV();closeSidebar();" class="sidebar-btn">
     <span class="icon" style="color:#3b82f6;">📄</span><span class="label">CSV Export</span>
-  </button>
-  <button onclick="exportPDFWithLogo();closeSidebar();" class="sidebar-btn">
-    <span class="icon" style="color:#ef4444;">📑</span><span class="label">PDF mit Logo</span>
   </button>
 
 
@@ -2157,9 +2528,24 @@ body.sun-mode .btn-ghost { box-shadow: none; }
 
     <div class="print-lock-stamp" id="print-lock-stamp"></div>
 
+    <!-- Kompakte KPI-Leiste: ersetzt am Handy die vier grossen Karten,
+         damit die erste Messzeile ohne langes Scrollen erreichbar ist. -->
+    <div class="kpi-strip no-print" id="kpi-strip">
+      <div class="kpi-strip-item"><span class="kpi-strip-val" id="ks-pwr">0.00</span><span class="kpi-strip-lbl">kWp</span></div>
+      <div class="kpi-strip-item"><span class="kpi-strip-val" id="ks-done">0</span><span class="kpi-strip-lbl">fertig</span></div>
+      <div class="kpi-strip-item"><span class="kpi-strip-val" id="ks-open">0</span><span class="kpi-strip-lbl">offen</span></div>
+      <div class="kpi-strip-item" id="ks-flag-item"><span class="kpi-strip-val" id="ks-flags">0</span><span class="kpi-strip-lbl">auffällig</span></div>
+    </div>
+
+    <div class="alarm-bar no-print" id="alarm-bar" style="display:none;"></div>
+
+    <button class="btn btn-ghost actions-toggle no-print" id="actions-toggle" onclick="toggleMatrixActions()" style="display:none; margin-bottom:8px;">
+      <span>⚙️</span> <span id="actions-toggle-text">Aktionen anzeigen</span>
+    </button>
+
     <div class="view-bar-wrap no-print">
       <div class="wr-filter-bar" id="wr-filter-bar"></div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <div class="matrix-actions" id="matrix-actions">
         <button class="filter-toggle-btn role-gate-planner" id="btn-add-wr" onclick="addNewInverter()" title="Neuen Wechselrichter hinzufügen">
           <span>➕</span> <span>+ WR</span>
         </button>
@@ -2190,6 +2576,10 @@ body.sun-mode .btn-ghost { box-shadow: none; }
       <div style="min-width:0;">
         <h2 style="font-size:1.2rem; font-weight:800; color:var(--text);">Projektübersicht</h2>
         <div style="font-size:0.8rem; color:var(--muted);">Verwalte und synchronisiere deine PV-Projekte</div>
+      </div>
+      <div class="proj-search-wrap">
+        <input type="search" id="proj-search" class="sp-inp proj-search" placeholder="Projekt oder Gruppe suchen…"
+               aria-label="Projekte durchsuchen" oninput="onProjectSearch(this.value)">
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-ghost" onclick="refreshProjects()">🔄 Aktualisieren</button>
@@ -2487,13 +2877,46 @@ function toastError(msg, err, ms=4000){
   toast('❌ ' + msg, ms);
 }
 
-function toggleSunMode(){
-  const on = document.body.classList.toggle('sun-mode');
+// Theme: 'sun' = Baustelle (hell, harter Kontrast), 'dark' = Cockpit.
+// Auswahl wird gemerkt, damit man sie nicht jeden Morgen neu setzen muss.
+function setTheme(mode, silent = false){
+  const isSun = mode !== 'dark';
+  document.body.classList.toggle('sun-mode', isSun);
+
   let meta = document.querySelector('meta[name="theme-color"]:not([media])');
   if(!meta){ meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
-  meta.setAttribute('content', on ? '#fafbfa' : '#0a0a0c');
+  meta.setAttribute('content', isSun ? '#eef1ef' : '#060807');
+
+  const sunBtn = g('theme-btn-sun'), darkBtn = g('theme-btn-dark');
+  if(sunBtn) sunBtn.classList.toggle('active', isSun);
+  if(darkBtn) darkBtn.classList.toggle('active', !isSun);
+
   const label = document.querySelector('#btn-sun .label');
-  if(label) label.textContent = on ? 'Dunkelmodus' : 'Hell-Modus';
+  if(label) label.textContent = isSun ? 'Dunkelmodus' : 'Hell-Modus';
+
+  try { localStorage.setItem('pv_theme', isSun ? 'sun' : 'dark'); } catch(_){}
+  if(!silent) toast(isSun ? '☀️ Baustellen-Modus' : '🌙 Cockpit-Modus');
+}
+
+// Bestehender Aufruf aus der Sidebar bleibt funktionsfaehig
+function toggleSunMode(){
+  setTheme(document.body.classList.contains('sun-mode') ? 'dark' : 'sun');
+}
+
+// Gemerkte Auswahl so frueh wie moeglich anwenden (vermeidet Aufblitzen)
+(function restoreTheme(){
+  let saved = null;
+  try { saved = localStorage.getItem('pv_theme'); } catch(_){}
+  if(saved === 'dark') document.body.classList.remove('sun-mode');
+  document.addEventListener('DOMContentLoaded', () => setTheme(saved === 'dark' ? 'dark' : 'sun', true));
+})();
+
+function toggleMatrixActions(){
+  const box = g('matrix-actions');
+  const txt = g('actions-toggle-text');
+  if(!box) return;
+  const open = box.classList.toggle('open');
+  if(txt) txt.textContent = open ? 'Aktionen ausblenden' : 'Aktionen anzeigen';
 }
 
 function toggleHighContrast(){
@@ -2601,13 +3024,21 @@ function renderProjectGrid(){
   }
 
   const visibleIds = ids.filter(id => {
+    const p = PROJECTS[id];
+    // Suchbegriff schlaegt den Gruppenfilter: wer sucht, will alles durchsuchen
+    if(projectSearchTerm){
+      const hay = `${p.name || ''} ${p.group || ''}`.toLowerCase();
+      return hay.includes(projectSearchTerm);
+    }
     if(currentProjectGroupFilter === '__all__') return true;
-    if(currentProjectGroupFilter === '__none__') return !PROJECTS[id].group;
-    return PROJECTS[id].group === currentProjectGroupFilter;
+    if(currentProjectGroupFilter === '__none__') return !p.group;
+    return p.group === currentProjectGroupFilter;
   });
 
   if(visibleIds.length === 0){
-    grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--muted);">Keine Projekte in dieser Gruppe.</div>`;
+    grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--muted);">${
+      projectSearchTerm ? `Kein Projekt passt zu „${esc(projectSearchTerm)}“.` : 'Keine Projekte in dieser Gruppe.'
+    }</div>`;
     return;
   }
   
@@ -2618,31 +3049,88 @@ function renderProjectGrid(){
     const wp = proj.model_wp || 465;
     const lockedIcon = proj.locked ? '🔒 ' : '';
     
+    const prog = getProjectProgress(proj);
+    const pct = prog.total ? Math.round(prog.done / prog.total * 100) : 0;
+    const canManage = currentUserRole !== 'site';
+
     return `
       <div class="project-card ${isActive ? 'active' : ''}" role="button" tabindex="0" aria-label="Projekt ${esc(proj.name)} öffnen" onclick="selectProject('${id}'); switchMainTab('matrix');" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
         <div class="project-card-header">
           <div class="project-card-title">${lockedIcon}${isActive ? '✓ ' : ''}${esc(proj.name)}</div>
           <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-            ${currentUserRole !== 'site' ? `<button class="btn btn-ghost" onclick="setProjectGroup('${id}', event)" title="Gruppe zuweisen" style="min-height:28px; min-width:28px; padding:2px 6px; font-size:0.8rem;">🏷️</button>` : ''}
-            ${currentUserRole !== 'site' ? `<button class="btn btn-ghost" onclick="renameProject('${id}', event)" title="Projekt umbenennen" style="min-height:28px; min-width:28px; padding:2px 6px; font-size:0.8rem;">✏️</button>` : ''}
-            ${currentUserRole !== 'site' ? `<button class="btn btn-ghost" onclick="deleteProject('${id}', event)" title="Projekt löschen" style="min-height:28px; min-width:28px; padding:2px 6px; font-size:0.8rem; color:#ef4444;">🗑️</button>` : ''}
             <div class="sync-status ${cloudProjectIds.has(id) ? 'synced' : 'pending'}" title="${cloudProjectIds.has(id) ? 'In der Cloud gespeichert' : 'Nur auf diesem Gerät – wird nach Anmeldung übertragen'}">${cloudProjectIds.has(id) ? '☁️' : '📱'}</div>
+            ${canManage ? `
+            <div class="pc-menu-wrap">
+              <button class="pc-menu-btn" title="Projekt-Aktionen" aria-haspopup="true" onclick="toggleProjectMenu('${id}', event)">⋯</button>
+              <div class="pc-menu" id="pc-menu-${id}" onclick="event.stopPropagation()">
+                <button onclick="renameProject('${id}', event); closeProjectMenus();"><span>✏️</span> Umbenennen</button>
+                <button onclick="setProjectGroup('${id}', event); closeProjectMenus();"><span>🏷️</span> Gruppe zuweisen</button>
+                <button onclick="openAssignModal('${id}', event); closeProjectMenus();"><span>👥</span> Bauleitung zuweisen</button>
+                <button class="danger" onclick="deleteProject('${id}', event); closeProjectMenus();"><span>🗑️</span> Projekt löschen</button>
+              </div>
+            </div>` : ''}
           </div>
         </div>
         <div class="project-card-meta">
           ${proj.group ? `<span style="color:var(--accent); font-weight:700;">${esc(proj.group)}</span> &middot; ` : ''}${wrCount} Wechselrichter &middot; ${wp} Wp${proj.locked ? ' &middot; <span style="color:#ef4444;font-weight:700;">gesperrt</span>' : ''}
         </div>
-        <div class="project-card-stats">
-          <div class="project-card-stat"><div class="project-card-stat-label">WR</div><div class="project-card-stat-value">${wrCount}</div></div>
-          <div class="project-card-stat"><div class="project-card-stat-label">Wp</div><div class="project-card-stat-value">${wp}</div></div>
-          <div class="project-card-stat"><div class="project-card-stat-label">MPPTs</div><div class="project-card-stat-value">${Object.keys(proj.plan || {}).filter(k => !isNaN(parseInt(k))).reduce((sum, wr) => {
-            const wrData = proj.plan[wr];
-            return sum + (Array.isArray(wrData) ? 12 : (wrData.mppts || 12));
-          }, 0)}</div></div>
+        <div class="pc-prog">
+          <div class="pc-prog-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Messfortschritt">
+            <div class="pc-prog-fill ${prog.crit ? 'crit' : ''}" style="width:${pct}%;"></div>
+          </div>
+          <div class="pc-prog-txt">
+            <span>${prog.total ? `<span class="done">${prog.done}</span> von ${prog.total} gemessen` : 'Noch keine Strings angelegt'}</span>
+            <span>${prog.crit ? `<span class="flags">⛔ ${prog.crit}</span>` : `${pct}%`}</span>
+          </div>
         </div>
       </div>
     `;
   }).join('');
+}
+
+// Fortschritt eines Projekts aus dem mitgeladenen Messstand.
+// Fuer das gerade geoeffnete Projekt wird der Live-Zustand genommen,
+// damit die Karte nicht hinterherhinkt.
+function getProjectProgress(proj){
+  const out = { done: 0, total: 0, crit: 0 };
+  if(!proj) return out;
+  const state = (proj.id === CURRENT_PROJECT_ID && APP_STATE && Object.keys(APP_STATE).length)
+    ? APP_STATE : proj.measurements;
+  if(!state || typeof state !== 'object') return out;
+
+  Object.keys(state).forEach(sid => {
+    const it = state[sid];
+    if(!it || it.stat !== 'JA') return;
+    out.total++;
+    const u = toNum(it.uoc), i = toNum(it.isc), r = toNum(it.riso);
+    if(u !== null && u > 0 && i !== null && i > 0 && r !== null && r > 0){
+      out.done++;
+      if(r < LIMIT_RISO_CRIT) out.crit++;
+    }
+  });
+  return out;
+}
+
+function toggleProjectMenu(id, event){
+  if(event){ event.stopPropagation(); event.preventDefault(); }
+  const menu = g(`pc-menu-${id}`);
+  if(!menu) return;
+  const wasOpen = menu.classList.contains('show');
+  closeProjectMenus();
+  if(!wasOpen) menu.classList.add('show');
+}
+function closeProjectMenus(){
+  document.querySelectorAll('.pc-menu.show').forEach(m => m.classList.remove('show'));
+}
+document.addEventListener('click', e => {
+  if(!e.target.closest('.pc-menu-wrap')) closeProjectMenus();
+});
+
+// Projekt-Suche: filtert Name und Gruppe
+let projectSearchTerm = '';
+function onProjectSearch(value){
+  projectSearchTerm = String(value || '').trim().toLowerCase();
+  renderProjectGrid();
 }
 
 let PROJECTS = {};
@@ -2842,13 +3330,14 @@ function exportCSV(){
   toast('📄 CSV exportiert');
 }
 
+// HINWEIS (Review 09/2026): Diese Funktion druckte bisher direkt die Matrix-Ansicht
+// per window.print(). Das Druck-Stylesheet blendet dabei aber die Spalten Uoc/Isc/Riso
+// aus (.col-hide-print), wodurch das erzeugte "PDF" ohne die eigentlichen Messwerte
+// herauskam. Der zugehörige Sidebar-Button wurde entfernt; diese Funktion leitet nur
+// noch defensiv (falls sie doch irgendwo aufgerufen wird) auf das korrekte, geprüfte
+// Messblatt weiter.
 function exportPDFWithLogo(){
-  const project = getCurrentProject();
-  if(!project) return toast('⚠️ Kein Projekt geöffnet');
-  
-  // Einfache Browser-Print Funktion statt komplexer PDF-Generierung
-  window.print();
-  toast('📑 Druckdialog geöffnet');
+  printBlankMeasurementSheet();
 }
 
 function applyTemplate(templateName){
@@ -3638,12 +4127,12 @@ function renderMatrix(remoteOverride = null){
           <tr id="row-${id}" class="${rowStatusCls} matrix-virtual-row" data-wr="${wr}" data-mppt="${m}" data-string="${s}" data-string-id="${id}" role="row" aria-label="String ${id} - Status: ${stringStatus}">
             <td data-label="Klemme" style="text-align:left; padding-left:6px; width:12%;">
                <div style="display:flex;flex-direction:column;gap:1px;">
-                 <span class="string-id" style="font-size:0.85rem;" aria-label="String-ID: ${id}">${id}</span>
+                 <span><span class="string-id" style="font-size:0.85rem;" aria-label="String-ID: ${id}">${id}</span><span class="flag-slot no-print" id="flag-${id}"></span></span>
                  ${strLabel}
                </div>
             </td>
             <td data-label="GAK" style="width:12%;">
-               <input type="text" id="gak-${id}" value="${esc(item.gak)}" class="sp-inp sp-inp-center sp-inp-gak" style="padding:3px;" list="gak-suggestions-${wr}" oninput="saveData('${id}', 'gak', this.value)" onkeydown="handleMeasureKeydown(event, '${id}', 'gak')" ${roAttr(gakRO)} placeholder="GAK eingeben...">
+               <input type="text" id="gak-${id}" value="${esc(item.gak)}" class="sp-inp sp-inp-center sp-inp-gak" style="padding:3px;" list="gak-suggestions-${wr}" onchange="saveData('${id}', 'gak', this.value)" onkeydown="handleMeasureKeydown(event, '${id}', 'gak')" ${roAttr(gakRO)} placeholder="GAK eingeben...">
                <datalist id="gak-suggestions-${wr}">
                  ${generateGakSuggestions(wr, mppts, inputs)}
                </datalist>
@@ -3741,6 +4230,10 @@ function renderMatrix(remoteOverride = null){
 
   buildFilterBar();
   setupScrollContext();
+  // updateKPIs() statt nur der vier Zahlen oben: nur dort werden auch die
+  // kompakte Sticky-Leiste (Handy) und die Fortschrittsbalken mitgezogen.
+  updateKPIs();
+  applyMeasurementFlags(); // Grenzwert-Alarm nach jedem Tabellen-Neuaufbau setzen
   // Scrollposition wiederherstellen — sonst springt die Ansicht bei jedem
   // erfolgreichen Auto-Save (nur mit Internetverbindung möglich) nach oben,
   // weil die Seite beim Neuaufbau kurz sehr klein wird und der Browser den
@@ -3848,6 +4341,208 @@ function getStringStatus(id){
   if(risoValid && (parseFloat(it.riso.replace(',', '.')) > 10000)) return 'ERROR';
   
   return 'COMPLETE';
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   GRENZWERT-PRÜFUNG (Review 09/2026)
+
+   Zwei klar getrennte Arten von Befunden — das ist bewusst so:
+
+   1) NORM-GRENZWERT (Riso)
+      IEC 62446-1 fordert als Mindest-Isolationswiderstand:
+        Systemspannung < 120 V  → Prüfspannung 250 V  → min. 0,5 MΩ
+        Systemspannung 120–500 V → Prüfspannung 500 V  → min. 1,0 MΩ
+        Systemspannung > 500 V   → Prüfspannung 1000 V → min. 1,0 MΩ
+      Strings in dieser Anwendung liegen praktisch immer über 120 V,
+      daher gilt hier 1,0 MΩ als harte Untergrenze. Gesunde, trockene
+      Anlagen liegen typischerweise bei 10–200+ MΩ, deshalb ist alles
+      unter 10 MΩ ein Hinweis (oft Feuchtigkeit), aber kein Normverstoß.
+
+   2) PLAUSIBILITÄTSVERGLEICH (Uoc, Isc)
+      Für Uoc/Isc gibt es KEINE feste Normtoleranz — die Messwerte hängen
+      von Einstrahlung und Modultemperatur ab. Deshalb wird hier nicht
+      gegen einen Datenblattwert geprüft, sondern gegen den Median aller
+      am selben Tag gemessenen Strings des Projekts. Das ist genau das,
+      was ein erfahrener Prüfer per Augenmaß macht, und es fängt genau
+      die Fälle: ein Modul weniger im String, lose Steckverbindung,
+      verschatteter oder defekter String.
+      Erst ab 3 gemessenen Strings aussagekräftig — vorher wird nicht
+      verglichen, um Fehlalarme zu vermeiden.
+   ══════════════════════════════════════════════════════════════════════════ */
+const LIMIT_RISO_CRIT = 1.0;    // MΩ, IEC 62446-1
+const LIMIT_RISO_WARN = 10.0;   // MΩ, unterhalb typisch gesunder Werte
+const LIMIT_UOC_WARN = 5;       // % Abweichung vom Median
+const LIMIT_UOC_CRIT = 10;
+const LIMIT_ISC_WARN = 10;      // Isc streut stärker (Einstrahlung)
+const LIMIT_ISC_CRIT = 20;
+const BASELINE_MIN_SAMPLES = 3;
+
+function toNum(v){
+  const n = parseFloat(String(v ?? '').replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+function medianOf(arr){
+  if(!arr.length) return null;
+  const s = [...arr].sort((a,b) => a-b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid-1] + s[mid]) / 2;
+}
+
+// Vergleichsbasis aus allen aktiven, gemessenen Strings des Projekts
+function getMeasurementBaseline(){
+  const uocPerMod = [], iscVals = [];
+  Object.keys(APP_STATE).forEach(id => {
+    const it = APP_STATE[id];
+    if(!it || it.stat !== 'JA') return;
+    const mods = Number(it.mod) || 0;
+    const u = toNum(it.uoc), i = toNum(it.isc);
+    if(u !== null && u > 0 && mods > 0) uocPerMod.push(u / mods);
+    if(i !== null && i > 0) iscVals.push(i);
+  });
+  return {
+    uocPerMod: medianOf(uocPerMod), uocN: uocPerMod.length,
+    isc: medianOf(iscVals), iscN: iscVals.length
+  };
+}
+
+// Bewertet einen String. Rueckgabe: { level, fields: {feld: 'warn'|'crit'}, msgs: [] }
+function evaluateString(id, base){
+  const res = { level: 'ok', fields: {}, msgs: [] };
+  const it = APP_STATE[id];
+  if(!it || it.stat !== 'JA') return res;
+
+  const mark = (field, lvl, msg) => {
+    res.fields[field] = lvl;
+    res.msgs.push(msg);
+    if(lvl === 'crit' || res.level === 'ok') res.level = (lvl === 'crit') ? 'crit' : 'warn';
+  };
+
+  // 1) Riso gegen Normgrenze.
+  // 0 gilt hier — wie überall sonst im Tool — als "noch nicht gemessen",
+  // nicht als Messwert 0. Sonst würde jede leere Zeile Alarm schlagen und
+  // die Warnungen würden schnell ignoriert.
+  const riso = toNum(it.riso);
+  if(riso !== null && riso > 0){
+    if(riso < LIMIT_RISO_CRIT){
+      mark('riso', 'crit', `Riso ${it.riso} MΩ unter Mindestwert ${String(LIMIT_RISO_CRIT).replace('.', ',')} MΩ (IEC 62446-1) — Isolationsfehler, nicht freigeben.`);
+    } else if(riso < LIMIT_RISO_WARN){
+      mark('riso', 'warn', `Riso ${it.riso} MΩ ist niedrig — gesunde Strings liegen meist über ${LIMIT_RISO_WARN} MΩ. Oft Feuchtigkeit im Stecker.`);
+    }
+  }
+
+  const mods = Number(it.mod) || 0;
+
+  // 2) Uoc je Modul gegen Projekt-Median
+  const u = toNum(it.uoc);
+  if(u !== null && u > 0 && mods > 0 && base.uocPerMod && base.uocN >= BASELINE_MIN_SAMPLES){
+    const dev = ((u / mods) - base.uocPerMod) / base.uocPerMod * 100;
+    const a = Math.abs(dev), dir = dev < 0 ? 'unter' : 'über';
+    const exp = (base.uocPerMod * mods);
+    if(a >= LIMIT_UOC_CRIT){
+      mark('uoc', 'crit', `Uoc ${a.toFixed(0)} % ${dir} Projektschnitt (erwartet ca. ${exp.toFixed(0)} V bei ${mods} Modulen) — Modulanzahl prüfen oder Unterbrechung im String.`);
+    } else if(a >= LIMIT_UOC_WARN){
+      mark('uoc', 'warn', `Uoc ${a.toFixed(0)} % ${dir} Projektschnitt (erwartet ca. ${exp.toFixed(0)} V) — plausibel prüfen.`);
+    }
+  }
+
+  // 3) Isc gegen Projekt-Median
+  const i = toNum(it.isc);
+  if(i !== null && i > 0 && base.isc && base.iscN >= BASELINE_MIN_SAMPLES){
+    const dev = (i - base.isc) / base.isc * 100;
+    const a = Math.abs(dev), dir = dev < 0 ? 'unter' : 'über';
+    if(a >= LIMIT_ISC_CRIT){
+      mark('isc', 'crit', `Isc ${a.toFixed(0)} % ${dir} Projektschnitt (${String(base.isc.toFixed(2)).replace('.', ',')} A) — Verschattung, Verschmutzung oder defekter String.`);
+    } else if(a >= LIMIT_ISC_WARN){
+      mark('isc', 'warn', `Isc ${a.toFixed(0)} % ${dir} Projektschnitt (${String(base.isc.toFixed(2)).replace('.', ',')} A) — bei wechselnder Einstrahlung normal, sonst prüfen.`);
+    }
+  }
+
+  return res;
+}
+
+// Faerbt Zellen, setzt Badges, aktualisiert Auffaelligkeiten-Leiste.
+let _flaggedIds = [];
+function applyMeasurementFlags(){
+  if(!APP_STATE || !Object.keys(APP_STATE).length) return;
+  const base = getMeasurementBaseline();
+  let nWarn = 0, nCrit = 0;
+  _flaggedIds = [];
+
+  Object.keys(APP_STATE).forEach(id => {
+    const res = evaluateString(id, base);
+
+    ['uoc', 'isc', 'riso'].forEach(f => {
+      const el = g(`${f}-${id}`);
+      if(!el) return;
+      el.classList.remove('val-warn', 'val-crit');
+      const lvl = res.fields[f];
+      if(lvl) el.classList.add(lvl === 'crit' ? 'val-crit' : 'val-warn');
+      el.title = lvl ? res.msgs.join('\n') : '';
+    });
+
+    const slot = g(`flag-${id}`);
+    if(slot){
+      if(res.level === 'ok'){
+        slot.innerHTML = '';
+      } else {
+        const cls = res.level === 'crit' ? 'crit' : 'warn';
+        const sym = res.level === 'crit' ? '!' : '?';
+        slot.innerHTML = `<span class="flag-badge ${cls}" title="${esc(res.msgs.join(' \n'))}" aria-label="${esc(res.msgs.join(' '))}">${sym}</span>`;
+      }
+    }
+
+    if(res.level === 'crit'){ nCrit++; _flaggedIds.push(id); }
+    else if(res.level === 'warn'){ nWarn++; _flaggedIds.push(id); }
+  });
+
+  _flaggedIds.sort((a, b) => {
+    const pa = a.split('.').map(Number), pb = b.split('.').map(Number);
+    return pa[0]-pb[0] || pa[1]-pb[1] || pa[2]-pb[2];
+  });
+
+  const bar = g('alarm-bar');
+  if(bar){
+    const total = nWarn + nCrit;
+    if(total === 0){
+      bar.style.display = 'none';
+    } else {
+      bar.style.display = 'flex';
+      bar.classList.toggle('has-crit', nCrit > 0);
+      bar.classList.toggle('has-warn', nCrit === 0 && nWarn > 0);
+      const parts = [];
+      if(nCrit) parts.push(`<strong>${nCrit}</strong> kritisch`);
+      if(nWarn) parts.push(`<strong>${nWarn}</strong> auffällig`);
+      bar.innerHTML = `<span>${nCrit ? '⛔' : '⚠️'}</span><span>${parts.join(' · ')}</span>`
+        + `<button type="button" class="ab-jump" onclick="jumpToNextFlag()">Zum nächsten →</button>`;
+    }
+  }
+
+  const ksFlags = g('ks-flags'), ksItem = g('ks-flag-item');
+  if(ksFlags) ksFlags.textContent = String(nWarn + nCrit);
+  if(ksItem) ksItem.classList.toggle('is-crit', nCrit > 0);
+}
+
+// Springt der Reihe nach durch alle auffaelligen Strings
+let _flagCursor = -1;
+function jumpToNextFlag(){
+  if(!_flaggedIds.length) return toast('Keine Auffälligkeiten');
+  _flagCursor = (_flagCursor + 1) % _flaggedIds.length;
+  const id = _flaggedIds[_flagCursor];
+  const row = g(`row-${id}`);
+  if(!row) return;
+  // Falls der String hinter einem WR-Filter versteckt ist: Filter aufheben
+  const block = row.closest('.wr-block');
+  if(block && block.style.display === 'none'){
+    const allBtn = document.querySelector('.wr-tab[data-wr="0"]');
+    if(allBtn) filterInverter(0, allBtn);
+  }
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.querySelectorAll('tr.row-focus').forEach(r => r.classList.remove('row-focus'));
+  row.classList.add('row-focus');
+  const target = g(`riso-${id}`) || g(`uoc-${id}`);
+  if(target && !target.readOnly){ try { target.focus({ preventScroll: true }); target.select(); } catch(_){} }
+  toast(`${_flagCursor + 1} von ${_flaggedIds.length}: String ${id}`);
 }
 
 let _inverterEditorWrId = null;
@@ -4319,7 +5014,24 @@ function focusCellAtIndex(wrId, mppt, input, fieldIdx, selectAll = true){
   if(selectAll && (el.type === 'text' || el.type === 'number')){
     try { el.select(); } catch(_) {}
   }
+  // Aktive Zeile sichtbar markieren und in den Blick holen. Ohne das
+  // verschwindet die fokussierte Zelle beim Enter-Durchlauf hinter dem
+  // klebenden Tabellenkopf bzw. unter der Bildschirmtastatur.
+  highlightActiveRow(`${wrId}.${mppt}.${input}`);
   return true;
+}
+
+function highlightActiveRow(id){
+  document.querySelectorAll('tr.row-focus').forEach(r => r.classList.remove('row-focus'));
+  const row = g(`row-${id}`);
+  if(!row) return;
+  row.classList.add('row-focus');
+  const r = row.getBoundingClientRect();
+  const topGuard = 130;                       // Sticky-Kopf + KPI-Leiste
+  const bottomGuard = window.innerHeight - 120; // Platz fuer Tastatur/FAB
+  if(r.top < topGuard || r.bottom > bottomGuard){
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 function nextCellInMatrix(wrId, mppt, input, currentField, direction = 1){
   // Springt zum nächsten editierbaren Feld in Tab-Reihenfolge.
@@ -4877,6 +5589,10 @@ function saveData(id, field, val) {
     if(pm) pm.textContent = (isJa && APP_STATE[id].mod>0) ? APP_STATE[id].mod : '—';
     updateKPIs(); // KPIs immer aktualisieren bei Modul- oder Statusänderungen
     updateWrHeaderLive(id.split('.')[0]); // Nur das eigene WR-Köpfchen aktualisieren — kein Tabellen-Neuaufbau nötig
+    // Grenzwerte neu bewerten: ein neuer Messwert verschiebt auch den
+    // Projekt-Median, daher wird die ganze Matrix neu geprüft — kein
+    // Neuaufbau der Tabelle, nur Klassen/Badges werden gesetzt.
+    applyMeasurementFlags();
   }
   const printMap = { uoc: 'puoc', isc: 'pisc', riso: 'priso', note: 'pnote' };
   if(printMap[field]) {
@@ -4939,6 +5655,12 @@ function updateKPIs(){
   if(dAct)  dAct.textContent  = totActive;
   if(dTot)  dTot.textContent  = totSlots;
   if(dWp)   dWp.textContent   = wp;
+
+  // Kompakte Sticky-Leiste (Handy): nur das, was beim Messen zaehlt
+  const ksPwr = g('ks-pwr'), ksDone = g('ks-done'), ksOpen = g('ks-open');
+  if(ksPwr)  ksPwr.textContent  = totPwr.toFixed(1);
+  if(ksDone) ksDone.textContent = totComplete;
+  if(ksOpen) ksOpen.textContent = totIncomplete;
   // Progress-Bar kWp vs Ziel (PVSOL-Plan, falls vorhanden)
   const proj = getCurrentProject();
   const planPwr = (proj && proj.plan_pwr) ? proj.plan_pwr : 0;
@@ -5338,11 +6060,20 @@ async function deleteProject(id, event){
   if(!confirm('Projekt wirklich löschen?')) return;
   delete PROJECTS[id];
   saveProjectsLocal();
-  if(supabaseClient && currentUser) try { await supabaseClient.from('pv_projects').delete().eq('id', id); } catch(e){}
+  let cloudOk = true;
+  if(supabaseClient && currentUser){
+    try {
+      const { error } = await supabaseClient.from('pv_projects').delete().eq('id', id);
+      if(error) throw error;
+    } catch(e){
+      cloudOk = false;
+      toastError('Lokal entfernt, aber Löschen in der Cloud fehlgeschlagen — Projekt taucht beim nächsten Laden eventuell wieder auf', e);
+    }
+  }
   if(g('projects-modal') && g('projects-modal').classList.contains('show')) openProjectsModal();
   renderProjectUI();
   if(g('project-grid')) renderProjectGrid();
-  toast('🗑️ Projekt gelöscht');
+  if(cloudOk) toast('🗑️ Projekt gelöscht');
 }
 
 async function renameProject(id, event){
@@ -5431,27 +6162,30 @@ async function editGroup(oldName, event) {
   if(trimmed === oldName || trimmed === '') return;
 
   let projectsUpdated = 0;
+  let failedIds = [];
   if(trimmed.toUpperCase() === 'LÖSCHEN') {
     if(!confirm(`Möchtest du die Gruppe "${oldName}" wirklich auflösen?`)) return;
     for(let id in PROJECTS) {
       if(PROJECTS[id].group === oldName) {
         PROJECTS[id].group = null;
         PROJECTS[id].updated_at = new Date().toISOString();
-        updateProjectConfigInCloud(id);
-        projectsUpdated++;
+        try { await updateProjectConfigInCloud(id); projectsUpdated++; }
+        catch(e){ failedIds.push(id); console.error('Gruppe auflösen fehlgeschlagen für', id, e); }
       }
     }
-    toast(`🗑️ Gruppe aufgelöst (${projectsUpdated} Projekte aktualisiert)`);
+    if(failedIds.length) toastError(`Gruppe teilweise aufgelöst (${projectsUpdated} ok, ${failedIds.length} fehlgeschlagen — bitte erneut versuchen)`);
+    else toast(`🗑️ Gruppe aufgelöst (${projectsUpdated} Projekte aktualisiert)`);
   } else {
     for(let id in PROJECTS) {
       if(PROJECTS[id].group === oldName) {
         PROJECTS[id].group = trimmed;
         PROJECTS[id].updated_at = new Date().toISOString();
-        updateProjectConfigInCloud(id);
-        projectsUpdated++;
+        try { await updateProjectConfigInCloud(id); projectsUpdated++; }
+        catch(e){ failedIds.push(id); console.error('Gruppe umbenennen fehlgeschlagen für', id, e); }
       }
     }
-    toast(`✅ Gruppe umbenannt (${projectsUpdated} Projekte aktualisiert)`);
+    if(failedIds.length) toastError(`Gruppe teilweise umbenannt (${projectsUpdated} ok, ${failedIds.length} fehlgeschlagen — bitte erneut versuchen)`);
+    else toast(`✅ Gruppe umbenannt (${projectsUpdated} Projekte aktualisiert)`);
   }
 
   saveProjectsLocal();
@@ -5626,7 +6360,11 @@ async function fetchProjectsFromCloud(){
           signature: cloudConfig._signature || null,
           updated_at: cloudProj.updated_at,
           cloud_updated_at: cloudProj.updated_at,
-          user_id: cloudProj.user_id 
+          user_id: cloudProj.user_id,
+          // Messstand mitnehmen statt wegwerfen: die Spalte wird oben ohnehin
+          // schon mitgeladen. Damit kann die Projektkarte den Fortschritt
+          // anzeigen, ohne dass ein zweiter Cloud-Abruf noetig waere.
+          measurements: cloudProj.data || null
         };
         PROJECTS[cloudProj.id] = cloudProject;
       });
@@ -5877,6 +6615,74 @@ async function changeUserRole(userId, newRole){
     const { error } = await supabaseClient.from('profiles').update({ role: newRole }).eq('id', userId);
     if(error) toastError('Rolle konnte nicht geändert werden', error); else toast('✅ Rolle geändert');
   } catch(e){ toastError('Rolle konnte nicht geändert werden', e); }
+}
+
+// Zuweisung von Bauleitung-Accounts zu einzelnen Projekten (pv_project_members).
+// Nur Admin/Planer sehen alle Projekte automatisch — Bauleitung sieht per RLS
+// nur noch Projekte, denen sie hier explizit zugewiesen wurde.
+let assignModalProjectId = null;
+
+function openAssignModal(id, event){
+  if(event) event.stopPropagation();
+  if(currentUserRole === 'site') return toast('🔒 Keine Berechtigung');
+  if(!supabaseClient || !currentUser) return toast('⚠️ Nur mit Cloud-Anmeldung verfügbar');
+  const proj = PROJECTS[id];
+  if(!proj) return;
+  assignModalProjectId = id;
+  g('assign-project-name').textContent = proj.name || id;
+  g('assign-modal').classList.add('show');
+  loadAssignments(id);
+}
+function closeAssignModal(evt){
+  if(!evt || evt.target === g('assign-modal')){
+    g('assign-modal').classList.remove('show');
+    assignModalProjectId = null;
+  }
+}
+
+async function loadAssignments(projectId){
+  const listEl = g('assign-list'); listEl.innerHTML = 'Lade...';
+  try {
+    const [{ data: siteUsers, error: uErr }, { data: members, error: mErr }] = await Promise.all([
+      supabaseClient.from('profiles').select('id, email, role').eq('role', 'site').order('email', { ascending: true }),
+      supabaseClient.from('pv_project_members').select('user_id').eq('project_id', projectId)
+    ]);
+    if(uErr) throw uErr;
+    if(mErr) throw mErr;
+    if(projectId !== assignModalProjectId) return; // Modal wurde inzwischen gewechselt/geschlossen
+    const assignedIds = new Set((members || []).map(m => m.user_id));
+    if(!siteUsers || siteUsers.length === 0){
+      listEl.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">Keine Bauleitung-Accounts vorhanden. Lege Benutzer in der Benutzerverwaltung an.</div>';
+      return;
+    }
+    listEl.innerHTML = siteUsers.map(u => `
+      <div class="user-row">
+        <span class="email">${esc(u.email)}</span>
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;white-space:nowrap;">
+          <input type="checkbox" ${assignedIds.has(u.id) ? 'checked' : ''} onchange="toggleAssignment('${projectId}', '${u.id}', this.checked)">
+          zugewiesen
+        </label>
+      </div>`).join('');
+  } catch(e){ listEl.innerHTML = `Fehler: ${esc(e.message || String(e))}`; }
+}
+
+async function toggleAssignment(projectId, userId, assign){
+  try {
+    if(assign){
+      const { error } = await supabaseClient.from('pv_project_members').insert({
+        project_id: projectId, user_id: userId, assigned_by: currentUser ? currentUser.id : null
+      });
+      if(error) throw error;
+      toast('✅ Zugewiesen');
+    } else {
+      const { error } = await supabaseClient.from('pv_project_members').delete().eq('project_id', projectId).eq('user_id', userId);
+      if(error) throw error;
+      toast('✅ Zuweisung entfernt');
+    }
+  } catch(e){
+    toastError('Zuweisung konnte nicht geändert werden', e);
+    loadAssignments(projectId); // Checkbox-Zustand nach Fehler zurücksetzen
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -931,6 +931,24 @@ body.sun-mode table.mt td[data-label="Aktiv"] { background: #ffffff; }
 .field-radio-title { font-weight: 700; font-size: 0.9rem; }
 .field-radio-desc { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
 .np-wr-row { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+/* Neues-Projekt-Maske: breiter + sauberes Raster statt gequetschter Flex-Zeilen */
+#newproj-modal .modal-card { max-width: 780px; }
+#newproj-modal .sp-inp { max-width: none !important; width: 100%; text-align: left; }
+#newproj-modal .sp-inp-center { text-align: center; }
+#newproj-modal .np-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+#newproj-modal .np-wr-grid { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
+#newproj-modal .np-wr-grid label, #newproj-modal .np-grid-2 label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#newproj-modal .np-backup-bar { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 12px; margin-bottom: 16px; border: 1px dashed var(--border); border-radius: 10px; align-items: center; }
+#newproj-modal .np-backup-bar .np-backup-hint { font-size: 0.7rem; color: var(--muted); flex: 1 1 200px; }
+#newproj-modal .np-backup-bar .btn { padding: 6px 12px; font-size: 0.78rem; }
+@media (max-width: 700px) {
+  #newproj-modal .np-wr-grid { grid-template-columns: 1fr 1fr 1fr; }
+  #newproj-modal .np-wr-grid > .np-wr-name { grid-column: 1 / -1; }
+}
+@media (max-width: 420px) {
+  #newproj-modal .np-grid-2 { grid-template-columns: 1fr; }
+  #newproj-modal .np-wr-grid { grid-template-columns: 1fr 1fr; }
+}
 
 .wr-edit-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -2358,6 +2376,9 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
   <button onclick="exportCSV();closeSidebar();" class="sidebar-btn">
     <span class="icon" style="color:#3b82f6;">📄</span><span class="label">CSV Export</span>
   </button>
+  <button onclick="exportProjectBackup();closeSidebar();" class="sidebar-btn">
+    <span class="icon" style="color:var(--accent);">💾</span><span class="label">Projekt-Sicherung (JSON)</span>
+  </button>
 
 
   <div class="role-gate-planner" style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px; margin-top:8px;">Verwaltung</div>
@@ -2763,13 +2784,13 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
         <datalist id="np-group-suggestions"></datalist>
         <div style="font-size:0.7rem; color:var(--muted); margin-top:4px;">Projekte mit gleicher Gruppe (z.B. verschiedene Dächer eines Kunden) lassen sich später zusammen filtern.</div>
       </div>
-      <div style="display:flex;gap:12px;margin-bottom:16px;">
-        <div style="flex:1;">
-          <label style="display:block;font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:4px;">Wp pro Modul</label>
+      <div class="np-grid-2">
+        <div>
+          <label>Wp pro Modul</label>
           <input type="number" id="np-wp" value="465" class="sp-inp">
         </div>
-        <div style="flex:1;">
-          <label style="display:block;font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:4px;">Anzahl WR</label>
+        <div>
+          <label>Anzahl WR</label>
           <input type="number" id="np-wr-count" value="1" min="1" max="20" class="sp-inp" oninput="renderNPWRPlan()">
         </div>
       </div>
@@ -2809,6 +2830,13 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
       <div class="field" id="np-plan-field">
         <label style="margin-bottom:8px;font-weight:700;">Hardware Konfiguration (pro WR)</label>
         <div id="np-wr-plan-list"></div>
+      </div>
+
+      <div class="np-backup-bar">
+        <span class="np-backup-hint">Aktuellen Eingabestand als Datei sichern oder eine gesicherte Datei wieder laden.</span>
+        <button type="button" onclick="exportNewProjectDraft()" class="btn btn-ghost">💾 Stand sichern</button>
+        <button type="button" onclick="g('np-draft-file').click()" class="btn btn-ghost">📂 Stand laden</button>
+        <input type="file" id="np-draft-file" accept=".json,application/json" style="display:none;" onchange="importNewProjectDraft(this)">
       </div>
 
       <div style="display:flex;gap:12px;margin-top:24px;">
@@ -5962,7 +5990,7 @@ function openNewProjectModal(){
   });
   document.querySelectorAll('input[name="np-template"]').forEach(r => r.checked = (r.value === 'plan'));
   updateNewProjectForm();
-  renderNPWRPlan();
+  renderNPWRPlan([]);
   closeProjectsModal();
   g('newproj-modal').classList.add('show');
 }
@@ -5976,22 +6004,115 @@ function updateNewProjectForm(){
   g('np-plan-field').style.display = selected.value === 'plan' ? 'block' : 'none';
 }
 
-function renderNPWRPlan(){
-  const count = parseInt(g('np-wr-count').value)||1;
+// Liest die aktuell eingegebenen WR-Zeilen aus (für Re-Render und Sicherung)
+function readNPWRRows(){
+  const rows = [];
+  let wr = 1;
+  while(g(`np-name-${wr}`)){
+    rows.push({
+      name: g(`np-name-${wr}`).value,
+      mppts: g(`np-mppts-${wr}`).value,
+      inputs: g(`np-inputs-${wr}`).value,
+      mods: g(`np-mods-${wr}`).value
+    });
+    wr++;
+  }
+  return rows;
+}
+
+function renderNPWRPlan(prefill){
+  const count = Math.min(Math.max(parseInt(g('np-wr-count').value)||1, 1), 50);
+  // Bereits eingegebene Werte merken, damit beim Ändern der WR-Anzahl nichts verloren geht
+  const prev = Array.isArray(prefill) ? prefill : readNPWRRows();
   let html = '';
   for(let wr=1; wr<=count; wr++){
+    const r = prev[wr-1] || {};
+    const v = (x, d) => esc(x !== undefined && x !== null && x !== '' ? x : d);
     html += `
       <div class="np-wr-row">
         <div style="font-weight:800; font-size:0.8rem; margin-bottom:10px; color:var(--accent);">Wechselrichter ${wr}</div>
-        <div style="display:flex; gap:12px; flex-wrap:wrap;">
-          <div style="flex:2; min-width:200px;"><label>Name/Bezeichnung</label><input type="text" id="np-name-${wr}" placeholder="z.B. WR 1 - Dach Ost" class="sp-inp"></div>
-          <div style="flex:1;"><label>MPPTs</label><input type="number" id="np-mppts-${wr}" value="12" class="sp-inp sp-inp-center"></div>
-          <div style="flex:1;"><label>Eingänge/MPPT</label><input type="number" id="np-inputs-${wr}" value="2" class="sp-inp sp-inp-center"></div>
-          <div style="flex:1;"><label>Mods/String (Opt.)</label><input type="number" id="np-mods-${wr}" placeholder="Leer" class="sp-inp sp-inp-center"></div>
+        <div class="np-wr-grid">
+          <div class="np-wr-name"><label>Name/Bezeichnung</label><input type="text" id="np-name-${wr}" placeholder="z.B. WR ${wr} - Dach Ost" value="${v(r.name,'')}" class="sp-inp"></div>
+          <div><label title="MPPTs">MPPTs</label><input type="number" id="np-mppts-${wr}" value="${v(r.mppts,'12')}" class="sp-inp sp-inp-center"></div>
+          <div><label title="Eingänge pro MPPT">Eingänge/MPPT</label><input type="number" id="np-inputs-${wr}" value="${v(r.inputs,'2')}" class="sp-inp sp-inp-center"></div>
+          <div><label title="Module pro String (optional)">Mods/String</label><input type="number" id="np-mods-${wr}" placeholder="optional" value="${v(r.mods,'')}" class="sp-inp sp-inp-center"></div>
         </div>
       </div>`;
   }
   g('np-wr-plan-list').innerHTML = html;
+}
+
+// Sicherung der Neues-Projekt-Maske als JSON-Datei
+function exportNewProjectDraft(){
+  const tpl = document.querySelector('input[name="np-template"]:checked');
+  const draft = {
+    type: 'solpro-newproject-draft',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    name: g('np-name').value,
+    group: g('np-group').value,
+    wp: g('np-wp').value,
+    wrCount: g('np-wr-count').value,
+    template: tpl ? tpl.value : 'plan',
+    cloneFrom: g('np-clone-from').value || '',
+    inverters: readNPWRRows()
+  };
+  const base = (draft.name || 'Neues_Projekt').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const stamp = new Date().toISOString().slice(0,16).replace(/[:T]/g, '-');
+  downloadJSONFile(draft, `${base}_Entwurf_${stamp}.json`);
+  toast('💾 Eingabestand gesichert');
+}
+
+function importNewProjectDraft(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const d = JSON.parse(reader.result);
+      if(!d || d.type !== 'solpro-newproject-draft') throw new Error('Keine Entwurfsdatei');
+      g('np-name').value = d.name || '';
+      g('np-group').value = d.group || '';
+      g('np-wp').value = d.wp || 465;
+      g('np-wr-count').value = d.wrCount || (d.inverters ? d.inverters.length : 1) || 1;
+      document.querySelectorAll('input[name="np-template"]').forEach(r => r.checked = (r.value === (d.template || 'plan')));
+      if(d.cloneFrom && [...g('np-clone-from').options].some(o => o.value === d.cloneFrom)) g('np-clone-from').value = d.cloneFrom;
+      updateNewProjectForm();
+      renderNPWRPlan(d.inverters || []);
+      toast('📂 Eingabestand geladen');
+    } catch(e){
+      toastError('Datei konnte nicht geladen werden', e);
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function downloadJSONFile(obj, filename){
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = filename; link.style.visibility = 'hidden';
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Sicherung des aktuell geöffneten Projekts (Hardware-Plan + alle Messwerte)
+async function exportProjectBackup(){
+  try { await flushPendingProjectEdits(); } catch(_){}
+  const project = getCurrentProject();
+  if(!project) return toast('⚠️ Kein Projekt geöffnet');
+  const backup = {
+    type: 'solpro-project-backup',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    project: JSON.parse(JSON.stringify(project)),
+    state: JSON.parse(JSON.stringify(APP_STATE || {}))
+  };
+  const base = (project.name || 'Projekt').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const stamp = new Date().toISOString().slice(0,16).replace(/[:T]/g, '-');
+  downloadJSONFile(backup, `${base}_Sicherung_${stamp}.json`);
+  toast('💾 Projekt-Sicherung exportiert');
 }
 
 async function doCreateNewProject(){

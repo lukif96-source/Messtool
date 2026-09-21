@@ -3191,9 +3191,19 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
 </div>
 
 <script>
-const SB_URL = "";
-const SB_KEY = "";
-let supabaseClient = window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null;
+const SB_URL = "https://rcuimtfmjkpxkazbsggj.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjdWltdGZtamtweGthemJzZ2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2Mjc0MTIsImV4cCI6MjEwMjIwMzQxMn0.x1md_jOFKwzYJJTAWE-ucxcCG1GE-QspZ3l4QzjEpBg";
+// createClient() wirft SOFORT einen Fehler, wenn SB_URL/SB_KEY leer sind
+// ("supabaseUrl is required") — ungefangen wuerde das den kompletten Rest
+// dieses <script>-Blocks abbrechen (alle Funktionen/Konstanten, die WEITER
+// UNTEN im selben Block stehen, blieben dann undefiniert -> z.B. "Cannot
+// access 'g' before initialization"). Deshalb erst pruefen/versuchen, sonst
+// bleibt supabaseClient einfach null (wie urspruenglich beabsichtigt).
+let supabaseClient = null;
+if(window.supabase && SB_URL && SB_KEY){
+  try { supabaseClient = window.supabase.createClient(SB_URL, SB_KEY); }
+  catch(e){ console.error('Supabase-Client konnte nicht erstellt werden:', e); }
+}
 
 let currentUser = null;
 let currentUserRole = null;

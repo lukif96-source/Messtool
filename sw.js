@@ -4,8 +4,9 @@
 //   Updates sofort ankommen – nur ohne Verbindung aus dem Zwischenspeicher
 // * Anfragen an Supabase (Anmeldung, Projekte, Messwerte) werden NIE
 //   zwischengespeichert
-const VERSION = 'pv-matrix-v1';   // bei Aenderungen an dieser Datei hochzaehlen
+const VERSION = 'pv-matrix-v2';   // bei Aenderungen an dieser Datei hochzaehlen
 const HUELLE = ['./', './index.html', './config.js', './manifest.webmanifest',
+  './css/app.css?v=20260922', './css/quantum.css?v=20260922', './js/app.js?v=20260922', './js/darstellung.js?v=20260922', './js/sw-registrierung.js?v=20260922',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', event => {
@@ -34,7 +35,7 @@ self.addEventListener('fetch', event => {
 
   const eigene = url.origin === self.location.origin;
   const istSeite = req.mode === 'navigate' ||
-    (eigene && (url.pathname.endsWith('/') || url.pathname.endsWith('.html') || url.pathname.endsWith('/config.js')));
+    (eigene && (url.pathname.endsWith('/') || /\.(html|css|js)$/.test(url.pathname)));
 
   if (istSeite) {
     event.respondWith(

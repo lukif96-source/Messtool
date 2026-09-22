@@ -1,0 +1,732 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   QUANTUM STUDIO — nach eurer Gemini-Referenz (Awwwards/Glas/Neon)
+   Dunkler Glas-Look mit Neon-Limette als einziger Akzent- UND "OK"-Farbe,
+   Klammer-Fokus auf Eingaben, gluehende Statuskanten, grosse Verlaufs-
+   Zahlen im Kopfbereich. Bewusst nur Nachtfassung — das ist die Formen-
+   sprache der Referenz, kein Tag/Nacht-Hybrid diesmal.
+
+   Reine Darstellungsebene. Kein einziges id-, class-, data- oder
+   onclick-Attribut wird angefasst — JA/NEIN, Eingaben, Alarm, Tab-Sprung
+   und Druck laufen unveraendert weiter.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+body.vq {
+  --ink:#FFFFFF; --ink-fokus:#FFFFFF;
+  --pa:#030303; --pa2:#0A0A0A;
+  --hair:rgba(255,255,255,.06); --rahmen:rgba(255,255,255,.09); --rahmen-hell:rgba(255,255,255,.16);
+  --mute:#6B6B6B; --dim:#333333;
+  --feld:rgba(255,255,255,.02); --feld-hover:rgba(255,255,255,.045);
+  --kopfbg:rgba(5,5,5,.82); --kopffg:#6B6B6B;
+  --mppt-bg:rgba(255,255,255,.015);
+  --aus:rgba(255,255,255,.02); --aus-fg:#6B6B6B;
+  --inp-border: rgba(255,255,255,.14);
+  /* "Invertierte" Pille (aktiver Tab/Button): fest von --ink getrennt, weil
+     --ink im Hell-Modus dunkel wird — ohne eigenes Token waere das dann
+     dunkler Chip mit schwarzem Text = unlesbar. */
+  --invert-bg:#FFFFFF; --invert-fg:#000000;
+  /* Verlaufstext (grosse Kennzahl/Hero-Titel) — im Hell-Modus muss der
+     Verlauf dunkel->grau statt hell->grau laufen, sonst unsichtbar auf
+     hellem Grund. */
+  --grad-kpi: linear-gradient(180deg, #ffffff 0%, #737373 100%);
+  --grad-hero: linear-gradient(180deg, #ffffff 0%, #9a9a9a 100%);
+  --edge-glow: rgba(255,255,255,.4); --edge-glow-soft: rgba(255,255,255,.3);
+  /* Akzentfarbe als TEXT (nicht als Flaeche) direkt auf dem Seitenhintergrund:
+     im Dunkeln ist jede der 12 Akzentfarben knackig lesbar, auf hellem Grund
+     faellt v.a. Neon-Limette/Gelb/Blau unter 2:1 Kontrast. Im Hell-Modus wird
+     die gewaehlte Farbe deshalb mit dunkler Tinte abgedunkelt, bleibt aber
+     erkennbar dieselbe Farbfamilie. */
+  --akz-text: var(--akz);
+  --warn-text: var(--warn); --krit-text: var(--krit);
+  --alarm-warn-text: #FFDA99;
+  /* "Fertig"/OK bleibt ein eigenes, festes Grün — sicherheitshalber getrennt
+     von der persoenlichen Akzentfarbe. Sonst koennte jemand, der z.B. Rot als
+     Akzent waehlt, aus Versehen "fertig" und "kritisch" verwechselbar machen. */
+  --ok:#7BE33D; --ok-glow:rgba(123,227,61,.28);
+  --warn:#FFB800; --warn-glow:rgba(255,184,0,.32); --warn-ink:#050505;
+  --krit:#FF3366; --krit-glow:rgba(255,51,102,.3); --krit-ink:#FFFFFF; --krit-row:rgba(255,51,102,.06);
+
+  /* ── Anbindung an "Darstellung anpassen" ────────────────────────────────
+     Akzentfarbe, Ecken-Rundung und Weichzeichnen kommen jetzt live vom
+     persoenlichen Regler (--acc/--rad/--rad-sm/--pill/--blur), nicht mehr
+     fest verdrahtet. Ohne Regler (falls er je fehlen sollte) gelten die
+     Werte der Referenz als Rueckfallebene. */
+  --akz: var(--acc, #CCFF00);
+  --akz-glow: color-mix(in srgb, var(--acc, #CCFF00) 30%, transparent);
+  --akz-ink:#050505;
+  --feld-fokus: color-mix(in srgb, var(--acc, #CCFF00) 3%, transparent);
+  --mppt-fg: var(--acc, #CCFF00);
+  --accent: var(--akz) !important; --accent-glow: var(--akz-glow) !important; --accent-muted: var(--akz) !important;
+
+  --vq-pill: var(--pill, 999px);
+  --vq-rad: var(--rad, 22px);
+  --vq-rad-sm: var(--rad-sm, 8px);
+  --vq-blur: var(--blur, blur(22px) saturate(140%));
+  --zeile: 54px; --kopf: 44px;
+
+  background: var(--pa) !important;
+  color: var(--ink) !important;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(620px 620px at -8% -6%, rgba(0,225,255,.10), transparent 62%),
+    radial-gradient(580px 580px at 106% 104%, color-mix(in srgb, var(--acc, #CCFF00) 8%, transparent), transparent 62%),
+    radial-gradient(900px 500px at 50% 38%, color-mix(in srgb, var(--acc, #CCFF00) 3%, transparent), transparent 70%) !important;
+  background-attachment: fixed !important;
+}
+body.vq::before { background: none !important; opacity: 0 !important; }
+
+/* ── Filmkorn — die letzte, feine Schicht, ohne die jede Glasflaeche wie
+   ein Mockup statt wie ein fertiges Bild aussieht. Rein dekorativ. ────── */
+body.vq::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 2;
+  pointer-events: none;
+  opacity: .045;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HELL-MODUS ("Baustelle") — echte zweite Fassung, kein Mogel-Umschalter.
+   Nur die Token oben werden neu gesetzt; jede Regel im Rest der Datei liest
+   ausschliesslich diese Variablen, daher reicht dieser eine Block, damit
+   Panels, Tabs, Felder, Status-Texte usw. ueberall korrekt hell werden.
+   Wichtig: reine Akzent-/Status-Farben (--warn/--krit/--akz) sind fuer
+   Dunkelgrund kalibriert und faellen auf hellem Grund als TEXT unter 2:1
+   Kontrast — dafuer gibt es die eigenen *-text-Varianten, hier abgedunkelt.
+   ══════════════════════════════════════════════════════════════════════════ */
+body.vq.sun-mode {
+  --ink:#14161A; --ink-fokus:#000000;
+  --pa:#F2F3F1; --pa2:#FFFFFF;
+  --hair:rgba(0,0,0,.08); --rahmen:rgba(0,0,0,.10); --rahmen-hell:rgba(0,0,0,.20);
+  --mute:#5B5F66; --dim:#AEB3BA;
+  --feld:rgba(0,0,0,.035); --feld-hover:rgba(0,0,0,.06);
+  --kopfbg:rgba(255,255,255,.85); --kopffg:#5B5F66;
+  --mppt-bg:rgba(0,0,0,.025);
+  --aus:rgba(0,0,0,.035); --aus-fg:#5B5F66;
+  --inp-border: rgba(0,0,0,.18);
+  --invert-bg:#14161A; --invert-fg:#FFFFFF;
+  --grad-kpi: linear-gradient(180deg, #14161A 0%, #6B7280 100%);
+  --grad-hero: linear-gradient(180deg, #14161A 0%, #8A8F98 100%);
+  --edge-glow: rgba(0,0,0,.08); --edge-glow-soft: rgba(0,0,0,.06);
+  --akz-text: color-mix(in srgb, var(--akz) 45%, #14161A);
+  --warn-text: color-mix(in srgb, var(--warn) 45%, #14161A);
+  --krit-text: color-mix(in srgb, var(--krit) 45%, #14161A);
+  --alarm-warn-text: color-mix(in srgb, var(--warn) 45%, #14161A);
+  /* Der stimmungsvolle Farbglanz ist fuers Nachtbild gedacht; auf hellem,
+     sonnenlicht-tauglichem Grund lieber sauber und flach. */
+  background-image: none !important;
+}
+body.vq.sun-mode::after { opacity: .025 !important; }
+/* Elevation-Schatten waren fuer Schwarz kalibriert (bis zu 60% Deckkraft) —
+   auf hellem Grund wirkt das wie ein harter Rahmen statt sanfter Tiefe. */
+body.vq.sun-mode .wr-block { box-shadow: 0 16px 40px rgba(20,22,26,.10), inset 0 1px 0 rgba(255,255,255,.6) !important; }
+body.vq.sun-mode .home-hero { box-shadow: 0 20px 54px rgba(20,22,26,.12), inset 0 1px 0 rgba(255,255,255,.6) !important; }
+body.vq.sun-mode #to-top { box-shadow: 0 10px 22px rgba(20,22,26,.18) !important; }
+body.vq.sun-mode .kpi-card:hover, body.vq.sun-mode .project-card:hover { box-shadow: 0 14px 32px rgba(20,22,26,.14) !important; }
+
+/* Erst alles einebnen — dann gezielt genau dort wieder Glas, Rundung und
+   Gluehen zulassen, wo es hingehoert. So bleibt kein Rest der alten Ebene
+   sichtbar, und die neue Formensprache ist bewusst gesetzt, nicht zufaellig. */
+body.vq *, body.vq *::before, body.vq *::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  text-shadow: none !important;
+}
+body.vq ::selection { background: var(--akz); color: var(--akz-ink); }
+
+/* ── Raster — dieselbe bewaehrte Grid-Mechanik wie in allen Fassungen ──── */
+@media screen and (min-width: 901px) {
+  body.vq table.mt { display: block; width: 100%; border-collapse: separate; }
+  body.vq table.mt thead { display: block; }
+  body.vq table.mt tbody { display: block; }
+  body.vq table.mt thead tr,
+  body.vq table.mt tbody tr[data-string-id] {
+    display: grid;
+    grid-template-columns:
+      minmax(124px, 1.15fr) minmax(136px, 1fr) 124px 86px 82px
+      minmax(94px, 1fr) minmax(94px, 1fr) minmax(104px, 1fr) minmax(150px, 1.7fr);
+    align-items: stretch;
+  }
+  body.vq table.mt th,
+  body.vq table.mt tbody tr[data-string-id] > td {
+    display: flex; align-items: center;
+    width: auto !important; min-width: 0;
+    border-bottom: 0 !important;
+  }
+  body.vq table.mt thead tr { height: var(--kopf); }
+  body.vq table.mt tbody tr[data-string-id] { min-height: var(--zeile); position: relative; }
+  body.vq table.mt tbody tr[data-string-id] { border-bottom: 1px solid var(--hair) !important; }
+  body.vq table.mt tbody tr.mppt-header { display: block; }
+  body.vq table.mt tbody tr.mppt-header td { display: block; width: 100% !important; }
+  body.vq table.mt tbody tr.mppt-header { top: var(--kopf) !important; }
+}
+body.vq table.mt { background: transparent !important; }
+body.vq table.mt th, body.vq table.mt td { padding: 0 18px !important; }
+
+/* ── Typografie ─────────────────────────────────────────────────────────── */
+body.vq table.mt thead th {
+  position: sticky; top: 0; z-index: 3;
+  background: var(--kopfbg) !important;
+  color: var(--kopffg) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 0.62rem !important; font-weight: 800 !important;
+  letter-spacing: 0.15em !important; text-transform: uppercase !important;
+  border-bottom: 1px solid var(--hair) !important;
+  justify-content: center;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+}
+body.vq table.mt thead th:first-child,
+body.vq table.mt thead th:last-child { justify-content: flex-start; }
+
+body.vq .sp-inp {
+  background: transparent !important;
+  /* Ganz feine weisse Umrandung, damit jedes Feld auch ohne Hover/Fokus
+     klar erkennbar bleibt — vorher komplett transparent, dadurch in der
+     dichten Matrix schwer zu unterscheiden. */
+  border: 1px solid var(--inp-border) !important;
+  color: var(--ink) !important;
+  font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+  font-size: 0.95rem !important; font-weight: 500 !important;
+  letter-spacing: -0.01em; text-align: right !important;
+  padding: 0 12px !important;
+  min-height: calc(var(--zeile) - 18px) !important;
+  width: 100%; border-radius: var(--vq-rad-sm) !important;
+  transition: background .18s cubic-bezier(.16,1,.3,1), box-shadow .18s cubic-bezier(.16,1,.3,1), color .18s linear;
+}
+body.vq .sp-inp::placeholder { color: var(--dim) !important; }
+body.vq input.sp-inp[type=number] { -moz-appearance: textfield; appearance: textfield; }
+body.vq input.sp-inp[type=number]::-webkit-outer-spin-button,
+body.vq input.sp-inp[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+body.vq .sp-inp:hover { background: var(--feld-hover) !important; }
+/* Der Klammer-Trick aus der Referenz: zwei Innenschatten links/rechts
+   ergeben "[ Wert ]" statt eines vollen Rahmens. */
+body.vq .sp-inp:focus, body.vq .sp-inp:focus-visible {
+  outline: 0 !important;
+  background: var(--feld-fokus) !important;
+  box-shadow: inset 2px 0 0 var(--akz), inset -2px 0 0 var(--akz) !important;
+  color: var(--ink-fokus) !important;
+}
+body.vq td[data-label="GAK"] .sp-inp {
+  text-align: left !important; color: var(--mute) !important;
+  font-size: 0.78rem !important; letter-spacing: -0.01em !important; padding: 0 10px !important;
+}
+body.vq td.col-note .sp-inp { text-align: left !important; font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 0.82rem !important; color: var(--mute) !important; }
+body.vq .sp-inp:read-only { background: transparent !important; }
+/* Texteingaben (Login, Namen, Gruppen, Auswahllisten) linksbuendig in normaler
+   Schrift – rechtsbuendig und Mono ist nur fuer Zahlen in der Matrix gedacht. */
+body.vq input.sp-inp[type="email"],
+body.vq input.sp-inp[type="password"],
+body.vq input.sp-inp[type="text"]:not([inputmode]):not(.sp-inp-center),
+body.vq select.sp-inp {
+  text-align: left !important;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif !important;
+  letter-spacing: 0 !important;
+}
+
+body.vq .string-id {
+  font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem !important; font-weight: 700 !important;
+  letter-spacing: -0.02em !important; color: var(--ink) !important;
+}
+body.vq .str-label {
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.65rem !important;
+  font-weight: 500 !important; letter-spacing: 0.03em !important;
+  text-transform: none !important; color: var(--mute) !important; margin-top: 4px !important;
+}
+body.vq .pwr-cell {
+  font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+  font-variant-numeric: tabular-nums; font-size: 0.85rem !important;
+  font-weight: 500 !important; color: var(--mute) !important; justify-content: flex-end !important;
+}
+
+body.vq table.mt tbody tr.mppt-header {
+  background: var(--mppt-bg) !important; border-top: 0 !important;
+  border-bottom: 1px solid var(--hair) !important;
+}
+body.vq table.mt tbody tr.mppt-header td {
+  background: transparent !important; color: var(--mppt-fg) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 0.66rem !important; font-weight: 800 !important;
+  letter-spacing: 0.18em !important; text-transform: uppercase !important;
+  padding: 13px 18px !important; border: 0 !important;
+}
+body.vq .mh-wr { color: var(--akz-text) !important; font-weight: 800 !important; }
+body.vq .mh-sep { opacity: .35 !important; margin: 0 8px !important; }
+
+/* ── Schalter — Pille statt Segment ────────────────────────────────────── */
+body.vq .tog-wrap {
+  transform: none !important; display: inline-flex !important;
+  background: var(--feld) !important; border: 1px solid var(--hair) !important;
+  padding: 3px !important; width: 100%; border-radius: var(--vq-pill) !important; gap: 3px;
+}
+body.vq .tog {
+  flex: 1; min-height: calc(var(--zeile) - 26px) !important; padding: 0 !important;
+  background: transparent !important; border: 0 !important; color: var(--mute) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 0.66rem !important; font-weight: 800 !important;
+  letter-spacing: 0.08em !important; text-transform: uppercase;
+  border-radius: var(--vq-pill) !important;
+  transition: background .18s cubic-bezier(.16,1,.3,1), color .18s linear;
+}
+body.vq .tog:hover { color: var(--ink) !important; }
+body.vq .tog.on-ja  { background: var(--akz) !important; color: var(--akz-ink) !important; box-shadow: 0 0 16px var(--akz-glow) !important; }
+body.vq .tog.on-nei { background: transparent !important; color: var(--mute) !important; }
+
+/* ── Status — gluehende Kante, getoente Zeile bei Kritisch ─────────────── */
+body.vq table.mt tbody tr[data-string-id] > td:first-child::after {
+  content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px;
+  background: transparent; border-radius: 0 4px 4px 0;
+  transition: background .18s linear, box-shadow .18s linear;
+}
+body.vq table.mt tbody tr.row-complete   > td:first-child::after { background: var(--ok) !important; box-shadow: 0 0 14px var(--ok-glow) !important; }
+body.vq table.mt tbody tr.row-incomplete > td:first-child::after { background: var(--warn) !important; box-shadow: 0 0 14px var(--warn-glow) !important; }
+body.vq table.mt tbody tr.row-error      > td:first-child::after,
+body.vq table.mt tbody tr[data-string-id]:has(.val-crit) > td:first-child::after {
+  background: var(--krit) !important; box-shadow: 0 0 14px var(--krit-glow) !important;
+}
+body.vq table.mt tbody tr.row-error,
+body.vq table.mt tbody tr[data-string-id]:has(.val-crit) { background: var(--krit-row) !important; }
+body.vq table.mt tbody tr.row-nein { opacity: .3 !important; }
+body.vq .flag-slot > * { background: var(--krit) !important; color: var(--krit-ink) !important;
+  border: 0 !important; font-size: 0.6rem !important; font-weight: 800 !important;
+  padding: 2px 7px !important; line-height: 1.4 !important; border-radius: var(--vq-pill) !important; }
+
+body.vq .sp-inp.val-warn { color: var(--warn-text) !important; font-weight: 700 !important; border-color: rgba(255,184,0,.45) !important; }
+body.vq .sp-inp.val-crit { color: var(--krit-text) !important; font-weight: 700 !important; border-color: rgba(255,51,102,.5) !important; }
+body.vq .sp-inp.val-crit:focus, body.vq .sp-inp.val-warn:focus {
+  box-shadow: inset 2px 0 0 currentColor, inset -2px 0 0 currentColor !important;
+}
+body.vq .flag-slot { font-size: 0.7rem !important; margin-left: 6px; }
+
+body.vq .alarm-bar {
+  background: var(--krit-row) !important; border: 1px solid rgba(255,51,102,.28) !important;
+  color: #FFB3C2 !important; border-radius: var(--vq-rad) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 0.78rem !important; font-weight: 700 !important;
+  letter-spacing: 0.02em !important; padding: 16px 20px !important;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+}
+body.vq .alarm-bar strong { font-weight: 800 !important; color: var(--krit-text) !important; }
+body.vq .alarm-bar .ab-jump {
+  background: var(--krit) !important; color: #1A000A !important;
+  border: 0 !important; font-weight: 800 !important; letter-spacing: 0.06em !important;
+  padding: 9px 18px !important; border-radius: var(--vq-pill) !important;
+  box-shadow: 0 0 18px var(--krit-glow) !important;
+}
+body.vq .alarm-bar.has-warn { background: rgba(255,184,0,.07) !important; border-color: rgba(255,184,0,.28) !important; color: var(--alarm-warn-text) !important; }
+body.vq .alarm-bar.has-warn .ab-jump { background: var(--warn) !important; color: #1A1200 !important; box-shadow: 0 0 18px var(--warn-glow) !important; }
+
+/* ── Bewegung ───────────────────────────────────────────────────────────── */
+body.vq table.mt tbody tr[data-string-id] { transition: background .18s cubic-bezier(.16,1,.3,1); }
+body.vq table.mt tbody tr[data-string-id]:hover { background: var(--feld-hover) !important; }
+body.vq table.mt tbody tr[data-string-id]:hover > td:first-child::after { width: 4px; }
+body.vq table.mt tbody tr[data-string-id]:focus-within { background: var(--feld-fokus) !important; }
+body.vq table.mt tbody tr.row-focus { background: var(--feld-fokus) !important; }
+
+/* ── Huelle — Glas-Panels, Pillen-Navigation, Gluehen ───────────────────── */
+body.vq .wr-block {
+  background: var(--pa2) !important;
+  border: 1px solid var(--rahmen) !important;
+  border-radius: var(--vq-rad) !important;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+  box-shadow: 0 24px 70px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.04) !important;
+  margin-bottom: 28px !important; overflow: hidden;
+}
+body.vq .wr-head {
+  background: rgba(255,255,255,.015) !important; border-bottom: 1px solid var(--hair) !important; padding: 18px 22px !important;
+}
+body.vq .wr-num {
+  background: var(--invert-bg) !important; color: var(--invert-fg) !important;
+  border-radius: var(--vq-pill) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.66rem !important;
+  font-weight: 800 !important; letter-spacing: 0.14em !important;
+  text-transform: uppercase; padding: 6px 14px !important;
+}
+body.vq .wr-kpis { font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+  font-size: 0.74rem !important; color: var(--mute) !important; letter-spacing: 0.02em !important; }
+body.vq .wr-head strong { color: var(--ink) !important; font-weight: 700 !important; }
+body.vq .wr-progress-bar { height: 3px !important; background: var(--hair) !important; border-radius: var(--vq-pill) !important; overflow: hidden; }
+body.vq .wr-progress-complete { background: var(--akz) !important; box-shadow: 0 0 8px var(--akz-glow) !important; }
+body.vq .wr-progress-incomplete { background: var(--warn) !important; }
+body.vq .wr-progress-inactive { background: var(--hair) !important; }
+body.vq .wr-progress-legend { font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.6rem !important;
+  letter-spacing: 0.12em !important; text-transform: uppercase !important; color: var(--mute) !important; }
+
+body.vq .btn, body.vq .filter-toggle-btn, body.vq .main-tab,
+body.vq .wr-tab, body.vq .bulk-dropdown-btn, body.vq .sidebar-btn {
+  border-radius: var(--vq-pill) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 0.72rem !important; font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  transition: background .2s cubic-bezier(.16,1,.3,1), color .2s linear, border-color .2s linear, box-shadow .2s linear !important;
+  transform: none !important;
+}
+body.vq .btn, body.vq .filter-toggle-btn, body.vq .wr-tab {
+  background: var(--feld) !important; border: 1px solid var(--hair) !important;
+  color: var(--mute) !important; padding: 11px 20px !important;
+}
+body.vq .btn:hover, body.vq .filter-toggle-btn:hover, body.vq .wr-tab:hover { border-color: var(--rahmen-hell) !important; color: var(--ink) !important; }
+body.vq .wr-tab.active { background: var(--invert-bg) !important; color: var(--invert-fg) !important; border-color: var(--invert-bg) !important; }
+body.vq .btn-primary {
+  background: var(--pa) !important; color: var(--akz-text) !important; border: 1px solid var(--akz) !important;
+  box-shadow: 0 0 22px var(--akz-glow), inset 0 0 12px var(--akz-glow) !important;
+}
+body.vq .btn-primary:hover { background: var(--akz) !important; color: #000 !important; box-shadow: 0 0 30px var(--akz-glow) !important; }
+
+body.vq .main-tabs { background: var(--feld) !important; border: 1px solid var(--hair) !important;
+  padding: 4px !important; gap: 2px !important; border-radius: var(--vq-pill) !important;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important; }
+body.vq .main-tab { background: transparent !important; color: var(--mute) !important; border: 0 !important; padding: 12px 20px !important; }
+body.vq .main-tab.active { background: var(--invert-bg) !important; color: var(--invert-fg) !important; }
+
+body.vq .kpi-card, body.vq .project-card, body.vq .modal-card, body.vq .sidebar,
+body.vq .kpi-strip, body.vq .theme-switch, body.vq .pc-menu, body.vq .bulk-dropdown-menu {
+  background: var(--pa2) !important; border: 1px solid var(--rahmen) !important;
+  border-radius: var(--vq-rad) !important;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+}
+body.vq .kpi-card:hover, body.vq .project-card:hover { transform: none !important; border-color: var(--rahmen-hell) !important; }
+body.vq .kpi-value, body.vq .kpi-strip-val {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-variant-numeric: tabular-nums; font-weight: 800 !important;
+  letter-spacing: -0.03em !important; color: var(--ink) !important;
+}
+body.vq .kpi-label, body.vq .kpi-strip-lbl, body.vq .sb-proj-section-label {
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.62rem !important;
+  font-weight: 700 !important; letter-spacing: 0.16em !important;
+  text-transform: uppercase !important; color: var(--mute) !important;
+}
+/* Die grosse Kennzahl der Uebersicht bekommt den Verlaufstext der
+   Referenz — der einzige Ort mit dieser Behandlung, kein Effekt-Inflation. */
+body.vq .dashboard .kpi-card:first-child .kpi-value {
+  background: var(--grad-kpi) !important;
+  -webkit-background-clip: text !important; background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  font-size: clamp(2.6rem, 4vw, 3.4rem) !important; letter-spacing: -0.03em !important;
+}
+body.vq .wr-bulk-bar { background: transparent !important; border-bottom: 1px solid var(--hair) !important; }
+body.vq .bulk-label, body.vq .bulk-dropdown-item {
+  font-family: 'Plus Jakarta Sans', sans-serif !important; letter-spacing: 0.04em !important;
+  font-size: 0.7rem !important;
+}
+body.vq .theme-switch { border: 1px solid var(--hair) !important; padding: 3px !important; border-radius: var(--vq-pill) !important; }
+body.vq .theme-switch button {
+  background: transparent !important; color: var(--mute) !important; border: 0 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.66rem !important; font-weight: 700 !important;
+  letter-spacing: 0.06em !important; padding: 10px 14px !important; border-radius: var(--vq-pill) !important;
+}
+body.vq .theme-switch button.active { background: var(--invert-bg) !important; color: var(--invert-fg) !important; }
+body.vq .bulk-dropdown-btn { background: var(--feld) !important; border: 1px solid var(--hair) !important;
+  color: var(--ink) !important; padding: 10px 18px !important; border-radius: var(--vq-pill) !important; }
+body.vq .bulk-dropdown-btn:hover { border-color: var(--rahmen-hell) !important; filter: none !important; }
+body.vq .scroll-context { display: none !important; }
+body.vq #to-top { background: var(--invert-bg) !important; color: var(--invert-fg) !important; border: 0 !important; border-radius: var(--vq-pill) !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,.5) !important; }
+body.vq #to-top * { color: inherit !important; }
+body.vq .sb-proj-new, body.vq .sb-proj-all-link {
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.68rem !important; font-weight: 700 !important;
+  border-style: dashed !important; border-color: var(--rahmen) !important; color: var(--mute) !important;
+  border-radius: var(--vq-rad-sm) !important;
+}
+body.vq .lock-banner, body.vq .role-hint-banner {
+  border-width: 1px !important; border-radius: var(--vq-rad-sm) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.72rem !important;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+}
+body.vq .sidebar { border-right: 1px solid var(--rahmen) !important; border-radius: 0 !important; }
+
+/* ── Empfang — die Begruessung bekommt die grosse Geste, nicht nur eine
+   neue Farbe. Das war die Luecke: bisher lief hier noch die alte, kleine
+   Basis-Typografie unveraendert mit. ───────────────────────────────────── */
+body.vq .home-hero {
+  background: var(--pa2) !important;
+  border: 1px solid var(--rahmen) !important;
+  border-radius: var(--vq-rad) !important;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+  box-shadow: 0 30px 90px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.07) !important;
+  padding: 56px 48px !important;
+  position: relative; overflow: hidden;
+}
+body.vq .home-hero::before {
+  content: ''; position: absolute; top: 0; left: 48px; right: 48px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--akz), transparent) !important;
+  opacity: .55; z-index: 1;
+}
+body.vq .home-hero-glow {
+  background:
+    radial-gradient(480px 320px at 14% 25%, var(--akz-glow), transparent 65%),
+    radial-gradient(420px 320px at 92% 92%, rgba(0,225,255,.16), transparent 65%) !important;
+  opacity: 1 !important; filter: var(--vq-blur);
+}
+body.vq .home-eyebrow {
+  color: var(--akz-text) !important;
+  font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+  font-size: 0.7rem !important; font-weight: 700 !important;
+  letter-spacing: 0.24em !important;
+}
+body.vq .home-eyebrow::before { content: '// '; opacity: .55; }
+body.vq .home-title {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: clamp(2.6rem, 5.2vw, 4.6rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.04em !important;
+  line-height: 0.98 !important;
+  background: var(--grad-hero) !important;
+  -webkit-background-clip: text !important; background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+body.vq .home-title span {
+  color: var(--akz-text) !important; -webkit-text-fill-color: var(--akz-text) !important;
+}
+body.vq .home-subtitle {
+  font-size: 1.02rem !important; color: var(--mute) !important; margin-top: 12px !important;
+}
+body.vq .home-hero-badge {
+  border-radius: var(--vq-pill) !important; border: 1px solid var(--hair) !important;
+  background: var(--feld) !important;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+  padding: 9px 18px !important; font-family: 'JetBrains Mono', monospace !important;
+  letter-spacing: .04em !important;
+}
+body.vq .home-hero-badge[data-state="done"] { color: var(--akz-text) !important; border-color: rgba(204,255,0,.3) !important; background: var(--akz-glow) !important; }
+body.vq .home-hero-badge[data-state="done"] .home-hero-badge-dot { background: var(--akz) !important; box-shadow: 0 0 8px var(--akz) !important; }
+body.vq .home-hero-badge[data-state="progress"] { color: var(--warn-text) !important; border-color: rgba(255,184,0,.3) !important; background: rgba(255,184,0,.08) !important; }
+
+body.vq .home-stat {
+  background: var(--pa2) !important; border: 1px solid var(--rahmen) !important;
+  border-radius: var(--vq-rad) !important;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+  transition: transform .2s cubic-bezier(.16,1,.3,1), border-color .2s linear !important;
+  position: relative; overflow: hidden;
+}
+body.vq .home-stat::before {
+  content: ''; position: absolute; top: 0; left: 16px; right: 16px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--edge-glow-soft), transparent) !important;
+}
+body.vq .home-stat:hover { transform: translateY(-3px) !important; border-color: var(--rahmen-hell) !important; }
+body.vq .home-stat-icon { background: var(--feld) !important; border-radius: var(--vq-rad-sm) !important; }
+body.vq .home-stat-value {
+  font-family: 'JetBrains Mono', ui-monospace, monospace !important; font-variant-numeric: tabular-nums;
+  font-size: 1.95rem !important; font-weight: 800 !important; letter-spacing: -0.02em !important;
+}
+body.vq .home-stat-label { font-family: 'Plus Jakarta Sans', sans-serif !important; letter-spacing: .1em !important; }
+body.vq .home-quick-card, body.vq .home-active-card, body.vq .anleitung-hero {
+  background: var(--pa2) !important; border: 1px solid var(--rahmen) !important;
+  border-radius: var(--vq-rad) !important; backdrop-filter: var(--vq-blur) !important;
+  transition: transform .2s cubic-bezier(.16,1,.3,1), border-color .2s linear !important;
+}
+body.vq .home-quick-card:hover { transform: translateY(-3px) !important; border-color: var(--rahmen-hell) !important; }
+
+/* ── Glas-Kante — ein feiner Lichtsaum oben an jedem grossen Panel, wie
+   Licht, das auf eine echte Glaskante faellt. ──────────────────────────── */
+body.vq .wr-block, body.vq .kpi-card { position: relative; overflow: hidden; }
+body.vq .wr-block::before, body.vq .kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 24px; right: 24px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--edge-glow), transparent) !important;
+  pointer-events: none; z-index: 1;
+}
+
+/* ── Bewegung mit mehr Gewicht — Knoepfe und Karten reagieren spuerbar,
+   nicht nur farblich. ───────────────────────────────────────────────────── */
+body.vq .btn:hover, body.vq .btn-primary:hover, body.vq .wr-tab:hover,
+body.vq .filter-toggle-btn:hover, body.vq .bulk-dropdown-btn:hover {
+  transform: translateY(-1px) !important;
+}
+body.vq .kpi-card:hover, body.vq .project-card:hover {
+  transform: translateY(-4px) !important; border-color: var(--rahmen-hell) !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,.5) !important;
+}
+body.vq .tog.on-ja:hover { transform: none !important; }
+
+/* ── Querschnittberechnung — gleiche Formensprache wie Kennzahlen und
+   Matrix: Glaskarten, Pillen-Umschalter, Mono-Ziffern. "OK" bekommt wie
+   Warnung/Kritisch eine eigene Textfarbe, die im Hell-Modus abgedunkelt
+   wird (reines --ok-Gruen hat auf Weiss nur ~1,6:1 Kontrast). ─────────── */
+body.vq { --ok-text: var(--ok); }
+body.vq.sun-mode { --ok-text: color-mix(in srgb, var(--ok) 45%, #14161A); }
+body.vq .qs-card {
+  background: var(--pa2) !important; border: 1px solid var(--rahmen) !important;
+  border-radius: var(--vq-rad) !important; position: relative; overflow: hidden;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+}
+body.vq .qs-card::before {
+  content: ''; position: absolute; top: 0; left: 24px; right: 24px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--edge-glow-soft), transparent) !important;
+  pointer-events: none;
+}
+body.vq .qs-card-titel, body.vq .qs-kz-lbl, body.vq .qs-tabelle th {
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.6rem !important;
+  font-weight: 700 !important; letter-spacing: 0.16em !important; color: var(--mute) !important;
+}
+body.vq .qs-seg { background: var(--feld) !important; border: 1px solid var(--hair) !important; border-radius: var(--vq-pill) !important; }
+body.vq .qs-seg-btn {
+  border-radius: var(--vq-pill) !important; color: var(--mute) !important; box-shadow: none !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.72rem !important; letter-spacing: 0.04em !important;
+}
+body.vq .qs-seg-btn:hover { color: var(--ink) !important; }
+body.vq .qs-seg-btn.active { background: var(--invert-bg) !important; color: var(--invert-fg) !important; }
+body.vq .qs-lbl { color: var(--ink) !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.76rem !important; }
+body.vq .qs-hint, body.vq .qs-leer, body.vq .qs-haupt-lbl, body.vq .qs-formel-sub, body.vq .qs-formel-lbl { color: var(--mute) !important; }
+body.vq .qs-feld .qs-inp-wrap .qs-inp { padding: 0 44px 0 14px !important; min-height: 48px !important; font-size: 1.05rem !important; }
+body.vq .qs-einheit { color: var(--mute) !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; font-weight: 500 !important; }
+body.vq .qs-haupt-wert {
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 800 !important; font-size: 3.4rem !important;
+  letter-spacing: -0.04em !important; color: var(--ink) !important;
+  background: var(--grad-kpi) !important; -webkit-background-clip: text !important; background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+body.vq .qs-haupt-einheit { color: var(--akz-text) !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; font-weight: 700 !important; }
+body.vq .qs-vergleich { color: var(--mute) !important; }
+body.vq .qs-vergleich strong { color: var(--ink) !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; }
+body.vq .qs-link { color: var(--akz-text) !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
+body.vq .qs-kz, body.vq .qs-formel, body.vq .qs-rechenweg {
+  background: var(--feld) !important; border: 1px solid var(--hair) !important; border-radius: var(--vq-rad-sm) !important;
+}
+body.vq .qs-kz-wert, body.vq .qs-tabelle td, body.vq .qs-formel-term {
+  color: var(--ink) !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; font-variant-numeric: tabular-nums;
+}
+body.vq .qs-kz-wert { font-weight: 700 !important; }
+body.vq .qs-rechenweg { color: var(--mute) !important; }
+body.vq .qs-tabelle td { border-top: 1px solid var(--hair) !important; font-weight: 500 !important; }
+body.vq .qs-tabelle tr.qs-empf td { font-weight: 800 !important; }
+body.vq .qs-tabelle td.qs-ok { color: var(--ok-text) !important; }
+body.vq .qs-tabelle td.qs-zu-hoch { color: var(--krit-text) !important; }
+body.vq .qs-warnung { color: var(--warn-text) !important; }
+body.vq .qs-hinweis { color: var(--mute) !important; border-left-color: var(--warn) !important; }
+/* Fuenf Reiter: knapp ueber der Handy-Grenze etwas schmaler polstern,
+   damit die Leiste einzeilig bleibt. */
+@media screen and (min-width: 901px) and (max-width: 959px) {
+  body.vq .main-tab { padding: 12px 10px !important; }
+}
+@media screen and (max-width: 600px) {
+  body.vq .qs-haupt-wert { font-size: 2.6rem !important; }
+  body.vq .qs-kz-lbl { letter-spacing: 0.06em !important; }
+}
+
+/* ── Startbildschirm & Bereiche ────────────────────────────────────────── */
+body.vq #bereich-gate {
+  background: var(--pa) !important;
+  background-image:
+    radial-gradient(620px 620px at -8% -6%, rgba(0,225,255,.10), transparent 62%),
+    radial-gradient(580px 580px at 106% 104%, color-mix(in srgb, var(--acc, #CCFF00) 9%, transparent), transparent 62%) !important;
+}
+body.vq.sun-mode #bereich-gate { background-image: none !important; }
+body.vq .bg-titel {
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 800 !important; font-size: 2.7rem !important;
+  letter-spacing: -0.045em !important; color: var(--ink) !important;
+  background: var(--grad-hero) !important; -webkit-background-clip: text !important; background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+body.vq .bg-sub, body.vq .bg-info, body.vq .bg-fuss, body.vq .bg-abmelden { color: var(--mute) !important; }
+body.vq .bg-abmelden:hover { color: var(--ink) !important; }
+body.vq .bg-karte {
+  background: var(--pa2) !important; border: 1px solid var(--rahmen) !important; border-radius: var(--vq-rad) !important;
+  color: var(--ink) !important; position: relative; overflow: hidden;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+  transition: transform .22s cubic-bezier(.16,1,.3,1), border-color .2s linear, box-shadow .22s linear !important;
+}
+body.vq .bg-karte::before {
+  content: ''; position: absolute; top: 0; left: 24px; right: 24px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--edge-glow), transparent) !important; pointer-events: none;
+}
+body.vq .bg-karte:hover, body.vq .bg-karte:focus-visible {
+  transform: translateY(-4px) !important; border-color: var(--akz) !important; outline: 0 !important;
+  box-shadow: 0 0 0 1px var(--akz), 0 22px 54px rgba(0,0,0,.5), 0 0 44px var(--akz-glow) !important;
+}
+body.vq.sun-mode .bg-karte:hover, body.vq.sun-mode .bg-karte:focus-visible {
+  box-shadow: 0 0 0 1px var(--akz), 0 20px 50px rgba(20,22,26,.14) !important;
+}
+body.vq .bg-name { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 800 !important; letter-spacing: -0.02em !important; }
+body.vq .bg-zahl { color: var(--akz-text) !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; letter-spacing: .06em !important; }
+body.vq .bg-leer { border-color: var(--rahmen) !important; color: var(--mute) !important; }
+body.vq .bereich-chip { background: var(--feld) !important; border: 1px solid var(--hair) !important; border-radius: var(--vq-rad-sm) !important; color: var(--ink) !important; }
+body.vq .bereich-chip:hover { border-color: var(--rahmen-hell) !important; }
+body.vq .bereich-chip-lbl { color: var(--mute) !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
+body.vq .bereich-chip-wechsel { color: var(--akz-text) !important; }
+body.vq .hpw-titel { color: var(--mute) !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.62rem !important; letter-spacing: .16em !important; }
+body.vq .hpw-alle { color: var(--akz-text) !important; }
+body.vq .hpw-karte {
+  background: var(--pa2) !important; border: 1px solid var(--rahmen) !important; border-radius: var(--vq-rad-sm) !important; color: var(--ink) !important;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+}
+body.vq .hpw-karte:hover { border-color: var(--rahmen-hell) !important; }
+body.vq .hpw-name { font-family: 'Plus Jakarta Sans', sans-serif !important; }
+body.vq .hpw-meta { color: var(--mute) !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; font-size: 0.7rem !important; }
+body.vq .bm-projekt { color: var(--ink) !important; }
+body.vq .bm-btn { background: var(--feld) !important; border: 1px solid var(--hair) !important; border-radius: var(--vq-rad-sm) !important; color: var(--ink) !important; }
+body.vq .bm-btn:hover { border-color: var(--rahmen-hell) !important; }
+body.vq .bm-btn.active { border-color: var(--akz) !important; box-shadow: inset 0 0 0 1px var(--akz) !important; }
+body.vq .bm-aktuell { color: var(--akz-text) !important; }
+body.vq .ub-chip { border-color: var(--hair) !important; color: var(--mute) !important; border-radius: var(--vq-pill) !important; background: transparent !important; }
+body.vq .ub-chip.an { background: var(--invert-bg) !important; color: var(--invert-fg) !important; border-color: var(--invert-bg) !important; }
+body.vq .ub-alle { color: var(--mute) !important; }
+body.vq .ub-hinweis { color: var(--warn-text) !important; }
+@media screen and (max-width: 600px) {
+  body.vq .bg-titel { font-size: 1.95rem !important; }
+}
+
+/* ── Handy ──────────────────────────────────────────────────────────────── */
+@media screen and (max-width: 900px) {
+  body.vq .top-bar-mobile { background: color-mix(in srgb, var(--pa) 85%, transparent) !important; border-bottom: 1px solid var(--hair) !important;
+    backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important; }
+  body.vq .mobile-fab, body.vq .sidebar-toggle { background: var(--invert-bg) !important; color: var(--invert-fg) !important; border: 0 !important; border-radius: var(--vq-pill) !important; }
+  body.vq table.mt tbody tr[data-string-id] {
+    background: var(--pa2) !important;
+    border: 1px solid var(--rahmen) !important; border-radius: var(--vq-rad-sm) !important;
+    padding: 14px 16px !important; margin: 10px 0 !important; gap: 12px !important; position: relative;
+    backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+  }
+  body.vq table.mt tbody tr.row-complete   { box-shadow: inset 3px 0 0 var(--ok), 0 0 14px var(--ok-glow) !important; }
+  body.vq table.mt tbody tr.row-incomplete { box-shadow: inset 3px 0 0 var(--warn) !important; }
+  body.vq table.mt tbody tr.row-error,
+  body.vq table.mt tbody tr[data-string-id]:has(.val-crit) { box-shadow: inset 3px 0 0 var(--krit), 0 0 14px var(--krit-glow) !important; background: var(--krit-row) !important; }
+  body.vq table.mt tbody tr[data-string-id] > td { border: 0 !important; padding: 0 !important; }
+  body.vq table.mt tbody tr[data-string-id] > td::before {
+    font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.58rem !important;
+    font-weight: 700 !important; letter-spacing: 0.14em !important;
+    text-transform: uppercase !important; color: var(--mute) !important;
+  }
+  body.vq table.mt tbody tr[data-string-id] .sp-inp {
+    width: 100% !important; max-width: 100% !important; text-align: right !important;
+    min-height: 48px !important; font-size: 1.05rem !important; padding: 0 14px !important;
+    border: 1px solid var(--hair) !important; background: var(--feld) !important; border-radius: var(--vq-rad-sm) !important;
+  }
+  body.vq table.mt tbody tr[data-string-id] .sp-inp.val-crit { color: var(--krit-text) !important; font-weight: 700 !important; border-color: rgba(255,51,102,.4) !important; }
+  body.vq table.mt tbody tr[data-string-id] .sp-inp.val-warn { color: var(--warn-text) !important; font-weight: 700 !important; border-color: rgba(255,184,0,.4) !important; }
+  body.vq table.mt tbody tr[data-string-id] td.col-note .sp-inp { min-height: 40px !important; font-size: 0.92rem !important; }
+  body.vq table.mt tbody tr[data-string-id] td.col-note .sp-inp,
+  body.vq table.mt tbody tr[data-string-id] td[data-label="GAK"] .sp-inp { text-align: left !important; }
+  body.vq table.mt tbody tr[data-string-id] > td[data-label="Aktiv"] { align-items: stretch !important; }
+  body.vq table.mt tbody tr[data-string-id] .tog-wrap { width: 100% !important; max-width: 100% !important; }
+  body.vq table.mt tbody tr[data-string-id] .tog { flex: 1 1 0; min-width: 0; min-height: 42px !important; padding: 0 4px !important; font-size: 0.64rem !important; }
+  body.vq table.mt tbody tr[data-string-id] .string-id { font-size: 1.15rem !important; }
+  body.vq table.mt tbody tr.mppt-header {
+    background: color-mix(in srgb, var(--pa) 90%, transparent) !important; margin: 22px 0 0 !important;
+    border-top: 0 !important; border-bottom: 1px solid var(--hair) !important; border-radius: var(--vq-rad-sm) var(--vq-rad-sm) 0 0 !important;
+    backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+  }
+  body.vq .kpi-strip { border: 0 !important; border-bottom: 1px solid var(--rahmen) !important; background: var(--pa) !important; border-radius: 0 !important; }
+  body.vq .kpi-strip-item + .kpi-strip-item { border-left: 1px solid var(--hair) !important; }
+  body.vq #to-top { width: 48px; height: 48px; }
+  body.vq .main-tab { flex: 1 1 0; min-width: 0; padding: 12px 5px !important; font-size: 0.6rem !important; letter-spacing: 0.02em !important; }
+}
+
+/* ── Druck bleibt unberuehrt ───────────────────────────────────────────── */
+@media print {
+  body.vq table.mt, body.vq table.mt thead, body.vq table.mt tbody,
+  body.vq table.mt tr, body.vq table.mt td, body.vq table.mt th { display: revert !important; }
+  body.vq .sp-inp.val-crit, body.vq .sp-inp.val-warn { background: #fff !important; color: #000 !important; }
+  body.vq .wr-block, body.vq .kpi-card, body.vq .home-hero, body.vq .home-stat { backdrop-filter: none !important; box-shadow: none !important; border-radius: 0 !important; }
+  body.vq .dashboard .kpi-card:first-child .kpi-value,
+  body.vq .home-title { -webkit-text-fill-color: #000 !important; background: none !important; }
+  body.vq::after { display: none !important; }
+  body.vq .wr-block::before, body.vq .kpi-card::before, body.vq .home-hero::before, body.vq .home-stat::before { display: none !important; }
+}
+

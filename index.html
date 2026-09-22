@@ -848,6 +848,21 @@ body.sun-mode .role-hint-banner { background: #f0fdf4; border-color: #00873d; co
 .lock-banner .lock-icon { font-size: 1.5rem; }
 body.sun-mode .lock-banner { background: #fef2f2; border-color: #b91c1c; color: #b91c1c; }
 
+/* Kollaboratives Locking Banner */
+.collab-lock-banner {
+  display: none; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 16px; margin-bottom: 16px; background: rgba(245, 158, 11, 0.12);
+  border: 2px solid #f59e0b; border-radius: 12px; color: #f59e0b; font-weight: 700;
+  font-size: 0.85rem; flex-wrap: wrap;
+}
+.collab-lock-banner.active { display: flex; }
+.collab-lock-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 220px; }
+.collab-lock-icon { font-size: 1.5rem; }
+.collab-lock-user { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--muted); }
+.collab-lock-user-name { font-weight: 800; color: var(--text); }
+.collab-lock-time { font-style: italic; }
+body.sun-mode .collab-lock-banner { background: #fefce8; border-color: #eab308; color: #b45309; }
+
 body.protocol-locked .sp-inp:disabled,
 body.protocol-locked .tog:disabled { opacity: 0.45; cursor: not-allowed; }
 body.protocol-locked .sp-inp:disabled { background: var(--bg); color: var(--muted); border-style: dashed; }
@@ -3088,6 +3103,21 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
       </button>
     </div>
 
+    <!-- Kollaboratives Locking Banner -->
+    <div class="collab-lock-banner no-print" id="collab-lock-banner" style="display:none;">
+      <div class="collab-lock-info">
+        <span class="collab-lock-icon">👥</span>
+        <span class="collab-lock-text">Projekt wird bearbeitet</span>
+      </div>
+      <div class="collab-lock-user">
+        <span class="collab-lock-user-name" id="collab-lock-user-name">—</span>
+        <span class="collab-lock-time" id="collab-lock-time">seit — Min</span>
+      </div>
+      <button class="btn btn-ghost" id="collab-lock-override" onclick="overrideProjectLock()" style="border-color:#f59e0b;color:#f59e0b;">
+        ⚠️ Trotzdem bearbeiten
+      </button>
+    </div>
+
     <div class="lock-banner no-print" id="endbearbeitung-banner" style="display:none;background:rgba(234,179,8,0.14);border-color:rgba(234,179,8,0.45);">
       <div class="lock-info">
         <span class="lock-icon">✍️</span>
@@ -4141,7 +4171,15 @@ function zeigeBereichsWahl(){
 async function waehleBereich(b){
   if(erlaubteBereiche().indexOf(b) < 0) return;
   // Ein offenes Projekt vorher sichern, dann ohne Projekt im Bereich starten
-  if(CURRENT_PROJECT_ID){ try { await flushPendingProjectEdits(); } catch(e){} }
+  if(CURRENT_PROJECT_ID){
+    try {
+      await flushPendingProjectEdits();
+      // Lock freigeben
+      if (currentProjectLock) {
+        await unlockProject(CURRENT_PROJECT_ID);
+      }
+    } catch(e){}
+  }
   CURRENT_BEREICH = b;
   CURRENT_PROJECT_ID = null;
   APP_STATE = {};
@@ -7207,7 +7245,20 @@ async function flushPendingProjectEdits(){
 
 async function selectProject(id){
   await flushPendingProjectEdits();
+  
+  // Vorheriges Lock freigeben
+  if (CURRENT_PROJECT_ID && currentProjectLock) {
+    await unlockProject(CURRENT_PROJECT_ID);
+  }
+  
   CURRENT_PROJECT_ID = id;
+  
+  // Neues Lock versuchen
+  const lockSuccess = await lockProject(id);
+  if (!lockSuccess) {
+    toast('⚠️ Projekt ist gesperrt - nur lesender Zugriff');
+  }
+  
   loadCurrentProjectData();
   if(supabaseClient && currentUser) await fetchCloudDataManually();
   if(g('projects-view').classList.contains('active')) switchMainTab('matrix');
@@ -7789,6 +7840,12 @@ async function handleAuthSubmit(){
 
 async function doLogout(){
   if(!confirm('Wirklich abmelden?')) return;
+
+  // Alle Locks freigeben
+  if (CURRENT_PROJECT_ID && currentProjectLock) {
+    await unlockProject(CURRENT_PROJECT_ID);
+  }
+
   if(supabaseClient) await supabaseClient.auth.signOut();
   currentUser = null; currentUserRole = null;
   CURRENT_BEREICH = null; currentUserBereiche = [];
@@ -8108,9 +8165,220 @@ document.addEventListener('DOMContentLoaded', () => {
   tryFillPrint();
   setInterval(tryFillPrint, 1500);
 });
-window.onload = () => { 
+window.onload = () => {
   checkSession();
 };
+
+// ══════════════════════════════════════════════════════════════════════════
+// KOLLABORATIVES LOCKING SYSTEM
+// Verhindert gleichzeitige Bearbeitung desselben Projekts durch mehrere User
+// ══════════════════════════════════════════════════════════════════════════
+
+let currentProjectLock = null;
+let lockCheckInterval = null;
+const LOCK_EXPIRY_MINUTES = 30; // Lock läuft nach 30 Min ab
+
+// Projekt sperren beim Öffnen
+async function lockProject(projectId) {
+  if (!currentUser || !supabaseClient) return false;
+
+  try {
+    // Prüfen ob bereits gesperrt
+    const { data: existingLock, error: checkError } = await supabaseClient
+      .from('project_locks')
+      .select('*')
+      .eq('project_id', projectId)
+      .single();
+
+    if (existingLock && !checkError) {
+      // Prüfen ob Lock noch gültig ist
+      const expiresAt = new Date(existingLock.expires_at);
+      if (expiresAt > new Date()) {
+        // Lock ist noch gültig
+        showCollabLockBanner(existingLock);
+        currentProjectLock = existingLock;
+        startLockCheck();
+        return false;
+      } else {
+        // Lock abgelaufen, aufräumen
+        await supabaseClient
+          .from('project_locks')
+          .delete()
+          .eq('project_id', projectId);
+      }
+    }
+
+    // Neues Lock erstellen
+    const expiresAt = new Date(Date.now() + LOCK_EXPIRY_MINUTES * 60 * 1000);
+    const { data: newLock, error: lockError } = await supabaseClient
+      .from('project_locks')
+      .upsert({
+        project_id: projectId,
+        user_id: currentUser.id,
+        user_name: currentUser.email,
+        locked_at: new Date().toISOString(),
+        expires_at: expiresAt.toISOString()
+      });
+
+    if (lockError) {
+      console.error('Lock fehlgeschlagen:', lockError);
+      return false;
+    }
+
+    currentProjectLock = newLock;
+    hideCollabLockBanner();
+    startLockCheck();
+    return true;
+
+  } catch (error) {
+    console.error('Lock-Fehler:', error);
+    return false;
+  }
+}
+
+// Projekt freigeben
+async function unlockProject(projectId) {
+  if (!currentUser || !supabaseClient) return;
+
+  try {
+    await supabaseClient
+      .from('project_locks')
+      .delete()
+      .eq('project_id', projectId)
+      .eq('user_id', currentUser.id);
+
+    currentProjectLock = null;
+    hideCollabLockBanner();
+    stopLockCheck();
+
+  } catch (error) {
+    console.error('Unlock-Fehler:', error);
+  }
+}
+
+// Lock-Status prüfen (alle 30 Sekunden)
+function startLockCheck() {
+  stopLockCheck(); // Vorherigen Check stoppen
+
+  lockCheckInterval = setInterval(async () => {
+    if (!CURRENT_PROJECT_ID) return;
+
+    try {
+      const { data: lock } = await supabaseClient
+        .from('project_locks')
+        .select('*')
+        .eq('project_id', CURRENT_PROJECT_ID)
+        .single();
+
+      if (lock) {
+        const expiresAt = new Date(lock.expires_at);
+        if (expiresAt <= new Date()) {
+          // Lock abgelaufen
+          await unlockProject(CURRENT_PROJECT_ID);
+        } else if (lock.user_id !== currentUser.id) {
+          // Jemand anderes hat das Lock
+          showCollabLockBanner(lock);
+          currentProjectLock = lock;
+        }
+      }
+    } catch (error) {
+      console.error('Lock-Check Fehler:', error);
+    }
+  }, 30000); // Alle 30 Sekunden prüfen
+}
+
+function stopLockCheck() {
+  if (lockCheckInterval) {
+    clearInterval(lockCheckInterval);
+    lockCheckInterval = null;
+  }
+}
+
+// Lock-Banner anzeigen
+function showCollabLockBanner(lock) {
+  const banner = g('collab-lock-banner');
+  const userName = g('collab-lock-user-name');
+  const timeSpan = g('collab-lock-time');
+
+  if (banner && userName && timeSpan) {
+    userName.textContent = lock.user_name || 'Unbekannt';
+
+    // Zeit seit Lock berechnen
+    const lockedAt = new Date(lock.locked_at);
+    const minutesAgo = Math.floor((Date.now() - lockedAt.getTime()) / 60000);
+    timeSpan.textContent = `seit ${minutesAgo} Min`;
+
+    banner.classList.add('active');
+
+    // Alle Eingaben deaktivieren
+    document.body.classList.add('collab-locked');
+  }
+}
+
+// Lock-Banner verstecken
+function hideCollabLockBanner() {
+  const banner = g('collab-lock-banner');
+  if (banner) {
+    banner.classList.remove('active');
+  }
+  document.body.classList.remove('collab-locked');
+}
+
+// Lock überschreiben (mit Warnung)
+async function overrideProjectLock() {
+  if (!confirm('⚠️ Achtung: Du bist nicht der Eigentümer dieses Locks!\n\nWenn du jetzt bearbeitest, könnte dies zu Datenverlust führen, wenn der andere User gleichzeitig speichert.\n\nTrotzdem fortfahren?')) {
+    return;
+  }
+
+  // Eigenes Lock erstellen
+  await lockProject(CURRENT_PROJECT_ID);
+}
+
+// Auto-Unlock beim Tab-Wechsel
+window.addEventListener('beforeunload', () => {
+  if (CURRENT_PROJECT_ID && currentProjectLock) {
+    // Sync-Aufruf vor dem Verlassen
+    navigator.sendBeacon('/api/unlock-project', JSON.stringify({
+      project_id: CURRENT_PROJECT_ID,
+      user_id: currentUser.id
+    }));
+  }
+});
+
+// Visibility API für Tab-Wechsel Erkennung
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    // Tab wird verlassen - Lock renewal pausieren
+    stopLockCheck();
+  } else {
+    // Tab wird wieder aktiv - Lock prüfen
+    if (CURRENT_PROJECT_ID) {
+      lockProject(CURRENT_PROJECT_ID);
+    }
+  }
+});
+
+// CSS für Lock-Status
+const lockStyles = `
+  body.collab-locked .sp-inp:disabled,
+  body.collab-locked .tog:disabled,
+  body.collab-locked .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  body.collab-locked .sp-inp:not(:disabled),
+  body.collab-locked .tog:not(:disabled),
+  body.collab-locked .btn:not(:disabled) {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+`;
+
+// Styles injizieren
+const styleSheet = document.createElement('style');
+styleSheet.textContent = lockStyles;
+document.head.appendChild(styleSheet);
 </script>
 <!-- ══════════════════════════════════════════════════════════════════════
      DARSTELLUNG — jeder richtet sich die Oberflaeche selbst ein.

@@ -3,6 +3,6 @@
 // diese Datei bleibt dann einfach liegen.
 // Beide Werte stehen in Supabase unter "Project Settings" -> "API".
 window.PV_CONFIG = {
-  url: "",   // Project URL, z. B. "https://abcdefgh.supabase.co"
-  key: ""    // anon / publishable Key (der oeffentliche, NICHT der service_role-Key)
+  url: "",   https://rcuimtfmjkpxkazbsggj.supabase.co
+  key: ""    sb_publishable_pe8Ye20-e9az1D5MvNCB5A_8_ai7afc
 };

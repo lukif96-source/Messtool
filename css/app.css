@@ -575,6 +575,12 @@ body.tab-querschnitt .dashboard { display: none; }
 .qs-ok { color: var(--accent); font-weight: 700; }
 .qs-zu-hoch { color: #ef4444; font-weight: 700; }
 body.sun-mode .qs-zu-hoch { color: #b91c1c; }
+.qs-marke { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 1px; }
+.qs-marke-empf { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.qs-marke-klein { background: rgba(239,68,68,0.12); color: #ef4444; }
+body.sun-mode .qs-marke-klein { color: #b91c1c; }
+.qs-th-max { font-weight: 600; letter-spacing: 0; text-transform: none; }
+.qs-rechenweg { white-space: pre-line; }
 .qs-warnung { font-size: 0.84rem; color: var(--warn); line-height: 1.5; margin: 10px 0 0; }
 .qs-formel-liste { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin-bottom: 14px; }
 .qs-formel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; min-width: 0; }
@@ -2527,3 +2533,29 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
 body.collab-locked #matrix-view .sp-inp, body.collab-locked #matrix-view .tog, body.collab-locked #matrix-view .btn:not(#collab-lock-override) {
   opacity: 0.5; pointer-events: none;
 }
+
+/* ── Fotos zum Wechselrichter ── */
+.wr-foto-leiste { display: inline-flex; align-items: center; gap: 6px; }
+.wr-foto-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: transparent; font-size: 1rem; cursor: pointer; padding: 0; }
+.wr-foto-btn:hover, .wr-foto-btn:focus-visible { border-color: var(--accent); background: var(--accent-glow); outline: none; }
+.wr-foto-btn[hidden] { display: none; }
+.wr-fotos { display: inline-flex; gap: 4px; }
+.wr-foto-mini { position: relative; width: 34px; height: 34px; border-radius: 7px; overflow: hidden; border: 1px solid var(--border); padding: 0; background: var(--panel); cursor: pointer; }
+.wr-foto-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wr-foto-mini.wartet img { opacity: 0.55; }
+.wr-foto-uhr { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+.wr-foto-mehr { height: 34px; min-width: 34px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); font-weight: 800; font-size: 0.75rem; cursor: pointer; padding: 0 6px; }
+.foto-viewer { position: fixed; inset: 0; z-index: 9000; background: rgba(8,10,14,0.92); display: none; flex-direction: column; color: #fff; }
+.foto-viewer.show { display: flex; }
+.fv-kopf, .fv-fuss { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; }
+.fv-titel { font-weight: 800; }
+.fv-info { font-size: 0.85rem; opacity: 0.8; }
+.fv-x { background: none; border: 0; color: #fff; font-size: 1.4rem; cursor: pointer; width: 44px; height: 44px; }
+.fv-bild { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; position: relative; padding: 0 8px; }
+.fv-bild img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
+.fv-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 64px; border: 0; border-radius: 10px; background: rgba(255,255,255,0.12); color: #fff; font-size: 2rem; cursor: pointer; }
+.fv-nav[hidden] { display: none; }
+.fv-zurueck { left: 10px; } .fv-weiter { right: 10px; }
+.fv-loeschen { background: rgba(239,68,68,0.18); color: #fecaca; border: 1px solid rgba(239,68,68,0.5); border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; min-height: 44px; }
+.fv-loeschen[hidden] { display: none; }
+@media (max-width: 600px) { .fv-fuss { flex-wrap: wrap; } .wr-foto-btn, .wr-foto-mini, .wr-foto-mehr { width: 40px; height: 40px; } }

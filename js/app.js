@@ -199,11 +199,16 @@ const QS_AC = {
 };
 const QS_HINT_I = {
   dc: 'Betriebsstrom, z. B. Impp des Strangs oder Summe am GAK',
-  ac: 'Nennstrom des Wechselrichters je Außenleiter'
+  ac: 'Nennleistung (Scheinleistung) des Wechselrichters laut Datenblatt'
+};
+// DC wird mit dem Strom gerechnet, AC mit der Leistung des Wechselrichters in kVA
+const QS_EINGABE = {
+  dc: { lbl: 'Strom I',     einheit: 'A',   ph: 'z. B. 13,5' },
+  ac: { lbl: 'Leistung S',  einheit: 'kVA', ph: 'z. B. 110' }
 };
 const QS_HINT_U_DC = 'MPP-Spannung des Strangs (Module × Vmpp)';
 const QS_FELDER = ['strom', 'spannung', 'laenge', 'du', 'cosphi'];
-const QS_SPEICHER = 'pv_querschnitt_v2';
+const QS_SPEICHER = 'pv_querschnitt_v3';   // v3: AC-Feld ist kVA statt A
 let qsArt = 'dc', qsMat = 'cu', qsUac = '400', qsBereit = false;
 // DC-Strang (13 A, 780 V) und AC-Anschluss (160 A) sind verschiedene
 // Leitungen – jede Art behaelt ihre eigenen Werte.
@@ -233,7 +238,11 @@ function qsInit(){
   if(qsBereit) return;
   qsBereit = true;
   try {
-    const s = JSON.parse(localStorage.getItem(QS_SPEICHER) || 'null');
+    let s = JSON.parse(localStorage.getItem(QS_SPEICHER) || 'null');
+    if(!s){
+      s = JSON.parse(localStorage.getItem('pv_querschnitt_v2') || 'null');
+      if(s && s.werte && s.werte.ac) s.werte.ac.strom = '';
+    }
     if(s && typeof s === 'object'){
       if(s.art === 'dc' || s.art === 'ac') qsArt = s.art;
       if(QS_KAPPA[s.mat]) qsMat = s.mat;
@@ -264,6 +273,10 @@ function qsAnzeigen(){
   const uac = g('qs-u-ac'); if(uac) uac.hidden = !istAc;
   const cos = g('qs-feld-cosphi'); if(cos) cos.hidden = !istAc;
   const hi = g('qs-hint-strom');    if(hi) hi.textContent = QS_HINT_I[qsArt];
+  const ein = QS_EINGABE[qsArt];
+  const li = g('qs-lbl-strom');     if(li) li.textContent = ein.lbl;
+  const ei = g('qs-einheit-strom'); if(ei) ei.textContent = ein.einheit;
+  const ii = g('qs-strom');         if(ii) ii.placeholder = ein.ph;
   const hu = g('qs-hint-spannung'); if(hu) hu.textContent = istAc ? QS_AC[qsUac].hint : QS_HINT_U_DC;
 }
 
@@ -300,12 +313,15 @@ function qsBerechnen(){
   const w = qsWerte[qsArt];
   const istAc = qsArt === 'ac';
   const ac = QS_AC[qsUac];
-  const I = toNum(w.strom), L = toNum(w.laenge), du = toNum(w.du);
+  const L = toNum(w.laenge), du = toNum(w.du);
   const U = istAc ? Number(qsUac) : toNum(w.spannung);
   const cos = istAc ? toNum(w.cosphi) : 1;
+  // AC: Strom je Aussenleiter aus der Scheinleistung – einphasig I = S ÷ U, dreiphasig I = S ÷ (√3 · U)
+  const S = istAc ? toNum(w.strom) : 0;
+  const I = istAc ? (S > 0 ? S * 1000 / ((qsUac === '230' ? 1 : Math.sqrt(3)) * U) : NaN) : toNum(w.strom);
 
   const fehlt = [];
-  if(!(I > 0)) fehlt.push('Strom');
+  if(!(I > 0)) fehlt.push(istAc ? 'Leistung' : 'Strom');
   if(!(U > 0)) fehlt.push('Spannung');
   if(!(L > 0)) fehlt.push('Länge');
   if(fehlt.length){
@@ -334,7 +350,8 @@ function qsBerechnen(){
   const matName = qsMat === 'cu' ? 'Kupfer' : 'Aluminium';
   const artName = istAc ? ac.name : 'DC';
   const kTxt = !istAc ? '2' : `${qsUac === '230' ? '2' : '√3'} · ${qsZahl(cos, 2)}`;
-  const rechenweg = `A = ${kTxt} · ${qsZahl(L, 1)} m · ${qsZahl(I, 2)} A ÷ (${kappa} · ${qsZahl(duV, 2)} V) = ${qsZahl(aMin, 2)} mm²`;
+  const stromweg = istAc ? `I = ${qsZahl(S, 1)} kVA ÷ (${qsUac === '230' ? '' : '√3 · '}${qsUac} V) = ${qsZahl(I, 1)} A\n` : '';
+  const rechenweg = stromweg + `A = ${kTxt} · ${qsZahl(L, 1)} m · ${qsZahl(I, 2)} A ÷ (${kappa} · ${qsZahl(duV, 2)} V) = ${qsZahl(aMin, 2)} mm²`;
 
   if(iEmpf < 0){
     out.innerHTML = `
@@ -352,25 +369,27 @@ function qsBerechnen(){
   const aMinAnders = faktor * L * I / (QS_KAPPA[anderes] * duV);
   const iAnders = reiheAnders.findIndex(a => a >= aMinAnders - 1e-9);
   const andersTxt = iAnders < 0 ? `mehr als ${qsQuer(reiheAnders[reiheAnders.length - 1])} mm²` : `${qsQuer(reiheAnders[iAnders])} mm²`;
+  // Ein Querschnitt darunter (zu klein) und bis zu fuenf darueber – jeweils mit
+  // dem Spannungsfall, damit man sieht, was ein groesserer Querschnitt bringt.
   const zeilen = [];
-  for(let i = Math.max(0, iEmpf - 1); i <= Math.min(reihe.length - 1, iEmpf + 2); i++){
+  for(let i = Math.max(0, iEmpf - 1); i <= Math.min(reihe.length - 1, iEmpf + 5); i++){
     const a = reihe[i], dv = spannungsfall(a), dp = dv / U * 100;
     const passt = dp <= du + 1e-9;
-    const status = i === iEmpf ? '✓ empfohlen' : (passt ? '✓' : '✗ zu hoch');
-    zeilen.push(`<tr${i === iEmpf ? ' class="qs-empf"' : ''}><td>${qsQuer(a)} mm²</td><td class="qs-spalte-v">${qsZahl(dv, 2)} V</td><td>${qsZahl(dp, 2)} %</td><td>${qsZahl(verlust(a), 0)} W</td><td class="${passt ? 'qs-ok' : 'qs-zu-hoch'}">${status}</td></tr>`);
+    const marke = i === iEmpf ? '<span class="qs-marke qs-marke-empf">empfohlen</span>' : (passt ? '' : '<span class="qs-marke qs-marke-klein">zu klein</span>');
+    zeilen.push(`<tr${i === iEmpf ? ' class="qs-empf"' : ''}><td>${qsQuer(a)} mm²${marke}</td><td class="qs-spalte-v">${qsZahl(dv, 2)} V</td><td class="${passt ? 'qs-ok' : 'qs-zu-hoch'}">${qsZahl(dp, 2)} %</td><td>${qsZahl(verlust(a), 0)} W</td></tr>`);
   }
   out.innerHTML = `
     <div class="qs-haupt"><span class="qs-haupt-wert">${qsQuer(aEmpf)}</span><span class="qs-haupt-einheit">mm²</span></div>
     <div class="qs-haupt-lbl">Empfohlener Normquerschnitt · ${matName} · ${artName}</div>
     <div class="qs-vergleich">Mit ${andersName}: <strong>${andersTxt}</strong> <button type="button" class="qs-link" onclick="qsSetMaterial('${anderes}')">anzeigen</button></div>
     <div class="qs-kennzahlen">
-      <div class="qs-kz"><span class="qs-kz-lbl">Rechnerisch</span><span class="qs-kz-wert">${qsZahl(aMin, 2)} mm²</span></div>
+      ${istAc ? `<div class="qs-kz"><span class="qs-kz-lbl">Strom</span><span class="qs-kz-wert">${qsZahl(I, 1)} A</span></div>` : `<div class="qs-kz"><span class="qs-kz-lbl">Rechnerisch</span><span class="qs-kz-wert">${qsZahl(aMin, 2)} mm²</span></div>`}
       <div class="qs-kz"><span class="qs-kz-lbl">Spannungsfall</span><span class="qs-kz-wert">${qsZahl(spannungsfall(aEmpf) / U * 100, 2)} %</span></div>
       <div class="qs-kz"><span class="qs-kz-lbl">Verlust</span><span class="qs-kz-wert">${qsZahl(verlust(aEmpf), 0)} W</span></div>
     </div>
     <div class="qs-rechenweg">${esc(rechenweg)}</div>
     <table class="qs-tabelle">
-      <thead><tr><th>Querschnitt</th><th class="qs-spalte-v">ΔU</th><th>ΔU %</th><th>Verlust</th><th>max. ${qsZahl(du, 1)} %</th></tr></thead>
+      <thead><tr><th>Querschnitt</th><th class="qs-spalte-v">ΔU</th><th>ΔU % <span class="qs-th-max">(max. ${qsZahl(du, 1)})</span></th><th>Verlust</th></tr></thead>
       <tbody>${zeilen.join('')}</tbody>
     </table>`;
 }
@@ -1920,6 +1939,7 @@ function renderMatrix(remoteOverride = null){
           <span class="wr-num" style="cursor:${canHardware ? 'pointer' : (canRename ? 'pointer' : 'default')};" onclick="${canHardware ? `openInverterEditor(${wr})` : (canRename ? `renameInverterQuick(${wr})` : 'void(0)')}" title="${canHardware ? 'Wechselrichter bearbeiten' : (canRename ? 'Namen ändern' : '')}">${esc(wrData.name || 'WR ' + wr)}</span>
           ${canHardware ? `<button class="wr-edit-btn" onclick="openInverterEditor(${wr})" title="Wechselrichter bearbeiten (MPPTs, Eingänge, löschen)">⚙️</button>` : (canRename ? `<button class="wr-edit-btn" onclick="renameInverterQuick(${wr})" title="Wechselrichter-Namen ändern">✏️</button>` : '')}
           <span class="wr-kpis">${activeStrings} Strings &middot; ${mppts} MPPTs</span>
+          <span class="wr-foto-leiste no-print"><button type="button" class="wr-foto-btn" onclick="fotoAufnehmen(${wr})" title="Foto zum Wechselrichter aufnehmen" aria-label="Foto zu ${esc(wrData.name || 'WR ' + wr)} aufnehmen">📷</button><span class="wr-fotos" data-wr="${wr}"></span></span>
         </div>
         <div class="wr-kpis"><strong id="wr-pwr-${wr}" style="color:var(--accent);">${wrPwr.toFixed(2)} kWp</strong></div>
       </div>
@@ -1982,6 +2002,7 @@ function renderMatrix(remoteOverride = null){
   // kompakte Sticky-Leiste (Handy) und die Fortschrittsbalken mitgezogen.
   updateKPIs();
   applyMeasurementFlags(); // Grenzwert-Alarm nach jedem Tabellen-Neuaufbau setzen
+  if(typeof fotoMatrixGerendert === 'function') fotoMatrixGerendert();
   // Scrollposition wiederherstellen — sonst springt die Ansicht bei jedem
   // erfolgreichen Auto-Save (nur mit Internetverbindung möglich) nach oben,
   // weil die Seite beim Neuaufbau kurz sehr klein wird und der Browser den
@@ -4377,6 +4398,7 @@ async function onAuthenticated(user){
   const roleLabels = { admin: 'Admin', planner: 'Planer', site: 'Bauleitung' };
   g('user-badge-role').textContent = roleLabels[currentUserRole] || '—';
   await initProjects();
+  if(typeof fotoWarteschlangeSenden === 'function') fotoWarteschlangeSenden();
   updateLockUI();
   updateRoleHint();
   if(currentUserRole === 'site') toggleHideInactive(true);

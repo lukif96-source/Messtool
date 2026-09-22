@@ -597,6 +597,8 @@ body.vq .qs-rechenweg { color: var(--mute) !important; }
 body.vq .qs-tabelle td { border-top: 1px solid var(--hair) !important; font-weight: 500 !important; }
 body.vq .qs-tabelle tr.qs-empf td { font-weight: 800 !important; }
 body.vq .qs-tabelle td.qs-ok { color: var(--ok-text) !important; }
+body.vq .qs-marke-empf { background: color-mix(in srgb, var(--ok) 16%, transparent) !important; color: var(--ok-text) !important; }
+body.vq .qs-marke-klein { background: color-mix(in srgb, var(--krit-text) 12%, transparent) !important; color: var(--krit-text) !important; }
 body.vq .qs-tabelle td.qs-zu-hoch { color: var(--krit-text) !important; }
 body.vq .qs-warnung { color: var(--warn-text) !important; }
 body.vq .qs-hinweis { color: var(--mute) !important; border-left-color: var(--warn) !important; }

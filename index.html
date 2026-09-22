@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PV Matrix">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="mobile-web-app-capable" content="yes">
@@ -13,7 +20,8 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- SB_URL/SB_KEY unten (~Zeile 3190) mit den echten Supabase-Werten fuellen -->
+<!-- Zugangsdaten (URL + anon-Key) stehen in config.js neben dieser Datei -->
+<script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
@@ -139,6 +147,9 @@ body.sun-mode .btn-primary { color: #ffffff; }
   min-height: var(--field-height); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
 }
 .sp-inp::placeholder { color: var(--muted); opacity: 0.7; }
+/* Texteingaben immer linksbuendig (auch am Handy, wo Zahlenfelder rechts stehen) */
+input.sp-inp[type="email"], input.sp-inp[type="password"],
+input.sp-inp[type="text"]:not([inputmode]):not(.sp-inp-center), select.sp-inp { text-align: left; }
 .sp-inp:hover { background: var(--field-bg-hover); border-color: var(--glass-border-hover); }
 .sp-inp:focus { border-color: var(--field-border-focus); background: var(--field-bg-hover); box-shadow: var(--field-glow); }
 .sp-inp:focus:not(:focus-visible) { outline: none; }
@@ -475,6 +486,154 @@ body:not(.sun-mode) .anleitung-hero { background: linear-gradient(145deg, #0e120
   .anleitung-hero h1 { font-size: 1.2rem; }
   .anleitung-card summary { font-size: 0.9rem; padding: 12px 14px; min-height: 44px; }
   .anleitung-body { padding: 0 14px 14px 14px; font-size: 0.85rem; }
+}
+
+
+/* ── Startbildschirm: Bereich wählen ───────────────────────────────────── */
+#bereich-gate { position: fixed; inset: 0; z-index: 4900; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: calc(24px + var(--safe-top)) 20px calc(24px + var(--safe-bottom)); overflow-y: auto; }
+#bereich-gate[hidden] { display: none !important; }
+body.bereich-offen { overflow: hidden; }
+.bg-inner { width: 100%; max-width: 980px; margin: auto; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.bg-logo { margin-bottom: 22px; display: flex; justify-content: center; }
+.bg-logo .brand-logo { height: 64px; }
+.bg-titel { font-size: 2rem; font-weight: 900; letter-spacing: -0.03em; color: var(--text); margin: 0 0 8px; }
+.bg-sub { font-size: 0.95rem; color: var(--muted); margin: 0 0 28px; }
+.bg-karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; width: 100%; }
+.bg-karte { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; padding: 26px 22px 22px; min-height: 200px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; color: var(--text); font: inherit; cursor: pointer; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+.bg-karte:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 16px 40px rgba(0,0,0,.16); }
+.bg-karte:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.bg-icon { font-size: 2.4rem; line-height: 1; margin-bottom: 12px; }
+.bg-name { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.01em; }
+.bg-info { font-size: 0.86rem; color: var(--muted); line-height: 1.45; flex: 1; }
+.bg-zahl { margin-top: 10px; font-size: 0.7rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.bg-leer { grid-column: 1 / -1; padding: 28px; border: 1px dashed var(--border); border-radius: 16px; color: var(--muted); line-height: 1.6; }
+.bg-fuss { margin-top: 30px; display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 6px 14px; font-size: 0.8rem; color: var(--muted); }
+.bg-abmelden { background: none; border: 0; padding: 8px 4px; color: var(--muted); font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.bg-abmelden:hover { color: var(--text); }
+@media (max-width: 600px) {
+  .bg-logo .brand-logo { height: 48px; }
+  .bg-titel { font-size: 1.55rem; }
+  .bg-sub { margin-bottom: 20px; }
+  .bg-karten { grid-template-columns: 1fr; gap: 12px; }
+  .bg-karte { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "icon name" "icon info" "icon zahl"; column-gap: 16px; row-gap: 2px; align-items: center; min-height: 0; padding: 18px; }
+  .bg-icon { grid-area: icon; margin: 0; font-size: 2rem; }
+  .bg-name { grid-area: name; font-size: 1.1rem; }
+  .bg-info { grid-area: info; font-size: 0.8rem; }
+  .bg-zahl { grid-area: zahl; margin-top: 4px; }
+}
+
+.bereich-chip { display: flex; align-items: center; gap: 10px; width: calc(100% - 16px); margin: 0 8px 12px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font: inherit; cursor: pointer; text-align: left; }
+.bereich-chip[hidden] { display: none !important; }
+.bereich-chip:hover { border-color: var(--accent); }
+.bereich-chip-icon { font-size: 1.25rem; line-height: 1; }
+.bereich-chip-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.bereich-chip-lbl { font-size: 0.58rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+#bereich-chip-name { font-size: 0.9rem; font-weight: 800; }
+.bereich-chip-wechsel { font-size: 0.72rem; font-weight: 700; color: var(--accent); }
+
+.home-projektwahl { margin: 0 0 24px; }
+.home-projektwahl[hidden] { display: none !important; }
+.hpw-kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.hpw-titel { font-size: 0.72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.hpw-alle { background: none; border: 0; padding: 4px 0; color: var(--accent); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+.hpw-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.hpw-karte { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 14px 16px; min-height: 64px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font: inherit; cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
+.hpw-karte:hover { border-color: var(--accent); transform: translateY(-2px); }
+.hpw-name { font-weight: 800; font-size: 0.92rem; }
+.hpw-meta { font-size: 0.74rem; color: var(--muted); }
+
+.bm-projekt { font-weight: 800; color: var(--text); margin-bottom: 14px; }
+.bm-liste { display: grid; gap: 8px; }
+.bm-btn { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; min-height: 52px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+.bm-btn:hover { border-color: var(--accent); }
+.bm-btn.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.bm-icon { font-size: 1.3rem; }
+.bm-name { flex: 1; }
+.bm-aktuell { font-size: 0.7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+
+.ub-bereiche { flex-basis: 100%; display: flex; gap: 6px; flex-wrap: wrap; }
+.ub-chip { padding: 6px 10px; min-height: 34px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--muted); font: inherit; font-size: 0.76rem; font-weight: 700; cursor: pointer; }
+.ub-chip.an { background: var(--accent-glow); color: var(--accent); border-color: var(--accent); }
+.ub-alle { flex-basis: 100%; font-size: 0.76rem; color: var(--muted); }
+.ub-hinweis { font-size: 0.72rem; color: var(--warn); font-weight: 700; }
+/* ── Querschnittberechnung ─────────────────────────────────────────────── */
+.querschnitt-view { display: none; }
+.querschnitt-view.active { display: block; }
+body.tab-querschnitt .dashboard { display: none; }
+.qs-tab-kurz, .qs-tab-mini { display: none; }
+.qs-layout { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-bottom: 16px; }
+.qs-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+.qs-card-titel { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+.qs-seg { display: flex; gap: 4px; padding: 4px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; }
+.qs-seg-btn { flex: 1 1 0; min-width: 0; min-height: 40px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
+.qs-seg-btn:hover { color: var(--text); }
+.qs-seg-btn.active { background: var(--accent-glow); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.qs-seg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.qs-seg-klein { margin-bottom: 0; }
+.qs-felder { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.qs-feld { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.qs-feld[hidden], .qs-seg[hidden], .qs-inp-wrap[hidden] { display: none !important; }
+.qs-u-wahl { margin-bottom: 0; }
+.qs-lbl { font-size: 0.78rem; font-weight: 700; color: var(--text); }
+.qs-inp-wrap { position: relative; display: flex; align-items: center; }
+.qs-feld .qs-inp-wrap .qs-inp { width: 100%; max-width: none; min-height: 46px; padding: 0 44px 0 12px; font-size: 1.05rem; text-align: right; font-variant-numeric: tabular-nums; }
+.qs-einheit { position: absolute; right: 14px; font-size: 0.82rem; font-weight: 700; color: var(--muted); pointer-events: none; }
+.qs-hint { font-size: 0.72rem; color: var(--muted); line-height: 1.4; }
+.qs-leer { color: var(--muted); font-size: 0.9rem; line-height: 1.5; margin: 0; padding: 6px 0; }
+.qs-haupt { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.qs-haupt-wert { font-size: 2.8rem; font-weight: 900; letter-spacing: -0.03em; line-height: 1.05; color: var(--text); font-variant-numeric: tabular-nums; }
+.qs-haupt-einheit { font-size: 1.1rem; font-weight: 800; color: var(--accent); }
+.qs-haupt-lbl { font-size: 0.8rem; color: var(--muted); margin: 4px 0 6px; }
+.qs-vergleich { font-size: 0.82rem; color: var(--muted); margin: 0 0 16px; }
+.qs-vergleich strong { color: var(--text); font-weight: 800; }
+.qs-link { background: none; border: 0; padding: 0 0 0 4px; font: inherit; font-weight: 700; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.qs-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.qs-kennzahlen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.qs-kz { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.qs-kz-lbl { display: block; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.qs-kz-wert { font-size: 1rem; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.qs-rechenweg { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.74rem; line-height: 1.5; color: var(--muted); background: var(--panel); border-radius: 8px; padding: 8px 10px; margin-bottom: 14px; overflow-wrap: anywhere; }
+.qs-tabelle { width: 100%; border-collapse: collapse; font-size: 0.84rem; font-variant-numeric: tabular-nums; }
+.qs-tabelle th { text-align: right; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 0 8px 8px; white-space: nowrap; }
+.qs-tabelle td { text-align: right; padding: 9px 0 9px 8px; border-top: 1px solid var(--border); color: var(--text); white-space: nowrap; }
+.qs-tabelle th:first-child, .qs-tabelle td:first-child { text-align: left; padding-left: 0; }
+.qs-tabelle tr.qs-empf td { font-weight: 800; }
+.qs-ok { color: var(--accent); font-weight: 700; }
+.qs-zu-hoch { color: #ef4444; font-weight: 700; }
+body.sun-mode .qs-zu-hoch { color: #b91c1c; }
+.qs-warnung { font-size: 0.84rem; color: var(--warn); line-height: 1.5; margin: 10px 0 0; }
+.qs-formel-liste { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.qs-formel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.qs-formel-lbl { font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+.qs-formel-term { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.92rem; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+.qs-formel-sub { font-size: 0.74rem; color: var(--muted); margin-top: 6px; line-height: 1.45; }
+.qs-hinweis { font-size: 0.8rem; color: var(--muted); line-height: 1.5; border-left: 3px solid var(--warn); padding: 4px 0 4px 12px; margin: 0; }
+@media (max-width: 1359px) {
+  /* Langer Name nur, wenn er in eine Zeile passt – sonst wuerde die ganze
+     Reiterleiste hoeher. */
+  .qs-tab-lang { display: none; }
+  .qs-tab-kurz { display: inline; }
+}
+@media (max-width: 900px) {
+  .qs-layout { grid-template-columns: 1fr; }
+}
+@media (min-width: 901px) and (max-width: 959px) {
+  .main-tab { padding-left: 8px; padding-right: 8px; }
+}
+@media (max-width: 600px) {
+  .qs-card { padding: 16px; }
+  .qs-felder { grid-template-columns: 1fr; gap: 14px; }
+  .qs-haupt-wert { font-size: 2.3rem; }
+  .qs-kz { padding: 9px 10px; }
+  .qs-kz-wert { font-size: 0.92rem; }
+  .qs-kz-lbl { letter-spacing: 0.04em; }
+  .qs-tabelle .qs-spalte-v { display: none; }
+}
+@media (max-width: 380px) {
+  /* Aeltere Regel blendet auf Kleinstbildschirmen alle Spans in Reitern aus;
+     die anderen Reiter haben keine Spans und zeigen weiter Text. */
+  .main-tab .qs-tab-kurz { display: none; }
+  .main-tab .qs-tab-mini { display: inline; }
 }
 
 .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
@@ -2045,8 +2204,13 @@ body.sun-mode .alarm-bar .ab-jump { color: #fff; }
   display: none; position: absolute; right: 0; top: 38px; z-index: 40;
   min-width: 218px; padding: 6px; border-radius: var(--rad-sm);
   background: var(--surface); border: 1px solid var(--border); box-shadow: var(--sh-2);
+  max-height: min(320px, calc(100vh - 24px)); overflow-y: auto;
 }
 .pc-menu.show { display: block; }
+/* Passt nicht mehr unter den Button (z.B. schmales Fenster, Karte am
+   unteren Bildschirmrand): dann oberhalb oeffnen statt die naechste
+   Projektkarte darunter zu verdecken. */
+.pc-menu.flip-up { top: auto; bottom: 38px; }
 .pc-menu button {
   display: flex; align-items: center; gap: 10px; width: 100%;
   border: 0; background: transparent; color: var(--text); cursor: pointer;
@@ -2426,6 +2590,32 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
   </div>
 </div>
 
+<div id="bereich-gate" hidden>
+  <div class="bg-inner">
+    <div class="bg-logo" id="bg-logo" aria-hidden="true"></div>
+    <h1 class="bg-titel">Bereich wählen</h1>
+    <p class="bg-sub" id="bg-sub">In welchem Bereich arbeitest du?</p>
+    <div class="bg-karten" id="bg-karten"></div>
+    <div class="bg-fuss">
+      <span id="bg-nutzer"></span>
+      <button type="button" class="bg-abmelden" onclick="doLogout()">Abmelden</button>
+    </div>
+  </div>
+</div>
+
+<div id="bereich-modal" class="modal-overlay" onclick="closeBereichModal(event)">
+  <div class="modal-card" onclick="event.stopPropagation()" style="max-width:420px;">
+    <div class="modal-head">
+      <h2>🧭 Bereich ändern</h2>
+      <button onclick="closeBereichModal()" class="btn btn-ghost" style="padding:4px 8px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="bm-projekt" id="bm-projekt"></div>
+      <div class="bm-liste" id="bm-liste"></div>
+    </div>
+  </div>
+</div>
+
 <div id="users-modal" class="modal-overlay" onclick="closeUsersModal(event)">
   <div class="modal-card" onclick="event.stopPropagation()">
     <div class="modal-head">
@@ -2434,7 +2624,7 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
     </div>
     <div class="modal-body">
       <div style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;line-height:1.4;">
-        <b>Admin:</b> alles · <b>Planer:</b> Hardware · <b>Bauleitung:</b> nur Messwerte.
+        <b>Admin:</b> alles · <b>Planer:</b> Hardware · <b>Bauleitung:</b> nur Messwerte.<br><b>Bereiche:</b> legen fest, welche Projekte jemand überhaupt sieht. Admins sehen immer alles.
       </div>
       <div id="users-list">Lade Benutzer...</div>
     </div>
@@ -2663,6 +2853,12 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
     <span class="role-chip" id="user-badge-role">—</span>
   </div>
 
+  <button type="button" class="bereich-chip" id="bereich-chip" onclick="zeigeBereichsWahl()" hidden title="Bereich wechseln">
+    <span class="bereich-chip-icon" id="bereich-chip-icon" aria-hidden="true">🏭</span>
+    <span class="bereich-chip-text"><span class="bereich-chip-lbl">Bereich</span><span id="bereich-chip-name">Gewerbe</span></span>
+    <span class="bereich-chip-wechsel">wechseln</span>
+  </button>
+
   <!-- Theme-Umschalter: Baustelle = harter Kontrast fuer Sonne,
        Cockpit = dunkel fuers Buero. Auswahl wird gemerkt. -->
   <div style="margin: 0 8px 12px;">
@@ -2689,6 +2885,11 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
   <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Hilfe</div>
   <button onclick="switchMainTab('anleitung');closeSidebar();" class="sidebar-btn">
     <span class="icon">📖</span><span class="label">Anleitung</span>
+  </button>
+
+  <div class="role-gate-planner" style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Werkzeuge</div>
+  <button onclick="switchMainTab('querschnitt');closeSidebar();" class="sidebar-btn role-gate-planner">
+    <span class="icon">⚡</span><span class="label">Querschnittberechnung</span>
   </button>
 
   <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Vorlagen</div>
@@ -2767,6 +2968,7 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
     <button class="main-tab" onclick="switchMainTab('matrix')" id="tab-matrix">📊 Matrix</button>
     <button class="main-tab" onclick="switchMainTab('projects')" id="tab-projects">📁 Projekte</button>
     <button class="main-tab" onclick="switchMainTab('anleitung')" id="tab-anleitung">📖 Anleitung</button>
+    <button class="main-tab role-gate-planner" onclick="switchMainTab('querschnitt')" id="tab-querschnitt">⚡ <span class="qs-tab-lang">Querschnittberechnung</span><span class="qs-tab-kurz">Querschnitt</span><span class="qs-tab-mini">Querschn.</span></button>
   </div>
 
   <div class="home-view active" id="home-view">
@@ -2837,9 +3039,11 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
             <div class="home-active-progress-text" id="home-active-progress-text"></div>
           </div>
         </div>
-        <button class="btn btn-primary" onclick="switchMainTab('matrix')">Matrix öffnen →</button>
+        <button class="btn btn-primary" id="home-active-open-btn" onclick="switchMainTab('matrix')">Matrix öffnen →</button>
       </div>
     </div>
+
+    <div class="home-projektwahl" id="home-projektwahl" hidden></div>
 
     <div class="home-section">
       <h2>Schnellstart</h2>
@@ -2961,6 +3165,103 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
     <div id="project-group-bar" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;"></div>
 
     <div class="project-grid" id="project-grid"></div>
+  </div>
+
+  <div class="querschnitt-view" id="querschnitt-view">
+    <div class="anleitung-hero qs-hero">
+      <h1>⚡ Querschnittberechnung</h1>
+      <p>Mindestquerschnitt einer Leitung aus Strom, Länge und zulässigem Spannungsfall – für DC-Strang, DC-Hauptleitung und AC-Anschluss mit 230, 400 oder 800 V.</p>
+    </div>
+
+    <div class="qs-layout">
+      <section class="qs-card qs-eingabe" aria-labelledby="qs-titel-eingabe">
+        <h2 class="qs-card-titel" id="qs-titel-eingabe">Eingaben</h2>
+        <div class="qs-seg" role="radiogroup" aria-label="Leitungsart">
+          <button type="button" class="qs-seg-btn active" data-qs-art="dc" role="radio" aria-checked="true" onclick="qsSetArt('dc')">DC</button>
+          <button type="button" class="qs-seg-btn" data-qs-art="ac" role="radio" aria-checked="false" onclick="qsSetArt('ac')">AC</button>
+        </div>
+        <div class="qs-felder">
+          <label class="qs-feld">
+            <span class="qs-lbl">Strom I</span>
+            <span class="qs-inp-wrap"><input type="text" inputmode="decimal" autocomplete="off" id="qs-strom" class="sp-inp qs-inp" placeholder="z. B. 13,5" aria-describedby="qs-hint-strom" oninput="qsBerechnen()"><span class="qs-einheit" aria-hidden="true">A</span></span>
+            <span class="qs-hint" id="qs-hint-strom">Betriebsstrom, z. B. Impp des Strangs oder Summe am GAK</span>
+          </label>
+          <div class="qs-feld">
+            <span class="qs-lbl" id="qs-lbl-spannung">Spannung U</span>
+            <span class="qs-inp-wrap" id="qs-u-dc"><input type="text" inputmode="decimal" autocomplete="off" id="qs-spannung" class="sp-inp qs-inp" placeholder="z. B. 780" aria-labelledby="qs-lbl-spannung" aria-describedby="qs-hint-spannung" oninput="qsBerechnen()"><span class="qs-einheit" aria-hidden="true">V</span></span>
+            <div class="qs-seg qs-seg-klein qs-u-wahl" id="qs-u-ac" role="radiogroup" aria-labelledby="qs-lbl-spannung" hidden>
+              <button type="button" class="qs-seg-btn" data-qs-u="230" role="radio" aria-checked="false" onclick="qsSetUac('230')">230 V</button>
+              <button type="button" class="qs-seg-btn active" data-qs-u="400" role="radio" aria-checked="true" onclick="qsSetUac('400')">400 V</button>
+              <button type="button" class="qs-seg-btn" data-qs-u="800" role="radio" aria-checked="false" onclick="qsSetUac('800')">800 V</button>
+            </div>
+            <span class="qs-hint" id="qs-hint-spannung">MPP-Spannung des Strangs (Module × Vmpp)</span>
+          </div>
+          <label class="qs-feld">
+            <span class="qs-lbl">Leitungslänge L (einfach)</span>
+            <span class="qs-inp-wrap"><input type="text" inputmode="decimal" autocomplete="off" id="qs-laenge" class="sp-inp qs-inp" placeholder="z. B. 45" aria-describedby="qs-hint-laenge" oninput="qsBerechnen()"><span class="qs-einheit" aria-hidden="true">m</span></span>
+            <span class="qs-hint" id="qs-hint-laenge">Einfache Strecke – Hin- und Rückleiter rechnet das Tool mit</span>
+          </label>
+          <label class="qs-feld">
+            <span class="qs-lbl">Zulässiger Spannungsfall</span>
+            <span class="qs-inp-wrap"><input type="text" inputmode="decimal" autocomplete="off" id="qs-du" class="sp-inp qs-inp" placeholder="1" aria-describedby="qs-hint-du" oninput="qsBerechnen()"><span class="qs-einheit" aria-hidden="true">%</span></span>
+            <span class="qs-hint" id="qs-hint-du">Bezogen auf die Spannung U</span>
+          </label>
+          <label class="qs-feld" id="qs-feld-cosphi" hidden>
+            <span class="qs-lbl">cos φ</span>
+            <span class="qs-inp-wrap"><input type="text" inputmode="decimal" autocomplete="off" id="qs-cosphi" class="sp-inp qs-inp" placeholder="1" aria-describedby="qs-hint-cosphi" oninput="qsBerechnen()"></span>
+            <span class="qs-hint" id="qs-hint-cosphi">Ohne Blindleistungsvorgabe des Netzbetreibers: 1</span>
+          </label>
+          <div class="qs-feld">
+            <span class="qs-lbl" id="qs-lbl-material">Leitermaterial</span>
+            <div class="qs-seg qs-seg-klein" role="radiogroup" aria-labelledby="qs-lbl-material">
+              <button type="button" class="qs-seg-btn active" data-qs-mat="cu" role="radio" aria-checked="true" onclick="qsSetMaterial('cu')">Kupfer</button>
+              <button type="button" class="qs-seg-btn" data-qs-mat="al" role="radio" aria-checked="false" onclick="qsSetMaterial('al')">Aluminium</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="qs-card qs-ergebnis" aria-labelledby="qs-titel-ergebnis">
+        <h2 class="qs-card-titel" id="qs-titel-ergebnis">Ergebnis</h2>
+        <div id="qs-ergebnis-inhalt"><p class="qs-leer">Strom, Spannung und Länge eingeben – das Ergebnis erscheint sofort.</p></div>
+      </section>
+    </div>
+
+    <section class="qs-card qs-formeln" aria-labelledby="qs-titel-formeln">
+      <h2 class="qs-card-titel" id="qs-titel-formeln">So wird gerechnet</h2>
+      <div class="qs-formel-liste">
+        <div class="qs-formel">
+          <div class="qs-formel-lbl">Mindestquerschnitt</div>
+          <div class="qs-formel-term">A = k · L · I ÷ (κ · ΔU)</div>
+          <div class="qs-formel-sub">DC: k = 2<br>AC 230 V (einphasig): k = 2 · cos φ<br>AC 400 V und 800 V (dreiphasig): k = √3 · cos φ</div>
+        </div>
+        <div class="qs-formel">
+          <div class="qs-formel-lbl">Zulässiger Spannungsfall in Volt</div>
+          <div class="qs-formel-term">ΔU = U · ΔU% ÷ 100</div>
+          <div class="qs-formel-sub">Beispiel: 1 % von 780 V = 7,8 V</div>
+        </div>
+        <div class="qs-formel">
+          <div class="qs-formel-lbl">Spannungsfall beim gewählten Querschnitt</div>
+          <div class="qs-formel-term">ΔU = k · L · I ÷ (κ · A)</div>
+          <div class="qs-formel-sub">in Prozent: ΔU ÷ U · 100</div>
+        </div>
+        <div class="qs-formel">
+          <div class="qs-formel-lbl">Verlustleistung</div>
+          <div class="qs-formel-term">P = n · I² · L ÷ (κ · A)</div>
+          <div class="qs-formel-sub">n = Zahl der stromführenden Leiter: 2 bei DC und AC 230 V, 3 bei AC 400 V und 800 V</div>
+        </div>
+        <div class="qs-formel">
+          <div class="qs-formel-lbl">Leitfähigkeit κ in m/(Ω·mm²)</div>
+          <div class="qs-formel-term">Kupfer 56 · Aluminium 35</div>
+          <div class="qs-formel-sub">Normquerschnitte Kupfer ab 1,5 mm², Aluminium ab 16 mm²</div>
+        </div>
+        <div class="qs-formel">
+          <div class="qs-formel-lbl">Zeichen</div>
+          <div class="qs-formel-sub">L = einfache Leitungslänge in m<br>I = Strom in A<br>U = Spannung in V<br>A = Querschnitt in mm²</div>
+        </div>
+      </div>
+      <p class="qs-hinweis">Geprüft wird nur der Spannungsfall, als Näherung ohne induktiven Anteil. Strombelastbarkeit (Verlegeart, Häufung, Umgebungstemperatur) und Absicherung immer zusätzlich nach Norm bzw. Kabeldatenblatt prüfen.</p>
+    </section>
   </div>
 
   <div class="anleitung-view" id="anleitung-view">
@@ -3191,8 +3492,10 @@ table.mt tbody tr { scroll-margin-top: 120px; scroll-margin-bottom: 90px; }
 </div>
 
 <script>
-const SB_URL = "https://rcuimtfmjkpxkazbsggj.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjdWltdGZtamtweGthemJzZ2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2Mjc0MTIsImV4cCI6MjEwMjIwMzQxMn0.x1md_jOFKwzYJJTAWE-ucxcCG1GE-QspZ3l4QzjEpBg";
+// Zugangsdaten kommen aus config.js (liegt neben index.html und wird nur einmal
+// eingetragen). Direkt hier eintragen geht zur Not auch noch.
+const SB_URL = (window.PV_CONFIG && window.PV_CONFIG.url) || "";
+const SB_KEY = (window.PV_CONFIG && window.PV_CONFIG.key) || "";
 // createClient() wirft SOFORT einen Fehler, wenn SB_URL/SB_KEY leer sind
 // ("supabaseUrl is required") — ungefangen wuerde das den kompletten Rest
 // dieses <script>-Blocks abbrechen (alle Funktionen/Konstanten, die WEITER
@@ -3350,25 +3653,225 @@ function buildFilterBar(){
 }
 
 function switchMainTab(tab){
+  // Querschnittberechnung nur fuer Planer und Admin – Bauleitung und
+  // Monteure sehen den Reiter nicht und landen sonst auf der Uebersicht.
+  if(tab === 'querschnitt' && !(currentUserRole === 'admin' || currentUserRole === 'planner')) tab = 'home';
   document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.matrix-view, .projects-view, .home-view, .anleitung-view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.matrix-view, .projects-view, .home-view, .anleitung-view, .querschnitt-view').forEach(v => v.classList.remove('active'));
   const tabEl = g(`tab-${tab}`);
   if(tabEl) tabEl.classList.add('active');
   const viewEl = g(`${tab}-view`);
   if(viewEl) viewEl.classList.add('active');
-  document.body.classList.remove('tab-home','tab-matrix','tab-projects','tab-anleitung');
+  document.body.classList.remove('tab-home','tab-matrix','tab-projects','tab-anleitung','tab-querschnitt');
   document.body.classList.add('tab-' + tab);
   if(tab === 'projects') renderProjectGrid();
   if(tab === 'home') renderHomeView();
+  if(tab === 'querschnitt') qsInit();
   const context = g('scroll-context');
   if(context) context.hidden = tab !== 'matrix';
   if(tab === 'matrix') requestAnimationFrame(updateScrollContext);
   closeSidebar();
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   QUERSCHNITTBERECHNUNG
+   Mindestquerschnitt einer Leitung nach dem zulaessigen Spannungsfall
+   (Naeherung ohne induktiven Anteil). Reines Rechenwerkzeug: schreibt nichts
+   ins Projekt und nichts in die Cloud, merkt sich nur die letzten Eingaben
+   (getrennt fuer DC und AC) auf diesem Geraet.
+   ══════════════════════════════════════════════════════════════════════════ */
+const QS_KAPPA = { cu: 56, al: 35 };   // Leitfaehigkeit in m/(Ohm*mm2)
+const QS_NORM = {
+  cu: [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300],
+  al: [16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300]     // Alu erst ab 16 mm2 ueblich
+};
+// AC: Spannung wird ausgewaehlt; 230 V einphasig, 400/800 V dreiphasig (Leiter-Leiter)
+const QS_AC = {
+  '230': { k: 2,            leiter: 2, name: 'AC 230 V',  hint: 'Einphasig, Leiter gegen Neutralleiter' },
+  '400': { k: Math.sqrt(3), leiter: 3, name: 'AC 400 V', hint: 'Dreiphasig, Leiter gegen Leiter' },
+  '800': { k: Math.sqrt(3), leiter: 3, name: 'AC 800 V', hint: 'Dreiphasig, Leiter gegen Leiter – große Wechselrichter' }
+};
+const QS_HINT_I = {
+  dc: 'Betriebsstrom, z. B. Impp des Strangs oder Summe am GAK',
+  ac: 'Nennstrom des Wechselrichters je Außenleiter'
+};
+const QS_HINT_U_DC = 'MPP-Spannung des Strangs (Module × Vmpp)';
+const QS_FELDER = ['strom', 'spannung', 'laenge', 'du', 'cosphi'];
+const QS_SPEICHER = 'pv_querschnitt_v2';
+let qsArt = 'dc', qsMat = 'cu', qsUac = '400', qsBereit = false;
+// DC-Strang (13 A, 780 V) und AC-Anschluss (160 A) sind verschiedene
+// Leitungen – jede Art behaelt ihre eigenen Werte.
+let qsWerte = {
+  dc: { strom: '', spannung: '', laenge: '', du: '1', cosphi: '1' },
+  ac: { strom: '', spannung: '', laenge: '', du: '1', cosphi: '1' }
+};
+
+function qsZahl(v, stellen){
+  return Number(v).toLocaleString('de-AT', { minimumFractionDigits: stellen, maximumFractionDigits: stellen });
+}
+function qsQuer(a){ return Number(a).toLocaleString('de-AT', { maximumFractionDigits: 1 }); }
+
+function qsFelderLesen(){
+  const w = {};
+  QS_FELDER.forEach(f => { const el = g('qs-' + f); w[f] = el ? el.value : ''; });
+  return w;
+}
+function qsFelderSchreiben(w){
+  QS_FELDER.forEach(f => { const el = g('qs-' + f); if(el) el.value = (w && typeof w[f] === 'string') ? w[f] : ''; });
+}
+function qsSpeichern(){
+  try { localStorage.setItem(QS_SPEICHER, JSON.stringify({ art: qsArt, mat: qsMat, uac: qsUac, werte: qsWerte })); } catch(e){}
+}
+
+function qsInit(){
+  if(qsBereit) return;
+  qsBereit = true;
+  try {
+    const s = JSON.parse(localStorage.getItem(QS_SPEICHER) || 'null');
+    if(s && typeof s === 'object'){
+      if(s.art === 'dc' || s.art === 'ac') qsArt = s.art;
+      if(QS_KAPPA[s.mat]) qsMat = s.mat;
+      if(QS_AC[s.uac]) qsUac = s.uac;
+      if(s.werte && typeof s.werte === 'object'){
+        ['dc', 'ac'].forEach(a => {
+          if(s.werte[a] && typeof s.werte[a] === 'object') qsWerte[a] = { ...qsWerte[a], ...s.werte[a] };
+        });
+      }
+    }
+  } catch(e){}
+  qsFelderSchreiben(qsWerte[qsArt]);
+  qsAnzeigen();
+  qsBerechnen();
+}
+
+function qsAnzeigen(){
+  const istAc = qsArt === 'ac';
+  const setzeGruppe = (attr, wert) => document.querySelectorAll(`[${attr}]`).forEach(b => {
+    const an = b.getAttribute(attr) === wert;
+    b.classList.toggle('active', an);
+    b.setAttribute('aria-checked', an ? 'true' : 'false');
+  });
+  setzeGruppe('data-qs-art', qsArt);
+  setzeGruppe('data-qs-u', qsUac);
+  setzeGruppe('data-qs-mat', qsMat);
+  const udc = g('qs-u-dc'); if(udc) udc.hidden = istAc;
+  const uac = g('qs-u-ac'); if(uac) uac.hidden = !istAc;
+  const cos = g('qs-feld-cosphi'); if(cos) cos.hidden = !istAc;
+  const hi = g('qs-hint-strom');    if(hi) hi.textContent = QS_HINT_I[qsArt];
+  const hu = g('qs-hint-spannung'); if(hu) hu.textContent = istAc ? QS_AC[qsUac].hint : QS_HINT_U_DC;
+}
+
+function qsSetArt(art){
+  if(art !== 'dc' && art !== 'ac') return;
+  if(!qsBereit) qsInit();
+  if(art === qsArt) return;
+  qsWerte[qsArt] = qsFelderLesen();
+  qsArt = art;
+  qsFelderSchreiben(qsWerte[qsArt]);
+  qsAnzeigen();
+  qsBerechnen();
+}
+function qsSetUac(u){
+  if(!QS_AC[u]) return;
+  if(!qsBereit) qsInit();
+  qsUac = u;
+  qsAnzeigen();
+  qsBerechnen();
+}
+function qsSetMaterial(mat){
+  if(!QS_KAPPA[mat]) return;
+  if(!qsBereit) qsInit();
+  qsMat = mat;
+  qsAnzeigen();
+  qsBerechnen();
+}
+
+function qsBerechnen(){
+  const out = g('qs-ergebnis-inhalt');
+  if(!out) return;
+  qsWerte[qsArt] = qsFelderLesen();
+  qsSpeichern();
+  const w = qsWerte[qsArt];
+  const istAc = qsArt === 'ac';
+  const ac = QS_AC[qsUac];
+  const I = toNum(w.strom), L = toNum(w.laenge), du = toNum(w.du);
+  const U = istAc ? Number(qsUac) : toNum(w.spannung);
+  const cos = istAc ? toNum(w.cosphi) : 1;
+
+  const fehlt = [];
+  if(!(I > 0)) fehlt.push('Strom');
+  if(!(U > 0)) fehlt.push('Spannung');
+  if(!(L > 0)) fehlt.push('Länge');
+  if(fehlt.length){
+    out.innerHTML = `<p class="qs-leer">${fehlt.join(', ').replace(/, ([^,]*)$/, ' und $1')} eingeben – das Ergebnis erscheint sofort.</p>`;
+    return;
+  }
+  if(!(du > 0 && du <= 20)){
+    out.innerHTML = '<p class="qs-leer">Zulässigen Spannungsfall zwischen 0 und 20 % eingeben.</p>';
+    return;
+  }
+  if(!(cos > 0 && cos <= 1)){
+    out.innerHTML = '<p class="qs-leer">cos φ zwischen 0 und 1 eingeben.</p>';
+    return;
+  }
+
+  const kappa = QS_KAPPA[qsMat];
+  const k = istAc ? ac.k : 2;
+  const leiter = istAc ? ac.leiter : 2;
+  const faktor = k * cos;                      // DC: 2 · AC 230 V: 2·cos φ · AC 400/800 V: √3·cos φ
+  const duV = U * du / 100;                    // zulaessiger Spannungsfall in V
+  const aMin = faktor * L * I / (kappa * duV);
+  const reihe = QS_NORM[qsMat];
+  const iEmpf = reihe.findIndex(a => a >= aMin - 1e-9);
+  const spannungsfall = a => faktor * L * I / (kappa * a);
+  const verlust = a => leiter * I * I * L / (kappa * a);
+  const matName = qsMat === 'cu' ? 'Kupfer' : 'Aluminium';
+  const artName = istAc ? ac.name : 'DC';
+  const kTxt = !istAc ? '2' : `${qsUac === '230' ? '2' : '√3'} · ${qsZahl(cos, 2)}`;
+  const rechenweg = `A = ${kTxt} · ${qsZahl(L, 1)} m · ${qsZahl(I, 2)} A ÷ (${kappa} · ${qsZahl(duV, 2)} V) = ${qsZahl(aMin, 2)} mm²`;
+
+  if(iEmpf < 0){
+    out.innerHTML = `
+      <div class="qs-haupt"><span class="qs-haupt-wert">&gt; ${qsQuer(reihe[reihe.length - 1])}</span><span class="qs-haupt-einheit">mm²</span></div>
+      <div class="qs-haupt-lbl">Rechnerisch ${qsZahl(aMin, 1)} mm² – mehr als der größte Normquerschnitt (${matName}, ${artName})</div>
+      <div class="qs-rechenweg">${esc(rechenweg)}</div>
+      <p class="qs-warnung">Parallele Leitungen, eine höhere Spannung oder einen größeren zulässigen Spannungsfall prüfen.</p>`;
+    return;
+  }
+
+  const aEmpf = reihe[iEmpf];
+  const anderes = qsMat === 'cu' ? 'al' : 'cu';
+  const andersName = anderes === 'cu' ? 'Kupfer' : 'Aluminium';
+  const reiheAnders = QS_NORM[anderes];
+  const aMinAnders = faktor * L * I / (QS_KAPPA[anderes] * duV);
+  const iAnders = reiheAnders.findIndex(a => a >= aMinAnders - 1e-9);
+  const andersTxt = iAnders < 0 ? `mehr als ${qsQuer(reiheAnders[reiheAnders.length - 1])} mm²` : `${qsQuer(reiheAnders[iAnders])} mm²`;
+  const zeilen = [];
+  for(let i = Math.max(0, iEmpf - 1); i <= Math.min(reihe.length - 1, iEmpf + 2); i++){
+    const a = reihe[i], dv = spannungsfall(a), dp = dv / U * 100;
+    const passt = dp <= du + 1e-9;
+    const status = i === iEmpf ? '✓ empfohlen' : (passt ? '✓' : '✗ zu hoch');
+    zeilen.push(`<tr${i === iEmpf ? ' class="qs-empf"' : ''}><td>${qsQuer(a)} mm²</td><td class="qs-spalte-v">${qsZahl(dv, 2)} V</td><td>${qsZahl(dp, 2)} %</td><td>${qsZahl(verlust(a), 0)} W</td><td class="${passt ? 'qs-ok' : 'qs-zu-hoch'}">${status}</td></tr>`);
+  }
+  out.innerHTML = `
+    <div class="qs-haupt"><span class="qs-haupt-wert">${qsQuer(aEmpf)}</span><span class="qs-haupt-einheit">mm²</span></div>
+    <div class="qs-haupt-lbl">Empfohlener Normquerschnitt · ${matName} · ${artName}</div>
+    <div class="qs-vergleich">Mit ${andersName}: <strong>${andersTxt}</strong> <button type="button" class="qs-link" onclick="qsSetMaterial('${anderes}')">anzeigen</button></div>
+    <div class="qs-kennzahlen">
+      <div class="qs-kz"><span class="qs-kz-lbl">Rechnerisch</span><span class="qs-kz-wert">${qsZahl(aMin, 2)} mm²</span></div>
+      <div class="qs-kz"><span class="qs-kz-lbl">Spannungsfall</span><span class="qs-kz-wert">${qsZahl(spannungsfall(aEmpf) / U * 100, 2)} %</span></div>
+      <div class="qs-kz"><span class="qs-kz-lbl">Verlust</span><span class="qs-kz-wert">${qsZahl(verlust(aEmpf), 0)} W</span></div>
+    </div>
+    <div class="qs-rechenweg">${esc(rechenweg)}</div>
+    <table class="qs-tabelle">
+      <thead><tr><th>Querschnitt</th><th class="qs-spalte-v">ΔU</th><th>ΔU %</th><th>Verlust</th><th>max. ${qsZahl(du, 1)} %</th></tr></thead>
+      <tbody>${zeilen.join('')}</tbody>
+    </table>`;
+}
+
 function renderProjectGrid(){
   const grid = g('project-grid');
-  const ids = Object.keys(PROJECTS);
+  const ids = bereichProjektIds();
   
   if(ids.length === 0){
     if(g('project-group-bar')) g('project-group-bar').innerHTML = '';
@@ -3461,6 +3964,7 @@ function renderProjectGrid(){
               <div class="pc-menu" id="pc-menu-${id}" onclick="event.stopPropagation()">
                 <button onclick="renameProject('${id}', event); closeProjectMenus();"><span>✏️</span> Umbenennen</button>
                 <button onclick="setProjectGroup('${id}', event); closeProjectMenus();"><span>🏷️</span> Gruppe zuweisen</button>
+                <button onclick="openBereichModal('${id}', event); closeProjectMenus();"><span>🧭</span> Bereich ändern</button>
                 <button onclick="openAssignModal('${id}', event); closeProjectMenus();"><span>👥</span> Bauleitung zuweisen</button>
                 <button onclick="openHistoryModal('${id}', event); closeProjectMenus();"><span>⏳</span> Versionen &amp; Wiederherstellen</button>
                 <button class="danger" onclick="deleteProject('${id}', event); closeProjectMenus();"><span>🗑️</span> Projekt löschen</button>
@@ -3546,7 +4050,18 @@ function toggleProjectMenu(id, event){
   if(!menu) return;
   const wasOpen = menu.classList.contains('show');
   closeProjectMenus();
-  if(!wasOpen) menu.classList.add('show');
+  if(!wasOpen){
+    menu.classList.remove('flip-up');
+    menu.classList.add('show');
+    // Ragt das Menu unten ueber die eigene Karte ODER den sichtbaren Bereich
+    // hinaus, deckt es sonst die naechste Projektkarte darunter zu (v.a. bei
+    // schmalen Fenstern mit nur einer Spalte) — dann stattdessen nach oben
+    // aufklappen, wo in der Regel mehr Platz ist.
+    const rect = menu.getBoundingClientRect();
+    const card = menu.closest('.project-card');
+    const cardBottom = card ? card.getBoundingClientRect().bottom : Infinity;
+    if(rect.bottom > Math.min(cardBottom, window.innerHeight - 8)) menu.classList.add('flip-up');
+  }
 }
 function closeProjectMenus(){
   document.querySelectorAll('.pc-menu.show').forEach(m => m.classList.remove('show'));
@@ -3564,6 +4079,194 @@ function onProjectSearch(value){
 
 let PROJECTS = {};
 let CURRENT_PROJECT_ID = null;
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BEREICHE (Privatanlage / Gewerbe / Freiflaeche) + STARTBILDSCHIRM
+   Jedes Projekt gehoert zu genau einem Bereich. Welche Bereiche jemand sehen
+   darf, legt der Admin in der Benutzerverwaltung fest – die Datenbank setzt
+   das durch. Nach dem Anmelden startet man immer auf dem Startbildschirm,
+   waehlt den Bereich und landet ohne offenes Projekt auf der Uebersicht.
+   ══════════════════════════════════════════════════════════════════════════ */
+const BEREICHE = {
+  privat:      { name: 'Privatanlage', icon: '🏠', info: 'Einfamilienhäuser und kleine Dachanlagen' },
+  gewerbe:     { name: 'Gewerbe',      icon: '🏭', info: 'Hallen, Betriebe und öffentliche Gebäude' },
+  freiflaeche: { name: 'Freifläche',   icon: '☀️', info: 'Solarparks und Freiflächenanlagen' }
+};
+const BEREICH_REIHE = ['privat', 'gewerbe', 'freiflaeche'];
+let CURRENT_BEREICH = null;
+let currentUserBereiche = [];
+
+function projektBereich(p){ return (p && BEREICHE[p.bereich]) ? p.bereich : 'gewerbe'; }
+function imAktuellenBereich(id){ return !CURRENT_BEREICH || projektBereich(PROJECTS[id]) === CURRENT_BEREICH; }
+function bereichProjektIds(){ return Object.keys(PROJECTS).filter(imAktuellenBereich); }
+function erlaubteBereiche(){
+  if(currentUserRole === 'admin') return BEREICH_REIHE.slice();
+  return BEREICH_REIHE.filter(b => (currentUserBereiche || []).indexOf(b) >= 0);
+}
+
+function zeigeBereichsWahl(){
+  const gate = g('bereich-gate');
+  if(!gate) return;
+  const logo = g('bg-logo');
+  const authLogo = document.querySelector('#auth-gate .auth-logo');
+  if(logo && authLogo && !logo.childElementCount) logo.innerHTML = authLogo.innerHTML;
+  const erlaubt = erlaubteBereiche();
+  const name = currentUser && currentUser.email ? currentUser.email.split('@')[0] : '';
+  const sub = g('bg-sub');
+  if(sub) sub.textContent = erlaubt.length ? `${name ? 'Hallo ' + name + ' – ' : ''}in welchem Bereich arbeitest du?` : '';
+  const karten = g('bg-karten');
+  if(karten){
+    if(!erlaubt.length){
+      karten.innerHTML = '<div class="bg-leer">Dir ist noch kein Bereich freigeschaltet.<br>Bitte melde dich beim Admin.</div>';
+    } else {
+      const anzahl = b => Object.keys(PROJECTS).filter(id => projektBereich(PROJECTS[id]) === b).length;
+      karten.innerHTML = erlaubt.map(b => {
+        const x = BEREICHE[b], n = anzahl(b);
+        return `<button type="button" class="bg-karte" data-bereich="${b}" onclick="waehleBereich('${b}')">
+          <span class="bg-icon" aria-hidden="true">${x.icon}</span>
+          <span class="bg-name">${x.name}</span>
+          <span class="bg-info">${x.info}</span>
+          <span class="bg-zahl">${n === 1 ? '1 Projekt' : n + ' Projekte'}</span>
+        </button>`;
+      }).join('');
+    }
+  }
+  const nutzer = g('bg-nutzer');
+  if(nutzer) nutzer.textContent = currentUser && currentUser.email ? currentUser.email : '';
+  gate.hidden = false;
+  document.body.classList.add('bereich-offen');
+  if(typeof closeSidebar === 'function') closeSidebar();
+}
+
+async function waehleBereich(b){
+  if(erlaubteBereiche().indexOf(b) < 0) return;
+  // Ein offenes Projekt vorher sichern, dann ohne Projekt im Bereich starten
+  if(CURRENT_PROJECT_ID){ try { await flushPendingProjectEdits(); } catch(e){} }
+  CURRENT_BEREICH = b;
+  CURRENT_PROJECT_ID = null;
+  APP_STATE = {};
+  currentProjectGroupFilter = '__all__';
+  const gate = g('bereich-gate');
+  if(gate) gate.hidden = true;
+  document.body.classList.remove('bereich-offen');
+  aktualisiereBereichsAnzeige();
+  renderMatrix();
+  if(typeof updateKPIs === 'function') updateKPIs();
+  renderProjectUI();
+  if(g('project-grid')) renderProjectGrid();
+  switchMainTab('home');
+}
+
+function aktualisiereBereichsAnzeige(){
+  const chip = g('bereich-chip');
+  if(chip){
+    chip.hidden = !CURRENT_BEREICH;
+    if(CURRENT_BEREICH){
+      g('bereich-chip-icon').textContent = BEREICHE[CURRENT_BEREICH].icon;
+      g('bereich-chip-name').textContent = BEREICHE[CURRENT_BEREICH].name;
+    }
+  }
+  document.body.dataset.bereich = CURRENT_BEREICH || '';
+}
+
+// Uebersicht ohne offenes Projekt: die zuletzt bearbeiteten Projekte des Bereichs
+function renderHomeProjektwahl(ids){
+  const box = g('home-projektwahl');
+  const btn = g('home-active-open-btn');
+  const offen = !!getCurrentProject();
+  if(btn) btn.style.display = offen ? '' : 'none';
+  if(!box) return;
+  if(offen || !ids.length){ box.hidden = true; box.innerHTML = ''; return; }
+  const zeit = p => Date.parse(p.updated_at || 0) || 0;
+  const liste = ids.map(id => PROJECTS[id]).sort((a, b) => zeit(b) - zeit(a)).slice(0, 6);
+  box.innerHTML = `
+    <div class="hpw-kopf"><span class="hpw-titel">Projekt öffnen</span>${ids.length > liste.length ? `<button type="button" class="hpw-alle" onclick="switchMainTab('projects')">Alle ${ids.length} Projekte →</button>` : ''}</div>
+    <div class="hpw-liste">${liste.map(p => {
+      const prog = getProjectProgress(p);
+      const meta = [p.group, prog.total ? `${prog.done} von ${prog.total} gemessen` : null, p.locked ? '🔒 gesperrt' : null].filter(Boolean).join(' · ');
+      return `<button type="button" class="hpw-karte" onclick="selectSbProject('${esc(p.id).replace(/'/g, "\\&#39;")}')"><span class="hpw-name">${esc(p.name || 'Unbenannt')}</span><span class="hpw-meta">${esc(meta || 'Noch keine Messwerte')}</span></button>`;
+    }).join('')}</div>`;
+  box.hidden = false;
+}
+
+// Bereich eines Projekts aendern (Planer/Admin; die Datenbank prueft mit)
+let bereichModalProjektId = null;
+function openBereichModal(id, event){
+  if(event){ event.stopPropagation(); event.preventDefault(); }
+  if(currentUserRole !== 'admin' && currentUserRole !== 'planner') return toast('🔒 Nur Planer oder Admin');
+  const proj = PROJECTS[id];
+  if(!proj) return;
+  bereichModalProjektId = id;
+  const aktuell = projektBereich(proj);
+  g('bm-projekt').textContent = proj.name || id;
+  g('bm-liste').innerHTML = erlaubteBereiche().map(b => `
+    <button type="button" class="bm-btn ${b === aktuell ? 'active' : ''}" onclick="setProjectBereich('${b}')"${b === aktuell ? ' aria-current="true"' : ''}>
+      <span class="bm-icon" aria-hidden="true">${BEREICHE[b].icon}</span>
+      <span class="bm-name">${BEREICHE[b].name}</span>${b === aktuell ? '<span class="bm-aktuell">aktuell</span>' : ''}
+    </button>`).join('');
+  g('bereich-modal').classList.add('show');
+}
+function closeBereichModal(evt){
+  if(!evt || evt.target === g('bereich-modal')){
+    g('bereich-modal').classList.remove('show');
+    bereichModalProjektId = null;
+  }
+}
+async function setProjectBereich(b){
+  const id = bereichModalProjektId;
+  const proj = PROJECTS[id];
+  if(!proj || !BEREICHE[b]) return;
+  const vorher = projektBereich(proj);
+  closeBereichModal();
+  if(b === vorher) return;
+  proj.bereich = b;
+  if(supabaseClient && currentUser){
+    try {
+      const { data, error } = await supabaseClient.from('pv_projects').update({ bereich: b }).eq('id', id).select('id');
+      if(error) throw error;
+      if(!data || !data.length) throw new Error('Keine Berechtigung – ist das Protokoll gesperrt?');
+    } catch(e){
+      proj.bereich = vorher;
+      toastError('Bereich konnte nicht geändert werden', e);
+      return;
+    }
+  } else {
+    saveProjectsLocal();
+  }
+  if(id === CURRENT_PROJECT_ID && b !== CURRENT_BEREICH){
+    CURRENT_PROJECT_ID = null;
+    APP_STATE = {};
+    renderMatrix();
+  }
+  renderProjectUI();
+  if(g('project-grid')) renderProjectGrid();
+  toast(`🧭 „${proj.name}“ ist jetzt im Bereich ${BEREICHE[b].name}`);
+}
+
+// Benutzerverwaltung: Bereiche je Nutzer
+function bereicheZellenHtml(u){
+  if(u.role === 'admin') return '<span class="ub-alle">Admin – sieht alle Bereiche</span>';
+  const hat = Array.isArray(u.bereiche) ? u.bereiche : [];
+  const chips = BEREICH_REIHE.map(b => {
+    const an = hat.indexOf(b) >= 0;
+    return `<button type="button" class="ub-chip ${an ? 'an' : ''}" aria-pressed="${an}" onclick="changeUserBereich('${u.id}', '${b}', ${!an})">${BEREICHE[b].icon} ${BEREICHE[b].name}</button>`;
+  }).join('');
+  return `<div class="ub-bereiche" role="group" aria-label="Bereiche von ${esc(u.email || '')}">${chips}${hat.length ? '' : '<span class="ub-hinweis">Noch kein Bereich – sieht nichts</span>'}</div>`;
+}
+async function changeUserBereich(userId, bereich, an){
+  if(currentUserRole !== 'admin') return toast('Nur für Admins');
+  try {
+    const { data: row, error: e1 } = await supabaseClient.from('profiles').select('bereiche').eq('id', userId).single();
+    if(e1) throw e1;
+    const menge = new Set(row && Array.isArray(row.bereiche) ? row.bereiche : []);
+    if(an) menge.add(bereich); else menge.delete(bereich);
+    const neu = BEREICH_REIHE.filter(b => menge.has(b));
+    const { error } = await supabaseClient.from('profiles').update({ bereiche: neu }).eq('id', userId);
+    if(error) throw error;
+    toast(`✅ Bereiche: ${neu.length ? neu.map(b => BEREICHE[b].name).join(', ') : 'keine'}`);
+  } catch(e){ toastError('Bereiche konnten nicht geändert werden', e); }
+  loadAllUsers();
+}
 let APP_STATE = {};
 let cloudProjectIds = new Set();
 let cloudFetchSucceeded = false;
@@ -3934,11 +4637,11 @@ function renderSidebarProjects(){
   const tree = g('sb-proj-tree');
   if(!tree) return;
   const countEl = g('sb-proj-count');
-  const ids = Object.keys(PROJECTS);
+  const ids = bereichProjektIds();
   if(countEl) countEl.textContent = String(ids.length);
 
   if(ids.length === 0){
-    tree.innerHTML = `<div class="sb-proj-empty">Noch keine Projekte.<br>Lege dein erstes an.</div>`;
+    tree.innerHTML = `<div class="sb-proj-empty">${CURRENT_BEREICH ? 'Noch keine Projekte im Bereich ' + esc(BEREICHE[CURRENT_BEREICH].name) + '.' : 'Noch keine Projekte.'}<br>Lege dein erstes an.</div>`;
     return;
   }
 
@@ -4041,10 +4744,10 @@ function renderHomeView(){
   if(subtitle){
     const h = new Date().getHours();
     const greet = h < 11 ? 'Guten Morgen' : (h < 18 ? 'Hallo' : 'Guten Abend');
-    subtitle.textContent = `${greet} — bereit für die Baustelle`;
+    subtitle.textContent = CURRENT_BEREICH ? `${greet} — Bereich ${BEREICHE[CURRENT_BEREICH].name}` : `${greet} — bereit für die Baustelle`;
   }
 
-  const ids = Object.keys(PROJECTS);
+  const ids = bereichProjektIds();
   const hasProjects = ids.length > 0;
   if(empty) empty.style.display = hasProjects ? 'none' : 'block';
   if(active) active.style.display = hasProjects ? 'block' : 'none';
@@ -4098,10 +4801,11 @@ function renderHomeView(){
       if(ptext) ptext.textContent = total > 0 ? `${done} von ${total} Strings fertig · ${pct}%` : '';
     } else if(activeName){
       activeName.textContent = 'Kein Projekt geöffnet';
-      if(activeMeta) activeMeta.textContent = 'Wähle ein Projekt in der Sidebar.';
+      if(activeMeta) activeMeta.textContent = 'Wähle unten ein Projekt oder lege ein neues an.';
       const pwrap = g('home-active-progress'); if(pwrap) pwrap.style.display = 'none';
     }
   }
+  renderHomeProjektwahl(ids);
 }
 
 function renderProjectUI(){
@@ -4123,9 +4827,10 @@ async function initProjects(){
   }
 
   if(cloudFetchSucceeded) clearLegacyBrowserCache();
-  const ids = Object.keys(PROJECTS);
-  CURRENT_PROJECT_ID = ids[0] || null;
-  loadCurrentProjectData();
+  // Immer ohne offenes Projekt starten – gewaehlt wird nach dem Startbildschirm
+  CURRENT_PROJECT_ID = null;
+  APP_STATE = {};
+  renderMatrix();
   if(CURRENT_PROJECT_ID && cloudFetchSucceeded){
     await fetchCloudDataManually(true);
   }
@@ -4593,7 +5298,7 @@ function renderMatrix(remoteOverride = null){
   const wrKeys = Object.keys(plan).map(Number).filter(n => !isNaN(n)).sort((a,b)=>a-b);
 
   if(wrKeys.length === 0){
-    container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--muted);">Kein aktives Projekt.</div>`;
+    container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--muted);">Kein Projekt geöffnet.<div style="margin-top:14px;"><button class="btn btn-primary" onclick="switchMainTab(${CURRENT_BEREICH ? "'home'" : "'projects'"})">Projekt wählen</button></div></div>`;
     window.scrollTo(0, _savedScrollY);
     return;
   }
@@ -6428,7 +7133,7 @@ async function confirmPVSOLImport(){
   const parsed = parsePVSOLData(pendingPVSOLData);
   let id = parsed.projectName.replace(/[^a-zA-Z0-9]/g, '_');
   if(PROJECTS[id]) id += '_' + Date.now();
-  PROJECTS[id] = { id, name: parsed.projectName, model_wp: parsed.moduleWp || 460, locked: false, plan: parsed.plan, updated_at: new Date().toISOString() };
+  PROJECTS[id] = { id, name: parsed.projectName, bereich: CURRENT_BEREICH || 'gewerbe', model_wp: parsed.moduleWp || 460, locked: false, plan: parsed.plan, updated_at: new Date().toISOString() };
   saveProjectsLocal();
   if(supabaseClient && currentUser) await saveProjectToCloud(id);
   closePVSOLModal();
@@ -6439,7 +7144,7 @@ async function confirmPVSOLImport(){
 async function openProjectsModal(){
   if(supabaseClient && currentUser) await fetchProjectsFromCloud();
   const list = g('proj-list');
-  const ids = Object.keys(PROJECTS);
+  const ids = bereichProjektIds();
   list.innerHTML = ids.map(id => {
     const proj = PROJECTS[id];
     const lockedIcon = proj.locked ? '🔒 ' : '';
@@ -6515,12 +7220,12 @@ function openNewProjectModal(){
   g('np-group').value = currentProjectGroupFilter && currentProjectGroupFilter !== '__all__' && currentProjectGroupFilter !== '__none__' ? currentProjectGroupFilter : '';
   const groupList = g('np-group-suggestions');
   if(groupList){
-    const groups = [...new Set(Object.values(PROJECTS).map(p => p.group).filter(Boolean))].sort();
+    const groups = [...new Set(bereichProjektIds().map(id => PROJECTS[id].group).filter(Boolean))].sort();
     groupList.innerHTML = groups.map(gr => `<option value="${esc(gr)}"></option>`).join('');
   }
   const sel = g('np-clone-from');
   sel.innerHTML = '';
-  Object.values(PROJECTS).forEach(p => {
+  bereichProjektIds().map(id => PROJECTS[id]).forEach(p => {
     const opt = document.createElement('option');
     opt.value = p.id; opt.textContent = p.name;
     sel.appendChild(opt);
@@ -6586,7 +7291,7 @@ async function doCreateNewProject(){
       };
     }
   }
-   PROJECTS[id] = { id, name, group: group || null, model_wp: wp, locked: false, plan, updated_at: new Date().toISOString() };
+   PROJECTS[id] = { id, name, group: group || null, bereich: CURRENT_BEREICH || 'gewerbe', model_wp: wp, locked: false, plan, updated_at: new Date().toISOString() };
   saveProjectsLocal();
   CURRENT_PROJECT_ID = id;
   closeNewProjectModal();
@@ -6687,7 +7392,7 @@ async function setProjectGroup(id, event){
   const proj = PROJECTS[id];
   if(!proj) return;
   if(currentUserRole === 'site') return toast('🔒 Keine Berechtigung');
-  const existingGroups = [...new Set(Object.values(PROJECTS).map(p => p.group).filter(Boolean))].sort();
+  const existingGroups = [...new Set(bereichProjektIds().map(pid => PROJECTS[pid].group).filter(Boolean))].sort();
   const hint = existingGroups.length ? `\n\nVorhandene Gruppen: ${existingGroups.join(', ')}` : '';
   const input = prompt('Gruppe für dieses Projekt (leer lassen zum Entfernen):' + hint, proj.group || '');
   if(input === null) return;
@@ -6733,7 +7438,7 @@ async function editGroup(oldName, event) {
   if(trimmed.toUpperCase() === 'LÖSCHEN') {
     if(!confirm(`Möchtest du die Gruppe "${oldName}" wirklich auflösen?`)) return;
     for(let id in PROJECTS) {
-      if(PROJECTS[id].group === oldName) {
+      if(PROJECTS[id].group === oldName && imAktuellenBereich(id)) {
         PROJECTS[id].group = null;
         PROJECTS[id].updated_at = new Date().toISOString();
         try { await updateProjectConfigInCloud(id); projectsUpdated++; }
@@ -6744,7 +7449,7 @@ async function editGroup(oldName, event) {
     else toast(`🗑️ Gruppe aufgelöst (${projectsUpdated} Projekte aktualisiert)`);
   } else {
     for(let id in PROJECTS) {
-      if(PROJECTS[id].group === oldName) {
+      if(PROJECTS[id].group === oldName && imAktuellenBereich(id)) {
         PROJECTS[id].group = trimmed;
         PROJECTS[id].updated_at = new Date().toISOString();
         try { await updateProjectConfigInCloud(id); projectsUpdated++; }
@@ -6910,7 +7615,7 @@ async function fetchProjectsFromCloud(){
     try { await saveProjectToCloud(CURRENT_PROJECT_ID); } catch(e){}
   }
   try {
-    const query = supabaseClient.from('pv_projects').select('id, name, config, data, updated_at, user_id, pruefer, modul_wp');
+    const query = supabaseClient.from('pv_projects').select('id, name, config, data, updated_at, user_id, pruefer, modul_wp, bereich');
     const { data, error } = await query;
     if(error) { toastError('Projekte konnten nicht geladen werden', error); return; }
     cloudFetchSucceeded = true;
@@ -6937,6 +7642,7 @@ async function fetchProjectsFromCloud(){
           updated_at: cloudProj.updated_at,
           cloud_updated_at: cloudProj.updated_at,
           user_id: cloudProj.user_id,
+          bereich: cloudProj.bereich || 'gewerbe',
           // Messstand mitnehmen statt wegwerfen: die Spalte wird oben ohnehin
           // schon mitgeladen. Damit kann die Projektkarte den Fortschritt
           // anzeigen, ohne dass ein zweiter Cloud-Abruf noetig waere.
@@ -6966,7 +7672,8 @@ async function saveProjectToCloudNow(projectId, skipRender){
       id: projectId, name: proj.name, pruefer: currentUser.email, 
       user_id: currentUser.id, modul_wp: proj.model_wp || 465, 
       mppts: "dynamic", data: stateData, config: configToSave, 
-      updated_at: updatedAt
+      updated_at: updatedAt,
+      bereich: projektBereich(proj)
     };
     const { error } = await supabaseClient.from('pv_projects').upsert(payload);
     if(syncIndicator) syncIndicator.classList.remove('syncing');
@@ -7011,7 +7718,8 @@ async function pushCloudDataManually(){
     const { error } = await supabaseClient.from('pv_projects').upsert({ 
       id: CURRENT_PROJECT_ID, name: proj.name, pruefer: currentUser.email, 
       modul_wp: proj.model_wp || 465, mppts: "dynamic", 
-      data: stateData, config: configToSave, updated_at: new Date().toISOString() 
+      data: stateData, config: configToSave, updated_at: new Date().toISOString(),
+      bereich: projektBereich(proj)
     });
     if(!error) toast('✅ Cloud gespeichert!'); else toastError('Cloud-Speichern fehlgeschlagen', error);
   } catch(e) { toastError('Keine Verbindung zur Cloud', e); }
@@ -7066,7 +7774,7 @@ async function handleAuthSubmit(){
   const password = g('auth-password').value || '';
   const errEl = g('auth-error'); errEl.textContent = '';
   if(!email || !password){ errEl.textContent = 'Bitte E-Mail und Passwort eingeben.'; return; }
-  if(!supabaseClient){ errEl.textContent = 'Keine Verbindung zu Supabase.'; return; }
+  if(!supabaseClient){ errEl.textContent = (!SB_URL || !SB_KEY) ? 'Zugangsdaten fehlen – bitte URL und Key in config.js eintragen.' : 'Keine Verbindung zu Supabase – Internetverbindung prüfen.'; return; }
   if(authMode === 'login'){
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if(error){ errEl.textContent = 'Login fehlgeschlagen: ' + error.message; return; }
@@ -7083,6 +7791,9 @@ async function doLogout(){
   if(!confirm('Wirklich abmelden?')) return;
   if(supabaseClient) await supabaseClient.auth.signOut();
   currentUser = null; currentUserRole = null;
+  CURRENT_BEREICH = null; currentUserBereiche = [];
+  aktualisiereBereichsAnzeige();
+  { const bg = g('bereich-gate'); if(bg) bg.hidden = true; document.body.classList.remove('bereich-offen'); }
   g('user-badge').style.display = 'none'; g('auth-gate').style.display = 'flex';
 }
 
@@ -7124,6 +7835,7 @@ async function onAuthenticated(user){
   const isPlannerUp = currentUserRole === 'admin' || currentUserRole === 'planner';
   document.querySelectorAll('.role-gate-admin').forEach(el => el.classList.toggle('hidden-role', !isAdmin));
   document.querySelectorAll('.role-gate-planner').forEach(el => el.classList.toggle('hidden-role', !isPlannerUp));
+  if(!isPlannerUp && document.body.classList.contains('tab-querschnitt')) switchMainTab('home');
   g('user-badge').style.display = 'flex';
   g('user-badge-email').textContent = currentUser.email;
   const roleLabels = { admin: 'Admin', planner: 'Planer', site: 'Bauleitung' };
@@ -7132,6 +7844,7 @@ async function onAuthenticated(user){
   updateLockUI();
   updateRoleHint();
   if(currentUserRole === 'site') toggleHideInactive(true);
+  zeigeBereichsWahl();
 }
 
 async function loadMyProfile(){
@@ -7140,10 +7853,12 @@ async function loadMyProfile(){
     if(error || !data){
       await supabaseClient.from('profiles').insert({ id: currentUser.id, email: currentUser.email, role: 'site' });
       currentUserRole = 'site';
+      currentUserBereiche = [];
     } else {
       currentUserRole = data.role || 'site';
+      currentUserBereiche = Array.isArray(data.bereiche) ? data.bereiche : [];
     }
-  } catch(e){ currentUserRole = 'site'; }
+  } catch(e){ currentUserRole = 'site'; currentUserBereiche = []; }
   // Ab hier steht fest, WER angemeldet ist — jetzt gilt dessen eigene
   // Darstellung und nicht mehr die zuletzt am Geraet verwendete.
   if(window.PV_DESIGN) PV_DESIGN.neuLaden();
@@ -7159,7 +7874,7 @@ function closeUsersModal(evt){ if(!evt || evt.target === g('users-modal')) g('us
 async function loadAllUsers(){
   const listEl = g('users-list'); listEl.innerHTML = 'Lade...';
   try {
-    const { data, error } = await supabaseClient.from('profiles').select('id, email, role').order('created_at', { ascending: true });
+    const { data, error } = await supabaseClient.from('profiles').select('id, email, role, bereiche').order('created_at', { ascending: true });
     if(error){ listEl.innerHTML = `Fehler: ${error.message}`; return; }
     listEl.innerHTML = data.map(u => `
       <div class="user-row">
@@ -7169,6 +7884,7 @@ async function loadAllUsers(){
           <option value="planner" ${u.role === 'planner' ? 'selected' : ''}>Planer</option>
           <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
         </select>
+        ${bereicheZellenHtml(u)}
       </div>`).join('');
   } catch(e){ listEl.innerHTML = `Fehler: ${e.message}`; }
 }
@@ -7207,7 +7923,7 @@ async function loadAssignments(projectId){
   const listEl = g('assign-list'); listEl.innerHTML = 'Lade...';
   try {
     const [{ data: siteUsers, error: uErr }, { data: members, error: mErr }] = await Promise.all([
-      supabaseClient.from('profiles').select('id, email, role').eq('role', 'site').order('email', { ascending: true }),
+      supabaseClient.from('profiles').select('id, email, role, bereiche').eq('role', 'site').order('email', { ascending: true }),
       supabaseClient.from('pv_project_members').select('user_id').eq('project_id', projectId)
     ]);
     if(uErr) throw uErr;
@@ -7220,7 +7936,7 @@ async function loadAssignments(projectId){
     }
     listEl.innerHTML = siteUsers.map(u => `
       <div class="user-row">
-        <span class="email">${esc(u.email)}</span>
+        <span class="email">${esc(u.email)}${(Array.isArray(u.bereiche) && PROJECTS[projectId] && u.bereiche.indexOf(projektBereich(PROJECTS[projectId])) < 0) ? ` <span class="ub-hinweis">· Bereich ${esc(BEREICHE[projektBereich(PROJECTS[projectId])].name)} fehlt – sieht das Projekt nicht</span>` : ''}</span>
         <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;white-space:nowrap;">
           <input type="checkbox" ${assignedIds.has(u.id) ? 'checked' : ''} onchange="toggleAssignment('${projectId}', '${u.id}', this.checked)">
           zugewiesen
@@ -7942,6 +8658,16 @@ body.vq td[data-label="GAK"] .sp-inp {
 body.vq td.col-note .sp-inp { text-align: left !important; font-family: 'Plus Jakarta Sans', sans-serif !important;
   font-size: 0.82rem !important; color: var(--mute) !important; }
 body.vq .sp-inp:read-only { background: transparent !important; }
+/* Texteingaben (Login, Namen, Gruppen, Auswahllisten) linksbuendig in normaler
+   Schrift – rechtsbuendig und Mono ist nur fuer Zahlen in der Matrix gedacht. */
+body.vq input.sp-inp[type="email"],
+body.vq input.sp-inp[type="password"],
+body.vq input.sp-inp[type="text"]:not([inputmode]):not(.sp-inp-center),
+body.vq select.sp-inp {
+  text-align: left !important;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif !important;
+  letter-spacing: 0 !important;
+}
 
 body.vq .string-id {
   font-family: 'JetBrains Mono', ui-monospace, monospace !important;
@@ -8259,6 +8985,133 @@ body.vq .kpi-card:hover, body.vq .project-card:hover {
 }
 body.vq .tog.on-ja:hover { transform: none !important; }
 
+/* ── Querschnittberechnung — gleiche Formensprache wie Kennzahlen und
+   Matrix: Glaskarten, Pillen-Umschalter, Mono-Ziffern. "OK" bekommt wie
+   Warnung/Kritisch eine eigene Textfarbe, die im Hell-Modus abgedunkelt
+   wird (reines --ok-Gruen hat auf Weiss nur ~1,6:1 Kontrast). ─────────── */
+body.vq { --ok-text: var(--ok); }
+body.vq.sun-mode { --ok-text: color-mix(in srgb, var(--ok) 45%, #14161A); }
+body.vq .qs-card {
+  background: var(--pa2) !important; border: 1px solid var(--rahmen) !important;
+  border-radius: var(--vq-rad) !important; position: relative; overflow: hidden;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+}
+body.vq .qs-card::before {
+  content: ''; position: absolute; top: 0; left: 24px; right: 24px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--edge-glow-soft), transparent) !important;
+  pointer-events: none;
+}
+body.vq .qs-card-titel, body.vq .qs-kz-lbl, body.vq .qs-tabelle th {
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.6rem !important;
+  font-weight: 700 !important; letter-spacing: 0.16em !important; color: var(--mute) !important;
+}
+body.vq .qs-seg { background: var(--feld) !important; border: 1px solid var(--hair) !important; border-radius: var(--vq-pill) !important; }
+body.vq .qs-seg-btn {
+  border-radius: var(--vq-pill) !important; color: var(--mute) !important; box-shadow: none !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.72rem !important; letter-spacing: 0.04em !important;
+}
+body.vq .qs-seg-btn:hover { color: var(--ink) !important; }
+body.vq .qs-seg-btn.active { background: var(--invert-bg) !important; color: var(--invert-fg) !important; }
+body.vq .qs-lbl { color: var(--ink) !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.76rem !important; }
+body.vq .qs-hint, body.vq .qs-leer, body.vq .qs-haupt-lbl, body.vq .qs-formel-sub, body.vq .qs-formel-lbl { color: var(--mute) !important; }
+body.vq .qs-feld .qs-inp-wrap .qs-inp { padding: 0 44px 0 14px !important; min-height: 48px !important; font-size: 1.05rem !important; }
+body.vq .qs-einheit { color: var(--mute) !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; font-weight: 500 !important; }
+body.vq .qs-haupt-wert {
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 800 !important; font-size: 3.4rem !important;
+  letter-spacing: -0.04em !important; color: var(--ink) !important;
+  background: var(--grad-kpi) !important; -webkit-background-clip: text !important; background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+body.vq .qs-haupt-einheit { color: var(--akz-text) !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; font-weight: 700 !important; }
+body.vq .qs-vergleich { color: var(--mute) !important; }
+body.vq .qs-vergleich strong { color: var(--ink) !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; }
+body.vq .qs-link { color: var(--akz-text) !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
+body.vq .qs-kz, body.vq .qs-formel, body.vq .qs-rechenweg {
+  background: var(--feld) !important; border: 1px solid var(--hair) !important; border-radius: var(--vq-rad-sm) !important;
+}
+body.vq .qs-kz-wert, body.vq .qs-tabelle td, body.vq .qs-formel-term {
+  color: var(--ink) !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; font-variant-numeric: tabular-nums;
+}
+body.vq .qs-kz-wert { font-weight: 700 !important; }
+body.vq .qs-rechenweg { color: var(--mute) !important; }
+body.vq .qs-tabelle td { border-top: 1px solid var(--hair) !important; font-weight: 500 !important; }
+body.vq .qs-tabelle tr.qs-empf td { font-weight: 800 !important; }
+body.vq .qs-tabelle td.qs-ok { color: var(--ok-text) !important; }
+body.vq .qs-tabelle td.qs-zu-hoch { color: var(--krit-text) !important; }
+body.vq .qs-warnung { color: var(--warn-text) !important; }
+body.vq .qs-hinweis { color: var(--mute) !important; border-left-color: var(--warn) !important; }
+/* Fuenf Reiter: knapp ueber der Handy-Grenze etwas schmaler polstern,
+   damit die Leiste einzeilig bleibt. */
+@media screen and (min-width: 901px) and (max-width: 959px) {
+  body.vq .main-tab { padding: 12px 10px !important; }
+}
+@media screen and (max-width: 600px) {
+  body.vq .qs-haupt-wert { font-size: 2.6rem !important; }
+  body.vq .qs-kz-lbl { letter-spacing: 0.06em !important; }
+}
+
+/* ── Startbildschirm & Bereiche ────────────────────────────────────────── */
+body.vq #bereich-gate {
+  background: var(--pa) !important;
+  background-image:
+    radial-gradient(620px 620px at -8% -6%, rgba(0,225,255,.10), transparent 62%),
+    radial-gradient(580px 580px at 106% 104%, color-mix(in srgb, var(--acc, #CCFF00) 9%, transparent), transparent 62%) !important;
+}
+body.vq.sun-mode #bereich-gate { background-image: none !important; }
+body.vq .bg-titel {
+  font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 800 !important; font-size: 2.7rem !important;
+  letter-spacing: -0.045em !important; color: var(--ink) !important;
+  background: var(--grad-hero) !important; -webkit-background-clip: text !important; background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+body.vq .bg-sub, body.vq .bg-info, body.vq .bg-fuss, body.vq .bg-abmelden { color: var(--mute) !important; }
+body.vq .bg-abmelden:hover { color: var(--ink) !important; }
+body.vq .bg-karte {
+  background: var(--pa2) !important; border: 1px solid var(--rahmen) !important; border-radius: var(--vq-rad) !important;
+  color: var(--ink) !important; position: relative; overflow: hidden;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+  transition: transform .22s cubic-bezier(.16,1,.3,1), border-color .2s linear, box-shadow .22s linear !important;
+}
+body.vq .bg-karte::before {
+  content: ''; position: absolute; top: 0; left: 24px; right: 24px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--edge-glow), transparent) !important; pointer-events: none;
+}
+body.vq .bg-karte:hover, body.vq .bg-karte:focus-visible {
+  transform: translateY(-4px) !important; border-color: var(--akz) !important; outline: 0 !important;
+  box-shadow: 0 0 0 1px var(--akz), 0 22px 54px rgba(0,0,0,.5), 0 0 44px var(--akz-glow) !important;
+}
+body.vq.sun-mode .bg-karte:hover, body.vq.sun-mode .bg-karte:focus-visible {
+  box-shadow: 0 0 0 1px var(--akz), 0 20px 50px rgba(20,22,26,.14) !important;
+}
+body.vq .bg-name { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 800 !important; letter-spacing: -0.02em !important; }
+body.vq .bg-zahl { color: var(--akz-text) !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; letter-spacing: .06em !important; }
+body.vq .bg-leer { border-color: var(--rahmen) !important; color: var(--mute) !important; }
+body.vq .bereich-chip { background: var(--feld) !important; border: 1px solid var(--hair) !important; border-radius: var(--vq-rad-sm) !important; color: var(--ink) !important; }
+body.vq .bereich-chip:hover { border-color: var(--rahmen-hell) !important; }
+body.vq .bereich-chip-lbl { color: var(--mute) !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
+body.vq .bereich-chip-wechsel { color: var(--akz-text) !important; }
+body.vq .hpw-titel { color: var(--mute) !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 0.62rem !important; letter-spacing: .16em !important; }
+body.vq .hpw-alle { color: var(--akz-text) !important; }
+body.vq .hpw-karte {
+  background: var(--pa2) !important; border: 1px solid var(--rahmen) !important; border-radius: var(--vq-rad-sm) !important; color: var(--ink) !important;
+  backdrop-filter: var(--vq-blur) !important; -webkit-backdrop-filter: var(--vq-blur) !important;
+}
+body.vq .hpw-karte:hover { border-color: var(--rahmen-hell) !important; }
+body.vq .hpw-name { font-family: 'Plus Jakarta Sans', sans-serif !important; }
+body.vq .hpw-meta { color: var(--mute) !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; font-size: 0.7rem !important; }
+body.vq .bm-projekt { color: var(--ink) !important; }
+body.vq .bm-btn { background: var(--feld) !important; border: 1px solid var(--hair) !important; border-radius: var(--vq-rad-sm) !important; color: var(--ink) !important; }
+body.vq .bm-btn:hover { border-color: var(--rahmen-hell) !important; }
+body.vq .bm-btn.active { border-color: var(--akz) !important; box-shadow: inset 0 0 0 1px var(--akz) !important; }
+body.vq .bm-aktuell { color: var(--akz-text) !important; }
+body.vq .ub-chip { border-color: var(--hair) !important; color: var(--mute) !important; border-radius: var(--vq-pill) !important; background: transparent !important; }
+body.vq .ub-chip.an { background: var(--invert-bg) !important; color: var(--invert-fg) !important; border-color: var(--invert-bg) !important; }
+body.vq .ub-alle { color: var(--mute) !important; }
+body.vq .ub-hinweis { color: var(--warn-text) !important; }
+@media screen and (max-width: 600px) {
+  body.vq .bg-titel { font-size: 1.95rem !important; }
+}
+
 /* ── Handy ──────────────────────────────────────────────────────────────── */
 @media screen and (max-width: 900px) {
   body.vq .top-bar-mobile { background: color-mix(in srgb, var(--pa) 85%, transparent) !important; border-bottom: 1px solid var(--hair) !important;
@@ -8318,5 +9171,10 @@ body.vq .tog.on-ja:hover { transform: none !important; }
 }
 
 </style>
+<script>
+if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')){
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(e => console.warn('Service Worker:', e)); });
+}
+</script>
 </body>
 </html>

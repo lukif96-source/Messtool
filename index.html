@@ -7245,20 +7245,23 @@ async function flushPendingProjectEdits(){
 
 async function selectProject(id){
   await flushPendingProjectEdits();
-  
+
   // Vorheriges Lock freigeben
   if (CURRENT_PROJECT_ID && currentProjectLock) {
     await unlockProject(CURRENT_PROJECT_ID);
   }
-  
+
   CURRENT_PROJECT_ID = id;
-  
+
   // Neues Lock versuchen
+  console.log('🔒 Lock-Test: Versuche Lock für Projekt', id);
   const lockSuccess = await lockProject(id);
+  console.log('🔒 Lock-Test: Lock-Ergebnis', lockSuccess);
+
   if (!lockSuccess) {
     toast('⚠️ Projekt ist gesperrt - nur lesender Zugriff');
   }
-  
+
   loadCurrentProjectData();
   if(supabaseClient && currentUser) await fetchCloudDataManually();
   if(g('projects-view').classList.contains('active')) switchMainTab('matrix');

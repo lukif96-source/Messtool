@@ -8183,27 +8183,38 @@ const LOCK_EXPIRY_MINUTES = 5; // Lock läuft nach 5 Min ab
 
 // Projekt sperren beim Öffnen
 async function lockProject(projectId) {
-  if (!currentUser || !supabaseClient) return false;
+  console.log('🔒 Lock-System: Start für Projekt', projectId);
+  if (!currentUser || !supabaseClient) {
+    console.warn('⚠️ Lock-System: Kein User oder Supabase-Client');
+    return false;
+  }
 
   try {
     // Prüfen ob bereits gesperrt
-    const { data: existingLock } = await supabaseClient
+    console.log('🔍 Lock-System: Prüfe bestehendes Lock...');
+    const { data: existingLock, error: checkError } = await supabaseClient
       .from('project_locks')
       .select('*')
       .eq('project_id', projectId)
       .maybeSingle();
 
+    console.log('🔍 Lock-System: Check-Ergebnis', { existingLock, checkError });
+
     if (existingLock) {
       // Prüfen ob Lock noch gültig ist
       const expiresAt = new Date(existingLock.expires_at);
+      console.log('⏰ Lock-System: Lock läuft ab am', expiresAt);
+
       if (expiresAt > new Date()) {
         // Lock ist noch gültig
+        console.log('🔒 Lock-System: Lock noch gültig für', existingLock.user_name);
         showCollabLockBanner(existingLock);
         currentProjectLock = existingLock;
         startLockCheck();
         return false;
       } else {
         // Lock abgelaufen, aufräumen
+        console.log('🧹 Lock-System: Lock abgelaufen, aufräumen...');
         await supabaseClient
           .from('project_locks')
           .delete()
@@ -8212,31 +8223,39 @@ async function lockProject(projectId) {
     }
 
     // Neues Lock erstellen
+    console.log('🔐 Lock-System: Erstelle neues Lock...');
     const expiresAt = new Date(Date.now() + LOCK_EXPIRY_MINUTES * 60 * 1000);
+
+    const lockData = {
+      project_id: projectId,
+      user_id: currentUser.id,
+      user_name: currentUser.email,
+      locked_at: new Date().toISOString(),
+      expires_at: expiresAt.toISOString()
+    };
+
+    console.log('🔐 Lock-System: Lock-Daten', lockData);
+
     const { data: newLock, error: lockError } = await supabaseClient
       .from('project_locks')
-      .insert({
-        project_id: projectId,
-        user_id: currentUser.id,
-        user_name: currentUser.email,
-        locked_at: new Date().toISOString(),
-        expires_at: expiresAt.toISOString()
-      })
+      .insert(lockData)
       .select()
       .single();
 
     if (lockError) {
-      console.error('Lock fehlgeschlagen:', lockError);
+      console.error('❌ Lock-System: Lock fehlgeschlagen', lockError);
+      console.error('Fehler-Details:', lockError.message, lockError.code, lockError.hint);
       return false;
     }
 
+    console.log('✅ Lock-System: Lock erfolgreich erstellt', newLock);
     currentProjectLock = newLock;
     hideCollabLockBanner();
     startLockCheck();
     return true;
 
   } catch (error) {
-    console.error('Lock-Fehler:', error);
+    console.error('❌ Lock-System: Lock-Fehler', error);
     return false;
   }
 }

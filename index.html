@@ -8176,7 +8176,7 @@ window.onload = () => {
 
 let currentProjectLock = null;
 let lockCheckInterval = null;
-const LOCK_EXPIRY_MINUTES = 30; // Lock läuft nach 30 Min ab
+const LOCK_EXPIRY_MINUTES = 5; // Lock läuft nach 5 Min ab
 
 // Projekt sperren beim Öffnen
 async function lockProject(projectId) {
@@ -8184,13 +8184,13 @@ async function lockProject(projectId) {
 
   try {
     // Prüfen ob bereits gesperrt
-    const { data: existingLock, error: checkError } = await supabaseClient
+    const { data: existingLock } = await supabaseClient
       .from('project_locks')
       .select('*')
       .eq('project_id', projectId)
-      .single();
+      .maybeSingle();
 
-    if (existingLock && !checkError) {
+    if (existingLock) {
       // Prüfen ob Lock noch gültig ist
       const expiresAt = new Date(existingLock.expires_at);
       if (expiresAt > new Date()) {
@@ -8212,13 +8212,15 @@ async function lockProject(projectId) {
     const expiresAt = new Date(Date.now() + LOCK_EXPIRY_MINUTES * 60 * 1000);
     const { data: newLock, error: lockError } = await supabaseClient
       .from('project_locks')
-      .upsert({
+      .insert({
         project_id: projectId,
         user_id: currentUser.id,
         user_name: currentUser.email,
         locked_at: new Date().toISOString(),
         expires_at: expiresAt.toISOString()
-      });
+      })
+      .select()
+      .single();
 
     if (lockError) {
       console.error('Lock fehlgeschlagen:', lockError);

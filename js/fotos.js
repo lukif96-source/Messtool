@@ -67,7 +67,7 @@ async function fotoVerkleinern(datei){
 /* ---------- Aufnehmen ---------- */
 function fotoAufnehmen(wr){
   if(!CURRENT_PROJECT_ID) return;
-  if(!fotoDarfAendern()){ toast('🔒 Protokoll ist abgeschlossen – Fotos kann nur der Admin ändern'); return; }
+  if(!fotoDarfAendern()){ toast('Protokoll ist abgeschlossen – Fotos kann nur der Admin ändern'); return; }
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
   inp.setAttribute('capture', 'environment');       // Handy: direkt die Rueckkamera
@@ -85,7 +85,7 @@ function fotoAufnehmen(wr){
 async function fotoHinzufuegen(pid, wr, datei){
   let blob;
   try { blob = await fotoVerkleinern(datei); }
-  catch(e){ toast('⚠️ Foto konnte nicht gelesen werden'); return; }
+  catch(e){ toast('Foto konnte nicht gelesen werden'); return; }
   const zufall = Math.random().toString(36).slice(2, 8);
   const eintrag = {
     pfad: `${pid}/wr${wr}/${Date.now()}-${zufall}.jpg`,
@@ -97,7 +97,7 @@ async function fotoHinzufuegen(pid, wr, datei){
   fotoWartend.push(eintrag);
   fotoAnzeigen(pid);
   const ok = await fotoSenden(eintrag);
-  toast(ok ? '📷 Foto gespeichert' : '📷 Foto gemerkt – wird hochgeladen, sobald wieder Netz da ist');
+  toast(ok ? 'Foto gespeichert' : 'Foto gemerkt – wird hochgeladen, sobald wieder Netz da ist');
 }
 
 /* Ein Eintrag der Warteschlange hochladen. true = fertig (oder endgueltig verworfen). */
@@ -115,7 +115,7 @@ async function fotoSenden(e){
         // Keine Berechtigung (z. B. Protokoll inzwischen abgeschlossen) – nicht endlos wiederholen
         try { await supabaseClient.storage.from(FOTO_BUCKET).remove([e.pfad]); } catch(x){}
         await fotoAusWarteschlange(e.pfad);
-        toast('⚠️ Foto nicht gespeichert – keine Berechtigung für dieses Projekt');
+        toast('Foto nicht gespeichert – keine Berechtigung für dieses Projekt');
         return true;
       }
       throw ins.error;
@@ -127,7 +127,7 @@ async function fotoSenden(e){
   } catch(err){
     if(/row-level security|permission|not authorized|unauthorized|403/i.test((err && (err.message || err.statusCode)) + '')){
       await fotoAusWarteschlange(e.pfad);
-      toast('⚠️ Foto nicht gespeichert – keine Berechtigung für dieses Projekt');
+      toast('Foto nicht gespeichert – keine Berechtigung für dieses Projekt');
       fotoAnzeigen(e.pid);
       return true;
     }
@@ -208,7 +208,7 @@ async function fotoAnzeigen(pid){
     const wr = el.dataset.wr;
     const fotos = fotoFuerWr(pid, wr);
     const zeigen = fotos.slice(-3);
-    el.innerHTML = zeigen.map((f, i) => `<button type="button" class="wr-foto-mini${f.wartet ? ' wartet' : ''}" onclick="fotoOeffnen(${Number(wr)}, ${fotos.length - zeigen.length + i})" title="${f.wartet ? 'Wartet auf Netz' : 'Foto ansehen'}">${f.url ? `<img src="${esc(f.url)}" alt="" loading="lazy">` : ''}${f.wartet ? '<span class="wr-foto-uhr">⏳</span>' : ''}</button>`).join('')
+    el.innerHTML = zeigen.map((f, i) => `<button type="button" class="wr-foto-mini${f.wartet ? ' wartet' : ''}" onclick="fotoOeffnen(${Number(wr)}, ${fotos.length - zeigen.length + i})" title="${f.wartet ? 'Wartet auf Netz' : 'Foto ansehen'}">${f.url ? `<img src="${esc(f.url)}" alt="" loading="lazy">` : ''}${f.wartet ? '<span class="wr-foto-uhr"></span>' : ''}</button>`).join('')
       + (fotos.length > 3 ? `<button type="button" class="wr-foto-mehr" onclick="fotoOeffnen(${Number(wr)}, 0)">+${fotos.length - 3}</button>` : '');
     const btn = el.parentElement && el.parentElement.querySelector('.wr-foto-btn');
     if(btn) btn.hidden = !fotoDarfAendern();
@@ -231,7 +231,7 @@ function fotoOeffnen(wr, index){
     ov.innerHTML = `
       <div class="fv-kopf"><span class="fv-titel" id="fv-titel"></span><button type="button" class="fv-x" onclick="fotoSchliessen()" aria-label="Schließen">✕</button></div>
       <div class="fv-bild"><button type="button" class="fv-nav fv-zurueck" onclick="fotoBlaettern(-1)" aria-label="Vorheriges Foto">‹</button><img id="fv-img" alt=""><button type="button" class="fv-nav fv-weiter" onclick="fotoBlaettern(1)" aria-label="Nächstes Foto">›</button></div>
-      <div class="fv-fuss"><span class="fv-info" id="fv-info"></span><button type="button" class="fv-loeschen" id="fv-loeschen" onclick="fotoLoeschen()">🗑 Löschen</button></div>`;
+      <div class="fv-fuss"><span class="fv-info" id="fv-info"></span><button type="button" class="fv-loeschen" id="fv-loeschen" onclick="fotoLoeschen()">Löschen</button></div>`;
     ov.addEventListener('click', e => { if(e.target === ov) fotoSchliessen(); });
     document.body.appendChild(ov);
     document.addEventListener('keydown', e => {
@@ -255,7 +255,7 @@ function fotoViewerZeigen(){
   g('fv-img').src = f.url || '';
   g('fv-titel').textContent = `${wrName} · Foto ${fotoViewer.index + 1} von ${liste.length}`;
   const zeit = f.erstellt_am ? new Date(f.erstellt_am).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }) : '';
-  g('fv-info').textContent = [zeit, f.erstellt_von_name, f.wartet ? '⏳ wartet auf Netz' : ''].filter(Boolean).join(' · ');
+  g('fv-info').textContent = [zeit, f.erstellt_von_name, f.wartet ? 'wartet auf Netz' : ''].filter(Boolean).join(' · ');
   g('fv-loeschen').hidden = !fotoDarfAendern();
   g('foto-viewer').querySelectorAll('.fv-nav').forEach(b => b.hidden = liste.length < 2);
 }
@@ -277,13 +277,13 @@ async function fotoLoeschen(){
   if(f.wartet){
     await fotoAusWarteschlange(f.pfad);
   } else {
-    if(!fotoCloudBereit() || navigator.onLine === false){ toast('⚠️ Löschen geht nur mit Internetverbindung'); return; }
+    if(!fotoCloudBereit() || navigator.onLine === false){ toast('Löschen geht nur mit Internetverbindung'); return; }
     const { data, error } = await supabaseClient.from('pv_photos').delete().eq('id', f.id).select('id');
-    if(error || !data || !data.length){ toast('⚠️ Foto konnte nicht gelöscht werden – keine Berechtigung'); return; }
+    if(error || !data || !data.length){ toast('Foto konnte nicht gelöscht werden – keine Berechtigung'); return; }
     try { await supabaseClient.storage.from(FOTO_BUCKET).remove([f.pfad]); } catch(e){}
     fotoListe[pid] = (fotoListe[pid] || []).filter(x => x.id !== f.id);
   }
-  toast('🗑 Foto gelöscht');
+  toast('Foto gelöscht');
   fotoViewerZeigen();
   fotoAnzeigen(pid);
 }

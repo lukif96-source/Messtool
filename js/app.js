@@ -16,11 +16,28 @@ if(window.supabase && SB_URL && SB_KEY){
 
 let currentUser = null;
 let currentUserRole = null;
+let currentUserDisplayName = '';
 let authMode = 'login';
 let hideInactive = false;
 let pendingPVSOLData = null;
 
 const g = id => document.getElementById(id);
+
+// Schlichte Linien-Icons (ersetzen die frueheren Emojis in Icon-Knoepfen)
+const ICON = (() => {
+  const svg = d => `<svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  return {
+    gear:    svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+    pencil:  svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
+    tag:     svg('<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.5"/>'),
+    camera:  svg('<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'),
+    lock:    svg('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
+    refresh: svg('<path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/>'),
+    home:    svg('<path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/>'),
+    factory: svg('<path d="M2 20V9l6 4V9l6 4V5h8v15z"/>'),
+    sun:     svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>')
+  };
+})();
 
 function esc(value){
   return String(value ?? '').replace(/[&<>'"]/g, char => ({
@@ -64,7 +81,7 @@ function toast(msg, ms=3000){
 // technische Details (z.B. Supabase-Fehlertext) landen nur in der Konsole.
 function toastError(msg, err, ms=4000){
   if(err) console.error(msg, err);
-  toast('❌ ' + msg, ms);
+  toast('' + msg, ms);
 }
 
 // Theme: 'sun' = Baustelle (hell, harter Kontrast), 'dark' = Cockpit.
@@ -85,7 +102,7 @@ function setTheme(mode, silent = false){
   if(label) label.textContent = isSun ? 'Dunkelmodus' : 'Hell-Modus';
 
   try { localStorage.setItem('pv_theme', isSun ? 'sun' : 'dark'); } catch(_){}
-  if(!silent) toast(isSun ? '☀️ Baustellen-Modus' : '🌙 Cockpit-Modus');
+  if(!silent) toast(isSun ? 'Baustellen-Modus' : 'Cockpit-Modus');
 }
 
 // Bestehender Aufruf aus der Sidebar bleibt funktionsfaehig
@@ -116,10 +133,10 @@ function toggleHighContrast(){
   const on = document.body.classList.toggle('high-contrast');
   if(on) {
     document.body.classList.add('high-contrast-mode');
-    toast('👁️ High Contrast aktiviert');
+    toast('High Contrast aktiviert');
   } else {
     document.body.classList.remove('high-contrast-mode');
-    toast('👁️ High Contrast deaktiviert');
+    toast('High Contrast deaktiviert');
   }
 }
 function toggleSidebar(){ g('sidebar').classList.toggle('open'); g('sidebar-overlay').classList.toggle('open'); document.body.style.overflow = g('sidebar').classList.contains('open') ? 'hidden' : ''; }
@@ -150,7 +167,7 @@ function buildFilterBar(){
   const plan = getCurrentPlan();
   const wrKeys = Object.keys(plan).map(k => parseInt(k)).filter(n => !isNaN(n)).sort((a,b) => a-b);
   if(wrKeys.length === 0){ bar.innerHTML = ''; return; }
-  let html = `<button class="wr-tab active" data-wr="0" onclick="filterInverter(0, this)">⚡ Alle WRs (1–${wrKeys.length})</button>`;
+  let html = `<button class="wr-tab active" data-wr="0" onclick="filterInverter(0, this)">Alle WRs (1–${wrKeys.length})</button>`;
   wrKeys.forEach(wr => { 
     const name = getCurrentPlan()[wr].name || `WR ${wr}`;
     html += `<button class="wr-tab" data-wr="${wr}" onclick="filterInverter(${wr}, this)">${esc(name)}</button>`; 
@@ -402,7 +419,7 @@ function renderProjectGrid(){
     if(g('project-group-bar')) g('project-group-bar').innerHTML = '';
     grid.innerHTML = `
       <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--muted);">
-        <div style="font-size:3rem; margin-bottom:16px;">📁</div>
+        <div style="font-size:3rem; margin-bottom:16px;"></div>
         <div style="font-size:1.1rem; font-weight:700; margin-bottom:8px;">Keine Projekte</div>
         ${currentUserRole !== 'site' ? '<button class="btn btn-primary" onclick="openNewProjectModal()">+ Neues Projekt</button>' : ''}
       </div>
@@ -438,7 +455,7 @@ function renderProjectGrid(){
         chips += `<button class="wr-tab ${currentProjectGroupFilter==='__none__'?'active':''}" onclick="selectProjectGroupFilter('__none__')">Ohne Gruppe <span style="opacity:0.6;">(${ungrouped})</span></button>`;
       }
       if(archiviert > 0){
-        chips += `<button class="wr-tab archiv-chip ${currentProjectGroupFilter==='__archiv__'?'active':''}" onclick="selectProjectGroupFilter('__archiv__')" title="Unterschriebene Protokolle — schreibgeschützt und vor Löschen gesichert">🔒 Archiv <span style="opacity:0.6;">(${archiviert})</span></button>`;
+        chips += `<button class="wr-tab archiv-chip ${currentProjectGroupFilter==='__archiv__'?'active':''}" onclick="selectProjectGroupFilter('__archiv__')" title="Unterschriebene Protokolle — schreibgeschützt und vor Löschen gesichert">Archiv <span style="opacity:0.6;">(${archiviert})</span></button>`;
       }
       groupBar.innerHTML = chips;
     }
@@ -471,7 +488,7 @@ function renderProjectGrid(){
     const isActive = id === CURRENT_PROJECT_ID;
     const wrCount = Object.keys(proj.plan || {}).filter(k => !isNaN(parseInt(k))).length;
     const wp = proj.model_wp || 465;
-    const lockedIcon = proj.locked ? '🔒 ' : '';
+    const lockedIcon = proj.locked ? ICON.lock + ' ' : '';
     
     const prog = getProjectProgress(proj);
     const pct = prog.total ? Math.round(prog.done / prog.total * 100) : 0;
@@ -482,17 +499,17 @@ function renderProjectGrid(){
         <div class="project-card-header">
           <div class="project-card-title">${lockedIcon}${isActive ? '✓ ' : ''}${esc(proj.name)}</div>
           <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-            <div class="sync-status ${cloudProjectIds.has(id) ? 'synced' : 'pending'}" title="${cloudProjectIds.has(id) ? 'In der Cloud gespeichert' : 'Nur auf diesem Gerät – wird nach Anmeldung übertragen'}">${cloudProjectIds.has(id) ? '☁️' : '📱'}</div>
+            <div class="sync-status ${cloudProjectIds.has(id) ? 'synced' : 'pending'}" title="${cloudProjectIds.has(id) ? 'In der Cloud gespeichert' : 'Nur auf diesem Gerät – wird nach Anmeldung übertragen'}">${cloudProjectIds.has(id) ? '' : ''}</div>
             ${canManage ? `
             <div class="pc-menu-wrap">
               <button class="pc-menu-btn" title="Projekt-Aktionen" aria-haspopup="true" onclick="toggleProjectMenu('${id}', event)">⋯</button>
               <div class="pc-menu" id="pc-menu-${id}" onclick="event.stopPropagation()">
-                <button onclick="renameProject('${id}', event); closeProjectMenus();"><span>✏️</span> Umbenennen</button>
-                <button onclick="setProjectGroup('${id}', event); closeProjectMenus();"><span>🏷️</span> Gruppe zuweisen</button>
-                <button onclick="openBereichModal('${id}', event); closeProjectMenus();"><span>🧭</span> Bereich ändern</button>
-                <button onclick="openAssignModal('${id}', event); closeProjectMenus();"><span>👥</span> Bauleitung zuweisen</button>
-                <button onclick="openHistoryModal('${id}', event); closeProjectMenus();"><span>⏳</span> Versionen &amp; Wiederherstellen</button>
-                <button class="danger" onclick="deleteProject('${id}', event); closeProjectMenus();"><span>🗑️</span> Projekt löschen</button>
+                <button onclick="renameProject('${id}', event); closeProjectMenus();"><span></span> Umbenennen</button>
+                <button onclick="setProjectGroup('${id}', event); closeProjectMenus();"><span></span> Gruppe zuweisen</button>
+                <button onclick="openBereichModal('${id}', event); closeProjectMenus();"><span></span> Bereich ändern</button>
+                <button onclick="openAssignModal('${id}', event); closeProjectMenus();"><span></span> Bauleitung zuweisen</button>
+                <button onclick="openHistoryModal('${id}', event); closeProjectMenus();"><span></span> Versionen &amp; Wiederherstellen</button>
+                <button class="danger" onclick="deleteProject('${id}', event); closeProjectMenus();"><span></span> Projekt löschen</button>
               </div>
             </div>` : ''}
           </div>
@@ -506,7 +523,7 @@ function renderProjectGrid(){
           </div>
           <div class="pc-prog-txt">
             <span>${prog.total ? `<span class="done">${prog.done}</span> von ${prog.total} gemessen` : 'Noch keine Strings angelegt'}</span>
-            <span>${prog.crit ? `<span class="flags">⛔ ${prog.crit}</span>` : `${pct}%`}</span>
+            <span>${prog.crit ? `<span class="flags">${prog.crit}</span>` : `${pct}%`}</span>
           </div>
         </div>
       </div>
@@ -613,9 +630,9 @@ let CURRENT_PROJECT_ID = null;
    waehlt den Bereich und landet ohne offenes Projekt auf der Uebersicht.
    ══════════════════════════════════════════════════════════════════════════ */
 const BEREICHE = {
-  privat:      { name: 'Privatanlage', icon: '🏠', info: 'Einfamilienhäuser und kleine Dachanlagen' },
-  gewerbe:     { name: 'Gewerbe',      icon: '🏭', info: 'Hallen, Betriebe und öffentliche Gebäude' },
-  freiflaeche: { name: 'Freifläche',   icon: '☀️', info: 'Solarparks und Freiflächenanlagen' }
+  privat:      { name: 'Privatanlage', icon: ICON.home, info: 'Einfamilienhäuser und kleine Dachanlagen' },
+  gewerbe:     { name: 'Gewerbe',      icon: ICON.factory, info: 'Hallen, Betriebe und öffentliche Gebäude' },
+  freiflaeche: { name: 'Freifläche',   icon: ICON.sun, info: 'Solarparks und Freiflächenanlagen' }
 };
 const BEREICH_REIHE = ['privat', 'gewerbe', 'freiflaeche'];
 let CURRENT_BEREICH = null;
@@ -636,7 +653,7 @@ function zeigeBereichsWahl(){
   const authLogo = document.querySelector('#auth-gate .auth-logo');
   if(logo && authLogo && !logo.childElementCount) logo.innerHTML = authLogo.innerHTML;
   const erlaubt = erlaubteBereiche();
-  const name = currentUser && currentUser.email ? currentUser.email.split('@')[0] : '';
+  const name = anzeigeName();
   const sub = g('bg-sub');
   if(sub) sub.textContent = erlaubt.length ? `${name ? 'Hallo ' + name + ' – ' : ''}in welchem Bereich arbeitest du?` : '';
   const karten = g('bg-karten');
@@ -695,7 +712,7 @@ function aktualisiereBereichsAnzeige(){
   if(chip){
     chip.hidden = !CURRENT_BEREICH;
     if(CURRENT_BEREICH){
-      g('bereich-chip-icon').textContent = BEREICHE[CURRENT_BEREICH].icon;
+      g('bereich-chip-icon').innerHTML = BEREICHE[CURRENT_BEREICH].icon;
       g('bereich-chip-name').textContent = BEREICHE[CURRENT_BEREICH].name;
     }
   }
@@ -716,7 +733,7 @@ function renderHomeProjektwahl(ids){
     <div class="hpw-kopf"><span class="hpw-titel">Projekt öffnen</span>${ids.length > liste.length ? `<button type="button" class="hpw-alle" onclick="switchMainTab('projects')">Alle ${ids.length} Projekte →</button>` : ''}</div>
     <div class="hpw-liste">${liste.map(p => {
       const prog = getProjectProgress(p);
-      const meta = [p.group, prog.total ? `${prog.done} von ${prog.total} gemessen` : null, p.locked ? '🔒 gesperrt' : null].filter(Boolean).join(' · ');
+      const meta = [p.group, prog.total ? `${prog.done} von ${prog.total} gemessen` : null, p.locked ? 'gesperrt' : null].filter(Boolean).join(' · ');
       return `<button type="button" class="hpw-karte" onclick="selectSbProject('${esc(p.id).replace(/'/g, "\\&#39;")}')"><span class="hpw-name">${esc(p.name || 'Unbenannt')}</span><span class="hpw-meta">${esc(meta || 'Noch keine Messwerte')}</span></button>`;
     }).join('')}</div>`;
   box.hidden = false;
@@ -726,7 +743,7 @@ function renderHomeProjektwahl(ids){
 let bereichModalProjektId = null;
 function openBereichModal(id, event){
   if(event){ event.stopPropagation(); event.preventDefault(); }
-  if(currentUserRole !== 'admin' && currentUserRole !== 'planner') return toast('🔒 Nur Planer oder Admin');
+  if(currentUserRole !== 'admin' && currentUserRole !== 'planner') return toast('Nur Planer oder Admin');
   const proj = PROJECTS[id];
   if(!proj) return;
   bereichModalProjektId = id;
@@ -773,7 +790,7 @@ async function setProjectBereich(b){
   }
   renderProjectUI();
   if(g('project-grid')) renderProjectGrid();
-  toast(`🧭 „${proj.name}“ ist jetzt im Bereich ${BEREICHE[b].name}`);
+  toast(`„${proj.name}“ ist jetzt im Bereich ${BEREICHE[b].name}`);
 }
 
 // Benutzerverwaltung: Bereiche je Nutzer
@@ -796,7 +813,7 @@ async function changeUserBereich(userId, bereich, an){
     const neu = BEREICH_REIHE.filter(b => menge.has(b));
     const { error } = await supabaseClient.from('profiles').update({ bereiche: neu }).eq('id', userId);
     if(error) throw error;
-    toast(`✅ Bereiche: ${neu.length ? neu.map(b => BEREICHE[b].name).join(', ') : 'keine'}`);
+    toast(`Bereiche: ${neu.length ? neu.map(b => BEREICHE[b].name).join(', ') : 'keine'}`);
   } catch(e){ toastError('Bereiche konnten nicht geändert werden', e); }
   loadAllUsers();
 }
@@ -810,7 +827,7 @@ let sbExpandedGroups = new Set();
 let PROJECT_TEMPLATES = {};
 
 function saveProjectAsTemplate(name){
-  if(!CURRENT_PROJECT_ID || !PROJECTS[CURRENT_PROJECT_ID]) return toast('⚠️ Kein Projekt geöffnet');
+  if(!CURRENT_PROJECT_ID || !PROJECTS[CURRENT_PROJECT_ID]) return toast('Kein Projekt geöffnet');
   
   const project = PROJECTS[CURRENT_PROJECT_ID];
   const template = {
@@ -840,7 +857,7 @@ function saveProjectAsTemplate(name){
   PROJECT_TEMPLATES[name] = template;
   localStorage.setItem('pv_matrix_templates', JSON.stringify(PROJECT_TEMPLATES));
   
-  toast(`✅ Vorlage "${name}" gespeichert`);
+  toast(`Vorlage "${name}" gespeichert`);
   renderTemplateOptions();
 }
 
@@ -918,7 +935,7 @@ function saveCurrentAsTemplate(){
   const nameInput = g('new-template-name');
   const name = nameInput.value.trim();
   
-  if(!name) return toast('⚠️ Bitte einen Namen eingeben');
+  if(!name) return toast('Bitte einen Namen eingeben');
   
   saveProjectAsTemplate(name);
   hideSaveTemplateForm();
@@ -938,7 +955,7 @@ function deleteSelectedTemplate(){
 // Export-Funktionen erweitern
 function exportCSV(){
   const project = getCurrentProject();
-  if(!project) return toast('⚠️ Kein Projekt geöffnet');
+  if(!project) return toast('Kein Projekt geöffnet');
   
   const plan = getCurrentPlan();
   const csvData = [];
@@ -992,7 +1009,7 @@ function exportCSV(){
   link.click();
   document.body.removeChild(link);
   
-  toast('📄 CSV exportiert');
+  toast('CSV exportiert');
 }
 
 // HINWEIS (Review 09/2026): Diese Funktion druckte bisher direkt die Matrix-Ansicht
@@ -1007,7 +1024,7 @@ function exportPDFWithLogo(){
 
 function applyTemplate(templateName){
   const template = PROJECT_TEMPLATES[templateName];
-  if(!template) return toast('⚠️ Vorlage nicht gefunden');
+  if(!template) return toast('Vorlage nicht gefunden');
   
   if(!confirm(`Vorlage "${templateName}" anwenden?\n\nDies wird die aktuelle Hardware-Konfiguration ersetzen.`)) return;
   
@@ -1037,7 +1054,7 @@ function applyTemplate(templateName){
   renderMatrix();
   buildFilterBar();
   
-  toast(`✅ Vorlage "${templateName}" angewendet`);
+  toast(`Vorlage "${templateName}" angewendet`);
 }
 
 function deleteTemplate(templateName){
@@ -1047,7 +1064,7 @@ function deleteTemplate(templateName){
   localStorage.setItem('pv_matrix_templates', JSON.stringify(PROJECT_TEMPLATES));
   
   renderTemplateOptions();
-  toast(`🗑️ Vorlage "${templateName}" gelöscht`);
+  toast(`Vorlage "${templateName}" gelöscht`);
 }
 
 function renderTemplateOptions(){
@@ -1097,7 +1114,7 @@ function saveStateToHistory(description = 'Änderung'){
 
 function performUndo(){
   if(undoStack.length === 0) {
-    toast('↩️ Nichts zum Rückgängig machen');
+    toast('Nichts zum Rückgängig machen');
     return;
   }
   
@@ -1119,12 +1136,12 @@ function performUndo(){
   updateKPIs();
   updateUndoRedoUI();
   
-  toast(`↩️ ${previousState.description} rückgängig gemacht`);
+  toast(`${previousState.description} rückgängig gemacht`);
 }
 
 function performRedo(){
   if(redoStack.length === 0) {
-    toast('↪️ Nichts zum Wiederherstellen');
+    toast('Nichts zum Wiederherstellen');
     return;
   }
   
@@ -1146,7 +1163,7 @@ function performRedo(){
   updateKPIs();
   updateUndoRedoUI();
   
-  toast(`↪️ ${nextState.description} wiederhergestellt`);
+  toast(`${nextState.description} wiederhergestellt`);
 }
 
 function updateUndoRedoUI(){
@@ -1208,7 +1225,7 @@ function renderSidebarProjects(){
           <span class="sb-group-name">${esc(label)}</span>
           <span class="sb-group-count">${items.length}</span>
         </button>
-        ${showGroupActions ? `<button class="sb-proj-mini-btn" style="margin-right:8px;" onclick="editGroup('${safeAttr(key)}', event)" title="Gruppe umbenennen/löschen">⚙️</button>` : ''}
+        ${showGroupActions ? `<button class="sb-proj-mini-btn" style="margin-right:8px;" onclick="editGroup('${safeAttr(key)}', event)" title="Gruppe umbenennen/löschen">${ICON.gear}</button>` : ''}
       </div>
       <div class="sb-proj-group-children">${children}</div>
     </div>`;
@@ -1231,11 +1248,11 @@ function renderSbProjectItem(id){
     onclick="selectSbProject('${esc(id).replace(/'/g, "\\&#39;")}')"
     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"
     title="${esc(proj.name)}${proj.locked ? ' (Protokoll gesperrt)' : ''}">
-    ${proj.locked ? '<span class="sb-proj-lock" aria-label="gesperrt">🔒</span>' : ''}
+    ${proj.locked ? '<span class="sb-proj-lock" aria-label="gesperrt">' + ICON.lock + '</span>' : ''}
     <span class="sb-proj-name">${isActive ? '✓ ' : ''}${esc(proj.name)}</span>
     ${showActions ? `<span class="sb-proj-actions">
-      <button class="sb-proj-mini-btn" type="button" onclick="renameProject('${esc(id).replace(/'/g, "\\&#39;")}', event)" title="Umbenennen" aria-label="Umbenennen">✏️</button>
-      <button class="sb-proj-mini-btn" type="button" onclick="setProjectGroup('${esc(id).replace(/'/g, "\\&#39;")}', event)" title="Gruppe" aria-label="Gruppe">🏷️</button>
+      <button class="sb-proj-mini-btn" type="button" onclick="renameProject('${esc(id).replace(/'/g, "\\&#39;")}', event)" title="Umbenennen" aria-label="Umbenennen">${ICON.pencil}</button>
+      <button class="sb-proj-mini-btn" type="button" onclick="setProjectGroup('${esc(id).replace(/'/g, "\\&#39;")}', event)" title="Gruppe" aria-label="Gruppe">${ICON.tag}</button>
     </span>` : ''}
   </div>`;
 }
@@ -1271,8 +1288,7 @@ function renderHomeView(){
   const subtitle = g('home-subtitle');
 
   if(userName){
-    const raw = (currentUser && currentUser.email) ? currentUser.email.split('@')[0] : 'Anwender';
-    userName.textContent = raw;
+    userName.textContent = anzeigeName() || 'Anwender';
   }
   if(subtitle){
     const h = new Date().getHours();
@@ -1320,7 +1336,7 @@ function renderHomeView(){
         if(current.group) meta.push(current.group);
         meta.push(`${wrCount} WR`);
         meta.push(`${current.model_wp || 465} Wp`);
-        if(current.locked) meta.push('🔒 gesperrt');
+        if(current.locked) meta.push('gesperrt');
         activeMeta.textContent = meta.join(' · ');
       }
       // Fortschrittsbalken im "Aktuell geöffnet"-Kärtchen
@@ -1389,7 +1405,7 @@ function getCurrentPlan(){
 function getCurrentWp(){ return getCurrentProject() ? (getCurrentProject().model_wp || 465) : 465; }
 
 async function editModuleWp(){
-  if(!canEditHardware()) return toast('🔒 Keine Berechtigung — nur Planer/Admin');
+  if(!canEditHardware()) return toast('Keine Berechtigung — nur Planer/Admin');
   const proj = getCurrentProject();
   if(!proj) return toast('Kein Projekt geöffnet');
   const input = prompt('Modulleistung in Wp:', proj.model_wp || 465);
@@ -1402,11 +1418,11 @@ async function editModuleWp(){
   g('d-wp').textContent = wp;
   renderMatrix();
   if(supabaseClient && currentUser){
-    toast('🔄 Speichere...');
+    toast('Speichere...');
     const synced = await saveProjectToCloud(CURRENT_PROJECT_ID);
-    toast(synced ? '✅ Wp aktualisiert' : '⚠️ Nur lokal gespeichert — Sync fehlgeschlagen');
+    toast(synced ? 'Wp aktualisiert' : 'Nur lokal gespeichert — Sync fehlgeschlagen');
   } else {
-    toast('✅ Wp aktualisiert (nur lokal)');
+    toast('Wp aktualisiert (nur lokal)');
   }
 }
 
@@ -1499,7 +1515,7 @@ function canRenameInverter(){
 
 async function toggleProtocolLock(){
   if(currentUserRole !== 'admin'){
-    toast('🔒 Nur Admins können das Protokoll sperren/entsperren');
+    toast('Nur Admins können das Protokoll sperren/entsperren');
     return;
   }
   const p = getCurrentProject();
@@ -1534,10 +1550,10 @@ async function toggleProtocolLock(){
     synced = await saveProjectToCloud(CURRENT_PROJECT_ID);
   }
   if(willLock){
-    toast(synced ? '🔒 Messprotokoll gesperrt' : '⚠️ Gesperrt — nur lokal gespeichert, Sync steht noch aus');
+    toast(synced ? 'Messprotokoll gesperrt' : 'Gesperrt — nur lokal gespeichert, Sync steht noch aus');
   } else {
     const behalten = (p.signature || p.abnahme) ? ' — Unterschriften bleiben erhalten' : '';
-    toast(synced ? ('🔓 Zur Endbearbeitung entsperrt' + behalten) : '⚠️ Entsperrt — nur lokal gespeichert, Sync steht noch aus');
+    toast(synced ? ('Zur Endbearbeitung entsperrt' + behalten) : 'Entsperrt — nur lokal gespeichert, Sync steht noch aus');
   }
   renderMatrix();
   updateLockUI();
@@ -1586,11 +1602,11 @@ function updateLockUI(){
   const lockText = g('protocol-lock-text');
   if(lockBtn && lockIcon && lockText){
     if(locked){
-      lockIcon.textContent = '🔒';
+      lockIcon.textContent = '';
       lockText.textContent = 'Protokoll gesperrt';
       lockBtn.classList.add('locked');
     } else {
-      lockIcon.textContent = '🔓';
+      lockIcon.textContent = '';
       lockText.textContent = 'Protokoll sperren';
       lockBtn.classList.remove('locked');
     }
@@ -1624,13 +1640,13 @@ function updateLockUI(){
         + `digital unterschrieben am ${esc(new Date(sig.at).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }))}</div></div>`
       : '';
     if(p && (p.signature || p.abnahme)){
-      const kopf = p.abnahme ? '🔒 MESSPROTOKOLL ABGESCHLOSSEN'
-                 : (locked ? '🔒 MESSPROTOKOLL FREIGEGEBEN' : '✍️ IN ENDBEARBEITUNG');
+      const kopf = p.abnahme ? 'MESSPROTOKOLL ABGESCHLOSSEN'
+                 : (locked ? 'MESSPROTOKOLL FREIGEGEBEN' : 'IN ENDBEARBEITUNG');
       printStamp.innerHTML = `${kopf}<div style="margin-top:8px;">${feld(p.signature, 'Prüfer')}${feld(p.abnahme, 'Abnahme')}</div>`;
     } else if(locked){
       const lockedBy = p.locked_by || 'Admin';
       const lockedAt = p.locked_at ? new Date(p.locked_at).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
-      printStamp.innerHTML = `🔒 MESSPROTOKOLL GESPERRT &middot; Freigegeben durch <strong>${esc(lockedBy)}</strong> am <strong>${esc(lockedAt)}</strong>`;
+      printStamp.innerHTML = `MESSPROTOKOLL GESPERRT &middot; Freigegeben durch <strong>${esc(lockedBy)}</strong> am <strong>${esc(lockedAt)}</strong>`;
     } else {
       printStamp.innerHTML = '';
     }
@@ -1706,7 +1722,7 @@ function istAbnahmeSchritt(proj){
 }
 
 function openSignatureModal(){
-  if(!canEditMeasurement()) return toast('🔒 Keine Berechtigung zum Unterschreiben');
+  if(!canEditMeasurement()) return toast('Keine Berechtigung zum Unterschreiben');
   const proj = getCurrentProject();
   if(!proj) return;
   const abnahme = istAbnahmeSchritt(proj);
@@ -1716,22 +1732,22 @@ function openSignatureModal(){
   const setTxt = (id, html) => { const el = g(id); if(el) el.innerHTML = html; };
   if(abnahme){
     const pruefer = esc((proj.signature && proj.signature.name) || 'Prüfer');
-    setTxt('sig-title', '✅ Abnahme unterschreiben');
+    setTxt('sig-title', 'Abnahme unterschreiben');
     setTxt('sig-intro', 'Geprüft und gemessen hat <strong>' + pruefer + '</strong> — '
       + 'diese Unterschrift bleibt unverändert auf dem Protokoll stehen. '
       + 'Du unterzeichnest hier die <strong>Abnahme</strong>. Danach ist das Protokoll abgeschlossen.');
     setTxt('sig-name-label', 'Name (Abnahme)');
-    setTxt('sig-confirm-btn', '✅ Abnahme unterschreiben');
+    setTxt('sig-confirm-btn', 'Abnahme unterschreiben');
   } else {
-    setTxt('sig-title', '✍️ Digital unterschreiben');
+    setTxt('sig-title', 'Digital unterschreiben');
     setTxt('sig-intro', 'Mit der Unterschrift bestätigst du die Richtigkeit der eingetragenen Messwerte '
       + 'und gibst das Protokoll zur Endbearbeitung frei. Du bleibst als <strong>Prüfer</strong> auf dem '
       + 'Protokoll stehen — auch wenn danach noch etwas geändert wird.');
     setTxt('sig-name-label', 'Name (Prüfer)');
-    setTxt('sig-confirm-btn', '🔒 Signieren & freigeben');
+    setTxt('sig-confirm-btn', 'Signieren & freigeben');
   }
   const nameField = g('sig-name');
-  if(nameField) nameField.value = (currentUser && currentUser.email) ? currentUser.email.split('@')[0] : '';
+  if(nameField) nameField.value = anzeigeName();
   g('signature-modal').classList.add('show');
   requestAnimationFrame(initSignatureCanvas);
 }
@@ -1774,9 +1790,9 @@ async function confirmSignature(){
   updateLockUI();
   updateRoleHint();
   toast(synced
-    ? (abnahme ? '✅ Abnahme unterschrieben — Protokoll abgeschlossen'
-               : '✅ Unterschrieben & freigegeben — Messprotokoll ist gesperrt')
-    : '⚠️ Unterschrieben (nur lokal gespeichert) — bitte Verbindung prüfen und erneut synchronisieren');
+    ? (abnahme ? 'Abnahme unterschrieben — Protokoll abgeschlossen'
+               : 'Unterschrieben & freigegeben — Messprotokoll ist gesperrt')
+    : 'Unterschrieben (nur lokal gespeichert) — bitte Verbindung prüfen und erneut synchronisieren');
 }
 
 function updateRoleHint(){
@@ -1785,7 +1801,7 @@ function updateRoleHint(){
   if(currentUserRole === 'site'){
     banner.style.display = 'flex';
     g('role-hint-text').textContent = isProtocolLocked()
-      ? '🔒 Protokoll gesperrt — keine Änderungen möglich.'
+      ? 'Protokoll gesperrt — keine Änderungen möglich.'
       : 'Bauleitungs-Modus: Du kannst nur Messwerte (Uoc/Isc/Riso) und Bemerkungen eintragen. Hardware ist read-only.';
   } else {
     banner.style.display = 'none';
@@ -1937,41 +1953,41 @@ function renderMatrix(remoteOverride = null){
       <div class="wr-head">
         <div style="display:flex;align-items:center;gap:12px;">
           <span class="wr-num" style="cursor:${canHardware ? 'pointer' : (canRename ? 'pointer' : 'default')};" onclick="${canHardware ? `openInverterEditor(${wr})` : (canRename ? `renameInverterQuick(${wr})` : 'void(0)')}" title="${canHardware ? 'Wechselrichter bearbeiten' : (canRename ? 'Namen ändern' : '')}">${esc(wrData.name || 'WR ' + wr)}</span>
-          ${canHardware ? `<button class="wr-edit-btn" onclick="openInverterEditor(${wr})" title="Wechselrichter bearbeiten (MPPTs, Eingänge, löschen)">⚙️</button>` : (canRename ? `<button class="wr-edit-btn" onclick="renameInverterQuick(${wr})" title="Wechselrichter-Namen ändern">✏️</button>` : '')}
+          ${canHardware ? `<button class="wr-edit-btn" onclick="openInverterEditor(${wr})" title="Wechselrichter bearbeiten (MPPTs, Eingänge, löschen)">${ICON.gear}</button>` : (canRename ? `<button class="wr-edit-btn" onclick="renameInverterQuick(${wr})" title="Wechselrichter-Namen ändern">${ICON.pencil}</button>` : '')}
           <span class="wr-kpis">${activeStrings} Strings &middot; ${mppts} MPPTs</span>
-          <span class="wr-foto-leiste no-print"><button type="button" class="wr-foto-btn" onclick="fotoAufnehmen(${wr})" title="Foto zum Wechselrichter aufnehmen" aria-label="Foto zu ${esc(wrData.name || 'WR ' + wr)} aufnehmen">📷</button><span class="wr-fotos" data-wr="${wr}"></span></span>
+          <span class="wr-foto-leiste no-print"><button type="button" class="wr-foto-btn" onclick="fotoAufnehmen(${wr})" title="Foto zum Wechselrichter aufnehmen" aria-label="Foto zu ${esc(wrData.name || 'WR ' + wr)} aufnehmen">${ICON.camera}</button><span class="wr-fotos" data-wr="${wr}"></span></span>
         </div>
         <div class="wr-kpis"><strong id="wr-pwr-${wr}" style="color:var(--accent);">${wrPwr.toFixed(2)} kWp</strong></div>
       </div>
       <div id="wr-progress-wrap-${wr}">${generateWrProgress(wr, mppts, inputs)}</div>
       ${canHardware ? `
       <div class="wr-bulk-bar no-print">
-        <span class="bulk-label">⚡ Bulk:</span>
+        <span class="bulk-label">Bulk:</span>
         <div class="bulk-dropdown">
           <button class="bulk-dropdown-btn" onclick="toggleBulkDropdown(${wr})">
-            <span>⚡ Aktionen</span>
+            <span>Aktionen</span>
             <span>▼</span>
           </button>
           <div class="bulk-dropdown-menu" id="bulk-dropdown-${wr}">
             <button class="bulk-dropdown-item" onclick="bulkSetStat(${wr}, 'JA'); toggleBulkDropdown(${wr});">
-              <span>✅</span> <span>Alle auf JA</span>
+              <span></span> <span>Alle auf JA</span>
             </button>
             <button class="bulk-dropdown-item" onclick="bulkSetStat(${wr}, 'NEIN'); toggleBulkDropdown(${wr});">
-              <span>❌</span> <span>Alle auf NEIN</span>
+              <span></span> <span>Alle auf NEIN</span>
             </button>
             <div class="bulk-dropdown-divider"></div>
             <button class="bulk-dropdown-item" onclick="bulkSetModules(${wr}); toggleBulkDropdown(${wr});">
-              <span>🔢</span> <span>Module setzen...</span>
+              <span></span> <span>Module setzen...</span>
             </button>
             <button class="bulk-dropdown-item" onclick="bulkApplyGakSchema(${wr}); toggleBulkDropdown(${wr});">
-              <span>🏷️</span> <span>GAK-Schema anwenden</span>
+              <span></span> <span>GAK-Schema anwenden</span>
             </button>
             <div class="bulk-dropdown-divider"></div>
             <button class="bulk-dropdown-item danger" onclick="bulkClearMeasurements(${wr}); toggleBulkDropdown(${wr});">
-              <span>🧹</span> <span>Messwerte löschen (WR ${wr})</span>
+              <span></span> <span>Messwerte löschen (WR ${wr})</span>
             </button>
             <button class="bulk-dropdown-item danger" onclick="bulkClearAllNotes(); toggleBulkDropdown(${wr});">
-              <span>🗒️</span> <span>Alle Bemerkungen löschen</span>
+              <span></span> <span>Alle Bemerkungen löschen</span>
             </button>
           </div>
         </div>
@@ -2029,7 +2045,12 @@ function updateScrollContext(){
   const rows = [...document.querySelectorAll('tr[data-string-id]')]
     .filter(row => row.offsetParent !== null)
     .map(row => ({ row, rect: row.getBoundingClientRect() }));
-  const active = rows.find(({ rect }) => rect.bottom >= anchor) || rows[rows.length - 1];
+  // Ganz unten angekommen erreichen die letzten Strings den Bezugspunkt nie –
+  // dann gilt der letzte String, der noch vollstaendig im Bild ist.
+  const amEnde = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+  const imBild = rows.filter(({ rect }) => rect.bottom <= window.innerHeight);
+  const active = (amEnde && imBild.length ? imBild[imBild.length - 1] : null)
+    || rows.find(({ rect }) => rect.bottom >= anchor) || rows[rows.length - 1];
   if(!active){ context.hidden = true; return; }
   const { wr, mppt, string, stringId } = active.row.dataset;
   label.textContent = `WR ${wr} · MPPT ${mppt} · String ${string} (${stringId})`;
@@ -2098,9 +2119,9 @@ function generateWrProgress(wrId, mppts, inputs){
       <div class="wr-progress-inactive" style="width:${pn}%"></div>
     </div>
     <div class="wr-progress-legend">
-      <span>🟢 ${complete} fertig</span>
-      <span>🟠 ${incomplete} offen</span>
-      <span>⚪ ${inactive} inaktiv</span>
+      <span>${complete} fertig</span>
+      <span>${incomplete} offen</span>
+      <span>${inactive} inaktiv</span>
     </div>`;
 }
 
@@ -2243,7 +2264,7 @@ function applyMeasurementFlags(){
       bar.style.display = 'flex';
       bar.classList.add('has-crit');
       bar.classList.remove('has-warn');
-      bar.innerHTML = `<span>⛔</span><span><strong>${nCrit}</strong> ${nCrit === 1 ? 'Wert' : 'Werte'} unplausibel</span>`
+      bar.innerHTML = `<span></span><span><strong>${nCrit}</strong> ${nCrit === 1 ? 'Wert' : 'Werte'} unplausibel</span>`
         + `<button type="button" class="ab-jump" onclick="jumpToNextFlag()">Zum nächsten →</button>`;
     }
   }
@@ -2327,7 +2348,7 @@ function getWrDefaultInputs(){
 }
 
 async function renameInverterQuick(wrId){
-  if(!canRenameInverter()) return toast('🔒 Keine Berechtigung');
+  if(!canRenameInverter()) return toast('Keine Berechtigung');
   const plan = getCurrentPlan();
   const data = plan[wrId];
   if(!data) return toast('Wechselrichter nicht gefunden');
@@ -2344,16 +2365,16 @@ async function renameInverterQuick(wrId){
   renderMatrix();
 
   if(supabaseClient && currentUser){
-    toast('🔄 Speichere...');
+    toast('Speichere...');
     const synced = await saveProjectToCloud(CURRENT_PROJECT_ID);
-    toast(synced ? '✅ Name geändert' : '⚠️ Nur lokal gespeichert — Sync fehlgeschlagen, bitte Verbindung prüfen');
+    toast(synced ? 'Name geändert' : 'Nur lokal gespeichert — Sync fehlgeschlagen, bitte Verbindung prüfen');
   } else {
-    toast('✅ Name geändert (nur lokal)');
+    toast('Name geändert (nur lokal)');
   }
 }
 
 function openInverterEditor(wrId){
-  if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
+  if(!canEditHardware()) return toast('Keine Berechtigung');
   const plan = getCurrentPlan();
   const data = plan[wrId];
   if(!data) return toast('Wechselrichter nicht gefunden');
@@ -2410,7 +2431,7 @@ function refreshInverterEditorInfo(){
 
 function toggleEditorSlot(mppt, input){
   if(!_inverterEditorWrId) return;
-  if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
+  if(!canEditHardware()) return toast('Keine Berechtigung');
   const wrId = _inverterEditorWrId;
   const id = `${wrId}.${mppt}.${input}`;
   if(!APP_STATE[id]) return;
@@ -2419,7 +2440,7 @@ function toggleEditorSlot(mppt, input){
   it.stat = wasJa ? 'NEIN' : 'JA';
   refreshInverterEditorWarnings(); // refresht Slot-Grid + Info-Box
   // Mini-Feedback-Toast
-  toast(wasJa ? `⛔ MPPT ${mppt}.${input} deaktiviert` : `✅ MPPT ${mppt}.${input} aktiviert`);
+  toast(wasJa ? `MPPT ${mppt}.${input} deaktiviert` : `MPPT ${mppt}.${input} aktiviert`);
 }
 
 function countActiveStringsForWr(wrId){
@@ -2508,7 +2529,7 @@ function refreshInverterEditorWarnings(){
     warnings.push(`Eingänge werden von ${oldInputs} auf ${newInputs} erweitert (neue Slots sind zunächst leer).`);
   }
   if(warnings.length){
-    warnEl.innerHTML = `<div class="inv-editor-warn"><span class="inv-editor-warn-icon">⚠️</span><div>${warnings.map(w => `<div style="margin-top:2px;">${esc(w)}</div>`).join('')}</div></div>`;
+    warnEl.innerHTML = `<div class="inv-editor-warn"><span class="inv-editor-warn-icon"></span><div>${warnings.map(w => `<div style="margin-top:2px;">${esc(w)}</div>`).join('')}</div></div>`;
     warnEl.hidden = false;
   } else {
     warnEl.hidden = true;
@@ -2534,7 +2555,7 @@ function saveInverterEditor(){
   if(shrinking){
     const maxUsedM = getMaxUsedMppt(wrId);
     if(newMppts < maxUsedM){
-      if(!confirm(`⚠️ Reduzierung entfernt MPPT ${maxUsedM}, das aktive Daten enthält.\n\nDiese Daten gehen UNWIDERRUFLICH verloren.\n\nTrotzdem fortfahren?`)) return;
+      if(!confirm(`Reduzierung entfernt MPPT ${maxUsedM}, das aktive Daten enthält.\n\nDiese Daten gehen UNWIDERRUFLICH verloren.\n\nTrotzdem fortfahren?`)) return;
     } else {
       if(!confirm(`MPPTs/Inputs reduzieren?\n\nSlots außerhalb der neuen Grenze werden entfernt.`)) return;
     }
@@ -2573,7 +2594,7 @@ function saveInverterEditor(){
   }
 
   renderMatrix();
-  toast(shrinking ? '⚠️ Wechselrichter angepasst (Daten in entfernten Slots gelöscht)' : '✅ Wechselrichter aktualisiert');
+  toast(shrinking ? 'Wechselrichter angepasst (Daten in entfernten Slots gelöscht)' : 'Wechselrichter aktualisiert');
   closeInverterEditor();
 }
 
@@ -2602,7 +2623,7 @@ function regenerateAppStatePreservingMeasurements(){
 
 function confirmDeleteInverterFromEditor(){
   if(!_inverterEditorWrId) return;
-  if(currentUserRole !== 'admin') return toast('🔒 Nur Admins können WRs löschen');
+  if(currentUserRole !== 'admin') return toast('Nur Admins können WRs löschen');
   const wrId = _inverterEditorWrId;
   const plan = getCurrentPlan();
   const data = plan[wrId];
@@ -2610,7 +2631,7 @@ function confirmDeleteInverterFromEditor(){
   const activeStr = countActiveStringsForWr(wrId);
   const activeMod = countActiveModulesForWr(wrId);
   const msg = activeStr > 0
-    ? `WR ${wrId} (${data.name || ''}) wirklich löschen?\n\n⚠️ ${activeStr} aktive Strings / ${activeMod} Module gehen verloren.\n\nDieser Schritt kann nicht rückgängig gemacht werden.`
+    ? `WR ${wrId} (${data.name || ''}) wirklich löschen?\n\n${activeStr} aktive Strings / ${activeMod} Module gehen verloren.\n\nDieser Schritt kann nicht rückgängig gemacht werden.`
     : `WR ${wrId} (${data.name || ''}) wirklich löschen?`;
   if(!confirm(msg)) return;
   deleteInverter(wrId, true);
@@ -2618,7 +2639,7 @@ function confirmDeleteInverterFromEditor(){
 }
 
 function deleteInverter(wrId, skipConfirm){
-  if(currentUserRole !== 'admin') return toast('🔒 Nur Admins können WRs löschen');
+  if(currentUserRole !== 'admin') return toast('Nur Admins können WRs löschen');
   const plan = getCurrentPlan();
   if(!plan[wrId]) return;
   if(!skipConfirm){
@@ -2638,11 +2659,11 @@ function deleteInverter(wrId, skipConfirm){
     if(supabaseClient && currentUser) saveProjectToCloud(CURRENT_PROJECT_ID);
   }
   renderMatrix();
-  toast(`🗑️ WR ${wrId} gelöscht`);
+  toast(`WR ${wrId} gelöscht`);
 }
 
 function addNewInverter(){
-  if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
+  if(!canEditHardware()) return toast('Keine Berechtigung');
   const plan = getCurrentPlan();
   const wrKeys = Object.keys(plan).map(k => parseInt(k, 10)).filter(n => !isNaN(n)).sort((a,b) => a-b);
   const nextId = wrKeys.length ? (wrKeys[wrKeys.length - 1] + 1) : 1;
@@ -2670,7 +2691,7 @@ function addNewInverter(){
   }
   renderMatrix();
   buildFilterBar();
-  toast(`➕ WR ${nextId} hinzugefügt`);
+  toast(`WR ${nextId} hinzugefügt`);
   // Direkt Editor öffnen, damit der User Name/MPPTs anpassen kann
   openInverterEditor(nextId);
 }
@@ -2712,11 +2733,11 @@ function showSaveIndicator(state){
   if(state === 'saving' || state === 'syncing'){
     if(el) { el.classList.add('show','syncing'); el.classList.remove('saved'); }
     if(elD) { elD.classList.add('show','syncing'); elD.classList.remove('saved'); elD.style.display='inline-flex'; }
-    setText('💾 Speichere...');
+    setText('Speichere...');
   } else if(state === 'saved'){
     if(el) { el.classList.add('show','saved'); el.classList.remove('syncing'); }
     if(elD) { elD.classList.add('show','saved'); elD.classList.remove('syncing'); elD.style.display='inline-flex'; }
-    setText('✅ Gespeichert');
+    setText('Gespeichert');
     _saveIndicatorTimer = setTimeout(() => {
       if(el){ el.classList.remove('show','saved'); }
       if(elD){ elD.classList.remove('show','saved'); }
@@ -2724,11 +2745,11 @@ function showSaveIndicator(state){
   } else if(state === 'error'){
     if(el) { el.classList.add('show'); el.classList.remove('syncing','saved'); el.style.color='#ef4444'; el.style.background='rgba(239,68,68,0.15)'; }
     if(elD) { elD.classList.add('show'); elD.classList.remove('syncing','saved'); elD.style.color='#ef4444'; elD.style.background='rgba(239,68,68,0.15)'; elD.style.display='inline-flex'; }
-    setText('❌ Speicherfehler');
+    setText('Speicherfehler');
   } else if(state === 'pending'){
     if(el) { el.classList.add('show'); el.classList.remove('syncing','saved'); el.style.color='#eab308'; el.style.background='rgba(234,179,8,0.15)'; }
     if(elD) { elD.classList.add('show'); elD.classList.remove('syncing','saved'); elD.style.color='#eab308'; elD.style.background='rgba(234,179,8,0.15)'; elD.style.display='inline-flex'; }
-    setText('⏳ Warte auf Sync...');
+    setText('Warte auf Sync...');
   }
 }
 
@@ -2895,12 +2916,12 @@ function toggleMatrixNav(){
   matrixNavMode = matrixNavMode === 'down' ? 'across' : 'down';
   try { localStorage.setItem('pv_nav_mode', matrixNavMode); } catch(_){}
   updateNavToggleLabel();
-  toast(matrixNavMode === 'down' ? '⬇️ Tab springt nach unten' : '➡️ Tab springt quer durch die Zeile');
+  toast(matrixNavMode === 'down' ? 'Tab springt nach unten' : 'Tab springt quer durch die Zeile');
 }
 
 function updateNavToggleLabel(){
   const el = g('nav-toggle-text');
-  if(el) el.textContent = matrixNavMode === 'down' ? 'Tab: nach unten' : 'Tab: quer';
+  if(el) el.textContent = matrixNavMode === 'down' ? 'Weiter: ↓ nächster String' : 'Weiter: → nächstes Feld';
   const btn = g('btn-nav-mode');
   if(btn) btn.title = matrixNavMode === 'down'
     ? 'Tab/Enter springt zum gleichen Feld des nächsten Strings — zum Umschalten klicken'
@@ -2991,14 +3012,14 @@ document.addEventListener('keydown', (e) => {
   if((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault();
     if(CURRENT_PROJECT_ID) {
-      toast('💾 Manuelles Speichern...');
+      toast('Manuelles Speichern...');
       if(supabaseClient && currentUser) {
         saveProjectToCloud(CURRENT_PROJECT_ID);
       } else {
         showSaveIndicator('pending');
       }
     } else {
-      toast('⚠️ Kein Projekt zum Speichern');
+      toast('Kein Projekt zum Speichern');
     }
   }
   
@@ -3008,7 +3029,7 @@ document.addEventListener('keydown', (e) => {
     if(currentUserRole !== 'site') {
       openNewProjectModal();
     } else {
-      toast('🔒 Keine Berechtigung für neue Projekte');
+      toast('Keine Berechtigung für neue Projekte');
     }
   }
   
@@ -3021,7 +3042,7 @@ document.addEventListener('keydown', (e) => {
       firstInput.focus();
       firstInput.select();
     } else {
-      toast('🔍 Kein Suchfeld verfügbar');
+      toast('Kein Suchfeld verfügbar');
     }
   }
   
@@ -3057,7 +3078,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 function bulkSetStat(wrId, st){
-  if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
+  if(!canEditHardware()) return toast('Keine Berechtigung');
   const plan = getCurrentPlan();
   const data = plan[wrId];
   if(!data) return;
@@ -3095,7 +3116,7 @@ function bulkSetStat(wrId, st){
 }
 
 function bulkSetModules(wrId){
-  if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
+  if(!canEditHardware()) return toast('Keine Berechtigung');
   const plan = getCurrentPlan();
   const data = plan[wrId];
   if(!data) return;
@@ -3154,7 +3175,7 @@ function bulkSetModules(wrId){
 }
 
 function bulkApplyGakSchema(wrId){
-  if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
+  if(!canEditHardware()) return toast('Keine Berechtigung');
   const plan = getCurrentPlan();
   const data = plan[wrId];
   if(!data) return;
@@ -3192,7 +3213,7 @@ function bulkApplyGakSchema(wrId){
 }
 
 function bulkClearMeasurements(wrId){
-  if(!canEditHardware()) return toast('🔒 Keine Berechtigung');
+  if(!canEditHardware()) return toast('Keine Berechtigung');
   const plan = getCurrentPlan();
   const data = plan[wrId];
   if(!data) return;
@@ -3226,12 +3247,12 @@ function bulkClearMeasurements(wrId){
     if(changed === 0) return toast('Keine Messwerte zum Löschen');
     saveStateToHistory('Messwerte gelöscht');
     bulkPersistAndRender();
-    toast(`🧹 ${changed} Messwerte gelöscht`);
+    toast(`${changed} Messwerte gelöscht`);
   }, 100);
 }
 
 async function bulkClearAllNotes(){
-  if(!canEditMeasurement()) return toast('🔒 Keine Berechtigung — Protokoll ist gesperrt');
+  if(!canEditMeasurement()) return toast('Keine Berechtigung — Protokoll ist gesperrt');
   const plan = getCurrentPlan();
   if(!plan) return;
   if(!confirm('Bemerkungen bei ALLEN Strings im gesamten Projekt löschen?')) return;
@@ -3274,7 +3295,7 @@ async function bulkClearAllNotes(){
     hideBulkProgress();
     saveStateToHistory('Alle Bemerkungen gelöscht');
     bulkPersistAndRender();
-    toast(`🧹 ${total} Bemerkungen gelöscht`);
+    toast(`${total} Bemerkungen gelöscht`);
   }, 100);
 }
 
@@ -3328,12 +3349,12 @@ function saveData(id, field, val) {
   const isHardware = hardwareFields.includes(field);
   
   if(isHardware && !canEditHardware()){
-    toast('🔒 Hardware-Felder kannst du nicht ändern');
+    toast('Hardware-Felder kannst du nicht ändern');
     revertInput(id, field);
     return;
   }
   if(!isHardware && !canEditMeasurement()){
-    toast('🔒 Protokoll gesperrt - Änderung nicht möglich');
+    toast('Protokoll gesperrt - Änderung nicht möglich');
     revertInput(id, field);
     return;
   }
@@ -3419,7 +3440,7 @@ function revertInput(id, field){
 }
 
 function setStat(id, st) {
-  if(!canEditHardware()) return toast('🔒 Hardware-Felder kannst du nicht ändern');
+  if(!canEditHardware()) return toast('Hardware-Felder kannst du nicht ändern');
   saveData(id, 'stat', st);
   const ja = g(`tja-${id}`); const nei = g(`tnei-${id}`);
   if(st==='JA'){ ja.className='tog on-ja'; nei.className='tog'; }
@@ -3501,7 +3522,7 @@ function updateKPIs(){
 }
 
 function openPVSOLModal(){
-  if(currentUserRole === 'site') return toast('🔒 Nur Planer/Admin');
+  if(currentUserRole === 'site') return toast('Nur Planer/Admin');
   pendingPVSOLData = null;
   g('pvsol-file-input').value = '';
   g('pvsol-file-label').textContent = 'JSON-Datei auswählen';
@@ -3673,7 +3694,7 @@ async function confirmPVSOLImport(){
   if(supabaseClient && currentUser) await saveProjectToCloud(id);
   closePVSOLModal();
   await selectProject(id);
-  toast(`✅ Import erfolgreich: ${parsed.stringCount} Strings / ${parsed.moduleCount} Module`);
+  toast(`Import erfolgreich: ${parsed.stringCount} Strings / ${parsed.moduleCount} Module`);
 }
 
 async function openProjectsModal(){
@@ -3682,7 +3703,7 @@ async function openProjectsModal(){
   const ids = bereichProjektIds();
   list.innerHTML = ids.map(id => {
     const proj = PROJECTS[id];
-    const lockedIcon = proj.locked ? '🔒 ' : '';
+    const lockedIcon = proj.locked ? ICON.lock + ' ' : '';
     const wrCount = Object.keys(proj.plan || {}).filter(k => !isNaN(parseInt(k))).length;
     return `
     <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--bg); border:1px solid var(--border); border-radius:12px; flex-wrap:wrap; gap:8px;">
@@ -3692,7 +3713,7 @@ async function openProjectsModal(){
       </div>
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
         <button class="btn btn-ghost" onclick="selectProject('${id}')" style="padding:6px 10px;">Öffnen</button>
-        ${currentUserRole !== 'site' ? `<button class="btn btn-ghost" onclick="renameProject('${id}', event)" style="padding:6px 10px;" title="Projekt umbenennen">✏️ Umbenennen</button>` : ''}
+        ${currentUserRole !== 'site' ? `<button class="btn btn-ghost" onclick="renameProject('${id}', event)" style="padding:6px 10px;" title="Projekt umbenennen">Umbenennen</button>` : ''}
         ${currentUserRole !== 'site' ? `<button class="btn btn-ghost" onclick="deleteProject('${id}', event)" style="padding:6px 10px; color:#ef4444; border-color:#ef4444;">Löschen</button>` : ''}
       </div>
     </div>
@@ -3704,18 +3725,18 @@ function closeProjectsModal(e){ if(!e || e.target===e.currentTarget) g('projects
 
 async function refreshProjects(){
   const btn = document.querySelector('button[onclick="refreshProjects()"]');
-  if(btn) { btn.disabled = true; btn.textContent = '⏳ Lade...'; }
+  if(btn) { btn.disabled = true; btn.textContent = 'Lade...'; }
   try {
-    if(!supabaseClient || !currentUser) { toast('❌ Keine Cloud-Verbindung'); return; }
-    toast('🔄 Aktualisiere...');
+    if(!supabaseClient || !currentUser) { toast('Keine Cloud-Verbindung'); return; }
+    toast('Aktualisiere...');
     await fetchProjectsFromCloud();
     renderProjectGrid();
     updateLockUI();
-    toast('✅ Projekte aktualisiert');
+    toast('Projekte aktualisiert');
   } catch(e){
     toastError('Projekte konnten nicht aktualisiert werden', e);
   } finally {
-    if(btn) { btn.disabled = false; btn.textContent = '🔄 Aktualisieren'; }
+    if(btn) { btn.disabled = false; btn.textContent = 'Aktualisieren'; }
   }
 }
 
@@ -3751,12 +3772,12 @@ async function selectProject(id){
   CURRENT_PROJECT_ID = id;
 
   // Neues Lock versuchen
-  console.log('🔒 Lock-Test: Versuche Lock für Projekt', id);
+  console.log('Lock-Test: Versuche Lock für Projekt', id);
   const lockSuccess = await lockProject(id);
-  console.log('🔒 Lock-Test: Lock-Ergebnis', lockSuccess);
+  console.log('Lock-Test: Lock-Ergebnis', lockSuccess);
 
   if (!lockSuccess) {
-    toast('⚠️ Projekt ist gesperrt - nur lesender Zugriff');
+    toast('Projekt ist gesperrt - nur lesender Zugriff');
   }
 
   loadCurrentProjectData();
@@ -3849,7 +3870,7 @@ async function doCreateNewProject(){
   loadCurrentProjectData(true);
   if(supabaseClient && currentUser) await saveProjectToCloud(id);
   renderProjectUI();
-  toast('✅ Projekt erstellt');
+  toast('Projekt erstellt');
 }
 
 async function updateProjectConfigInCloud(id) {
@@ -3875,8 +3896,8 @@ async function deleteProject(id, event){
   if(PROJECTS[id] && istGeschuetzt(PROJECTS[id])){
     if(event) event.stopPropagation();
     return toast(PROJECTS[id].locked
-      ? '🔒 Unterschriebenes Protokoll — geschützt, kann nicht gelöscht werden'
-      : '🔒 Dieses Protokoll war unterschrieben — es bleibt dauerhaft vor dem Löschen geschützt');
+      ? 'Unterschriebenes Protokoll — geschützt, kann nicht gelöscht werden'
+      : 'Dieses Protokoll war unterschrieben — es bleibt dauerhaft vor dem Löschen geschützt');
   }
   if(event) event.stopPropagation();
   if(id === CURRENT_PROJECT_ID) return toast('Aktives Projekt kann nicht gelöscht werden');
@@ -3896,14 +3917,14 @@ async function deleteProject(id, event){
   if(g('projects-modal') && g('projects-modal').classList.contains('show')) openProjectsModal();
   renderProjectUI();
   if(g('project-grid')) renderProjectGrid();
-  if(cloudOk) toast('🗑️ Projekt gelöscht');
+  if(cloudOk) toast('Projekt gelöscht');
 }
 
 async function renameProject(id, event){
   if(event) event.stopPropagation();
   const proj = PROJECTS[id];
   if(!proj) return;
-  if(currentUserRole === 'site') return toast('🔒 Keine Berechtigung');
+  if(currentUserRole === 'site') return toast('Keine Berechtigung');
   const newName = prompt('Projekt umbenennen:', proj.name || '');
   if(newName === null) return;
   const trimmed = newName.trim();
@@ -3925,7 +3946,7 @@ async function renameProject(id, event){
         .update({ name: trimmed, updated_at: proj.updated_at })
         .eq('id', id);
       if(error) throw error;
-      toast('✅ Projekt umbenannt');
+      toast('Projekt umbenannt');
     } catch(e){
       proj.name = previousName;
       if(g('project-grid')) renderProjectGrid();
@@ -3934,7 +3955,7 @@ async function renameProject(id, event){
       toastError('Umbenennen fehlgeschlagen — bitte erneut versuchen', e);
     }
   } else {
-    toast('✅ Projekt umbenannt (nur lokal)');
+    toast('Projekt umbenannt (nur lokal)');
   }
 }
 
@@ -3942,7 +3963,7 @@ async function setProjectGroup(id, event){
   if(event) event.stopPropagation();
   const proj = PROJECTS[id];
   if(!proj) return;
-  if(currentUserRole === 'site') return toast('🔒 Keine Berechtigung');
+  if(currentUserRole === 'site') return toast('Keine Berechtigung');
   const existingGroups = [...new Set(bereichProjektIds().map(pid => PROJECTS[pid].group).filter(Boolean))].sort();
   const hint = existingGroups.length ? `\n\nVorhandene Gruppen: ${existingGroups.join(', ')}` : '';
   const input = prompt('Gruppe für dieses Projekt (leer lassen zum Entfernen):' + hint, proj.group || '');
@@ -3962,7 +3983,7 @@ async function setProjectGroup(id, event){
   if(supabaseClient && currentUser){
     try {
       await updateProjectConfigInCloud(id);
-      toast('✅ Gruppe gespeichert');
+      toast('Gruppe gespeichert');
     } catch(e){
       proj.group = previousGroup;
       if(g('project-grid')) renderProjectGrid();
@@ -3971,13 +3992,13 @@ async function setProjectGroup(id, event){
       toastError('Gruppe konnte nicht gespeichert werden', e);
     }
   } else {
-    toast('✅ Gruppe gesetzt (nur lokal)');
+    toast('Gruppe gesetzt (nur lokal)');
   }
 }
 
 async function editGroup(oldName, event) {
   if(event) { event.stopPropagation(); event.preventDefault(); }
-  if(currentUserRole === 'site') return toast('🔒 Keine Berechtigung');
+  if(currentUserRole === 'site') return toast('Keine Berechtigung');
   const action = prompt(`Gruppe "${oldName}" bearbeiten:\n\n- Neuen Namen eingeben zum Umbenennen.\n- ODER "LÖSCHEN" eintippen, um die Gruppe komplett aufzulösen (Die Projekte bleiben dabei erhalten).`, oldName);
   
   if(action === null) return;
@@ -3997,7 +4018,7 @@ async function editGroup(oldName, event) {
       }
     }
     if(failedIds.length) toastError(`Gruppe teilweise aufgelöst (${projectsUpdated} ok, ${failedIds.length} fehlgeschlagen — bitte erneut versuchen)`);
-    else toast(`🗑️ Gruppe aufgelöst (${projectsUpdated} Projekte aktualisiert)`);
+    else toast(`Gruppe aufgelöst (${projectsUpdated} Projekte aktualisiert)`);
   } else {
     for(let id in PROJECTS) {
       if(PROJECTS[id].group === oldName && imAktuellenBereich(id)) {
@@ -4008,7 +4029,7 @@ async function editGroup(oldName, event) {
       }
     }
     if(failedIds.length) toastError(`Gruppe teilweise umbenannt (${projectsUpdated} ok, ${failedIds.length} fehlgeschlagen — bitte erneut versuchen)`);
-    else toast(`✅ Gruppe umbenannt (${projectsUpdated} Projekte aktualisiert)`);
+    else toast(`Gruppe umbenannt (${projectsUpdated} Projekte aktualisiert)`);
   }
 
   saveProjectsLocal();
@@ -4094,7 +4115,7 @@ function printBlankMeasurementSheet(){
   const lockedBy = proj.locked_by || 'Admin';
   const lockedAt = proj.locked_at ? new Date(proj.locked_at).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
   const lockStampHtml = isLocked ? 
-    `<div style="margin-top:24px;padding:14px 16px;border:3px solid #b91c1c;border-radius:8px;text-align:center;color:#b91c1c;font-weight:800;font-size:11pt;background:#fef2f2;">🔒 MESSPROTOKOLL GESPERRT &middot; Freigegeben durch <strong>${esc(lockedBy)}</strong> am <strong>${esc(lockedAt)}</strong></div>` : '';
+    `<div style="margin-top:24px;padding:14px 16px;border:3px solid #b91c1c;border-radius:8px;text-align:center;color:#b91c1c;font-weight:800;font-size:11pt;background:#fef2f2;">MESSPROTOKOLL GESPERRT &middot; Freigegeben durch <strong>${esc(lockedBy)}</strong> am <strong>${esc(lockedAt)}</strong></div>` : '';
   
   const valOrLine = (val, width) => {
     const v = (val ?? '').toString().trim();
@@ -4113,7 +4134,7 @@ function printBlankMeasurementSheet(){
 
   let win = window.open('', '_blank');
   if(!win){
-    toast('⚠️ Popup wurde vom Browser blockiert — bitte Popups für diese Seite erlauben und erneut versuchen');
+    toast('Popup wurde vom Browser blockiert — bitte Popups für diese Seite erlauben und erneut versuchen');
     return;
   }
   const wrKeys = Object.keys(proj.plan || {}).map(Number).filter(n => !isNaN(n)).sort((a,b)=>a-b);
@@ -4262,7 +4283,7 @@ function saveProjectToCloud(projectId, skipRender){
 async function pushCloudDataManually(){
   if(!supabaseClient || !CURRENT_PROJECT_ID || !currentUser) return toast('Cloud/Projekt nicht bereit');
   const proj = getCurrentProject();
-  toast('☁️ Lade hoch...');
+  toast('Lade hoch...');
   try {
     const stateData = APP_STATE;
     const configToSave = buildProjectConfig(proj, currentUser.email);
@@ -4272,7 +4293,7 @@ async function pushCloudDataManually(){
       data: stateData, config: configToSave, updated_at: new Date().toISOString(),
       bereich: projektBereich(proj)
     });
-    if(!error) toast('✅ Cloud gespeichert!'); else toastError('Cloud-Speichern fehlgeschlagen', error);
+    if(!error) toast('Cloud gespeichert!'); else toastError('Cloud-Speichern fehlgeschlagen', error);
   } catch(e) { toastError('Keine Verbindung zur Cloud', e); }
 }
 
@@ -4285,13 +4306,13 @@ async function fetchCloudDataManually(silent = false){
   if(cloudSaveQueues.has(CURRENT_PROJECT_ID)){
     try { await cloudSaveQueues.get(CURRENT_PROJECT_ID); } catch(e){}
   }
-  if(!silent) toast('📥 Lade...');
+  if(!silent) toast('Lade...');
   try {
     const { data, error } = await supabaseClient.from('pv_projects').select('*').eq('id', CURRENT_PROJECT_ID).single();
     if(data && data.data){
       APP_STATE = { ...generateState(getCurrentPlan(), false), ...data.data };
       renderMatrix();
-      if(!silent) toast('✅ Stand geladen');
+      if(!silent) toast('Stand geladen');
     } else if(error) {
       if(!silent) toastError('Stand konnte nicht geladen werden', error);
     } else if(!silent) {
@@ -4308,7 +4329,7 @@ async function factoryResetCloud(){
   APP_STATE = generateState(getCurrentPlan());
   renderMatrix(null);
   await pushCloudDataManually();
-  toast('✅ Matrix zurückgesetzt');
+  toast('Matrix zurückgesetzt');
 }
 
 function toggleAuthMode(){
@@ -4379,30 +4400,43 @@ window.addEventListener('pagehide', () => {
 });
 
 async function checkSession(){
-  if(!supabaseClient) return;
-  const { data } = await supabaseClient.auth.getSession();
-  if(data && data.session && data.session.user) await onAuthenticated(data.session.user);
+  // Ladezustand (body.app-laedt, schon im HTML gesetzt) endet hier in jedem
+  // Fall – auch ohne Verbindung oder bei einem Fehler, sonst haengt die App.
+  try {
+    if(!supabaseClient) return;
+    const { data } = await supabaseClient.auth.getSession();
+    if(data && data.session && data.session.user) await onAuthenticated(data.session.user);
+  } finally {
+    document.body.classList.remove('app-laedt');
+  }
 }
 
 async function onAuthenticated(user){
   currentUser = user;
+  // Waehrend Profil und Projekte laden, nicht die leere App zeigen,
+  // sondern den Ladezustand – danach direkt die Bereichswahl.
+  document.body.classList.add('app-laedt');
   g('auth-gate').style.display = 'none';
-  await loadMyProfile();
-  const isAdmin = currentUserRole === 'admin';
-  const isPlannerUp = currentUserRole === 'admin' || currentUserRole === 'planner';
-  document.querySelectorAll('.role-gate-admin').forEach(el => el.classList.toggle('hidden-role', !isAdmin));
-  document.querySelectorAll('.role-gate-planner').forEach(el => el.classList.toggle('hidden-role', !isPlannerUp));
-  if(!isPlannerUp && document.body.classList.contains('tab-querschnitt')) switchMainTab('home');
-  g('user-badge').style.display = 'flex';
-  g('user-badge-email').textContent = currentUser.email;
-  const roleLabels = { admin: 'Admin', planner: 'Planer', site: 'Bauleitung' };
-  g('user-badge-role').textContent = roleLabels[currentUserRole] || '—';
-  await initProjects();
-  if(typeof fotoWarteschlangeSenden === 'function') fotoWarteschlangeSenden();
-  updateLockUI();
-  updateRoleHint();
-  if(currentUserRole === 'site') toggleHideInactive(true);
-  zeigeBereichsWahl();
+  try {
+    await loadMyProfile();
+    const isAdmin = currentUserRole === 'admin';
+    const isPlannerUp = currentUserRole === 'admin' || currentUserRole === 'planner';
+    document.querySelectorAll('.role-gate-admin').forEach(el => el.classList.toggle('hidden-role', !isAdmin));
+    document.querySelectorAll('.role-gate-planner').forEach(el => el.classList.toggle('hidden-role', !isPlannerUp));
+    if(!isPlannerUp && document.body.classList.contains('tab-querschnitt')) switchMainTab('home');
+    g('user-badge').style.display = 'flex';
+    aktualisiereNamensAnzeige();
+    const roleLabels = { admin: 'Admin', planner: 'Planer', site: 'Bauleitung' };
+    g('user-badge-role').textContent = roleLabels[currentUserRole] || '—';
+    await initProjects();
+    if(typeof fotoWarteschlangeSenden === 'function') fotoWarteschlangeSenden();
+    updateLockUI();
+    updateRoleHint();
+    if(currentUserRole === 'site') toggleHideInactive(true);
+    zeigeBereichsWahl();
+  } finally {
+    document.body.classList.remove('app-laedt');
+  }
 }
 
 async function loadMyProfile(){
@@ -4412,14 +4446,69 @@ async function loadMyProfile(){
       await supabaseClient.from('profiles').insert({ id: currentUser.id, email: currentUser.email, role: 'site' });
       currentUserRole = 'site';
       currentUserBereiche = [];
+      currentUserDisplayName = '';
     } else {
       currentUserRole = data.role || 'site';
+      currentUserDisplayName = (data.display_name || '').trim();
       currentUserBereiche = Array.isArray(data.bereiche) ? data.bereiche : [];
     }
   } catch(e){ currentUserRole = 'site'; currentUserBereiche = []; }
   // Ab hier steht fest, WER angemeldet ist — jetzt gilt dessen eigene
   // Darstellung und nicht mehr die zuletzt am Geraet verwendete.
   if(window.PV_DESIGN) PV_DESIGN.neuLaden();
+}
+
+// ── Anzeigename ───────────────────────────────────────────────────────────
+// Jeder legt selbst fest, wie er in der App heisst ("Hallo Lukas").
+// Ohne eigenen Namen gilt wie bisher der Teil der E-Mail vor dem @.
+function anzeigeName(){
+  if(currentUserDisplayName) return currentUserDisplayName;
+  return (currentUser && currentUser.email) ? currentUser.email.split('@')[0] : '';
+}
+
+function aktualisiereNamensAnzeige(){
+  const badge = g('user-badge-email');
+  if(badge){
+    badge.textContent = anzeigeName() || '—';
+    if(currentUser && currentUser.email) g('user-badge').title = currentUser.email + ' – klicken, um den Anzeigenamen zu ändern';
+  }
+  const home = g('home-user-name');
+  if(home) home.textContent = anzeigeName() || 'Anwender';
+}
+
+function openNameModal(){
+  if(!currentUser) return;
+  const inp = g('name-input');
+  if(inp) inp.value = currentUserDisplayName;
+  g('name-modal').classList.add('show');
+  closeSidebar();
+  setTimeout(() => { if(inp) inp.focus(); }, 50);
+}
+
+function closeNameModal(evt){
+  if(!evt || evt.target === g('name-modal')) g('name-modal').classList.remove('show');
+}
+
+async function saveDisplayName(){
+  const inp = g('name-input');
+  const name = String(inp ? inp.value : '').trim().replace(/\s+/g, ' ');
+  if(name.length < 2 || name.length > 40) return toast('Bitte 2 bis 40 Zeichen eingeben');
+  if(!supabaseClient || !currentUser) return toast('Keine Verbindung – bitte später erneut versuchen');
+  const btn = g('name-save-btn');
+  if(btn) btn.disabled = true;
+  try {
+    // Eigene Datenbank-Funktion: darf ausschliesslich den eigenen Namen setzen
+    const { error } = await supabaseClient.rpc('set_display_name', { neuer_name: name });
+    if(error) throw error;
+    currentUserDisplayName = name;
+    aktualisiereNamensAnzeige();
+    closeNameModal();
+    toast('Name gespeichert');
+  } catch(e){
+    toastError('Name konnte nicht gespeichert werden', e);
+  } finally {
+    if(btn) btn.disabled = false;
+  }
 }
 
 function openUsersModal(){
@@ -4450,7 +4539,7 @@ async function loadAllUsers(){
 async function changeUserRole(userId, newRole){
   try {
     const { error } = await supabaseClient.from('profiles').update({ role: newRole }).eq('id', userId);
-    if(error) toastError('Rolle konnte nicht geändert werden', error); else toast('✅ Rolle geändert');
+    if(error) toastError('Rolle konnte nicht geändert werden', error); else toast('Rolle geändert');
   } catch(e){ toastError('Rolle konnte nicht geändert werden', e); }
 }
 
@@ -4461,8 +4550,8 @@ let assignModalProjectId = null;
 
 function openAssignModal(id, event){
   if(event) event.stopPropagation();
-  if(currentUserRole === 'site') return toast('🔒 Keine Berechtigung');
-  if(!supabaseClient || !currentUser) return toast('⚠️ Nur mit Cloud-Anmeldung verfügbar');
+  if(currentUserRole === 'site') return toast('Keine Berechtigung');
+  if(!supabaseClient || !currentUser) return toast('Nur mit Cloud-Anmeldung verfügbar');
   const proj = PROJECTS[id];
   if(!proj) return;
   assignModalProjectId = id;
@@ -4510,11 +4599,11 @@ async function toggleAssignment(projectId, userId, assign){
         project_id: projectId, user_id: userId, assigned_by: currentUser ? currentUser.id : null
       });
       if(error) throw error;
-      toast('✅ Zugewiesen');
+      toast('Zugewiesen');
     } else {
       const { error } = await supabaseClient.from('pv_project_members').delete().eq('project_id', projectId).eq('user_id', userId);
       if(error) throw error;
-      toast('✅ Zuweisung entfernt');
+      toast('Zuweisung entfernt');
     }
   } catch(e){
     toastError('Zuweisung konnte nicht geändert werden', e);
@@ -4534,10 +4623,10 @@ let historyModalProjectId = null;
 
 function openHistoryModal(id, event){
   if(event) event.stopPropagation();
-  if(!supabaseClient || !currentUser) return toast('⚠️ Nur mit Cloud-Anmeldung verfügbar');
+  if(!supabaseClient || !currentUser) return toast('Nur mit Cloud-Anmeldung verfügbar');
   const target = id || CURRENT_PROJECT_ID;
   const proj = PROJECTS[target];
-  if(!proj) return toast('⚠️ Kein Projekt geöffnet');
+  if(!proj) return toast('Kein Projekt geöffnet');
   historyModalProjectId = target;
   g('history-project-name').textContent = proj.name || target;
   g('history-modal').classList.add('show');
@@ -4614,7 +4703,7 @@ async function loadProjectHistory(projectId){
 async function restoreHistoryVersion(historyId, projectId){
   const proj = PROJECTS[projectId];
   if(!proj) return;
-  if(!canEditMeasurement()) return toast('🔒 Protokoll gesperrt — Wiederherstellen nicht möglich');
+  if(!canEditMeasurement()) return toast('Protokoll gesperrt — Wiederherstellen nicht möglich');
   if(!confirm(
       'Diesen Stand wiederherstellen?\n\n' +
       'Die Messwerte des Projekts werden auf diesen Stand zurückgesetzt.\n' +
@@ -4648,7 +4737,7 @@ async function restoreHistoryVersion(historyId, projectId){
     }
     renderProjectUI();
     if(g('project-grid')) renderProjectGrid();
-    toast('✅ Stand wiederhergestellt');
+    toast('Stand wiederhergestellt');
     loadProjectHistory(projectId);
   } catch(e){
     toastError('Wiederherstellen fehlgeschlagen', e);
@@ -4745,7 +4834,7 @@ function startLockCheck(){
         if(lock && lockGueltig(lock) && !lockGehoertMir(lock)){
           currentProjectLock = lock;
           showCollabLockBanner(lock);
-          toast(`⚠️ ${lock.user_name || 'Jemand'} hat das Projekt übernommen`);
+          toast(`${lock.user_name || 'Jemand'} hat das Projekt übernommen`);
         } else {
           currentProjectLock = await lockSetzen(pid);
         }
@@ -4754,7 +4843,7 @@ function startLockCheck(){
         if(!lock || !lockGueltig(lock)){
           if(await lockProject(pid)){
             await fetchCloudDataManually(true);   // neuesten Stand des anderen holen
-            toast('🔓 Projekt ist wieder frei – du kannst bearbeiten');
+            toast('Projekt ist wieder frei – du kannst bearbeiten');
           }
         } else {
           currentProjectLock = lock;
@@ -4792,10 +4881,10 @@ function hideCollabLockBanner(){
 async function overrideProjectLock(){
   if(!CURRENT_PROJECT_ID) return;
   const wer = (currentProjectLock && currentProjectLock.user_name) || 'Jemand';
-  if(!confirm(`⚠️ ${wer} bearbeitet dieses Projekt gerade.\n\nWenn ihr gleichzeitig speichert, überschreibt einer die Eingaben des anderen.\n\nTrotzdem übernehmen?`)) return;
+  if(!confirm(`${wer} bearbeitet dieses Projekt gerade.\n\nWenn ihr gleichzeitig speichert, überschreibt einer die Eingaben des anderen.\n\nTrotzdem übernehmen?`)) return;
   if(await lockProject(CURRENT_PROJECT_ID, true)){
     if(supabaseClient && currentUser) await fetchCloudDataManually(true);
-    toast('✏️ Du bearbeitest jetzt dieses Projekt');
+    toast('Du bearbeitest jetzt dieses Projekt');
   }
 }
 

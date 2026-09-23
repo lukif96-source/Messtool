@@ -267,7 +267,7 @@ ${blurM}
     }));
 
     binde(document.getElementById('dp-close'),  () => { p.hidden = true; });
-    binde(document.getElementById('dp-fertig'), () => { p.hidden = true; if(window.toast) toast('🎨 Darstellung gespeichert'); });
+    binde(document.getElementById('dp-fertig'), () => { p.hidden = true; if(window.toast) toast('Darstellung gespeichert'); });
     binde(document.getElementById('dp-reset'),  () => {
       if(dunkel()) T.dark = Object.assign({}, STD.dark); else T.light = Object.assign({}, STD.light);
       setz(); anwenden();

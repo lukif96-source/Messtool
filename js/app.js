@@ -912,12 +912,12 @@ function updateTemplatePreview(){
   previewContent.innerHTML = html;
 }
 
-function applySelectedTemplate(){
+async function applySelectedTemplate(){
   const select = g('template-select');
   const selectedTemplate = select.value;
   if(!selectedTemplate) return;
   
-  applyTemplate(selectedTemplate);
+  await applyTemplate(selectedTemplate);
   closeTemplateModal();
 }
 
@@ -942,12 +942,12 @@ function saveCurrentAsTemplate(){
   renderTemplateOptions();
 }
 
-function deleteSelectedTemplate(){
+async function deleteSelectedTemplate(){
   const select = g('template-select');
   const selectedTemplate = select.value;
   if(!selectedTemplate) return;
   
-  deleteTemplate(selectedTemplate);
+  await deleteTemplate(selectedTemplate);
   renderTemplateOptions();
   updateTemplatePreview();
 }
@@ -1022,11 +1022,11 @@ function exportPDFWithLogo(){
   printBlankMeasurementSheet();
 }
 
-function applyTemplate(templateName){
+async function applyTemplate(templateName){
   const template = PROJECT_TEMPLATES[templateName];
   if(!template) return toast('Vorlage nicht gefunden');
   
-  if(!confirm(`Vorlage "${templateName}" anwenden?\n\nDies wird die aktuelle Hardware-Konfiguration ersetzen.`)) return;
+  if(!await appFrage(`Vorlage "${templateName}" anwenden?\n\nDies wird die aktuelle Hardware-Konfiguration ersetzen.`)) return;
   
   saveStateToHistory('Vorlage angewendet');
   
@@ -1057,8 +1057,8 @@ function applyTemplate(templateName){
   toast(`Vorlage "${templateName}" angewendet`);
 }
 
-function deleteTemplate(templateName){
-  if(!confirm(`Vorlage "${templateName}" wirklich löschen?`)) return;
+async function deleteTemplate(templateName){
+  if(!await appFrage(`Vorlage "${templateName}" wirklich löschen?`)) return;
   
   delete PROJECT_TEMPLATES[templateName];
   localStorage.setItem('pv_matrix_templates', JSON.stringify(PROJECT_TEMPLATES));
@@ -1291,9 +1291,8 @@ function renderHomeView(){
     userName.textContent = anzeigeName() || 'Anwender';
   }
   if(subtitle){
-    const h = new Date().getHours();
-    const greet = h < 11 ? 'Guten Morgen' : (h < 18 ? 'Hallo' : 'Guten Abend');
-    subtitle.textContent = CURRENT_BEREICH ? `${greet} — Bereich ${BEREICHE[CURRENT_BEREICH].name}` : `${greet} — bereit für die Baustelle`;
+    const datum = new Date().toLocaleDateString('de-AT', { weekday: 'long', day: 'numeric', month: 'long' });
+    subtitle.textContent = CURRENT_BEREICH ? `Bereich ${BEREICHE[CURRENT_BEREICH].name} · ${datum}` : datum;
   }
 
   const ids = bereichProjektIds();
@@ -1408,7 +1407,7 @@ async function editModuleWp(){
   if(!canEditHardware()) return toast('Keine Berechtigung — nur Planer/Admin');
   const proj = getCurrentProject();
   if(!proj) return toast('Kein Projekt geöffnet');
-  const input = prompt('Modulleistung in Wp:', proj.model_wp || 465);
+  const input = await appEingabe('Modulleistung in Wp:', proj.model_wp || 465);
   if(input === null) return;
   const wp = parseInt(input, 10);
   if(!wp || wp <= 0 || wp > 1000) return toast('Bitte eine gültige Wp-Zahl zwischen 1 und 1000 eingeben');
@@ -1521,7 +1520,7 @@ async function toggleProtocolLock(){
   const p = getCurrentProject();
   if(!p) return;
   const willLock = !p.locked;
-  if(willLock && !confirm('Messprotokoll wirklich sperren?\n\nDanach können Bauleitung & Planer KEINE Änderungen mehr vornehmen.')) return;
+  if(willLock && !await appFrage('Messprotokoll wirklich sperren?\n\nDanach können Bauleitung & Planer KEINE Änderungen mehr vornehmen.')) return;
   // Entsperren gibt das Protokoll nur wieder zur Bearbeitung frei.
   // Es loescht NICHTS mehr: die Prueferunterschrift bleibt stehen, eine
   // bereits geleistete Abnahme ebenso, und das Protokoll bleibt vor dem
@@ -1529,7 +1528,7 @@ async function toggleProtocolLock(){
   // war ein wieder entsperrtes altes Protokoll tatsaechlich "weg".
   if(!willLock && (p.signature || p.abnahme)){
     const wer = (p.signature && p.signature.name) ? p.signature.name : 'dem Prüfer';
-    if(!confirm('Protokoll zur Endbearbeitung entsperren?\n\n'
+    if(!await appFrage('Protokoll zur Endbearbeitung entsperren?\n\n'
       + 'Die Unterschrift von ' + wer + ' bleibt erhalten und steht weiter auf dem Ausdruck.\n'
       + 'Das Protokoll bleibt vor dem Löschen geschützt.')) return;
   }
@@ -1929,15 +1928,15 @@ function renderMatrix(remoteOverride = null){
             </td>
             <td data-label="kWp" class="pwr-cell" style="width:8%;" id="pw-${id}">${pwr}</td>
             <td data-label="Uoc(V)" class="col-hide-print" style="width:10%;">
-               <input type="text" inputmode="decimal" id="uoc-${id}" value="${esc(item.uoc||'')}" class="sp-inp sp-inp-center" style="padding:3px;" onchange="saveData('${id}', 'uoc', this.value)" onkeydown="handleMeasureKeydown(event, '${id}', 'uoc')" ${roAttr(uocRO)}>
+               <input type="text" inputmode="decimal" id="uoc-${id}" placeholder="–" enterkeyhint="next" autocomplete="off" value="${esc(item.uoc||'')}" class="sp-inp sp-inp-center" style="padding:3px;" onchange="saveData('${id}', 'uoc', this.value)" onkeydown="handleMeasureKeydown(event, '${id}', 'uoc')" ${roAttr(uocRO)}>
                 <span class="print-cell" id="puoc-${id}">${esc(item.uoc||'')}</span>
             </td>
             <td data-label="Isc(A)" class="col-hide-print" style="width:10%;">
-               <input type="text" inputmode="decimal" id="isc-${id}" value="${esc(item.isc||'')}" class="sp-inp sp-inp-center" style="padding:3px;" onchange="saveData('${id}', 'isc', this.value)" onkeydown="handleMeasureKeydown(event, '${id}', 'isc')" ${roAttr(iscRO)}>
+               <input type="text" inputmode="decimal" id="isc-${id}" placeholder="–" enterkeyhint="next" autocomplete="off" value="${esc(item.isc||'')}" class="sp-inp sp-inp-center" style="padding:3px;" onchange="saveData('${id}', 'isc', this.value)" onkeydown="handleMeasureKeydown(event, '${id}', 'isc')" ${roAttr(iscRO)}>
                 <span class="print-cell" id="pisc-${id}">${esc(item.isc||'')}</span>
             </td>
             <td data-label="Riso(MΩ)" class="col-hide-print" style="width:10%;">
-               <input type="text" inputmode="decimal" id="riso-${id}" value="${esc(item.riso||'')}" class="sp-inp sp-inp-center" style="padding:3px;" onchange="saveData('${id}', 'riso', this.value)" onkeydown="handleMeasureKeydown(event, '${id}', 'riso')" ${roAttr(risoRO)}>
+               <input type="text" inputmode="decimal" id="riso-${id}" placeholder="–" enterkeyhint="next" autocomplete="off" value="${esc(item.riso||'')}" class="sp-inp sp-inp-center" style="padding:3px;" onchange="saveData('${id}', 'riso', this.value)" onkeydown="handleMeasureKeydown(event, '${id}', 'riso')" ${roAttr(risoRO)}>
                 <span class="print-cell" id="priso-${id}">${esc(item.riso||'')}</span>
             </td>
             <td data-label="Info" class="col-note" style="text-align:left; width:18%;">
@@ -2353,7 +2352,7 @@ async function renameInverterQuick(wrId){
   const data = plan[wrId];
   if(!data) return toast('Wechselrichter nicht gefunden');
   const current = data.name || `WR ${wrId}`;
-  const input = prompt(`Name für WR ${wrId}:`, current);
+  const input = await appEingabe(`Name für WR ${wrId}:`, current);
   if(input === null) return; // abgebrochen
   const newName = input.trim() || `WR ${wrId}`;
   if(newName === current) return;
@@ -2537,7 +2536,7 @@ function refreshInverterEditorWarnings(){
   }
 }
 
-function saveInverterEditor(){
+async function saveInverterEditor(){
   if(!_inverterEditorWrId) return;
   const wrId = _inverterEditorWrId;
   const plan = getCurrentPlan();
@@ -2555,9 +2554,9 @@ function saveInverterEditor(){
   if(shrinking){
     const maxUsedM = getMaxUsedMppt(wrId);
     if(newMppts < maxUsedM){
-      if(!confirm(`Reduzierung entfernt MPPT ${maxUsedM}, das aktive Daten enthält.\n\nDiese Daten gehen UNWIDERRUFLICH verloren.\n\nTrotzdem fortfahren?`)) return;
+      if(!await appFrage(`Reduzierung entfernt MPPT ${maxUsedM}, das aktive Daten enthält.\n\nDiese Daten gehen UNWIDERRUFLICH verloren.\n\nTrotzdem fortfahren?`)) return;
     } else {
-      if(!confirm(`MPPTs/Inputs reduzieren?\n\nSlots außerhalb der neuen Grenze werden entfernt.`)) return;
+      if(!await appFrage(`MPPTs/Inputs reduzieren?\n\nSlots außerhalb der neuen Grenze werden entfernt.`)) return;
     }
   }
 
@@ -2621,7 +2620,7 @@ function regenerateAppStatePreservingMeasurements(){
   APP_STATE = fresh;
 }
 
-function confirmDeleteInverterFromEditor(){
+async function confirmDeleteInverterFromEditor(){
   if(!_inverterEditorWrId) return;
   if(currentUserRole !== 'admin') return toast('Nur Admins können WRs löschen');
   const wrId = _inverterEditorWrId;
@@ -2633,17 +2632,17 @@ function confirmDeleteInverterFromEditor(){
   const msg = activeStr > 0
     ? `WR ${wrId} (${data.name || ''}) wirklich löschen?\n\n${activeStr} aktive Strings / ${activeMod} Module gehen verloren.\n\nDieser Schritt kann nicht rückgängig gemacht werden.`
     : `WR ${wrId} (${data.name || ''}) wirklich löschen?`;
-  if(!confirm(msg)) return;
+  if(!await appFrage(msg)) return;
   deleteInverter(wrId, true);
   closeInverterEditor();
 }
 
-function deleteInverter(wrId, skipConfirm){
+async function deleteInverter(wrId, skipConfirm){
   if(currentUserRole !== 'admin') return toast('Nur Admins können WRs löschen');
   const plan = getCurrentPlan();
   if(!plan[wrId]) return;
   if(!skipConfirm){
-    if(!confirm(`WR ${wrId} wirklich löschen? Alle Strings & Messwerte dieses WR gehen verloren.`)) return;
+    if(!await appFrage(`WR ${wrId} wirklich löschen? Alle Strings & Messwerte dieses WR gehen verloren.`)) return;
   }
   delete plan[wrId];
   // APP_STATE Slots dieses WR entfernen
@@ -3115,7 +3114,7 @@ function bulkSetStat(wrId, st){
   }, 100);
 }
 
-function bulkSetModules(wrId){
+async function bulkSetModules(wrId){
   if(!canEditHardware()) return toast('Keine Berechtigung');
   const plan = getCurrentPlan();
   const data = plan[wrId];
@@ -3131,7 +3130,7 @@ function bulkSetModules(wrId){
     }
   }
   const defaultN = Object.keys(count).length ? Number(Object.entries(count).sort((a,b)=>b[1]-a[1])[0][0]) : 14;
-  const raw = prompt(`Modulzahl für alle aktiven Strings dieses WR setzen:\n\n(Vorschlag: ${defaultN} — am häufigsten verwendet)`, defaultN);
+  const raw = await appEingabe(`Modulzahl für alle aktiven Strings dieses WR setzen:\n\n(Vorschlag: ${defaultN} — am häufigsten verwendet)`, defaultN);
   if(raw === null) return;
   const n = parseInt(raw, 10);
   if(isNaN(n) || n < 0 || n > 100) return toast('Ungültige Zahl (0–100)');
@@ -3212,12 +3211,12 @@ function bulkApplyGakSchema(wrId){
   }, 100);
 }
 
-function bulkClearMeasurements(wrId){
+async function bulkClearMeasurements(wrId){
   if(!canEditHardware()) return toast('Keine Berechtigung');
   const plan = getCurrentPlan();
   const data = plan[wrId];
   if(!data) return;
-  if(!confirm(`Messwerte (Uoc, Isc, Riso, Bemerkung) für alle Strings dieses WR löschen?`)) return;
+  if(!await appFrage(`Messwerte (Uoc, Isc, Riso, Bemerkung) für alle Strings dieses WR löschen?`)) return;
   
   const mppts = data.mppts || 12;
   const inputs = data.inputs || 2;
@@ -3255,7 +3254,7 @@ async function bulkClearAllNotes(){
   if(!canEditMeasurement()) return toast('Keine Berechtigung — Protokoll ist gesperrt');
   const plan = getCurrentPlan();
   if(!plan) return;
-  if(!confirm('Bemerkungen bei ALLEN Strings im gesamten Projekt löschen?')) return;
+  if(!await appFrage('Bemerkungen bei ALLEN Strings im gesamten Projekt löschen?')) return;
   
   // 1) Erst zählen, ohne etwas zu verändern
   const ids = [];
@@ -3424,6 +3423,10 @@ function saveData(id, field, val) {
     saveProjectsLocal();
   }
   
+  // Sofort auf dem Geraet sichern – falls das Hochladen scheitert oder die
+  // App geschlossen wird, bevor der verzoegerte Upload laeuft.
+  offlineSichern();
+  updateSyncStatus();
   if(supabaseClient && currentUser) {
     showSaveIndicator('syncing');
     clearTimeout(cloudSyncTimeout);
@@ -3770,6 +3773,7 @@ async function selectProject(id){
   }
 
   CURRENT_PROJECT_ID = id;
+  syncStandZuruecksetzen();
 
   // Neues Lock versuchen
   console.log('Lock-Test: Versuche Lock für Projekt', id);
@@ -3901,7 +3905,7 @@ async function deleteProject(id, event){
   }
   if(event) event.stopPropagation();
   if(id === CURRENT_PROJECT_ID) return toast('Aktives Projekt kann nicht gelöscht werden');
-  if(!confirm('Projekt wirklich löschen?')) return;
+  if(!await appFrage('Projekt wirklich löschen?')) return;
   delete PROJECTS[id];
   saveProjectsLocal();
   let cloudOk = true;
@@ -3925,7 +3929,7 @@ async function renameProject(id, event){
   const proj = PROJECTS[id];
   if(!proj) return;
   if(currentUserRole === 'site') return toast('Keine Berechtigung');
-  const newName = prompt('Projekt umbenennen:', proj.name || '');
+  const newName = await appEingabe('Projekt umbenennen:', proj.name || '');
   if(newName === null) return;
   const trimmed = newName.trim();
   if(!trimmed) return toast('Name darf nicht leer sein');
@@ -3966,7 +3970,7 @@ async function setProjectGroup(id, event){
   if(currentUserRole === 'site') return toast('Keine Berechtigung');
   const existingGroups = [...new Set(bereichProjektIds().map(pid => PROJECTS[pid].group).filter(Boolean))].sort();
   const hint = existingGroups.length ? `\n\nVorhandene Gruppen: ${existingGroups.join(', ')}` : '';
-  const input = prompt('Gruppe für dieses Projekt (leer lassen zum Entfernen):' + hint, proj.group || '');
+  const input = await appEingabe('Gruppe für dieses Projekt (leer lassen zum Entfernen):' + hint, proj.group || '');
   if(input === null) return;
   const trimmed = input.trim();
   if(trimmed === (proj.group || '')) return;
@@ -3999,7 +4003,7 @@ async function setProjectGroup(id, event){
 async function editGroup(oldName, event) {
   if(event) { event.stopPropagation(); event.preventDefault(); }
   if(currentUserRole === 'site') return toast('Keine Berechtigung');
-  const action = prompt(`Gruppe "${oldName}" bearbeiten:\n\n- Neuen Namen eingeben zum Umbenennen.\n- ODER "LÖSCHEN" eintippen, um die Gruppe komplett aufzulösen (Die Projekte bleiben dabei erhalten).`, oldName);
+  const action = await appEingabe(`Gruppe "${oldName}" bearbeiten:\n\n- Neuen Namen eingeben zum Umbenennen.\n- ODER "LÖSCHEN" eintippen, um die Gruppe komplett aufzulösen (Die Projekte bleiben dabei erhalten).`, oldName);
   
   if(action === null) return;
   const trimmed = action.trim();
@@ -4008,7 +4012,7 @@ async function editGroup(oldName, event) {
   let projectsUpdated = 0;
   let failedIds = [];
   if(trimmed.toUpperCase() === 'LÖSCHEN') {
-    if(!confirm(`Möchtest du die Gruppe "${oldName}" wirklich auflösen?`)) return;
+    if(!await appFrage(`Möchtest du die Gruppe "${oldName}" wirklich auflösen?`)) return;
     for(let id in PROJECTS) {
       if(PROJECTS[id].group === oldName && imAktuellenBereich(id)) {
         PROJECTS[id].group = null;
@@ -4247,17 +4251,21 @@ async function saveProjectToCloudNow(projectId, skipRender){
       updated_at: updatedAt,
       bereich: projektBereich(proj)
     };
+    // Genau diesen Stand merken: nur wenn er ankommt, gilt er als gesichert
+    const _gesendet = projectId === CURRENT_PROJECT_ID ? JSON.stringify(stateData) : null;
     const { error } = await supabaseClient.from('pv_projects').upsert(payload);
     if(syncIndicator) syncIndicator.classList.remove('syncing');
     if(error) {
       const off = g('offline-indicator'); if(off) off.classList.add('offline');
       showSaveIndicator('error');
+      syncFehlschlag(projectId);
       return false;
     } else {
       proj.cloud_updated_at = updatedAt;
       saveProjectsLocal();
       const off = g('offline-indicator'); if(off) off.classList.remove('offline');
       showSaveIndicator('saved');
+      if(_gesendet !== null) syncErfolg(projectId, _gesendet);
       if(!skipRender) renderMatrixDebounced(); // Debounced nach Cloud-Save
       return true;
     }
@@ -4265,6 +4273,7 @@ async function saveProjectToCloudNow(projectId, skipRender){
     if(syncIndicator) syncIndicator.classList.remove('syncing');
     const off = g('offline-indicator'); if(off) off.classList.add('offline');
     showSaveIndicator('error');
+    syncFehlschlag(projectId);
     return false;
   }
 }
@@ -4276,7 +4285,9 @@ function saveProjectToCloud(projectId, skipRender){
   cloudSaveQueues.set(projectId, next);
   next.finally(() => {
     if(cloudSaveQueues.get(projectId) === next) cloudSaveQueues.delete(projectId);
+    updateSyncStatus();
   });
+  updateSyncStatus();
   return next;
 }
 
@@ -4312,6 +4323,9 @@ async function fetchCloudDataManually(silent = false){
     if(data && data.data){
       APP_STATE = { ...generateState(getCurrentPlan(), false), ...data.data };
       renderMatrix();
+      syncStandMerken();
+      // Gibt es auf diesem Geraet noch nicht hochgeladene Werte? Dann fragen.
+      await offlineWiederherstellenPruefen(CURRENT_PROJECT_ID);
       if(!silent) toast('Stand geladen');
     } else if(error) {
       if(!silent) toastError('Stand konnte nicht geladen werden', error);
@@ -4325,7 +4339,7 @@ async function fetchCloudDataManually(silent = false){
 
 async function factoryResetCloud(){
   if(currentUserRole === 'site') return toast('Nicht erlaubt');
-  if(!confirm("Matrix komplett zurücksetzen?")) return;
+  if(!await appFrage("Matrix komplett zurücksetzen?")) return;
   APP_STATE = generateState(getCurrentPlan());
   renderMatrix(null);
   await pushCloudDataManually();
@@ -4360,7 +4374,7 @@ async function handleAuthSubmit(){
 }
 
 async function doLogout(){
-  if(!confirm('Wirklich abmelden?')) return;
+  if(!await appFrage('Wirklich abmelden?')) return;
 
   // Alle Locks freigeben
   if (CURRENT_PROJECT_ID && currentProjectLock) {
@@ -4521,11 +4535,11 @@ function closeUsersModal(evt){ if(!evt || evt.target === g('users-modal')) g('us
 async function loadAllUsers(){
   const listEl = g('users-list'); listEl.innerHTML = 'Lade...';
   try {
-    const { data, error } = await supabaseClient.from('profiles').select('id, email, role, bereiche').order('created_at', { ascending: true });
+    const { data, error } = await supabaseClient.from('profiles').select('id, email, role, bereiche, display_name').order('created_at', { ascending: true });
     if(error){ listEl.innerHTML = `Fehler: ${error.message}`; return; }
     listEl.innerHTML = data.map(u => `
-      <div class="user-row">
-        <span class="email">${esc(u.email)}${u.id === currentUser.id ? ' (du)' : ''}</span>
+      <div class="user-row" data-suche="${esc(((u.display_name || '') + ' ' + (u.email || '')).toLowerCase())}">
+        <span class="email"><span class="user-name">${esc(u.display_name || (u.email || '').split('@')[0])}${u.id === currentUser.id ? ' (du)' : ''}</span><span class="user-mail">${esc(u.email)}</span></span>
         <select onchange="changeUserRole('${u.id}', this.value)" ${u.id === currentUser.id ? 'disabled' : ''}>
           <option value="site" ${u.role === 'site' ? 'selected' : ''}>Bauleitung</option>
           <option value="planner" ${u.role === 'planner' ? 'selected' : ''}>Planer</option>
@@ -4704,7 +4718,7 @@ async function restoreHistoryVersion(historyId, projectId){
   const proj = PROJECTS[projectId];
   if(!proj) return;
   if(!canEditMeasurement()) return toast('Protokoll gesperrt — Wiederherstellen nicht möglich');
-  if(!confirm(
+  if(!await appFrage(
       'Diesen Stand wiederherstellen?\n\n' +
       'Die Messwerte des Projekts werden auf diesen Stand zurückgesetzt.\n' +
       'Der aktuelle Stand wird dabei automatisch gesichert und lässt sich\n' +
@@ -4734,6 +4748,8 @@ async function restoreHistoryVersion(historyId, projectId){
     if(projectId === CURRENT_PROJECT_ID){
       APP_STATE = { ...generateState(getCurrentPlan(), false), ...data.data };
       renderMatrix();
+      syncStandMerken();
+      offlineLoeschen(projectId);
     }
     renderProjectUI();
     if(g('project-grid')) renderProjectGrid();
@@ -4881,7 +4897,7 @@ function hideCollabLockBanner(){
 async function overrideProjectLock(){
   if(!CURRENT_PROJECT_ID) return;
   const wer = (currentProjectLock && currentProjectLock.user_name) || 'Jemand';
-  if(!confirm(`${wer} bearbeitet dieses Projekt gerade.\n\nWenn ihr gleichzeitig speichert, überschreibt einer die Eingaben des anderen.\n\nTrotzdem übernehmen?`)) return;
+  if(!await appFrage(`${wer} bearbeitet dieses Projekt gerade.\n\nWenn ihr gleichzeitig speichert, überschreibt einer die Eingaben des anderen.\n\nTrotzdem übernehmen?`)) return;
   if(await lockProject(CURRENT_PROJECT_ID, true)){
     if(supabaseClient && currentUser) await fetchCloudDataManually(true);
     toast('Du bearbeitest jetzt dieses Projekt');
@@ -4900,3 +4916,389 @@ document.addEventListener('visibilitychange', () => {
   if(document.hidden) stopLockCheck();
   else if(CURRENT_PROJECT_ID) lockProject(CURRENT_PROJECT_ID);
 });
+
+
+// ══════════════════════════════════════════════════════════════════════════
+//   ERWEITERUNGEN (Design-/UX-Paket)
+// ══════════════════════════════════════════════════════════════════════════
+
+// ── Eigene Dialoge statt confirm()/prompt() des Browsers ──────────────────
+// Gleiche Bedienung wie vorher (true/false bzw. Text/null), aber im App-Design.
+// Erster Absatz der Meldung = Ueberschrift, der Rest = Erklaerung.
+function appDialog({ titel = '', text = '', wert = null, ok = 'OK', abbrechen = 'Abbrechen', gefahr = false } = {}){
+  return new Promise(resolve => {
+    const vorher = document.activeElement;
+    const ov = document.createElement('div');
+    ov.className = 'app-dialog-overlay';
+    ov.innerHTML = `<div class="app-dialog" role="alertdialog" aria-modal="true" aria-labelledby="app-dialog-titel">
+        <h2 id="app-dialog-titel"></h2>
+        <p class="app-dialog-text"></p>
+        ${wert !== null ? '<input type="text" class="sp-inp app-dialog-eingabe" autocomplete="off">' : ''}
+        <div class="app-dialog-knoepfe">
+          <button type="button" class="btn btn-ghost" data-antwort="nein"></button>
+          <button type="button" class="btn ${gefahr ? 'app-dialog-gefahr' : 'btn-primary'}" data-antwort="ja"></button>
+        </div>
+      </div>`;
+    ov.querySelector('h2').textContent = titel;
+    const p = ov.querySelector('.app-dialog-text');
+    p.textContent = text; p.hidden = !text;
+    ov.querySelector('[data-antwort="nein"]').textContent = abbrechen;
+    ov.querySelector('[data-antwort="ja"]').textContent = ok;
+    const inp = ov.querySelector('.app-dialog-eingabe');
+    if(inp) inp.value = wert;
+    function ende(antwort){
+      document.removeEventListener('keydown', taste, true);
+      ov.remove();
+      try { if(vorher && vorher.focus) vorher.focus({ preventScroll: true }); } catch(_){}
+      resolve(antwort);
+    }
+    const ja = () => ende(inp ? inp.value : true);
+    const nein = () => ende(inp ? null : false);
+    function taste(e){
+      if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); nein(); }
+      // Enter bestaetigt nur im Eingabefeld – bei Rueckfragen loest Enter den
+      // gerade markierten Knopf aus (bei Loeschen ist das "Abbrechen").
+      else if(e.key === 'Enter' && inp && document.activeElement === inp){ e.preventDefault(); e.stopPropagation(); ja(); }
+    }
+    ov.addEventListener('click', e => { if(e.target === ov) nein(); });
+    ov.querySelector('[data-antwort="ja"]').addEventListener('click', ja);
+    ov.querySelector('[data-antwort="nein"]').addEventListener('click', nein);
+    document.addEventListener('keydown', taste, true);
+    document.body.appendChild(ov);
+    setTimeout(() => {
+      const ziel = inp || ov.querySelector(gefahr ? '[data-antwort="nein"]' : '[data-antwort="ja"]');
+      if(ziel){ ziel.focus(); if(inp) inp.select(); }
+    }, 30);
+  });
+}
+function _dialogTeile(msg){
+  const t = String(msg ?? '');
+  const i = t.indexOf('\n\n');
+  return i > 0 ? [t.slice(0, i), t.slice(i + 2)] : [t, ''];
+}
+const DIALOG_GEFAHR = /lösch|zurücksetz|verloren|unwiderruflich|auflösen|entfernt|überschreib/i;
+function appFrage(msg, opt = {}){
+  const [titel, text] = _dialogTeile(msg);
+  const gefahr = opt.gefahr !== undefined ? opt.gefahr : DIALOG_GEFAHR.test(String(msg));
+  return appDialog({ titel, text, gefahr, ok: opt.ok || (gefahr ? 'Ja, fortfahren' : 'OK'), abbrechen: opt.abbrechen || 'Abbrechen' });
+}
+function appEingabe(msg, wert = '', opt = {}){
+  const [titel, text] = _dialogTeile(msg);
+  return appDialog({ titel, text, wert: String(wert ?? ''), ok: opt.ok || 'Übernehmen' });
+}
+
+// ── Sicherung auf dem Geraet + Sync-Status ────────────────────────────────
+// Bisher lagen Messwerte bis zum erfolgreichen Upload nur im Arbeitsspeicher.
+// Jetzt: jede Aenderung wird sofort im Geraet gesichert und erst geloescht,
+// wenn genau dieser Stand in der Cloud angekommen ist. Beim Oeffnen eines
+// Projekts wird gefragt, falls noch nicht hochgeladene Werte existieren –
+// nie still ueberschrieben.
+const OFFLINE_SCHLUESSEL = pid => `pv_offline_v1::${currentUser ? currentUser.id : 'anon'}::${pid}`;
+let syncStand = null;          // { id: JSON } – zuletzt bestaetigter Cloud-Stand
+let syncFehler = false;
+let syncLetzterUpload = null;
+let syncWiederholung = null;
+
+function offlineSichern(){
+  if(!CURRENT_PROJECT_ID || !APP_STATE || !Object.keys(APP_STATE).length) return;
+  try {
+    localStorage.setItem(OFFLINE_SCHLUESSEL(CURRENT_PROJECT_ID), JSON.stringify({
+      state: APP_STATE, at: new Date().toISOString(), name: (getCurrentProject() || {}).name || ''
+    }));
+  } catch(_){}
+}
+function offlineLesen(pid){
+  try { const roh = localStorage.getItem(OFFLINE_SCHLUESSEL(pid)); return roh ? JSON.parse(roh) : null; } catch(_){ return null; }
+}
+function offlineLoeschen(pid){ try { localStorage.removeItem(OFFLINE_SCHLUESSEL(pid)); } catch(_){} }
+
+function _standAlsMap(obj){
+  const m = {};
+  Object.keys(obj || {}).forEach(k => { m[k] = JSON.stringify(obj[k]); });
+  return m;
+}
+function syncStandMerken(){ syncStand = _standAlsMap(APP_STATE); syncFehler = false; updateSyncStatus(); }
+function syncStandZuruecksetzen(){ syncStand = null; syncFehler = false; syncLetzterUpload = null; updateSyncStatus(); }
+
+function syncAenderungen(){
+  if(!syncStand || !APP_STATE) return 0;
+  const ids = new Set([...Object.keys(syncStand), ...Object.keys(APP_STATE)]);
+  let n = 0;
+  ids.forEach(k => { if(JSON.stringify(APP_STATE[k]) !== syncStand[k]) n++; });
+  return n;
+}
+
+function syncErfolg(pid, gesendet){
+  if(pid !== CURRENT_PROJECT_ID) return;
+  syncStand = _standAlsMap(JSON.parse(gesendet));
+  syncFehler = false;
+  syncLetzterUpload = new Date();
+  clearTimeout(syncWiederholung);
+  // Nur loeschen, wenn seit dem Absenden nichts mehr geaendert wurde
+  if(JSON.stringify(APP_STATE) === gesendet) offlineLoeschen(pid); else offlineSichern();
+  updateSyncStatus();
+}
+
+function syncFehlschlag(pid){
+  if(pid !== CURRENT_PROJECT_ID) return;
+  syncFehler = true;
+  offlineSichern();
+  clearTimeout(syncWiederholung);
+  // Automatisch erneut versuchen, solange noch etwas offen ist
+  syncWiederholung = setTimeout(() => {
+    if(syncAenderungen() > 0 && navigator.onLine !== false) flushCloudSync();
+  }, 30000);
+  updateSyncStatus();
+}
+
+function updateSyncStatus(){
+  const el = g('sync-status');
+  if(!el) return;
+  if(!CURRENT_PROJECT_ID || !currentUser){ el.hidden = true; return; }
+  const n = syncAenderungen();
+  const laeuft = cloudSaveQueues.has(CURRENT_PROJECT_ID);
+  const offline = navigator.onLine === false;
+  let art, text, knopf = false;
+  if(n > 0 && (syncFehler || offline)){
+    art = 'offen'; knopf = true;
+    text = `${n} ${n === 1 ? 'Änderung' : 'Änderungen'} noch nicht hochgeladen – auf diesem Gerät gesichert`;
+  } else if(n > 0 || laeuft){
+    art = 'laeuft'; text = 'Wird gespeichert …';
+  } else {
+    art = 'ok';
+    text = syncLetzterUpload
+      ? `Alles gespeichert · ${syncLetzterUpload.toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' })}`
+      : 'Alles gespeichert';
+  }
+  el.hidden = false;
+  el.className = 'sync-status sync-' + art;
+  const t = g('sync-status-text'); if(t) t.textContent = text;
+  const b = g('sync-jetzt'); if(b) b.hidden = !knopf;
+}
+
+async function syncJetzt(){
+  if(navigator.onLine === false) return toast('Kein Netz – der Upload startet automatisch, sobald wieder Verbindung da ist');
+  const ok = await flushCloudSync();
+  toast(ok ? 'Hochgeladen' : 'Hochladen fehlgeschlagen – neuer Versuch folgt automatisch');
+}
+
+async function offlineWiederherstellenPruefen(pid){
+  const b = offlineLesen(pid);
+  if(!b || !b.state || pid !== CURRENT_PROJECT_ID) return;
+  const anders = Object.keys(b.state).filter(k => JSON.stringify(b.state[k]) !== JSON.stringify(APP_STATE[k])).length;
+  if(!anders){ offlineLoeschen(pid); return; }
+  if(!canEditMeasurement()){
+    toast('Auf diesem Gerät liegen noch nicht hochgeladene Werte – das Protokoll ist aber gesperrt');
+    return;
+  }
+  const wann = new Date(b.at).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' });
+  const uebernehmen = await appFrage(
+    `Nicht hochgeladene Messwerte gefunden\n\nAuf diesem Gerät sind Änderungen an ${anders} ${anders === 1 ? 'String' : 'Strings'} vom ${wann} gesichert, `
+    + 'die noch nicht in der Cloud sind. Sollen sie wiederhergestellt und hochgeladen werden?',
+    { ok: 'Wiederherstellen', abbrechen: 'Verwerfen', gefahr: false });
+  let wiederherstellen = uebernehmen;
+  if(!uebernehmen){
+    wiederherstellen = !(await appFrage('Änderungen wirklich verwerfen?\n\nDie nicht hochgeladenen Werte auf diesem Gerät werden gelöscht. Es gilt der Stand aus der Cloud.',
+      { ok: 'Verwerfen', gefahr: true }));
+  }
+  if(wiederherstellen){
+    APP_STATE = { ...APP_STATE, ...b.state };
+    renderMatrix();
+    updateSyncStatus();
+    saveProjectToCloud(pid);
+    toast('Messwerte wiederhergestellt');
+  } else {
+    offlineLoeschen(pid);
+  }
+}
+
+window.addEventListener('online', updateSyncStatus);
+window.addEventListener('offline', updateSyncStatus);
+// Beim Verlassen warnen, wenn noch etwas nicht in der Cloud ist
+window.addEventListener('beforeunload', e => {
+  if(syncAenderungen() > 0){ e.preventDefault(); e.returnValue = ''; }
+});
+
+// ── Naechster offener String ──────────────────────────────────────────────
+function springeZuNaechstemOffenen(){
+  const offen = [...document.querySelectorAll('tr.row-incomplete[data-string-id]')];
+  if(!offen.length) return toast(CURRENT_PROJECT_ID ? 'Alle aktiven Strings sind fertig gemessen' : 'Kein Projekt geöffnet');
+  const aktiv = document.activeElement && document.activeElement.closest ? document.activeElement.closest('tr[data-string-id]') : null;
+  let ziel = null;
+  if(aktiv){
+    ziel = offen.find(r => r !== aktiv && (aktiv.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING));
+  } else {
+    const anker = Math.min(window.innerHeight * 0.32, 220);
+    ziel = offen.find(r => r.offsetParent !== null && r.getBoundingClientRect().top > anker);
+  }
+  if(!ziel) ziel = offen[0];
+  const block = ziel.closest('.wr-block');
+  if(block && block.style.display === 'none'){
+    const alle = document.querySelector('.wr-tab[data-wr="0"]');
+    if(alle) filterInverter(0, alle);
+  }
+  const id = ziel.dataset.stringId;
+  ziel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.querySelectorAll('tr.row-focus').forEach(r => r.classList.remove('row-focus'));
+  ziel.classList.add('row-focus');
+  const feld = ['uoc', 'isc', 'riso'].map(f => g(`${f}-${id}`)).find(el => el && !el.readOnly && !el.value) || g(`uoc-${id}`);
+  if(feld && !feld.readOnly){ try { feld.focus({ preventScroll: true }); } catch(_){} }
+  toast(`String ${id} · noch ${offen.length} offen`);
+}
+
+// ── Pruefprotokoll als PDF (Druckansicht -> "Als PDF speichern") ──────────
+function druckePruefprotokoll(){
+  const proj = getCurrentProject();
+  if(!proj) return toast('Bitte zuerst ein Projekt öffnen');
+  const win = window.open('', '_blank');
+  if(!win) return toast('Popup wurde blockiert – bitte Popups für diese Seite erlauben');
+  const plan = getCurrentPlan();
+  const wp = getCurrentWp();
+  const zeit = iso => iso ? new Date(iso).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+  const logoEl = document.querySelector('#auth-gate .brand-logo--light');
+  const logo = logoEl ? logoEl.getAttribute('src') : '';
+  const zahl = v => (v === undefined || v === null || String(v).trim() === '') ? '<span class="leer">—</span>' : esc(String(v));
+
+  let aktiv = 0, fertig = 0, offen = 0, krit = 0, module = 0;
+  const auffaellig = [];
+  const proWr = {};
+  getAllFullIds().forEach(id => {
+    const it = APP_STATE[id];
+    if(!it || it.stat !== 'JA') return;
+    const st = getStringStatus(id);
+    const ev = evaluateString(id);
+    aktiv++; module += Number(it.mod) || 0;
+    if(st === 'COMPLETE') fertig++; else offen++;
+    if(ev.level === 'crit' || st === 'ERROR'){ krit++; auffaellig.push({ id, msgs: ev.msgs }); }
+    const wr = id.split('.')[0];
+    const status = (ev.level === 'crit' || st === 'ERROR') ? ['krit', 'Auffällig'] : (st === 'COMPLETE' ? ['ok', 'OK'] : ['offen', 'Offen']);
+    const f = k => ev.fields[k] ? ` class="z ${ev.fields[k]}"` : ' class="z"';
+    (proWr[wr] = proWr[wr] || []).push(`<tr>
+      <td class="id">${esc(id)}</td><td>${esc(it.planName || '—')}</td><td>${esc(it.gak || '—')}</td>
+      <td class="z">${zahl(it.mod)}</td><td${f('uoc')}>${zahl(it.uoc)}</td><td${f('isc')}>${zahl(it.isc)}</td><td${f('riso')}>${zahl(it.riso)}</td>
+      <td><span class="st ${status[0]}">${status[1]}</span></td><td class="note">${esc(it.note || '')}</td></tr>`);
+  });
+  const kwp = (module * wp / 1000).toFixed(2);
+  const statusText = proj.abnahme ? 'Abgenommen' : (proj.locked ? 'Freigegeben (gesperrt)' : 'In Bearbeitung');
+  const bereich = BEREICHE[projektBereich(proj)] ? BEREICHE[projektBereich(proj)].name : '—';
+  const pruefer = (proj.signature && proj.signature.name) || anzeigeName() || '—';
+  const unterschrift = (sig, rolle) => (sig && sig.dataUrl)
+    ? `<div class="sig"><img src="${sig.dataUrl}" alt="Unterschrift ${rolle}"><div class="sig-l"></div><div><strong>${esc(sig.name || '')}</strong> · ${rolle}</div><div class="klein">digital unterschrieben am ${zeit(sig.at)}</div></div>`
+    : `<div class="sig"><div class="sig-leer"></div><div class="sig-l"></div><div>${rolle}</div><div class="klein">Ort, Datum, Unterschrift</div></div>`;
+  const wrHtml = Object.keys(proWr).map(Number).sort((a, b) => a - b).map(wr => {
+    const name = (plan[wr] && plan[wr].name) ? plan[wr].name : 'WR ' + wr;
+    return `<section class="wr"><h2>${esc(name)} <span>WR ${wr} · ${proWr[wr].length} Strings</span></h2>
+      <table><thead><tr><th>Klemme</th><th>Plan-String</th><th>GAK</th><th class="z">Module</th><th class="z">Uoc (V)</th>
+      <th class="z">Isc (A)</th><th class="z">Riso (MΩ)</th><th>Status</th><th>Bemerkung</th></tr></thead>
+      <tbody>${proWr[wr].join('')}</tbody></table></section>`;
+  }).join('');
+  const auffHtml = auffaellig.length
+    ? `<section class="auff"><h2>Auffälligkeiten <span>${auffaellig.length}</span></h2><ul>${auffaellig.map(a =>
+        `<li><strong>${esc(a.id)}</strong> – ${esc((a.msgs || []).join(' · ') || 'Wert außerhalb des gültigen Bereichs')}</li>`).join('')}</ul></section>`
+    : '';
+  const heute = new Date().toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  win.document.write(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Prüfprotokoll ${esc(proj.name)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 14mm 12mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Inter, system-ui, sans-serif; color: #18181b; margin: 0; font-size: 9pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .seite { max-width: 190mm; margin: 0 auto; padding: 16px; }
+  .leiste { position: sticky; top: 0; background: #fff; border-bottom: 1px solid #e4e4e7; padding: 10px 16px; display: flex; gap: 10px; align-items: center; justify-content: space-between; font-size: 10pt; }
+  .leiste button { font: inherit; font-weight: 600; background: #93BD14; color: #172300; border: 0; border-radius: 6px; padding: 9px 16px; cursor: pointer; }
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; border-bottom: 3px solid #93BD14; padding-bottom: 12px; }
+  header img { height: 46px; }
+  h1 { font-size: 17pt; margin: 0 0 2px; letter-spacing: -.02em; }
+  .unter { color: #6b6b73; font-size: 9.5pt; }
+  .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 16px; margin: 14px 0; }
+  .meta div span { display: block; color: #6b6b73; font-size: 7.5pt; }
+  .meta div strong { font-weight: 600; }
+  .kacheln { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px; }
+  .kachel { border: 1px solid #e4e4e7; border-radius: 6px; padding: 8px 10px; border-top: 3px solid var(--f, #93BD14); }
+  .kachel b { display: block; font-size: 14pt; font-variant-numeric: tabular-nums; }
+  .kachel span { color: #6b6b73; font-size: 7.5pt; }
+  h2 { font-size: 11pt; margin: 18px 0 6px; display: flex; justify-content: space-between; align-items: baseline; }
+  h2 span { color: #6b6b73; font-weight: 500; font-size: 8.5pt; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-weight: 600; color: #3f3f46; background: #f4f4f5; border-bottom: 1px solid #d4d4d8; padding: 5px 6px; font-size: 8pt; }
+  td { border-bottom: 1px solid #ececef; padding: 4px 6px; vertical-align: top; }
+  tr { break-inside: avoid; }
+  .z { text-align: right; }
+  .id { font-weight: 600; white-space: nowrap; }
+  .note { color: #52525b; font-size: 8pt; }
+  .leer { color: #a1a1aa; }
+  td.crit { color: #c8261c; font-weight: 700; background: #fef1f0; }
+  td.warn { color: #b45309; font-weight: 600; }
+  .st { font-size: 7.5pt; font-weight: 600; padding: 1px 6px; border-radius: 99px; white-space: nowrap; }
+  .st.ok { background: #f3f9e3; color: #4d7a05; } .st.offen { background: #fff6e5; color: #9a5b00; } .st.krit { background: #fef1f0; color: #c8261c; }
+  .auff ul { margin: 0; padding-left: 16px; } .auff li { margin: 2px 0; }
+  .auff h2 span { color: #c8261c; }
+  .unterschriften { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; break-inside: avoid; }
+  .sig img { height: 50px; max-width: 100%; display: block; }
+  .sig-leer { height: 50px; }
+  .sig-l { border-top: 1px solid #18181b; margin: 2px 0 4px; }
+  .klein { color: #6b6b73; font-size: 7.5pt; }
+  footer { margin-top: 18px; color: #a1a1aa; font-size: 7.5pt; display: flex; justify-content: space-between; }
+  @media print { .leiste { display: none; } .seite { padding: 0; } }
+</style></head><body>
+<div class="leiste"><span>Prüfprotokoll – zum Speichern im Druckdialog <strong>„Als PDF speichern“</strong> wählen.</span><button onclick="window.print()">Drucken / PDF</button></div>
+<div class="seite">
+  <header><div><h1>Prüfprotokoll</h1><div class="unter">DC-Strangmessung · Inbetriebnahme</div></div>${logo ? `<img src="${logo}" alt="SOLPRO">` : '<strong>SOLPRO</strong>'}</header>
+  <div class="meta">
+    <div><span>Projekt</span><strong>${esc(proj.name || '—')}</strong></div>
+    <div><span>Bereich</span><strong>${esc(bereich)}</strong></div>
+    <div><span>Gruppe</span><strong>${esc(proj.group || '—')}</strong></div>
+    <div><span>Status</span><strong>${statusText}</strong></div>
+    <div><span>Modulleistung</span><strong>${wp} Wp</strong></div>
+    <div><span>Anlagenleistung aktiv</span><strong>${kwp} kWp</strong></div>
+    <div><span>Prüfer</span><strong>${esc(pruefer)}</strong></div>
+    <div><span>Erstellt am</span><strong>${heute}</strong></div>
+  </div>
+  <div class="kacheln">
+    <div class="kachel"><b>${aktiv}</b><span>Strings aktiv</span></div>
+    <div class="kachel" style="--f:#2563EB"><b>${module}</b><span>Module</span></div>
+    <div class="kachel" style="--f:#15803D"><b>${fertig}</b><span>fertig gemessen</span></div>
+    <div class="kachel" style="--f:#E08A00"><b>${offen}</b><span>offen</span></div>
+    <div class="kachel" style="--f:#C8261C"><b>${krit}</b><span>auffällig</span></div>
+  </div>
+  ${auffHtml}
+  ${wrHtml || '<p>Keine aktiven Strings.</p>'}
+  <div class="unterschriften">${unterschrift(proj.signature, 'Prüfer')}${unterschrift(proj.abnahme, 'Abnahme')}</div>
+  <footer><span>SOLPRO Messtool</span><span>${esc(proj.name || '')} · ${heute}</span></footer>
+</div>
+<script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 400); });<\/script>
+</body></html>`);
+  win.document.close();
+}
+
+// ── Datensicherung (Admin): alle Projekte als Datei ───────────────────────
+async function datensicherungExport(){
+  if(currentUserRole !== 'admin') return toast('Nur für Admins');
+  if(!supabaseClient || !currentUser) return toast('Keine Verbindung');
+  toast('Sicherung wird erstellt …');
+  try {
+    await flushCloudSync();
+    const { data, error } = await supabaseClient.from('pv_projects').select('*');
+    if(error) throw error;
+    const inhalt = { erstellt: new Date().toISOString(), von: currentUser.email, anzahl: (data || []).length, projekte: data || [] };
+    const blob = new Blob([JSON.stringify(inhalt, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `SOLPRO-Messtool-Sicherung_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    toast(`Sicherung mit ${inhalt.anzahl} Projekten gespeichert`);
+  } catch(e){
+    toastError('Sicherung fehlgeschlagen', e);
+  }
+}
+
+// ── Benutzerverwaltung: Suche ─────────────────────────────────────────────
+function filterUsers(text){
+  const q = String(text || '').trim().toLowerCase();
+  document.querySelectorAll('#users-list .user-row').forEach(r => {
+    r.hidden = !!q && !(r.dataset.suche || '').includes(q);
+  });
+}

@@ -937,3 +937,83 @@ html body.pp .name-edit-btn {
 html body.pp .name-edit-btn:hover { background: var(--pa3); border-color: var(--line); color: var(--ink); }
 html body.pp .nm-hinweis { color: var(--mute); font-size: .85rem; margin-bottom: 14px; line-height: 1.45; }
 html body.pp #name-input { text-align: left !important; min-height: 42px !important; font-size: .95rem !important; margin-top: 6px; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ERWEITERUNGEN (Design-/UX-Paket)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Eigene Dialoge */
+.app-dialog-overlay {
+  position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(9,9,11,.5); animation: dlg-rein .12s ease-out;
+}
+@keyframes dlg-rein { from { opacity: 0; } to { opacity: 1; } }
+html body.pp .app-dialog {
+  width: 100%; max-width: 420px; background: var(--pa2); color: var(--ink);
+  border: 1px solid var(--line); border-top: 3px solid var(--brand); border-radius: 12px;
+  box-shadow: var(--sh-lg); padding: 20px;
+}
+html body.pp .app-dialog h2 { font-size: 1.05rem !important; margin: 0 0 6px; line-height: 1.35; }
+html body.pp .app-dialog-text { color: var(--mute); font-size: .9rem; line-height: 1.5; white-space: pre-line; margin: 0 0 14px; }
+html body.pp .app-dialog-eingabe { text-align: left !important; min-height: 42px !important; font-size: .95rem !important; margin: 4px 0 14px; }
+html body.pp .app-dialog-knoepfe { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+html body.pp .app-dialog-knoepfe .btn { min-width: 110px; justify-content: center; }
+html body.pp .app-dialog-gefahr, html body.pp .app-dialog-gefahr:hover {
+  background: var(--krit) !important; color: #fff !important; border: 1px solid var(--krit) !important; font-weight: 600 !important;
+  border-radius: var(--r-sm) !important; padding: 8px 14px !important; min-height: 36px; cursor: pointer;
+}
+@media (max-width: 480px) { html body.pp .app-dialog-knoepfe .btn { flex: 1; min-width: 0; } }
+
+/* Statuszeile ueber der Matrix: Sync-Status + naechster offener String */
+html body.pp .matrix-statuszeile { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 0 12px; }
+html body.pp .sync-status {
+  display: inline-flex; align-items: center; gap: 8px; font-size: .82rem; font-weight: 500; color: var(--mute);
+  padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--pa2);
+}
+html body.pp .sync-status[hidden] { display: none; }
+html body.pp .sync-punkt { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+html body.pp .sync-laeuft .sync-punkt { background: var(--c-blue); animation: sync-puls 1s ease-in-out infinite; }
+@keyframes sync-puls { 50% { opacity: .3; } }
+html body.pp .sync-offen { color: var(--ink); background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+html body.pp .sync-offen .sync-punkt { background: var(--warn); }
+html body.pp .sync-jetzt {
+  font: inherit; font-weight: 600; color: var(--brand-ink); background: var(--brand); border: 0;
+  border-radius: 999px; padding: 3px 10px; cursor: pointer;
+}
+html body.pp .sync-jetzt[hidden] { display: none; }
+html body.pp .naechster-offener { display: inline-flex !important; align-items: center; gap: 7px; margin-left: auto; }
+html body.pp .naechster-offener .ico { color: var(--warn); }
+@media screen and (max-width: 900px) {
+  html body.pp .matrix-statuszeile { margin-top: 4px; }
+  html body.pp .sync-status { flex: 1 1 100%; justify-content: center; }
+  html body.pp .naechster-offener { flex: 1 1 100%; justify-content: center; min-height: 44px; margin-left: 0; }
+}
+
+/* Leere Messfelder sichtbar anders als ausgefuellte */
+html body.pp tr[data-string-id]:not(.row-nein) input[id^="uoc-"]:placeholder-shown,
+html body.pp tr[data-string-id]:not(.row-nein) input[id^="isc-"]:placeholder-shown,
+html body.pp tr[data-string-id]:not(.row-nein) input[id^="riso-"]:placeholder-shown {
+  border-style: dashed !important; background: var(--pa3) !important;
+}
+html body.pp tr[data-string-id] input[id^="uoc-"]::placeholder,
+html body.pp tr[data-string-id] input[id^="isc-"]::placeholder,
+html body.pp tr[data-string-id] input[id^="riso-"]::placeholder { color: var(--dim) !important; }
+
+/* Benutzerverwaltung */
+html body.pp #users-suche { text-align: left !important; min-height: 40px !important; margin-bottom: 12px; }
+html body.pp .user-row[hidden] { display: none !important; }
+html body.pp .user-row .email { display: flex; flex-direction: column; min-width: 0; }
+html body.pp .user-name { font-weight: 600; color: var(--ink); }
+html body.pp .user-mail { font-size: .78rem; color: var(--mute); overflow: hidden; text-overflow: ellipsis; }
+
+/* Seitenleiste: hervorgehobenes Protokoll + aufklappbare Exporte */
+html body.pp .sb-hervor .label { font-weight: 600; color: var(--ink); }
+html body.pp .sb-gruppe > summary { list-style: none; cursor: pointer; }
+html body.pp .sb-gruppe > summary::-webkit-details-marker { display: none; }
+html body.pp .sb-gruppe > summary::after {
+  content: ''; margin-left: auto; width: 7px; height: 7px; border-right: 1.8px solid var(--mute); border-bottom: 1.8px solid var(--mute);
+  transform: rotate(-45deg); transition: transform .15s ease;
+}
+html body.pp .sb-gruppe[open] > summary::after { transform: rotate(45deg); }
+html body.pp .sb-gruppe > .sidebar-btn { padding-left: 22px !important; }

@@ -1,6 +1,6 @@
 {
-  "name": "SOLPRO PV Matrix",
-  "short_name": "PV Matrix",
+  "name": "SOLPRO Messtool",
+  "short_name": "Messtool",
   "description": "DC-Strangmessung, Prüfprotokolle und Querschnittberechnung für PV-Anlagen",
   "id": "./",
   "start_url": "./",

@@ -273,7 +273,7 @@ async function fotoLoeschen(){
   if(!fotoViewer) return;
   const { pid, wr } = fotoViewer;
   const f = fotoFuerWr(pid, wr)[fotoViewer.index];
-  if(!f || !confirm('Dieses Foto wirklich löschen?')) return;
+  if(!f || !await appFrage('Dieses Foto wirklich löschen?')) return;
   if(f.wartet){
     await fotoAusWarteschlange(f.pfad);
   } else {

@@ -1194,3 +1194,44 @@ html body.pp .fk-zeile .ppk-seg { flex: 0 1 260px; }
 /* Modul-Auswahl (Matrix) */
 html body.pp .app-dialog .md-feld { display: flex; flex-direction: column; gap: 4px; margin: 0 0 12px; text-align: left; }
 html body.pp .app-dialog .md-feld span { font-size: .8rem; color: var(--mute); }
+
+/* Status-Chips je Projekt */
+html body.pp .st-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 2px; }
+html body.pp .st-chip { display: inline-flex; align-items: center; gap: 5px; font-size: .72rem; font-weight: 600; line-height: 1; padding: 4px 8px;
+  border-radius: 999px; border: 1px solid var(--line); background: var(--pa3); color: var(--ink2); white-space: nowrap; }
+html body.pp .st-chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--mute); }
+html body.pp .st-chip.st-ok { background: var(--brand-soft); border-color: var(--brand-line); color: var(--brand-text); }
+html body.pp .st-chip.st-ok::before { background: var(--brand); }
+html body.pp .st-chip.st-teil::before { background: var(--c-amber); }
+html body.pp .pa-projekt .st-chips { margin-top: 6px; }
+/* Im Projekt abgelegte PDFs */
+html body.pp .pdf-archiv { margin: 0 0 12px; font-size: .86rem; }
+html body.pp .pdf-archiv summary { cursor: pointer; color: var(--ink2); font-weight: 600; padding: 4px 0; }
+html body.pp .pdf-archiv ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+/* Messgeraete in den Firmendaten */
+html body.pp .mg-zeile { display: grid; grid-template-columns: 1fr 1fr 1fr 150px auto; gap: 8px; align-items: end; padding: 8px 0; border-bottom: 1px solid var(--line); }
+html body.pp .mg-kal { display: flex; flex-direction: column; gap: 2px; font-size: .72rem; color: var(--mute); }
+@media (max-width: 720px) {
+  html body.pp .mg-zeile { grid-template-columns: 1fr 1fr; }
+  html body.pp .mg-zeile .ab-gefahr { justify-self: start; }
+}
+
+/* ══ Handy-Feinschliff ══════════════════════════════════════════════════
+   iOS zoomt beim Antippen in Felder unter 16 px hinein und die Seite
+   verrutscht – daher auf Touch-Geraeten immer 16 px. Dazu groessere
+   Tippflaechen fuer kleine Knoepfe. */
+@media (max-width: 900px), (pointer: coarse) {
+  html body.pp input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
+  html body.pp select, html body.pp textarea { font-size: 16px !important; }
+  html body.pp #proj-search, html body.pp .pa-suche, html body.pp #users-suche { text-align: left !important; }
+  html body.pp .ab-mini { min-height: 38px; padding-left: 12px; padding-right: 12px; }
+  html body.pp .ppk-seg button, html body.pp .ppk-chips button { min-height: 42px; }
+  html body.pp .wr-edit-btn, html body.pp .wr-foto-btn { min-width: 40px !important; min-height: 40px !important; }
+  html body.pp .sidebar-btn, html body.pp .sb-proj-all-link, html body.pp .sb-proj-group-head { min-height: 42px; }
+  html body.pp .bulk-dropdown-btn { min-height: 40px; }
+  html body.pp .pc-menu-btn { min-width: 40px; min-height: 40px; }
+}
+/* Querformat am Handy: Inhalt nicht unter Notch/Kamera */
+@media (max-width: 900px) and (orientation: landscape) {
+  html body.pp .main-content { padding-left: calc(10px + var(--safe-left, 0px)); padding-right: calc(10px + var(--safe-right, 0px)); }
+}

@@ -67,10 +67,10 @@ const RECHTE = [
   { k: 'export',            g: 'Export & Werkzeuge', l: 'Prüfprotokoll und Exporte (PDF, Excel, CSV)',       std: ['admin', 'planner', 'site', 'elektriker'] },
   { k: 'querschnitt',       g: 'Export & Werkzeuge', l: 'Querschnittberechnung (Menü)',                      std: ['admin', 'planner', 'elektriker'] },
   { k: 'vorlagen',          g: 'Export & Werkzeuge', l: 'Projekt-Vorlagen',                                  std: ['admin', 'planner'] },
-  { k: 'anlagenbuch',       g: 'Anlagenbuch',       l: 'Reiter Anlagenbuch sehen und erstellen',            std: ['admin'] },
+  { k: 'anlagenbuch',       g: 'Anlagenbuch',       l: 'Reiter Anlagenbuch sehen und erstellen',            std: ['admin', 'buero'] },
   { k: 'katalog',           g: 'Anlagenbuch',       l: 'Reiter Komponenten: Katalog und Firmendaten pflegen', std: ['admin'] }
 ];
-const ROLLEN = { admin: 'Admin', planner: 'Planer', site: 'Bauleitung', elektriker: 'Elektriker' };
+const ROLLEN = { admin: 'Admin', planner: 'Planer', site: 'Bauleitung', elektriker: 'Elektriker', buero: 'Büro' };
 
 // Welcher Reiter braucht welches Recht? Gesperrte Reiter leiten auf den
 // ersten erlaubten weiter (z. B. Elektriker landen direkt in der Matrix).
@@ -686,6 +686,7 @@ function renderProjectGrid(){
         <div class="project-card-meta">
           ${proj.group ? `<span style="color:var(--accent); font-weight:700;">${esc(proj.group)}</span> &middot; ` : ''}${wrCount} Wechselrichter &middot; ${wp} Wp${proj.locked ? ' &middot; <span style="color:#ef4444;font-weight:700;">gesperrt</span>' : ''}
         </div>
+        ${projektStatusHtml(proj, prog)}
         <div class="pc-prog">
           <div class="pc-prog-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Messfortschritt">
             <div class="pc-prog-fill ${prog.crit ? 'crit' : ''}" style="width:${pct}%;"></div>
@@ -4434,6 +4435,17 @@ async function saveProjectToCloudNow(projectId, skipRender){
   if(syncIndicator) syncIndicator.classList.add('syncing');
   
   try {
+    // Nur das Anlagenbuch hochladen (Server-Funktion, Messwerte bleiben unberuehrt):
+    // fuer Nutzer ohne DC-Recht (z. B. Buero) und bei geschuetzten Projekten,
+    // die nur Admins als Ganzes aendern duerfen. Offene DC-Aenderungen gehen
+    // weiter den normalen Weg, damit nichts still verloren geht.
+    if(currentUserRole !== 'admin' && (!darfDcSchreiben() || istGeschuetzt(proj))){
+      const dcOffen = projectId === CURRENT_PROJECT_ID && syncStand ? syncAenderungen() - (abOffen ? 1 : 0) : 0;
+      if(!(darfDcSchreiben() && dcOffen > 0)){
+        if(syncIndicator) syncIndicator.classList.remove('syncing');
+        return anlagenbuchNurSpeichern(proj);
+      }
+    }
     const stateData = projectId === CURRENT_PROJECT_ID ? APP_STATE : generateState(proj.plan);
 
     const configToSave = buildProjectConfig(proj, currentUser ? currentUser.email : null);
@@ -4441,7 +4453,7 @@ async function saveProjectToCloudNow(projectId, skipRender){
     proj.updated_at = updatedAt;
     const payload = { 
       id: projectId, name: proj.name, pruefer: currentUser.email, 
-      user_id: currentUser.id, modul_wp: proj.model_wp || 465, 
+      user_id: proj.user_id || currentUser.id, modul_wp: proj.model_wp || 465, 
       mppts: "dynamic", data: stateData, config: configToSave, 
       updated_at: updatedAt,
       bereich: projektBereich(proj)
@@ -4461,6 +4473,7 @@ async function saveProjectToCloudNow(projectId, skipRender){
       return false;
     } else {
       proj.cloud_updated_at = updatedAt;
+      if(!proj.user_id) proj.user_id = currentUser.id;
       saveProjectsLocal();
       const off = g('offline-indicator'); if(off) off.classList.remove('offline');
       showSaveIndicator('saved');
@@ -4646,6 +4659,7 @@ async function onAuthenticated(user){
     aktualisiereNamensAnzeige();
     g('user-badge-role').textContent = ROLLEN[currentUserRole] || '—';
     await initProjects();
+    ppkStatusLaden().then(() => { if(g('project-grid')) renderProjectGrid(); });
     if(typeof fotoWarteschlangeSenden === 'function') fotoWarteschlangeSenden();
     updateLockUI();
     updateRoleHint();
@@ -4749,6 +4763,7 @@ async function loadAllUsers(){
         <select onchange="changeUserRole('${u.id}', this.value)" ${u.id === currentUser.id ? 'disabled' : ''}>
           <option value="site" ${u.role === 'site' ? 'selected' : ''}>Bauleitung</option>
           <option value="elektriker" ${u.role === 'elektriker' ? 'selected' : ''}>Elektriker</option>
+          <option value="buero" ${u.role === 'buero' ? 'selected' : ''}>Büro</option>
           <option value="planner" ${u.role === 'planner' ? 'selected' : ''}>Planer</option>
           <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
         </select>
@@ -5866,6 +5881,7 @@ const AB_KAPITEL = [
   ]},
   { id: 'pruefung', titel: 'Prüf- und Messergebnisse (ÖVE/ÖNORM E 8101)', fuer: ['gewerbe', 'freiflaeche'], felder: [
     ['pruefung.datum', 'Prüfdatum', 'date'], ['pruefung.pruefer', 'Prüfer'],
+    ['@messgeraet', 'Messgerät aus der Liste'],
     ['pruefung.geraet', 'Messgerät (Hersteller, Typ, Seriennummer)'], ['pruefung.kalibrierung', 'Kalibriert am', 'date'],
     ['pruefung.temperatur', 'Modultemperatur (°C, optional)', 'num'],
     ['pruefung.wetter', 'Witterung', 'text', 'z. B. sonnig, wolkenlos'],
@@ -5906,7 +5922,7 @@ function abSetzen(pfad, wert){
 const abZahl = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return isNaN(n) ? null : n; };
 const abKomp = id => abKatalog.find(k => k.id === id) || null;
 const abKompName = k => k ? `${k.hersteller} ${k.typ}` : '';
-function abDarfAendern(){ return darf('anlagenbuch') && (currentUserRole === 'admin' || !isProtocolLocked()); }
+function abDarfAendern(){ return darf('anlagenbuch'); }
 const AB_ENTWURF = pid => `pv_ab_entwurf::${currentUser ? currentUser.id : 'anon'}::${pid}`;
 
 function abSpeichernVerzoegert(){
@@ -6010,6 +6026,12 @@ function abFeldHtml([pfad, label, typ, opt]){
   const dis = abDarfAendern() ? '' : ' disabled';
   const brt = (typ === 'area') ? ' ab-breit' : '';
   if(pfad === '@wr') return abWrTabelleHtml();
+  if(pfad === '@messgeraet'){
+    const liste = messgeraeteListe();
+    if(!liste.length) return '';
+    return `<label class="ab-feld"><span>${esc(label)}</span><select class="sp-inp" data-ab-mg${dis}><option value="">– übernehmen aus … –</option>`
+      + liste.map(m => `<option value="${esc(m.id)}">${esc(messgeraetName(m))}</option>`).join('') + '</select></label>';
+  }
   if(pfad === '@firma') return abFirmaUebersichtHtml();
   // Aufstellungsort/Lueftung nur, wenn ein Speicher gewaehlt ist
   if(/^speicher\.(ort|lueftung)$/.test(pfad) && !abWert('speicher.komponente')) return '';
@@ -6108,6 +6130,7 @@ function abZeichnen(){
   const box = g('ab-inhalt');
   const proj = getCurrentProject();
   if(!box || !proj || !abDaten) return;
+  setTimeout(() => pdfArchivZeigen('ab-archiv', proj.id, 'Anlagenbuch'), 0);
   const gesperrt = !abDarfAendern();
   box.innerHTML = `
     <div class="ab-kopf">
@@ -6115,8 +6138,9 @@ function abZeichnen(){
         <p class="ab-klein">Umfang passend zum Bereich des Projekts – Privatanlagen kompakt, Gewerbe und Freifläche mit allen Prüf- und Messergebnissen.</p></div>
       <button type="button" class="btn btn-primary ab-erstellen" onclick="anlagenbuchErstellen()">Anlagenbuch erstellen (PDF)</button>
     </div>
-    ${gesperrt ? '<div class="ab-info">Das Protokoll ist abgeschlossen – Änderungen am Anlagenbuch sind nur noch dem Admin möglich.</div>' : ''}
+    ${gesperrt ? '<div class="ab-info">Du kannst das Anlagenbuch nur ansehen.</div>' : ''}
     <div class="ab-status" id="ab-status" hidden></div>
+    <div id="ab-archiv"></div>
     ${abKapitelFuer(abBereich()).map((k, i) => `<details class="ab-kapitel"${i === 0 ? ' open' : ''}><summary><span class="ab-nr">${i + 1}</span>${esc(k.titel)}</summary>
       <div class="ab-raster">${k.felder.map(abFeldHtml).join('')}</div></details>`).join('')}
     <details class="ab-kapitel"><summary><span class="ab-nr">A</span>Datenblätter & Dokumente</summary><div class="ab-block">${abDokumenteHtml()}</div></details>
@@ -6136,6 +6160,16 @@ function abEingabe(e){
     abDaten.zusatz = abDaten.zusatz.filter(x => x !== id);
     if(el.checked) abDaten.zusatz.push(id);
     if(e.type === 'change') abSpeichernVerzoegert();
+    return;
+  }
+  if(el.dataset.abMg !== undefined){
+    if(e.type !== 'change') return;
+    const m = messgeraeteListe().find(x => x.id === el.value);
+    if(!m) return;
+    abSetzen('pruefung.geraet', messgeraetName(m));
+    if(m.kal) abSetzen('pruefung.kalibrierung', m.kal);
+    abSpeichernVerzoegert();
+    abZeichnenBehalten();
     return;
   }
   const pfad = el.dataset.ab;
@@ -6929,6 +6963,8 @@ async function anlagenbuchErstellen(){
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
     window.__abLetztesPdf = bytes;
+    if(abDaten){ abDaten.erstellt_am = new Date().toISOString(); abSpeichernVerzoegert(); }
+    pdfArchivieren(proj.id, 'Anlagenbuch', bytes).then(ok => { if(ok) pdfArchivZeigen('ab-archiv', proj.id, 'Anlagenbuch', true); });
     abStatus(hinweise.length ? `Fertig mit Hinweisen: ${hinweise.join(' · ')}` : `Fertig – ${seiten.length} Seiten`);
     toast(`Anlagenbuch erstellt (${seiten.length} Seiten)`);
   } catch(e){
@@ -7013,6 +7049,9 @@ function komponentenZeichnen(){
         <div class="ab-feld ab-breit"><span>Firmenstempel (Stampiglie) als Bild – erscheint im Bestätigungsfeld</span>
           <div class="komp-stempel">${stempel ? '<img id="komp-stempel-bild" alt="Firmenstempel">' : '<span class="ab-klein">Noch kein Stempel hinterlegt.</span>'}
             <button type="button" class="btn btn-ghost" onclick="firmaStempelHochladen()">${stempel ? 'Stempel ersetzen' : 'Stempel hochladen (PNG/JPG)'}</button></div></div>
+        <div class="ab-feld ab-breit"><span>Messgeräte – im PPK und Anlagenbuch auswählbar</span>
+          <div id="mg-liste">${messgeraeteHtml()}</div>
+          <div><button type="button" class="btn btn-ghost ab-mini" onclick="messgeraetNeu()">Messgerät hinzufügen</button></div></div>
         <div class="ab-breit ab-klein" id="firma-status"></div>
       </div>
     </details>
@@ -7112,6 +7151,7 @@ document.addEventListener('click', e => {
 function abFotoNeu(){
   const proj = getCurrentProject();
   if(!proj || !abDarfAendern()) return toast('Keine Berechtigung');
+  if(currentUserRole !== 'admin' && istGeschuetzt(proj)) return toast('Das Protokoll ist abgeschlossen – neue Fotos kann nur der Admin hinzufügen. Wähle ein vorhandenes Foto.');
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = 'image/*';
   inp.setAttribute('capture', 'environment');
@@ -7202,8 +7242,9 @@ const PPK_TEILE = [
       { t: 'date', f: 'Datum der nächsten Überprüfung', l: 'Datum der nächsten Überprüfung' },
       { t: 'text', f: 'Ort;Seite2', l: 'Ort', a: 'ort' },
       { t: 'date', f: 'am;Seite2', l: 'am', a: 'heute' },
+      { t: 'sig', k: 'sig', l: 'Unterschrift Prüfer' },
       { t: 'text', f: 'Name, Seite2', l: 'Anlagenverantwortlicher (nimmt zur Kenntnis)', a: 'betreiber' },
-      { t: 'sig', l: 'Unterschrift Prüfer' }
+      { t: 'sig', k: 'sig_betreiber', l: 'Unterschrift Anlagenverantwortlicher (Kenntnisnahme)' }
     ]}
   ]},
   { teil: 'B', titel: 'Anlagendokumentation', abschnitte: [
@@ -7475,6 +7516,11 @@ function ppkAuto(){
     dc_frei: ppkEinzeilig(ab.schalter && ab.schalter.dc),
     temp: ab.pruefung && ab.pruefung.temperatur, wetter: ab.pruefung && ab.pruefung.wetter
   };
+  // Messgeraete: eigene Auswahl, sonst das erste Geraet der Liste
+  [1, 2].forEach(n => {
+    const m = ppkMessgeraet(n);
+    if(m){ o['mg' + n + '_h'] = m.hersteller; o['mg' + n + '_t'] = m.typ; o['mg' + n + '_sn'] = m.sn; }
+  });
   // Abgewaehlter Ueberspannungsschutz: Befund-Kaestchen passend vorbelegen
   const acAn = ppkAbschnittAn(ppkAbschnitt('ues_ac'), o), dcAn = ppkAbschnittAn(ppkAbschnitt('ues_dc'), o);
   if(!acAn) o.uess_ac = 'nicht vorhanden';
@@ -7490,7 +7536,8 @@ const PPK_ABSCHNITT_ZUSATZ = {
   'B|Wechselrichter': { id: 'wr', komp: 'wechselrichter' },
   'B|Überspannungsschutz AC': { id: 'ues_ac', optional: 1, komp: 'schutz', leer: 'Type_5' },
   'B|Generatoranschlusskasten (GAK)': { id: 'gak', optional: 1, leer: 'Einbauten' },
-  'B|Überspannungsschutz DC': { id: 'ues_dc', optional: 1, komp: 'schutz', leer: 'Type_7' }
+  'B|Überspannungsschutz DC': { id: 'ues_dc', optional: 1, komp: 'schutz', leer: 'Type_7' },
+  'C|Verwendete Messgeräte': { id: 'mess', mess: 1 }
 };
 const PPK_FELD_ZUSATZ = {
   // Formularfeld: [Vorschlagsliste, Auto-Wert]
@@ -7509,6 +7556,8 @@ const PPK_FELD_ZUSATZ = {
   'Einbauten': ['gak'], 'Schutzart': ['schutzart'], 'Aufstellungsort_2': ['ort_technik'],
   'Lieferant_7': [null, 'ues_dc_lief'], 'Klasse_2': ['ues_klasse'], 'Type_7': [null, 'ues_dc_typ'], 'IIMP_2': ['ues_iimp', 'ues_dc_iimp'],
   'IN_2': ['ues_in', 'ues_dc_in'], 'UC_2': ['ues_uc_dc', 'ues_dc_uc'], 'Montageort_2': ['ues_ort'],
+  'Hersteller_5': [null, 'mg1_h'], 'Type_8': [null, 'mg1_t'], 'Seriennummer': [null, 'mg1_sn'],
+  'Hersteller_6': [null, 'mg2_h'], 'Type_9': [null, 'mg2_t'], 'Seriennummer_2': [null, 'mg2_sn'],
   'Netzbetreiber': ['netzbetreiber'], 'Nennspg': ['spannung'], 'Absicherung': ['ampere'],
   'Hauptleitung': ['hauptltg'], 'Bauart der Hauptsicherung': ['sicherung'], 'mm²Absicherung der Hauptleitung': ['ampere'], 'inauf': ['in_auf'],
   'Vorzählerleitung': ['hauptltg'], 'Bauart der Vorzählersicherung': ['sicherung'], 'Absicherung der Vorzählerleitung': ['ampere'], 'inauf_2': ['in_auf'],
@@ -7608,10 +7657,12 @@ function ppkFeldHtml(fd, auto){
   const dis = ppkDarfAendern() ? '' : ' disabled';
   if(fd.t === 'titel') return `<div class="ab-breit ab-unter">${esc(fd.l)}</div>`;
   if(fd.t === 'sig'){
+    const hinweis = fd.k === 'sig_betreiber' ? 'Vom Kunden unterschreiben lassen – kommt ins Feld „Unterschrift“ neben seinem Namen.'
+      : 'Mit Finger oder Maus unterschreiben – kommt ins Feld „Unterschrift“ und zur Stampiglie.';
     return `<div class="ab-breit ppk-sig"><span class="ab-feld-titel">${esc(fd.l)}</span>
-      <canvas id="ppk-sig" width="600" height="160"></canvas>
-      <div class="ppk-sig-knoepfe"><span class="ab-klein">Mit Finger oder Maus unterschreiben – kommt ins Feld „Unterschrift“ und zur Stampiglie.</span>
-      <button type="button" class="btn btn-ghost ab-mini" onclick="ppkSigLoeschen()">Löschen</button></div></div>`;
+      <canvas data-sig="${fd.k}" width="600" height="160"></canvas>
+      <div class="ppk-sig-knoepfe"><span class="ab-klein">${hinweis}</span>
+      <button type="button" class="btn btn-ghost ab-mini" onclick="ppkSigLoeschen('${fd.k}')"${dis}>Löschen</button></div></div>`;
   }
   if(fd.t === 'strang'){
     const ids = ppkStraenge();
@@ -7672,15 +7723,17 @@ function ppkZeichnen(){
         <button type="button" class="btn btn-primary" onclick="ppkErstellen()">PPK erstellen (PDF)</button></div>
     </div>
     <div class="ab-status" id="ppk-meldung" hidden></div>
+    <div id="ppk-archiv"></div>
     ${PPK_TEILE.map(t => `<div class="ppk-teil"><h2><span>${t.teil}</span>${esc(t.titel)}</h2>
       ${t.abschnitte.map(a => { const i = nr++; const an = ppkAbschnittAn(a, auto); return `<details class="ab-kapitel${an ? '' : ' ppk-aus'}"${hatteZustand ? (offen[i] ? ' open' : '') : (i === 0 ? ' open' : '')}>
         <summary><span class="ab-nr">${t.teil}${t.abschnitte.indexOf(a) + 1}</span>${esc(a.titel)}${a.optional ? `<span class="ab-sum-info">${an ? 'vorhanden' : 'entfällt'}</span>` : ''}</summary>
         <div class="ab-raster">${a.optional ? ppkVorhandenHtml(a, an) : ''}
-        ${an ? `${a.komp ? ppkKompHtml(a) : ''}${a.schnell && ppkDarfAendern() ? `<div class="ab-breit"><button type="button" class="btn btn-ghost ab-mini" data-ppk-schnell="${esc(t.teil)}|${esc(a.titel)}">Alle Punkte: ja / in Ordnung</button></div>` : ''}
+        ${an ? `${a.komp ? ppkKompHtml(a) : ''}${a.mess ? ppkMessHtml() : ''}${a.schnell && ppkDarfAendern() ? `<div class="ab-breit"><button type="button" class="btn btn-ghost ab-mini" data-ppk-schnell="${esc(t.teil)}|${esc(a.titel)}">Alle Punkte: ja / in Ordnung</button></div>` : ''}
         ${a.felder.map(fd => ppkFeldHtml(fd, auto)).join('')}` : '<p class="ab-breit ab-klein">Abschnitt entfällt – im PDF steht dort „nicht vorhanden“.</p>'}</div></details>`; }).join('')}</div>`).join('')}
     <div class="ab-fuss"><button type="button" class="btn btn-primary" onclick="ppkErstellen()">PPK erstellen (PDF)</button></div>`;
   ppkSigEinrichten();
   ppkStatus();
+  pdfArchivZeigen('ppk-archiv', proj.id, 'PPK');
 }
 
 function ppkVorhandenHtml(a, an){
@@ -7750,24 +7803,25 @@ function ppkRisoUebernehmen(min){
 
 // Unterschrift
 function ppkSigEinrichten(){
-  const c = g('ppk-sig');
-  if(!c) return;
-  const ctx = c.getContext('2d');
-  ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.strokeStyle = '#1e3a8a';
-  if(ppkDaten.sig){ const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, c.width, c.height); img.src = ppkDaten.sig; }
-  if(!ppkDarfAendern()) return;
-  let zieht = false;
-  const pos = e => { const r = c.getBoundingClientRect(); const p = e.touches ? e.touches[0] : e; return [(p.clientX - r.left) * c.width / r.width, (p.clientY - r.top) * c.height / r.height]; };
-  const start = e => { zieht = true; const [x, y] = pos(e); ctx.beginPath(); ctx.moveTo(x, y); e.preventDefault(); };
-  const zug = e => { if(!zieht) return; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); e.preventDefault(); };
-  const ende = () => { if(!zieht) return; zieht = false; ppkDaten.sig = c.toDataURL('image/png'); ppkSpeichernVerzoegert(); };
-  c.addEventListener('mousedown', start); c.addEventListener('mousemove', zug); window.addEventListener('mouseup', ende);
-  c.addEventListener('touchstart', start, { passive: false }); c.addEventListener('touchmove', zug, { passive: false }); c.addEventListener('touchend', ende);
+  document.querySelectorAll('#ppk-inhalt canvas[data-sig]').forEach(c => {
+    const k = c.dataset.sig;
+    const ctx = c.getContext('2d');
+    ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.strokeStyle = '#1e3a8a';
+    if(ppkDaten[k]){ const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, c.width, c.height); img.src = ppkDaten[k]; }
+    if(!ppkDarfAendern()) return;
+    let zieht = false;
+    const pos = e => { const r = c.getBoundingClientRect(); const p = e.touches ? e.touches[0] : e; return [(p.clientX - r.left) * c.width / r.width, (p.clientY - r.top) * c.height / r.height]; };
+    const start = e => { zieht = true; const [x, y] = pos(e); ctx.beginPath(); ctx.moveTo(x, y); e.preventDefault(); };
+    const zug = e => { if(!zieht) return; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); e.preventDefault(); };
+    const ende = () => { if(!zieht) return; zieht = false; ppkDaten[k] = c.toDataURL('image/png'); ppkSpeichernVerzoegert(); };
+    c.addEventListener('mousedown', start); c.addEventListener('mousemove', zug); c.addEventListener('mouseup', ende); c.addEventListener('mouseleave', ende);
+    c.addEventListener('touchstart', start, { passive: false }); c.addEventListener('touchmove', zug, { passive: false }); c.addEventListener('touchend', ende);
+  });
 }
-function ppkSigLoeschen(){
-  const c = g('ppk-sig');
+function ppkSigLoeschen(k = 'sig'){
+  const c = document.querySelector(`#ppk-inhalt canvas[data-sig="${k}"]`);
   if(c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
-  if(ppkDaten){ delete ppkDaten.sig; ppkSpeichernVerzoegert(); }
+  if(ppkDaten){ delete ppkDaten[k]; ppkSpeichernVerzoegert(); }
 }
 
 // Speichern
@@ -7882,6 +7936,8 @@ async function ppkErstellen(){
     if(stK){ try { stempel = await abBildEinbetten(pdf, await abBytes(await abDateiLink(stK.pfad))); } catch(_){ hinweise.push('Firmenstempel'); } }
     const setze = (img, x, y, mw, mh) => { const s = Math.min(mw / img.width, mh / img.height); befund.drawImage(img, { x, y, width: img.width * s, height: img.height * s }); };
     if(sig){ setze(sig, 360, 356, 190, 34); setze(sig, 460, 174, 110, 60); }
+    // Kenntnisnahme des Anlagenverantwortlichen: rechts neben "Unterschrift:"
+    if(ppkDaten.sig_betreiber){ try { setze(await pdf.embedPng(ppkDaten.sig_betreiber), 305, 97, 240, 30); } catch(_){ hinweise.push('Unterschrift Anlagenverantwortlicher'); } }
     if(stempel) setze(stempel, 330, 174, 125, 85);
 
     // Beiblatt, wenn mehr als 12 Straenge
@@ -7899,6 +7955,10 @@ async function ppkErstellen(){
     pdf.setCreator('SOLPRO Messtool');
     const bytes = await pdf.save();
     window.__ppkLetztesPdf = bytes;
+    ppkDaten.erstellt = new Date().toISOString();
+    ppkStatusMap[proj.id] = ppkDaten.erstellt;
+    ppkSpeichernVerzoegert();
+    pdfArchivieren(proj.id, 'PPK', bytes).then(ok => { if(ok) pdfArchivZeigen('ppk-archiv', proj.id, 'PPK', true); });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
     a.download = `PPK_${String(proj.name || 'Projekt').replace(/[^\wäöüÄÖÜß.-]+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -7956,7 +8016,7 @@ function projektAuswahlHtml(){
   if(!ids.length) return '<p class="ab-klein">Keine Projekte sichtbar – ggf. muss dir der Admin Projekte zuweisen.</p>';
   return `<input type="search" class="sp-inp pa-suche" placeholder="Projekt suchen …" oninput="projektAuswahlFiltern(this.value)" autocomplete="off">
     <div class="pa-liste">${ids.map(id => { const p = PROJECTS[id]; return `<button type="button" class="pa-projekt" data-suche="${esc(((p.name || '') + ' ' + (p.group || '')).toLowerCase())}" onclick="selectProject('${id}')">
-      <strong>${esc(p.name || 'Unbenannt')}</strong><span>${esc(BEREICHE[projektBereich(p)] ? BEREICHE[projektBereich(p)].name : '')}${p.group ? ' · ' + esc(p.group) : ''}</span></button>`; }).join('')}</div>`;
+      <strong>${esc(p.name || 'Unbenannt')}</strong><span>${esc(BEREICHE[projektBereich(p)] ? BEREICHE[projektBereich(p)].name : '')}${p.group ? ' · ' + esc(p.group) : ''}</span>${projektStatusHtml(p)}</button>`; }).join('')}</div>`;
 }
 function projektAuswahlFiltern(q){
   const t = String(q || '').trim().toLowerCase();
@@ -8027,4 +8087,169 @@ function modulDialog(proj){
     document.body.appendChild(ov);
     setTimeout(() => (module.length ? sel : wp).focus(), 30);
   });
+}
+
+// ── Status je Projekt: DC-Protokoll, PPK, Anlagendoku ─────────────────────
+let ppkStatusMap = {};   // project_id -> Zeitpunkt, an dem das PPK erstellt wurde
+async function ppkStatusLaden(){
+  if(!supabaseClient || !currentUser || !darf('ppk')) return;
+  try {
+    const { data, error } = await supabaseClient.from('pv_ppk').select('project_id, erstellt:daten->>erstellt');
+    if(error) throw error;
+    ppkStatusMap = {};
+    (data || []).forEach(r => { if(r.erstellt) ppkStatusMap[r.project_id] = r.erstellt; });
+  } catch(e){ console.warn('PPK-Status:', e); }
+}
+function projektStatusHtml(p, prog){
+  const chips = [];
+  if(darf('reiter_matrix')){
+    const pr = prog || getProjectProgress(p);
+    if(p.signature || p.abnahme) chips.push(['ok', 'DC unterschrieben']);
+    else if(pr.total && pr.done === pr.total) chips.push(['teil', 'DC gemessen']);
+    else chips.push(['offen', 'DC offen']);
+  }
+  if(darf('ppk')) chips.push(ppkStatusMap[p.id] ? ['ok', 'PPK erstellt'] : ['offen', 'PPK offen']);
+  if(darf('anlagenbuch')){
+    const ab = p.anlagenbuch;
+    chips.push(ab && ab.erstellt_am ? ['ok', 'Doku erstellt'] : (ab ? ['teil', 'Doku begonnen'] : ['offen', 'Doku offen']));
+  }
+  if(!chips.length) return '';
+  return `<span class="st-chips">${chips.map(([art, t]) => `<span class="st-chip st-${art}">${t}</span>`).join('')}</span>`;
+}
+
+// ── Fertige PDFs im Projekt ablegen (pv-dokumente/<projekt>/archiv/) ──────
+const archivCache = {};
+async function pdfArchivieren(pid, art, bytes){
+  if(!supabaseClient || !currentUser || !pid) return false;
+  try {
+    const stempel = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    const { error } = await supabaseClient.storage.from(AB_BUCKET)
+      .upload(`${pid}/archiv/${stempel}_${art}.pdf`, new Blob([bytes], { type: 'application/pdf' }), { contentType: 'application/pdf', upsert: false });
+    if(error) throw error;
+    return true;
+  } catch(e){
+    console.warn('PDF ablegen:', e);
+    toast('PDF heruntergeladen – im Projekt ablegen hat nicht geklappt');
+    return false;
+  }
+}
+async function pdfArchivZeigen(boxId, pid, art, neuLaden){
+  const box = g(boxId);
+  if(!box || !supabaseClient || !currentUser) return;
+  const schluessel = pid + '|' + art;
+  if(neuLaden || !archivCache[schluessel]){
+    try {
+      const { data, error } = await supabaseClient.storage.from(AB_BUCKET)
+        .list(`${pid}/archiv`, { limit: 100, sortBy: { column: 'name', order: 'desc' } });
+      if(error) throw error;
+      archivCache[schluessel] = (data || []).filter(f => f.name && f.name.endsWith(`_${art}.pdf`)).map(f => f.name);
+    } catch(e){ archivCache[schluessel] = []; }
+  }
+  const el = g(boxId);
+  const proj = getCurrentProject();
+  if(!el || !proj || proj.id !== pid) return;
+  const liste = archivCache[schluessel];
+  const datum = n => { const m = n.match(/^(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})/); return m ? `${m[3]}.${m[2]}.${m[1]} · ${m[4]}:${m[5]} Uhr (UTC)` : n; };
+  el.innerHTML = liste.length ? `<details class="pdf-archiv"><summary>Im Projekt abgelegt (${liste.length})</summary>
+    <ul>${liste.map(n => `<li><button type="button" class="btn btn-ghost ab-mini" data-archiv="${esc(pid + '/archiv/' + n)}">${esc(art)} vom ${esc(datum(n))}</button></li>`).join('')}</ul></details>` : '';
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-archiv]');
+  if(!b) return;
+  const w = window.open('', '_blank');
+  abDateiLink(b.dataset.archiv).then(u => { if(w) w.location = u; else location.href = u; })
+    .catch(err => { if(w) w.close(); toastError('PDF konnte nicht geöffnet werden', err); });
+});
+
+// ── Messgeraete (Firmendaten, einmal hinterlegen) ─────────────────────────
+function messgeraeteListe(){ return (abFirma && Array.isArray(abFirma.messgeraete)) ? abFirma.messgeraete : []; }
+function messgeraetName(m){ return [[m.hersteller, m.typ].filter(Boolean).join(' '), m.sn ? `SN ${m.sn}` : ''].filter(Boolean).join(', '); }
+function messgeraeteHtml(){
+  const liste = messgeraeteListe();
+  if(!liste.length) return '<p class="ab-klein">Noch keine Messgeräte hinterlegt.</p>';
+  return liste.map(m => `<div class="mg-zeile" data-mg-id="${esc(m.id)}">
+    <input class="sp-inp" data-mg="hersteller" placeholder="Hersteller" value="${esc(m.hersteller || '')}">
+    <input class="sp-inp" data-mg="typ" placeholder="Typ" value="${esc(m.typ || '')}">
+    <input class="sp-inp" data-mg="sn" placeholder="Seriennummer" value="${esc(m.sn || '')}">
+    <label class="mg-kal"><span>Kalibriert am</span><input type="date" class="sp-inp" data-mg="kal" value="${esc(m.kal || '')}"></label>
+    <button type="button" class="btn btn-ghost ab-mini ab-gefahr" onclick="messgeraetLoeschen('${esc(m.id)}')">Entfernen</button></div>`).join('');
+}
+function messgeraeteSpeichern(){
+  const st = g('firma-status');
+  if(st) st.textContent = 'Wird gespeichert …';
+  clearTimeout(firmaTimer);
+  firmaTimer = setTimeout(firmaSpeichern, 800);
+}
+function messgeraetNeu(){
+  if(!darf('katalog')) return toast('Keine Berechtigung');
+  abFirma = abFirma || {};
+  abFirma.messgeraete = [...messgeraeteListe(), { id: 'mg' + Date.now(), hersteller: '', typ: '', sn: '', kal: '' }];
+  g('mg-liste').innerHTML = messgeraeteHtml();
+  const letzte = document.querySelector('#mg-liste .mg-zeile:last-child input');
+  if(letzte) letzte.focus();
+  messgeraeteSpeichern();
+}
+async function messgeraetLoeschen(id){
+  if(!darf('katalog')) return;
+  const m = messgeraeteListe().find(x => x.id === id);
+  if(m && (m.hersteller || m.typ || m.sn) && !await appFrage(`Messgerät „${messgeraetName(m)}“ entfernen?`)) return;
+  abFirma.messgeraete = messgeraeteListe().filter(x => x.id !== id);
+  g('mg-liste').innerHTML = messgeraeteHtml();
+  messgeraeteSpeichern();
+}
+document.addEventListener('input', e => {
+  const el = e.target;
+  if(!el || !el.dataset || !el.dataset.mg || !el.closest || !el.closest('#mg-liste') || !darf('katalog')) return;
+  const m = messgeraeteListe().find(x => x.id === el.closest('.mg-zeile').dataset.mgId);
+  if(!m) return;
+  m[el.dataset.mg] = el.value;
+  messgeraeteSpeichern();
+});
+// PPK: Messgeraet 1 und 2 aus der Liste
+function ppkMessgeraet(n){
+  const v = ppkDaten && ppkDaten.w ? ppkDaten.w['_mg' + n] : undefined;
+  const liste = messgeraeteListe();
+  if(v === undefined) return n === 1 ? liste[0] || null : null;
+  return liste.find(m => m.id === v) || null;
+}
+function ppkMessHtml(){
+  const liste = messgeraeteListe();
+  const dis = ppkDarfAendern() ? '' : ' disabled';
+  if(!liste.length) return `<p class="ab-breit ab-klein">${darf('katalog') ? 'Tipp: Messgeräte einmal im Reiter Komponenten unter Firmendaten hinterlegen, dann hier nur noch auswählen.' : 'Messgeräte kann der Admin in den Firmendaten hinterlegen – dann sind sie hier auswählbar.'}</p>`;
+  return [1, 2].map(n => { const akt = ppkMessgeraet(n); return `<label class="ab-feld ppk-komp"><span>Messgerät ${n} aus der Liste</span>
+    <select class="sp-inp" data-ppk-mg="${n}"${dis}><option value="">– keins –</option>
+    ${liste.map(m => `<option value="${esc(m.id)}"${akt && akt.id === m.id ? ' selected' : ''}>${esc(messgeraetName(m))}</option>`).join('')}</select></label>`; }).join('');
+}
+document.addEventListener('change', e => {
+  const el = e.target;
+  if(!el || !el.dataset || !el.dataset.ppkMg || !ppkDaten || !ppkDarfAendern()) return;
+  const n = el.dataset.ppkMg;
+  ppkDaten.w['_mg' + n] = el.value;
+  (n === '1' ? ['Hersteller_5', 'Type_8', 'Seriennummer'] : ['Hersteller_6', 'Type_9', 'Seriennummer_2']).forEach(k => delete ppkDaten.w[k]);
+  ppkSpeichernVerzoegert();
+  ppkZeichnen();
+});
+
+// ── Anlagenbuch speichern ohne Projekt-Schreibrecht (Server-Funktion) ─────
+async function anlagenbuchNurSpeichern(proj){
+  if(!abOffen || proj.id !== CURRENT_PROJECT_ID || !darf('anlagenbuch')) return true;   // nichts offen
+  const version = abVersion;
+  const ind = g('cloud-sync-indicator');
+  if(ind) ind.classList.add('syncing');
+  try {
+    const { data, error } = await supabaseClient.rpc('pv_anlagenbuch_speichern', { pid: proj.id, ab: proj.anlagenbuch || null, beschreibung: proj.beschreibung || '' });
+    if(error) throw error;
+    if(data){ proj.updated_at = data; proj.cloud_updated_at = data; }
+    saveProjectsLocal();
+    showSaveIndicator('saved');
+    abNachUpload(proj.id, version);
+    return true;
+  } catch(e){
+    console.warn('Anlagenbuch speichern:', e);
+    showSaveIndicator('error');
+    syncFehlschlag(proj.id);
+    return false;
+  } finally {
+    if(ind) ind.classList.remove('syncing');
+  }
 }

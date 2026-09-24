@@ -1130,3 +1130,6 @@ html body.pp .ab-firma dl { display: grid; grid-template-columns: max-content 1f
 html body.pp .ab-firma dt { color: var(--mute); }
 html body.pp .ab-firma dd { margin: 0; white-space: pre-line; }
 html body.pp .ab-klein a, html body.pp .ab-firma a { color: var(--brand-text); font-weight: 600; }
+
+/* Anleitung und Querschnitt nur im Menü links, nicht in der Reiterleiste */
+html body.pp #tab-anleitung, html body.pp #tab-querschnitt { display: none !important; }

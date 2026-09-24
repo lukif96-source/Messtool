@@ -384,7 +384,7 @@
     </div>
     <div class="sb-proj-tree" id="sb-proj-tree"></div>
     <button onclick="openNewProjectModal();closeSidebar();" data-recht="projekt_anlegen" class="sb-proj-new role-gate-planner">+ Neues Projekt</button>
-    <button onclick="switchMainTab('projects');closeSidebar();" class="sb-proj-all-link">Alle Projekte verwalten →</button>
+    <button onclick="switchMainTab('projects');closeSidebar();" class="sb-proj-all-link" data-recht="reiter_projekte">Alle Projekte verwalten →</button>
   </div>
 
   <div style="font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; padding:12px 8px 4px;">Hilfe</div>
@@ -478,9 +478,9 @@
   </div>
 
   <div class="main-tabs no-print">
-    <button class="main-tab active" onclick="switchMainTab('home')" id="tab-home">Übersicht</button>
-    <button class="main-tab" onclick="switchMainTab('matrix')" id="tab-matrix">Matrix</button>
-    <button class="main-tab" onclick="switchMainTab('projects')" id="tab-projects">Projekte</button>
+    <button class="main-tab active" data-recht="reiter_uebersicht" onclick="switchMainTab('home')" id="tab-home">Übersicht</button>
+    <button class="main-tab" data-recht="reiter_matrix" onclick="switchMainTab('matrix')" id="tab-matrix">Matrix</button>
+    <button class="main-tab" data-recht="reiter_projekte" onclick="switchMainTab('projects')" id="tab-projects">Projekte</button>
     <button class="main-tab" data-recht="anlagenbuch" onclick="switchMainTab('anlagenbuch')" id="tab-anlagenbuch">Anlagenbuch</button>
     <button class="main-tab" data-recht="katalog" onclick="switchMainTab('komponenten')" id="tab-komponenten">Komponenten</button>
     <button class="main-tab" onclick="switchMainTab('anleitung')" id="tab-anleitung">Anleitung</button>
@@ -1038,7 +1038,7 @@
   </div>
 </div>
 
-<script src="js/app.js?v=20260924i"></script>
+<script src="js/app.js?v=20260924l"></script>
 <script src="js/fotos.js?v=20260924c"></script>
 <!-- ══════════════════════════════════════════════════════════════════════
      DARSTELLUNG — jeder richtet sich die Oberflaeche selbst ein.
@@ -1054,7 +1054,7 @@
 
 
 
-<link rel="stylesheet" href="css/pro.css?v=20260924g">
+<link rel="stylesheet" href="css/pro.css?v=20260924l">
 <script src="js/sw-registrierung.js?v=20260923b"></script>
 </body>
 </html>

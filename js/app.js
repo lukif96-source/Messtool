@@ -49,23 +49,35 @@ const ICON = (() => {
 //   die Datenbank (pv_hat_recht).
 // ══════════════════════════════════════════════════════════════════════════
 const RECHTE = [
+  { k: 'reiter_uebersicht', g: 'Reiter',            l: 'Reiter Übersicht',                                  std: ['admin', 'planner', 'site'] },
+  { k: 'reiter_matrix',     g: 'Reiter',            l: 'Reiter Matrix (DC-Messungen ansehen)',              std: ['admin', 'planner', 'site', 'elektriker'] },
+  { k: 'reiter_projekte',   g: 'Reiter',            l: 'Reiter Projekte',                                   std: ['admin', 'planner', 'site'] },
+  { k: 'ppk',               g: 'Reiter',            l: 'Reiter PPK – AC-Prüfprotokoll (Förderung)',         std: ['admin', 'planner', 'elektriker'] },
   { k: 'projekt_anlegen',   g: 'Projekte',          l: 'Projekte anlegen und PVSOL-Import',                 std: ['admin', 'planner'] },
-  { k: 'projekt_verwalten', g: 'Projekte',          l: 'Projekte umbenennen, Gruppe/Bereich, Bauleitung zuweisen', std: ['admin', 'planner'] },
+  { k: 'projekt_verwalten', g: 'Projekte',          l: 'Projekte umbenennen, Gruppe/Bereich, Personen zuweisen', std: ['admin', 'planner'] },
   { k: 'projekt_loeschen',  g: 'Projekte',          l: 'Projekte löschen',                                  std: ['admin', 'planner'] },
-  { k: 'messwerte',         g: 'Matrix',            l: 'Messwerte eintragen',                               std: ['admin', 'planner', 'site'] },
+  { k: 'messwerte',         g: 'Matrix',            l: 'DC-Messwerte eintragen',                            std: ['admin', 'planner', 'site'] },
   { k: 'hardware',          g: 'Matrix',            l: 'Wechselrichter, MPPTs und Module bearbeiten',       std: ['admin', 'planner'] },
   { k: 'wr_loeschen',       g: 'Matrix',            l: 'Wechselrichter löschen',                            std: ['admin'] },
-  { k: 'fotos',             g: 'Matrix',            l: 'Fotos aufnehmen und löschen',                       std: ['admin', 'planner', 'site'] },
+  { k: 'fotos',             g: 'Matrix',            l: 'Fotos aufnehmen und löschen',                       std: ['admin', 'planner', 'site', 'elektriker'] },
   { k: 'matrix_reset',      g: 'Matrix',            l: 'Matrix zurücksetzen',                               std: ['admin', 'planner'] },
-  { k: 'unterschreiben',    g: 'Protokoll',         l: 'Protokoll unterschreiben',                          std: ['admin', 'planner', 'site'] },
+  { k: 'unterschreiben',    g: 'Protokoll',         l: 'DC-Protokoll unterschreiben',                       std: ['admin', 'planner', 'site'] },
   { k: 'sperren',           g: 'Protokoll',         l: 'Protokoll sperren und entsperren',                  std: ['admin'] },
   { k: 'versionen',         g: 'Protokoll',         l: 'Versionen ansehen und wiederherstellen',            std: ['admin', 'planner', 'site'] },
-  { k: 'export',            g: 'Export & Werkzeuge', l: 'Prüfprotokoll und Exporte (PDF, Excel, CSV)',       std: ['admin', 'planner', 'site'] },
-  { k: 'querschnitt',       g: 'Export & Werkzeuge', l: 'Querschnittberechnung',                             std: ['admin', 'planner'] },
+  { k: 'export',            g: 'Export & Werkzeuge', l: 'Prüfprotokoll und Exporte (PDF, Excel, CSV)',       std: ['admin', 'planner', 'site', 'elektriker'] },
+  { k: 'querschnitt',       g: 'Export & Werkzeuge', l: 'Querschnittberechnung (Menü)',                      std: ['admin', 'planner', 'elektriker'] },
   { k: 'vorlagen',          g: 'Export & Werkzeuge', l: 'Projekt-Vorlagen',                                  std: ['admin', 'planner'] },
-  { k: 'anlagenbuch',       g: 'Anlagenbuch',       l: 'Anlagenbuch sehen und erstellen',                   std: ['admin'] },
+  { k: 'anlagenbuch',       g: 'Anlagenbuch',       l: 'Reiter Anlagenbuch sehen und erstellen',            std: ['admin'] },
   { k: 'katalog',           g: 'Anlagenbuch',       l: 'Reiter Komponenten: Katalog und Firmendaten pflegen', std: ['admin'] }
 ];
+const ROLLEN = { admin: 'Admin', planner: 'Planer', site: 'Bauleitung', elektriker: 'Elektriker' };
+
+// Welcher Reiter braucht welches Recht? Gesperrte Reiter leiten auf den
+// ersten erlaubten weiter (z. B. Elektriker landen direkt in der Matrix).
+const TAB_RECHT = { home: 'reiter_uebersicht', matrix: 'reiter_matrix', projects: 'reiter_projekte', ppk: 'ppk',
+  anlagenbuch: 'anlagenbuch', komponenten: 'katalog', querschnitt: 'querschnitt' };
+const TAB_REIHE = ['home', 'matrix', 'projects', 'ppk', 'anlagenbuch', 'komponenten', 'querschnitt', 'anleitung'];
+function tabErlaubt(t){ const r = TAB_RECHT[t]; return !r || darf(r); }
 let currentUserRechte = {};
 
 function darf(k){
@@ -278,9 +290,7 @@ function buildFilterBar(){
 function switchMainTab(tab){
   // Querschnittberechnung nur fuer Planer und Admin – Bauleitung und
   // Monteure sehen den Reiter nicht und landen sonst auf der Uebersicht.
-  if(tab === 'querschnitt' && !darf('querschnitt')) tab = 'home';
-  if(tab === 'anlagenbuch' && !darf('anlagenbuch')) tab = 'home';
-  if(tab === 'komponenten' && !darf('katalog')) tab = 'home';
+  if(!tabErlaubt(tab)) tab = TAB_REIHE.find(tabErlaubt) || 'anleitung';
   document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.matrix-view, .projects-view, .home-view, .anleitung-view, .querschnitt-view, .anlagenbuch-view, .komponenten-view').forEach(v => v.classList.remove('active'));
   const tabEl = g(`tab-${tab}`);
@@ -4562,11 +4572,11 @@ async function onAuthenticated(user){
     document.querySelectorAll('.role-gate-admin').forEach(el => el.classList.toggle('hidden-role', !isAdmin));
     document.querySelectorAll('.role-gate-planner').forEach(el => el.classList.toggle('hidden-role', !isPlannerUp));
     rechteAnwenden();
+    { const akt = (document.body.className.match(/\btab-(\w+)/) || [])[1] || 'home'; if(!tabErlaubt(akt)) switchMainTab(akt); }
     if(!isPlannerUp && document.body.classList.contains('tab-querschnitt')) switchMainTab('home');
     g('user-badge').style.display = 'flex';
     aktualisiereNamensAnzeige();
-    const roleLabels = { admin: 'Admin', planner: 'Planer', site: 'Bauleitung' };
-    g('user-badge-role').textContent = roleLabels[currentUserRole] || '—';
+    g('user-badge-role').textContent = ROLLEN[currentUserRole] || '—';
     await initProjects();
     if(typeof fotoWarteschlangeSenden === 'function') fotoWarteschlangeSenden();
     updateLockUI();
@@ -4669,6 +4679,7 @@ async function loadAllUsers(){
         <span class="email"><span class="user-name">${esc(u.display_name || (u.email || '').split('@')[0])}${u.id === currentUser.id ? ' (du)' : ''}</span><span class="user-mail">${esc(u.email)}</span></span>
         <select onchange="changeUserRole('${u.id}', this.value)" ${u.id === currentUser.id ? 'disabled' : ''}>
           <option value="site" ${u.role === 'site' ? 'selected' : ''}>Bauleitung</option>
+          <option value="elektriker" ${u.role === 'elektriker' ? 'selected' : ''}>Elektriker</option>
           <option value="planner" ${u.role === 'planner' ? 'selected' : ''}>Planer</option>
           <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
         </select>
@@ -4712,7 +4723,7 @@ async function loadAssignments(projectId){
   const listEl = g('assign-list'); listEl.innerHTML = 'Lade...';
   try {
     const [{ data: siteUsers, error: uErr }, { data: members, error: mErr }] = await Promise.all([
-      supabaseClient.from('profiles').select('id, email, role, bereiche').eq('role', 'site').order('email', { ascending: true }),
+      supabaseClient.from('profiles').select('id, email, role, bereiche').in('role', ['site', 'elektriker']).order('email', { ascending: true }),
       supabaseClient.from('pv_project_members').select('user_id').eq('project_id', projectId)
     ]);
     if(uErr) throw uErr;
@@ -5655,7 +5666,7 @@ const AB_NORMEN = 'ÖVE/ÖNORM E 8101 – Elektrische Niederspannungsanlagen\n'
   + 'OVE R 6-2-1 / R 6-2-2 – Blitz- und Überspannungsschutz';
 const AB_BESTAETIGUNG = 'Hiermit wird bestätigt, dass die in diesem Anlagenbuch beschriebene Photovoltaikanlage nach den angeführten '
   + 'Normen und Richtlinien errichtet und einer Erstprüfung gemäß ÖVE/ÖNORM E 8101 (Besichtigung, Erprobung, Messung) '
-  + 'unterzogen wurde. Die Ergebnisse sind in Kapitel 5 dokumentiert.';
+  + 'unterzogen wurde. Die Prüfergebnisse sind in diesem Anlagenbuch dokumentiert.';
 
 // Vorlagen "Betrieb & Wartung" je Anlagentyp (pro Projekt anpassbar)
 const AB_BETRIEB = {
@@ -6300,7 +6311,14 @@ class AbPdf {
     this.y = this.H - this.ro;
     this.text(this.kopfText, this.rl, this.H - 36, 7.5, this.fR, '#6b6b73');
     this.page.drawLine({ start: { x: this.rl, y: this.H - 42 }, end: { x: this.W - this.rr, y: this.H - 42 }, thickness: 1.2, color: this.farbe('#93BD14') });
+    this.logoKopf();
     return this.page;
+  }
+  // Firmenlogo klein oben rechts auf jeder Inhaltsseite
+  logoKopf(){
+    if(!this.logo) return;
+    const h = 18, w = this.logo.width * h / this.logo.height;
+    this.page.drawImage(this.logo, { x: this.W - this.rr - w, y: this.H - 40 + 2, width: w, height: h });
   }
   platz(h){ if(this.y - h < this.ru) this.seite(); }
   neuesKapitel(titel){
@@ -6438,7 +6456,9 @@ async function anlagenbuchErstellen(){
     abStatus('Fotos werden geladen …');
     const logoEl = document.querySelector('#auth-gate .brand-logo--light');
     let logo = null;
-    try { if(logoEl) logo = await pdf.embedPng(logoEl.getAttribute('src')); } catch(_){}
+    try { if(abFirma && abFirma.logo) logo = await abBildEinbetten(pdf, await abBytes(await abDateiLink(abFirma.logo))); } catch(_){ hinweise.push('Firmenlogo konnte nicht geladen werden'); }
+    try { if(!logo && logoEl) logo = await pdf.embedPng(logoEl.getAttribute('src')); } catch(_){}
+    doc.logo = logo;
     const fotos = { anlage: null, wr: [] };
     if(typeof fotoListeLaden === 'function'){
       try {
@@ -6466,7 +6486,7 @@ async function anlagenbuchErstellen(){
     const deck = pdf.addPage([doc.W, doc.H]);
     doc.page = deck;
     deck.drawRectangle({ x: 0, y: doc.H - 10, width: doc.W, height: 10, color: doc.farbe('#93BD14') });
-    if(logo){ const s = 54 / logo.height; deck.drawImage(logo, { x: doc.rl, y: doc.H - 96, width: logo.width * s, height: 54 }); }
+    if(logo){ const s = Math.min(54 / logo.height, 240 / logo.width); deck.drawImage(logo, { x: doc.rl, y: doc.H - 42 - logo.height * s, width: logo.width * s, height: logo.height * s }); }
     doc.text('Anlagenbuch', doc.rl, doc.H - 170, 34, fB);
     const typName = BEREICHE[projektBereich(proj)] ? BEREICHE[projektBereich(proj)].name : '';
     doc.text(`Photovoltaikanlage${typName ? ' · ' + typName : ''} · Dokumentation nach ÖVE/ÖNORM E 8101`, doc.rl, doc.H - 194, 12, fR, '#52525b');
@@ -6763,6 +6783,7 @@ async function anlagenbuchErstellen(){
     doc.page = tocSeite; doc.y = doc.H - doc.ro;
     doc.text(doc.kopfText, doc.rl, doc.H - 36, 7.5, fR, '#6b6b73');
     tocSeite.drawLine({ start: { x: doc.rl, y: doc.H - 42 }, end: { x: doc.W - doc.rr, y: doc.H - 42 }, thickness: 1.2, color: doc.farbe('#93BD14') });
+    doc.logoKopf();
     doc.text('Inhaltsverzeichnis', doc.rl, doc.y - 6, 17, fB); doc.y -= 40;
     doc.kapitel.forEach(k => {
       doc.text(k.titel, doc.rl, doc.y, 11, fR);
@@ -6872,6 +6893,9 @@ function komponentenZeichnen(){
         ${FIRMA_FELDER.map(([k, l, t]) => t === 'area'
           ? `<label class="ab-feld ab-breit"><span>${esc(l)}</span><textarea class="sp-inp" rows="3" data-firma="${k}">${esc(f[k] != null ? f[k] : vorgabe(k))}</textarea></label>`
           : `<label class="ab-feld"><span>${esc(l)}</span><input class="sp-inp" data-firma="${k}" value="${esc(f[k] || '')}"></label>`).join('')}
+        <div class="ab-feld ab-breit"><span>Firmenlogo – erscheint auf Deckblatt und jeder Seite des Anlagenbuchs</span>
+          <div class="komp-stempel">${f.logo ? '<img id="komp-logo-bild" alt="Firmenlogo">' : '<span class="ab-klein">Noch kein eigenes Logo – verwendet wird das App-Logo.</span>'}
+            <button type="button" class="btn btn-ghost" onclick="firmaLogoHochladen()">${f.logo ? 'Logo ersetzen' : 'Logo hochladen (PNG/JPG)'}</button></div></div>
         <div class="ab-feld ab-breit"><span>Firmenstempel (Stampiglie) als Bild – erscheint im Bestätigungsfeld</span>
           <div class="komp-stempel">${stempel ? '<img id="komp-stempel-bild" alt="Firmenstempel">' : '<span class="ab-klein">Noch kein Stempel hinterlegt.</span>'}
             <button type="button" class="btn btn-ghost" onclick="firmaStempelHochladen()">${stempel ? 'Stempel ersetzen' : 'Stempel hochladen (PNG/JPG)'}</button></div></div>
@@ -6882,6 +6906,7 @@ function komponentenZeichnen(){
       <div class="ab-block">${abKatalogHtml()}</div>
     </details>`;
   if(stempel) abDateiLink(stempel.pfad).then(u => { const i = g('komp-stempel-bild'); if(i) i.src = u; }).catch(() => {});
+  if(f.logo) abDateiLink(f.logo).then(u => { const i = g('komp-logo-bild'); if(i) i.src = u; }).catch(() => {});
 }
 
 document.addEventListener('input', e => {
@@ -6985,6 +7010,34 @@ function abFotoNeu(){
     const fotos = await abFotosLaden();
     if(fotos.length && abDaten){ abDaten.anlagenfoto = fotos[fotos.length - 1].pfad; abSpeichernVerzoegert(); }
     abFotoWahlZeichnen();
+  };
+  document.body.appendChild(inp);
+  inp.click();
+}
+
+// Firmenlogo hochladen (liegt im Speicher, Pfad in den Firmendaten)
+function firmaLogoHochladen(){
+  if(!darf('katalog')) return toast('Keine Berechtigung');
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/png,image/jpeg'; inp.style.display = 'none';
+  inp.onchange = async () => {
+    const datei = inp.files && inp.files[0];
+    inp.remove();
+    if(!datei) return;
+    if(!/^image\/(png|jpeg)$/.test(datei.type)) return toast('Bitte ein PNG- oder JPG-Bild wählen');
+    const fehler = abDateiPruefen(datei);
+    if(fehler) return toast(fehler);
+    try {
+      const alt = abFirma && abFirma.logo;
+      const pfad = `bibliothek/firmenlogo-${Date.now()}.${abDateiEndung(datei)}`;
+      await abHochladen(pfad, datei);
+      abFirma = abFirma || {};
+      abFirma.logo = pfad;
+      await firmaSpeichern();
+      if(alt && alt !== pfad) await supabaseClient.storage.from(AB_BUCKET).remove([alt]);
+      toast('Firmenlogo gespeichert');
+      komponentenZeichnen();
+    } catch(e){ toastError('Logo konnte nicht gespeichert werden', e); }
   };
   document.body.appendChild(inp);
   inp.click();

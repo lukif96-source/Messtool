@@ -5702,7 +5702,7 @@ const AB_KAPITEL = [
   { nr: 5, titel: 'Prüf- und Messergebnisse (ÖVE/ÖNORM E 8101)', felder: [
     ['pruefung.datum', 'Prüfdatum', 'date'], ['pruefung.pruefer', 'Prüfer'],
     ['pruefung.geraet', 'Messgerät (Hersteller, Typ, Seriennummer)'], ['pruefung.kalibrierung', 'Kalibriert am', 'date'],
-    ['pruefung.einstrahlung', 'Einstrahlung (W/m²)', 'num'], ['pruefung.temperatur', 'Modultemperatur (°C)', 'num'],
+    ['pruefung.temperatur', 'Modultemperatur (°C, optional)', 'num'],
     ['pruefung.wetter', 'Witterung', 'text', 'z. B. sonnig, wolkenlos'],
     ['pruefung.besichtigung', 'Besichtigung', 'select', AB_ERGEBNIS],
     ['pruefung.erprobung', 'Erprobung', 'select', AB_ERGEBNIS],
@@ -6502,7 +6502,7 @@ async function anlagenbuchErstellen(){
     const pr = d.pruefung || {};
     doc.ueberschrift('Prüfbedingungen');
     doc.kv([['Prüfdatum', datum(pr.datum)], ['Prüfer', pr.pruefer], ['Messgerät', pr.geraet], ['Kalibriert am', datum(pr.kalibrierung)],
-      ['Einstrahlung', pr.einstrahlung ? `${pr.einstrahlung} W/m²` : ''], ['Modultemperatur', pr.temperatur ? `${pr.temperatur} °C` : ''], ['Witterung', pr.wetter]]);
+      ['Modultemperatur', pr.temperatur ? `${pr.temperatur} °C` : ''], ['Witterung', pr.wetter]]);
     const risoWerte = aktive.map(id => abZahl(APP_STATE[id].riso)).filter(v => v !== null);
     const risoMin = risoWerte.length ? Math.min(...risoWerte) : null;
     const auff = aktive.filter(id => evaluateString(id).level === 'crit' || getStringStatus(id) === 'ERROR');
@@ -6521,15 +6521,15 @@ async function anlagenbuchErstellen(){
     if(pr.bemerkung){ doc.ueberschrift('Bemerkungen'); doc.absatz(pr.bemerkung); }
 
     // Kontrollberechnung: Soll-Uoc = Module x Uoc(STC), temperaturkorrigiert
-    const uocM = abZahl(md.uoc), iscM = abZahl(md.isc), tk = abZahl(md.tk_uoc);
-    const T = abZahl(pr.temperatur), G = abZahl(pr.einstrahlung);
+    const uocM = abZahl(md.uoc), tk = abZahl(md.tk_uoc);
+    const T = abZahl(pr.temperatur);
     const tFaktor = (tk !== null && T !== null) ? (1 + tk / 100 * (T - 25)) : 1;
     const mitSoll = uocM !== null;
     doc.ueberschrift('Messwerte je Wechselrichter');
     doc.hinweis(mitSoll
       ? `Kontrollberechnung: Soll-Uoc = Modulanzahl × Uoc(STC) ${tk !== null && T !== null ? `× Temperaturkorrektur (${fmt(tk)} %/K, ${T} °C)` : '(ohne Temperaturkorrektur)'}`
-        + (iscM !== null && G ? `; Soll-Isc = Isc(STC) × ${G}/1000 W/m²` : '') + '. Abweichungen über 10 % sind markiert.'
-      : 'Für die Kontrollberechnung im Katalog beim Solarmodul Uoc und Isc hinterlegen.');
+        + '. Abweichungen über 10 % sind markiert.'
+      : 'Für die Kontrollberechnung im Katalog beim Solarmodul Uoc hinterlegen.');
     wrNrn.forEach(wr => {
       const ids = aktive.filter(id => id.split('.')[0] === String(wr));
       if(!ids.length) return;
@@ -6537,8 +6537,8 @@ async function anlagenbuchErstellen(){
       doc.text(`WR ${wr} – ${(plan[wr] && plan[wr].name) || ''}`, doc.rl, doc.y - 10, 9.5, fB);
       doc.y -= 16;
       const spalten = mitSoll
-        ? [{ t: 'Klemme', w: 9 }, { t: 'Module', w: 7, r: 1 }, { t: 'Uoc V', w: 9, r: 1 }, { t: 'Soll V', w: 9, r: 1 }, { t: 'Abw.', w: 8, r: 1 },
-           { t: 'Isc A', w: 8, r: 1 }, { t: 'Soll A', w: 8, r: 1 }, { t: 'Abw.', w: 8, r: 1 }, { t: 'Riso MOhm', w: 11, r: 1 }, { t: 'Status', w: 11 }]
+        ? [{ t: 'Klemme', w: 10 }, { t: 'Plan-String', w: 12 }, { t: 'Module', w: 8, r: 1 }, { t: 'Uoc V', w: 10, r: 1 }, { t: 'Soll V', w: 10, r: 1 }, { t: 'Abw.', w: 9, r: 1 },
+           { t: 'Isc A', w: 9, r: 1 }, { t: 'Riso MOhm', w: 12, r: 1 }, { t: 'Status', w: 11 }]
         : [{ t: 'Klemme', w: 12 }, { t: 'Plan-String', w: 16 }, { t: 'Module', w: 9, r: 1 }, { t: 'Uoc V', w: 12, r: 1 },
            { t: 'Isc A', w: 12, r: 1 }, { t: 'Riso MOhm', w: 14, r: 1 }, { t: 'Status', w: 14 }];
       doc.tabelle(spalten, ids.map(id => {
@@ -6550,15 +6550,13 @@ async function anlagenbuchErstellen(){
         if(!mitSoll) return [id, it.planName || '—', String(it.mod || ''), feld('uoc'), feld('isc'), feld('riso'), status];
         const n = Number(it.mod) || 0;
         const uSoll = n ? n * uocM * tFaktor : null;
-        const iSoll = (iscM !== null && G) ? iscM * G / 1000 : null;
-        const u = abZahl(it.uoc), i = abZahl(it.isc);
+        const u = abZahl(it.uoc);
         const abw = (ist, soll, grenze) => {
           if(ist === null || !soll) return { t: '' };
           const p = (ist - soll) / soll * 100;
           return { t: `${p > 0 ? '+' : ''}${fmt(p, 1)} %`, farbe: Math.abs(p) > grenze ? '#b45309' : '#6b6b73', fett: Math.abs(p) > grenze };
         };
-        return [id, String(n || ''), feld('uoc'), uSoll ? fmt(uSoll, 1) : '', abw(u, uSoll, 10), feld('isc'),
-          iSoll ? fmt(iSoll, 2) : '', abw(i, iSoll, 15), feld('riso'), status];
+        return [id, it.planName || '—', String(n || ''), feld('uoc'), uSoll ? fmt(uSoll, 1) : '', abw(u, uSoll, 10), feld('isc'), feld('riso'), status];
       }));
     });
     if(auff.length){

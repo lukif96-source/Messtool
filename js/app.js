@@ -80,8 +80,59 @@ const TAB_REIHE = ['home', 'matrix', 'projects', 'ppk', 'anlagenbuch', 'komponen
 function tabErlaubt(t){ const r = TAB_RECHT[t]; return !r || darf(r); }
 let currentUserRechte = {};
 
+// Funktionen, die der Admin zentral freigibt. "In Arbeit" = nur Admins sehen
+// sie, fuer alle anderen gibt es sie nicht – egal welche Rechte sie haben.
+const FUNKTIONEN = [
+  { k: 'anlagenbuch', l: 'Anlagendokumentation (Anlagenbuch)', std: 'admin' },
+  { k: 'katalog',     l: 'Komponenten (Katalog und Firmendaten)', std: 'admin' },
+  { k: 'ppk',         l: 'AC-Prüfprotokoll (PPK)', std: 'frei' }
+];
+const FUNKTIONEN_CACHE = 'pv_funktionen_v1';
+let funktionStatus = (() => { try { return JSON.parse(localStorage.getItem(FUNKTIONEN_CACHE)) || {}; } catch(_){ return {}; } })();
+function funktionFrei(k){
+  const f = FUNKTIONEN.find(x => x.k === k);
+  return !f || (funktionStatus[k] || f.std) === 'frei';
+}
+async function funktionenLaden(){
+  if(!supabaseClient || !currentUser) return;
+  try {
+    const { data, error } = await supabaseClient.from('pv_einstellungen').select('wert').eq('schluessel', 'funktionen').maybeSingle();
+    if(error) throw error;
+    funktionStatus = (data && data.wert) || {};
+    try { localStorage.setItem(FUNKTIONEN_CACHE, JSON.stringify(funktionStatus)); } catch(_){}
+  } catch(e){ console.warn('Funktionen laden:', e); }   // offline: letzter bekannter Stand
+}
+function funktionenBoxZeichnen(){
+  const box = g('funktionen-box');
+  if(!box) return;
+  if(currentUserRole !== 'admin'){ box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="fk-titel">Funktionen freigeben</div>
+    <p class="fk-info">„In Arbeit“ sehen nur Admins – für alle anderen ist die Funktion nicht vorhanden, egal welche Rechte sie haben.</p>
+    ${FUNKTIONEN.map(f => { const frei = funktionFrei(f.k); return `<div class="fk-zeile"><span>${esc(f.l)}</span><div class="ppk-seg">
+      <button type="button" class="${frei ? 'an' : ''}" onclick="funktionSetzen('${f.k}', 'frei')">Freigegeben</button>
+      <button type="button" class="${frei ? '' : 'an'}" onclick="funktionSetzen('${f.k}', 'admin')">In Arbeit</button></div></div>`; }).join('')}`;
+}
+async function funktionSetzen(k, v){
+  if(currentUserRole !== 'admin') return;
+  const vorher = funktionStatus[k];
+  funktionStatus[k] = v;
+  funktionenBoxZeichnen();
+  try {
+    const { error } = await supabaseClient.from('pv_einstellungen')
+      .upsert({ schluessel: 'funktionen', wert: funktionStatus, geaendert_am: new Date().toISOString() });
+    if(error) throw error;
+    try { localStorage.setItem(FUNKTIONEN_CACHE, JSON.stringify(funktionStatus)); } catch(_){}
+    toast(v === 'frei' ? 'Freigegeben – gilt beim nächsten Öffnen der App' : 'Auf „In Arbeit“ gestellt – nur Admins sehen die Funktion');
+  } catch(e){
+    if(vorher === undefined) delete funktionStatus[k]; else funktionStatus[k] = vorher;
+    funktionenBoxZeichnen();
+    toastError('Konnte nicht gespeichert werden', e);
+  }
+}
+
 function darf(k){
   if(currentUserRole === 'admin') return true;
+  if(!funktionFrei(k)) return false;
   if(currentUserRechte && Object.prototype.hasOwnProperty.call(currentUserRechte, k)) return !!currentUserRechte[k];
   const r = RECHTE.find(x => x.k === k);
   return !!(r && currentUserRole && r.std.includes(currentUserRole));
@@ -4578,6 +4629,7 @@ async function onAuthenticated(user){
   g('auth-gate').style.display = 'none';
   try {
     await loadMyProfile();
+    await funktionenLaden();
     const isAdmin = currentUserRole === 'admin';
     const isPlannerUp = currentUserRole === 'admin' || currentUserRole === 'planner';
     document.querySelectorAll('.role-gate-admin').forEach(el => el.classList.toggle('hidden-role', !isAdmin));
@@ -4682,6 +4734,7 @@ function closeUsersModal(evt){ if(!evt || evt.target === g('users-modal')) g('us
 
 async function loadAllUsers(){
   const listEl = g('users-list'); listEl.innerHTML = 'Lade...';
+  funktionenBoxZeichnen();
   try {
     const { data, error } = await supabaseClient.from('profiles').select('id, email, role, bereiche, display_name, rechte').order('created_at', { ascending: true });
     if(error){ listEl.innerHTML = `Fehler: ${error.message}`; return; }
@@ -5660,10 +5713,13 @@ const AB_KAT = {
   unterkonstruktion: 'Unterkonstruktion', schutz: 'Überspannungsschutz', stempel: 'Firmenstempel', sonstiges: 'Sonstiges'
 };
 const AB_KAT_DATEN = {
-  modul: [['wp', 'Nennleistung (Wp)'], ['uoc', 'Uoc bei STC (V)'], ['isc', 'Isc bei STC (A)'], ['tk_uoc', 'Temperaturkoeffizient Uoc (%/K, z. B. -0,27)']],
-  wechselrichter: [['leistung_kw', 'AC-Nennleistung (kW)'], ['ip', 'Schutzart (z. B. IP66)']],
-  speicher: [['kapazitaet', 'Kapazität (kWh)'], ['spannung', 'Nennspannung (V)']],
-  schutz: [['typ', 'Ableiter-Typ (z. B. Typ I+II)'], ['seite', 'Einsatz (DC / AC)']],
+  modul: [['wp', 'Nennleistung (Wp)'], ['uoc', 'Uoc bei STC (V)'], ['isc', 'Isc bei STC (A)'], ['impp', 'Impp (A)'],
+    ['u_max', 'Max. Systemspannung (V)'], ['tk_uoc', 'Temperaturkoeffizient Uoc (%/K, z. B. -0,27)'], ['lieferant', 'Lieferant / Großhandel']],
+  wechselrichter: [['leistung_kw', 'AC-Nennleistung (kW)'], ['ip', 'Schutzart (z. B. IP66)'], ['u_dc_min', 'DC-Eingangsspannung von (V)'],
+    ['u_dc_max', 'DC-Eingangsspannung bis (V)'], ['u_max', 'Max. Eingangsspannung (V)'], ['i_max', 'Max. Eingangsstrom (A)'],
+    ['u_ac', 'AC-Nennspannung (V)'], ['temp', 'Temperaturbereich (z. B. -25 … +60 °C)'], ['lieferant', 'Lieferant / Großhandel']],
+  speicher: [['kapazitaet', 'Kapazität (kWh)'], ['spannung', 'Nennspannung (V)'], ['bauart', 'Bauart (z. B. Lithium-Eisenphosphat)'], ['lieferant', 'Lieferant / Großhandel']],
+  schutz: [['typ', 'Ableiter-Typ (z. B. Typ 1+2)'], ['seite', 'Einsatz (DC / AC)'], ['iimp', 'Iimp (kA)'], ['in', 'In (kA)'], ['uc', 'Uc (V)'], ['lieferant', 'Lieferant / Großhandel']],
   unterkonstruktion: [], stempel: [], sonstiges: []
 };
 const AB_DOK_KAT = {
@@ -5699,6 +5755,40 @@ const AB_BETRIEB = {
 };
 
 const AB_ALLE = ['privat', 'gewerbe', 'freiflaeche'];
+// Vorschlagslisten: antippen statt tippen, eigene Eingabe bleibt moeglich
+const VORSCHLAG = {
+  dc_kabel: ['H1Z2Z2-K (EN 50618)', 'PV1-F', 'Solarkabel UV-beständig'],
+  dc_qs: ['4 mm²', '6 mm²', '10 mm²', '16 mm²'],
+  dc_qs_zahl: ['4', '6', '10', '16'],
+  dc_u: ['1,5 kV DC', '1,0 kV DC'],
+  ac_kabel: ['NYM-J', 'NYY-J', 'YMvK', 'E-YY-J', 'H07RN-F', 'NAYY-J'],
+  ac_qs_zahl: ['5x2,5', '5x4', '5x6', '5x10', '5x16', '5x25', '4x35', '4x50'],
+  anschluss_qs: ['4', '6', '10', '16', '25', '35'],
+  verlegung: ['im Kabelkanal', 'auf Kabeltasse', 'im Schutzrohr', 'unter Putz', 'auf Putz', 'im Freien UV-beständig', 'im Erdreich (Schutzrohr)'],
+  ues_klasse: ['Typ 1', 'Typ 2', 'Typ 1+2', 'Typ 3'],
+  ues_uc_ac: ['275', '320', '335', '350'],
+  ues_uc_dc: ['600', '1000', '1100', '1200', '1500'],
+  ues_in: ['12,5', '15', '20', '25', '40'],
+  ues_iimp: ['6,25', '12,5', '25'],
+  ues_ort: ['Zählerverteiler', 'Unterverteiler', 'Generatoranschlusskasten (GAK)', 'im Wechselrichter integriert', 'beim Wechselrichter'],
+  sicherung: ['NH00', 'NH0', 'NH1', 'NH2', 'D0 (Neozed)', 'D II / D III (Diazed)'],
+  ampere: ['35', '50', '63', '80', '100', '125', '160', '200', '250'],
+  hauptltg: ['10', '16', '25', '35', '50', '70', '95', '120', '150'],
+  in_auf: ['in Rohr', 'auf Putz', 'unter Putz', 'im Kabelkanal', 'im Erdreich'],
+  netzbetreiber: ['Energienetze Steiermark', 'KNG-Kärnten Netz', 'Linz Netz', 'Netz Burgenland', 'Netz Niederösterreich', 'Netz Oberösterreich',
+    'Salzburg Netz', 'TINETZ', 'Vorarlberger Energienetze', 'Wiener Netze'],
+  zaehler: ['Smart Meter (bidirektional)', 'Ferraris-Zähler (Zweirichtung)', 'Wandlermessung'],
+  einspeisung: ['Zählerverteiler', 'Hauptverteiler', 'Unterverteiler'],
+  zaehlerplatz: ['Keller', 'Erdgeschoss', 'Zählerkasten Außenwand', 'Technikraum'],
+  schutzart: ['IP20', 'IP54', 'IP65', 'IP66'],
+  temp: ['-25 … +60 °C', '-25 … +65 °C', '-40 … +60 °C'],
+  gak: ['Strangsicherungen, DC-Trennschalter, Überspannungsschutz', 'DC-Trennschalter, Überspannungsschutz', 'Überspannungsschutz'],
+  ort_technik: ['Keller', 'Technikraum', 'Garage', 'Hauswirtschaftsraum', 'Dachboden', 'Außenwand'],
+  ort_trennung: ['Zählerverteiler', 'Unterverteiler', 'beim Wechselrichter'],
+  ort_dc_frei: ['am Dachaustritt', 'beim Wechselrichter', 'im GAK', 'im Technikraum'],
+  speicher_bauart: ['Lithium-Eisenphosphat (LiFePO4)', 'Lithium-Ionen (NMC)', 'Blei-Gel', 'Blei-Säure'],
+  spannung: ['230', '400']
+};
 const AB_USCHUTZ = ['Typ I', 'Typ II', 'Typ I+II', 'Typ III', 'nicht vorhanden'];
 
 // Kapitel mit Geltungsbereich: Privatkunden bekommen ein kompaktes,
@@ -5737,10 +5827,10 @@ const AB_KAPITEL = [
     ['r11.notaus', 'Feuerwehrschalter bzw. DC-Freischaltung vorhanden', 'check']
   ]},
   { id: 'verkabelung', titel: 'Verkabelung & Schutzorgane', fuer: ['gewerbe', 'freiflaeche'], felder: [
-    ['kabel.dc_querschnitt', 'DC-Solarkabel – Querschnitt (mm²)'], ['kabel.dc_laenge', 'DC – Leitungslängen (m)'],
-    ['kabel.dc_verlegung', 'DC – Verlegeart', 'text', 'z. B. im Freien UV-beständig, im Kabelkanal'],
-    ['kabel.ac_querschnitt', 'AC-Zuleitung – Querschnitt (mm²)'], ['kabel.ac_laenge', 'AC – Leitungslänge (m)'],
-    ['kabel.ac_verlegung', 'AC – Verlegeart', 'text', 'z. B. unter Putz, im Kabelkanal'],
+    ['kabel.dc_typ', 'DC-Solarkabel – Typ', 'vs', 'dc_kabel'], ['kabel.dc_querschnitt', 'DC-Solarkabel – Querschnitt (mm²)', 'vs', 'dc_qs_zahl'],
+    ['kabel.dc_laenge', 'DC – Leitungslängen (m)'], ['kabel.dc_verlegung', 'DC – Verlegeart', 'vs', 'verlegung'],
+    ['kabel.ac_typ', 'AC-Zuleitung – Kabeltyp', 'vs', 'ac_kabel'], ['kabel.ac_querschnitt', 'AC-Zuleitung – Querschnitt (mm²)', 'vs', 'ac_qs_zahl'],
+    ['kabel.ac_laenge', 'AC – Leitungslänge (m)'], ['kabel.ac_verlegung', 'AC – Verlegeart', 'vs', 'verlegung'],
     ['schalter.dc', 'DC-Freischaltung – Position und Typ', 'area', 'möglichst nahe am Generator'],
     ['schalter.ac', 'AC-seitige Netztrennung – Position und Typ', 'area'],
     ['ueberspannung.dc', 'Überspannungsschutz DC-seitig', 'select', AB_USCHUTZ],
@@ -5914,6 +6004,13 @@ function abFeldHtml([pfad, label, typ, opt]){
   const brt = (typ === 'area') ? ' ab-breit' : '';
   if(pfad === '@wr') return abWrTabelleHtml();
   if(pfad === '@firma') return abFirmaUebersichtHtml();
+  // Aufstellungsort/Lueftung nur, wenn ein Speicher gewaehlt ist
+  if(/^speicher\.(ort|lueftung)$/.test(pfad) && !abWert('speicher.komponente')) return '';
+  if(typ === 'vs'){
+    const id = 'ab-vs-' + pfad.replace(/[^a-z0-9]/gi, '_');
+    return `<label class="ab-feld"><span>${esc(label)}</span><input type="text" class="sp-inp" data-ab="${pfad}" list="${id}" value="${esc(wert)}" placeholder="auswählen oder eintippen"${dis}>`
+      + `<datalist id="${id}">${(VORSCHLAG[opt] || []).map(o => `<option value="${esc(o)}">`).join('')}</datalist></label>`;
+  }
   if(pfad === '@foto') return '<div class="ab-breit" id="ab-fotos"><span class="ab-feld-titel">Anlagenfoto (Deckblatt)</span><p class="ab-klein">Fotos werden geladen …</p></div>';
   if(typ === 'area'){
     return `<label class="ab-feld${brt}"><span>${esc(label)}</span><textarea class="sp-inp" rows="3" data-ab="${pfad}" placeholder="${esc(opt || '')}"${dis}>${esc(wert)}</textarea></label>`;
@@ -6592,9 +6689,9 @@ async function anlagenbuchErstellen(){
         kap(k.titel);
         const kb = d.kabel || {};
         doc.ueberschrift('DC-Leitungen (Solarkabel)');
-        doc.kv([['Querschnitt', kb.dc_querschnitt ? `${kb.dc_querschnitt} mm²` : ''], ['Leitungslängen', kb.dc_laenge ? `${kb.dc_laenge} m` : ''], ['Verlegeart', kb.dc_verlegung]]);
+        doc.kv([['Kabeltyp', kb.dc_typ], ['Querschnitt', kb.dc_querschnitt ? `${kb.dc_querschnitt} mm²` : ''], ['Leitungslängen', kb.dc_laenge ? `${kb.dc_laenge} m` : ''], ['Verlegeart', kb.dc_verlegung]]);
         doc.ueberschrift('AC-Zuleitung');
-        doc.kv([['Querschnitt', kb.ac_querschnitt ? `${kb.ac_querschnitt} mm²` : ''], ['Leitungslänge', kb.ac_laenge ? `${kb.ac_laenge} m` : ''], ['Verlegeart', kb.ac_verlegung]]);
+        doc.kv([['Kabeltyp', kb.ac_typ], ['Querschnitt', kb.ac_querschnitt ? `${kb.ac_querschnitt} mm²` : ''], ['Leitungslänge', kb.ac_laenge ? `${kb.ac_laenge} m` : ''], ['Verlegeart', kb.ac_verlegung]]);
         doc.ueberschrift('Schalteinrichtungen');
         doc.kv([['DC-Freischaltung', d.schalter && d.schalter.dc], ['AC-seitige Netztrennung', d.schalter && d.schalter.ac]]);
         doc.ueberschrift('Überspannungs- und Blitzschutz (OVE R 6-2-1 / R 6-2-2)');
@@ -7322,12 +7419,15 @@ function ppkAuto(){
   const proj = getCurrentProject();
   const ab = (proj && proj.anlagenbuch) || {};
   const f = abFirma || {};
-  const mod = abKomp(ab.modul && ab.modul.komponente);
-  const md = (mod && mod.daten) || {};
+  const w = (ppkDaten && ppkDaten.w) || {};
+  const kd = k => (k && k.daten) || {};
+  const mod = ppkKomp('modul');
+  const md = kd(mod);
   const plan = getCurrentPlan();
-  const wrK = Object.keys(plan).map(wr => abKomp(ab.wr && ab.wr[wr])).filter(Boolean);
-  const wd = (wrK[0] && wrK[0].daten) || {};
-  const sp = abKomp(ab.speicher && ab.speicher.komponente);
+  const wrK = w._komp_wr && abKomp(w._komp_wr) ? [abKomp(w._komp_wr)] : Object.keys(plan).map(wr => abKomp(ab.wr && ab.wr[wr])).filter(Boolean);
+  const wd = kd(wrK[0]);
+  const sp = ppkKomp('speicher');
+  const uac = ppkKomp('ues_ac'), udc = ppkKomp('ues_dc');
   const aktiv = ppkStraenge();
   const mods = aktiv.map(id => Number(APP_STATE[id].mod) || 0).filter(Boolean);
   const zaehl = {}; mods.forEach(m => { zaehl[m] = (zaehl[m] || 0) + 1; });
@@ -7337,8 +7437,10 @@ function ppkAuto(){
   const uocs = aktiv.map(id => abZahl(APP_STATE[id].uoc)).filter(v => v !== null);
   const eindeutig = arr => [...new Set(arr.filter(Boolean))].join(' / ');
   const ba = String(ab.betriebsart || '');
+  const kb = ab.kabel || {};
+  const us = ab.ueberspannung || {};
   const heute = new Date().toISOString().slice(0, 10);
-  return {
+  const o = {
     betreiber: ab.betreiber && ab.betreiber.name, telefon: ab.betreiber && ab.betreiber.kontakt,
     adresse: ppkEinzeilig(ab.standort && ab.standort.adresse), postadresse: ppkEinzeilig(ab.betreiber && ab.betreiber.adresse),
     art: 'Erstprüfung', norm_teil: 'ÖVE/ÖNORM E 8101', norm: 'ÖVE/ÖNORM E 8101', heute,
@@ -7347,18 +7449,103 @@ function ppkAuto(){
     zaehlpunkt: ab.zaehlpunkt,
     anlagenart: /DC-gekoppelt/.test(ba) ? 'Inselbetrieb (DC)' : (/AC-gekoppelt/.test(ba) ? 'Inselbetrieb (AC)' : 'Netzparallelbetrieb'),
     m_hersteller: mod && mod.hersteller, m_typ: mod && mod.typ, m_wp: md.wp || (wp ? String(wp) : ''), m_uoc: md.uoc, m_isc: md.isc,
+    m_impp: md.impp, m_umax: md.u_max, m_lief: md.lieferant,
     mod_strang: haeufig, u_system: uocs.length ? String(Math.round(Math.max(...uocs))) : '',
     kwp: summe ? (summe * wp / 1000).toFixed(2).replace('.', ',') : '',
     ausrichtung: ab.modul && ab.modul.ausrichtung, neigung: ab.modul && ab.modul.neigung,
-    s_hersteller: sp && sp.hersteller, s_typ: sp && sp.typ, s_spannung: sp && sp.daten && sp.daten.spannung, s_ort: ab.speicher && ab.speicher.ort,
+    hat_speicher: !!sp || /Speicher/.test(ba),
+    s_hersteller: sp && sp.hersteller, s_typ: sp && sp.typ, s_spannung: kd(sp).spannung, s_bauart: kd(sp).bauart, s_lief: kd(sp).lieferant,
+    s_ort: ab.speicher && ab.speicher.ort,
     w_hersteller: eindeutig(wrK.map(k => k.hersteller)), w_typ: eindeutig(wrK.map(k => k.typ)), wrart: 'Netzgekoppelt',
-    wr_anzahl: String(Object.keys(plan).length || ''), w_kw: wd.leistung_kw, w_ip: wd.ip,
-    uesk_ac: ab.ueberspannung && ab.ueberspannung.ac !== 'nicht vorhanden' ? ab.ueberspannung.ac : '',
-    uesk_dc: ab.ueberspannung && ab.ueberspannung.dc !== 'nicht vorhanden' ? ab.ueberspannung.dc : '',
+    wr_anzahl: String(Object.keys(plan).length || ''), w_kw: wd.leistung_kw, w_ip: wd.ip, w_lief: eindeutig(wrK.map(k => kd(k).lieferant)),
+    w_udc_von: wd.u_dc_min, w_udc_bis: wd.u_dc_max, w_umax: wd.u_max, w_imax: wd.i_max, w_uac: wd.u_ac, w_temp: wd.temp,
+    uesk_ac: kd(uac).typ || (us.ac && us.ac !== 'nicht vorhanden' ? us.ac : ''),
+    ues_ac_typ: uac ? abKompName(uac) : '', ues_ac_iimp: kd(uac).iimp, ues_ac_in: kd(uac).in, ues_ac_uc: kd(uac).uc,
+    uesk_dc: kd(udc).typ || (us.dc && us.dc !== 'nicht vorhanden' ? us.dc : ''),
+    ues_dc_typ: udc ? abKompName(udc) : '', ues_dc_iimp: kd(udc).iimp, ues_dc_in: kd(udc).in, ues_dc_uc: kd(udc).uc,
+    ues_dc_lief: kd(udc).lieferant, ues_dc_db: udc && udc.pfad ? 'ja' : '',
+    dc_typ: kb.dc_typ, dc_qs: kb.dc_querschnitt ? `${kb.dc_querschnitt} mm²` : '', dc_verl: kb.dc_verlegung,
     dc_frei: ppkEinzeilig(ab.schalter && ab.schalter.dc),
     temp: ab.pruefung && ab.pruefung.temperatur, wetter: ab.pruefung && ab.pruefung.wetter
   };
+  // Abgewaehlter Ueberspannungsschutz: Befund-Kaestchen passend vorbelegen
+  const acAn = ppkAbschnittAn(ppkAbschnitt('ues_ac'), o), dcAn = ppkAbschnittAn(ppkAbschnitt('ues_dc'), o);
+  if(!acAn) o.uess_ac = 'nicht vorhanden';
+  if(!dcAn) o.uess_dc = 'nicht vorhanden';
+  if(!acAn && !dcAn) o.ue_vorh = 'nein';
+  return o;
 }
+// Zusaetze zu den Formular-Abschnitten, ohne die Feldzuordnung anzufassen
+const PPK_ABSCHNITT_ZUSATZ = {
+  'B|Solarmodule & PV-Generator': { id: 'modul', komp: 'modul' },
+  'B|Laderegler (falls vorhanden)': { id: 'laderegler', titel: 'Laderegler', optional: 1, leer: 'Hersteller_2' },
+  'B|Stromspeicher (falls vorhanden)': { id: 'speicher', titel: 'Stromspeicher', optional: 1, komp: 'speicher', leer: 'Hersteller_3' },
+  'B|Wechselrichter': { id: 'wr', komp: 'wechselrichter' },
+  'B|Überspannungsschutz AC': { id: 'ues_ac', optional: 1, komp: 'schutz', leer: 'Type_5' },
+  'B|Generatoranschlusskasten (GAK)': { id: 'gak', optional: 1, leer: 'Einbauten' },
+  'B|Überspannungsschutz DC': { id: 'ues_dc', optional: 1, komp: 'schutz', leer: 'Type_7' }
+};
+const PPK_FELD_ZUSATZ = {
+  // Formularfeld: [Vorschlagsliste, Auto-Wert]
+  'Lieferant': [null, 'm_lief'], 'Betriebsstrom IMPP': [null, 'm_impp'], 'Max zulässige Systemsp': [null, 'm_umax'],
+  'Lieferant_3': [null, 's_lief'], 'Bauart': ['speicher_bauart', 's_bauart'], 'Aufstellungsort': ['ort_technik'], 'Anschlußleitung': ['anschluss_qs'],
+  'Hauptabsicherung': ['ampere'],
+  'Lieferant_4': [null, 'w_lief'], 'von': [null, 'w_udc_von'], 'bis': [null, 'w_udc_bis'], 'Max Eingangsspannung': [null, 'w_umax'],
+  'Max Eingangsstrom': [null, 'w_imax'], 'Nennspannung_2': ['spannung', 'w_uac'], 'Gehäuse Schutzart': ['schutzart'], 'Temperaturbereich': ['temp', 'w_temp'],
+  'Ort; Seite4': ['ort_trennung'],
+  'Klasse': ['ues_klasse'], 'Type_5': [null, 'ues_ac_typ'], 'IIMP': ['ues_iimp', 'ues_ac_iimp'], 'IN': ['ues_in', 'ues_ac_in'], 'UC': ['ues_uc_ac', 'ues_ac_uc'],
+  'Montageort': ['ues_ort'],
+  'Einspeisepunkt Ort': ['einspeisung'], 'Art des Zählers': ['zaehler'],
+  'Spannungsfestigkeit': ['dc_u'], 'Leitungstype': ['dc_kabel', 'dc_typ'], 'Querschnitt': ['dc_qs', 'dc_qs'],
+  'Spannungsfestigkeit_2': ['dc_u'], 'Leitungstype_2': ['dc_kabel'], 'Querschnitt_2': ['dc_qs'], 'Verlegung der Leitung': ['verlegung', 'dc_verl'],
+  'Ort Freischalteinrichtung In unmittelbarer Nähe der Module empfohlen': ['ort_dc_frei'],
+  'Einbauten': ['gak'], 'Schutzart': ['schutzart'], 'Aufstellungsort_2': ['ort_technik'],
+  'Lieferant_7': [null, 'ues_dc_lief'], 'Klasse_2': ['ues_klasse'], 'Type_7': [null, 'ues_dc_typ'], 'IIMP_2': ['ues_iimp', 'ues_dc_iimp'],
+  'IN_2': ['ues_in', 'ues_dc_in'], 'UC_2': ['ues_uc_dc', 'ues_dc_uc'], 'Montageort_2': ['ues_ort'],
+  'Netzbetreiber': ['netzbetreiber'], 'Nennspg': ['spannung'], 'Absicherung': ['ampere'],
+  'Hauptleitung': ['hauptltg'], 'Bauart der Hauptsicherung': ['sicherung'], 'mm²Absicherung der Hauptleitung': ['ampere'], 'inauf': ['in_auf'],
+  'Vorzählerleitung': ['hauptltg'], 'Bauart der Vorzählersicherung': ['sicherung'], 'Absicherung der Vorzählerleitung': ['ampere'], 'inauf_2': ['in_auf'],
+  'Zählerplatz Standort': ['zaehlerplatz'], 'Verlegung': ['verlegung']
+};
+const PPK_SEG_AUTO = { uess_ac: 'uess_ac', uess_dc: 'uess_dc', ue_vorh: 'ue_vorh', db_ueds: 'ues_dc_db' };
+PPK_TEILE.forEach(t => t.abschnitte.forEach(a => {
+  Object.assign(a, PPK_ABSCHNITT_ZUSATZ[t.teil + '|' + a.titel] || {});
+  a.felder.forEach(fd => {
+    const z = typeof fd.f === 'string' ? PPK_FELD_ZUSATZ[fd.f] : null;
+    if(z){ if(z[0]) fd.vs = z[0]; if(z[1] && !fd.a) fd.a = z[1]; }
+    if(fd.k && PPK_SEG_AUTO[fd.k] && !fd.a) fd.a = PPK_SEG_AUTO[fd.k];
+  });
+}));
+const ppkAbschnitt = id => PPK_TEILE.flatMap(t => t.abschnitte).find(a => a.id === id);
+
+// Komponente eines Abschnitts: eigene Auswahl im PPK, sonst aus dem Anlagenbuch
+function ppkKompAusAnlagenbuch(id){
+  const proj = getCurrentProject();
+  const ab = (proj && proj.anlagenbuch) || {};
+  if(id === 'modul') return abKomp(ab.modul && ab.modul.komponente);
+  if(id === 'speicher') return abKomp(ab.speicher && ab.speicher.komponente);
+  if(id === 'wr'){ const plan = getCurrentPlan(); return Object.keys(plan).map(wr => abKomp(ab.wr && ab.wr[wr])).find(Boolean) || null; }
+  if(id === 'ues_ac' || id === 'ues_dc'){
+    const k = abKomp(ab.ueberspannung && ab.ueberspannung.komponente);
+    const s = String((k && k.daten && k.daten.seite) || '').toUpperCase();
+    return k && (!s || s.includes(id === 'ues_ac' ? 'AC' : 'DC')) ? k : null;
+  }
+  return null;
+}
+function ppkKomp(id){
+  const w = (ppkDaten && ppkDaten.w) || {};
+  return abKomp(w['_komp_' + id]) || ppkKompAusAnlagenbuch(id);
+}
+// Optionale Abschnitte: "nicht vorhanden" blendet sie aus und laesst sie im PDF leer
+function ppkAbschnittAn(a, auto){
+  if(!a || !a.optional) return true;
+  const s = ppkDaten && ppkDaten.w ? ppkDaten.w['_an_' + a.id] : undefined;
+  if(s === true || s === false) return s;
+  if(a.id === 'laderegler') return /^Insel/.test(ppkWert({ k: 'anlagenart', a: 'anlagenart' }, auto).v || '');
+  if(a.id === 'speicher') return !!(auto && auto.hat_speicher);
+  return true;
+}
+
 function ppkFeldKey(fd){ return fd.f ? (Array.isArray(fd.f) ? fd.f[0] : fd.f) : fd.k; }
 function ppkWert(fd, auto){
   const k = ppkFeldKey(fd);
@@ -7457,7 +7644,9 @@ function ppkFeldHtml(fd, auto){
   }
   const art = fd.t === 'date' ? 'date' : 'text';
   const im = fd.t === 'num' ? ' inputmode="decimal"' : '';
-  return `<label class="ab-feld${fd.b ? ' ab-breit' : ''}"><span>${esc(fd.l)} ${marke}</span><input type="${art}" class="sp-inp${istAuto ? ' ppk-auto-feld' : ''}" data-ppk="${esc(k)}"${im} value="${esc(v)}"${dis}></label>`;
+  const dl = fd.vs && VORSCHLAG[fd.vs] ? 'ppk-vs-' + k.replace(/[^a-z0-9]/gi, '_') : '';
+  return `<label class="ab-feld${fd.b ? ' ab-breit' : ''}"><span>${esc(fd.l)} ${marke}</span><input type="${art}" class="sp-inp${istAuto ? ' ppk-auto-feld' : ''}" data-ppk="${esc(k)}"${im}${dl ? ` list="${dl}" placeholder="auswählen oder eintippen"` : ''} value="${esc(v)}"${dis}>`
+    + (dl ? `<datalist id="${dl}">${VORSCHLAG[fd.vs].map(x => `<option value="${esc(x)}">`).join('')}</datalist>` : '') + '</label>';
 }
 
 function ppkZeichnen(){
@@ -7477,14 +7666,45 @@ function ppkZeichnen(){
     </div>
     <div class="ab-status" id="ppk-meldung" hidden></div>
     ${PPK_TEILE.map(t => `<div class="ppk-teil"><h2><span>${t.teil}</span>${esc(t.titel)}</h2>
-      ${t.abschnitte.map(a => { const i = nr++; return `<details class="ab-kapitel"${hatteZustand ? (offen[i] ? ' open' : '') : (i === 0 ? ' open' : '')}>
-        <summary><span class="ab-nr">${t.teil}${t.abschnitte.indexOf(a) + 1}</span>${esc(a.titel)}${a.optional ? '<span class="ab-sum-info">optional</span>' : ''}</summary>
-        <div class="ab-raster">${a.schnell && ppkDarfAendern() ? `<div class="ab-breit"><button type="button" class="btn btn-ghost ab-mini" data-ppk-schnell="${esc(t.teil)}|${esc(a.titel)}">Alle Punkte: ja / in Ordnung</button></div>` : ''}
-        ${a.felder.map(fd => ppkFeldHtml(fd, auto)).join('')}</div></details>`; }).join('')}</div>`).join('')}
+      ${t.abschnitte.map(a => { const i = nr++; const an = ppkAbschnittAn(a, auto); return `<details class="ab-kapitel${an ? '' : ' ppk-aus'}"${hatteZustand ? (offen[i] ? ' open' : '') : (i === 0 ? ' open' : '')}>
+        <summary><span class="ab-nr">${t.teil}${t.abschnitte.indexOf(a) + 1}</span>${esc(a.titel)}${a.optional ? `<span class="ab-sum-info">${an ? 'vorhanden' : 'entfällt'}</span>` : ''}</summary>
+        <div class="ab-raster">${a.optional ? ppkVorhandenHtml(a, an) : ''}
+        ${an ? `${a.komp ? ppkKompHtml(a) : ''}${a.schnell && ppkDarfAendern() ? `<div class="ab-breit"><button type="button" class="btn btn-ghost ab-mini" data-ppk-schnell="${esc(t.teil)}|${esc(a.titel)}">Alle Punkte: ja / in Ordnung</button></div>` : ''}
+        ${a.felder.map(fd => ppkFeldHtml(fd, auto)).join('')}` : '<p class="ab-breit ab-klein">Abschnitt entfällt – im PDF steht dort „nicht vorhanden“.</p>'}</div></details>`; }).join('')}</div>`).join('')}
     <div class="ab-fuss"><button type="button" class="btn btn-primary" onclick="ppkErstellen()">PPK erstellen (PDF)</button></div>`;
   ppkSigEinrichten();
   ppkStatus();
 }
+
+function ppkVorhandenHtml(a, an){
+  const dis = ppkDarfAendern() ? '' : ' disabled';
+  return `<div class="ab-feld ab-breit ppk-vorh"><span>${esc(a.titel)} vorhanden?</span><div class="ppk-seg">
+    <button type="button" class="${an ? 'an' : ''}" data-ppk-an="${a.id}" data-v="1"${dis}>vorhanden</button>
+    <button type="button" class="${an ? '' : 'an'}" data-ppk-an="${a.id}" data-v="0"${dis}>nicht vorhanden</button></div></div>`;
+}
+function ppkKompHtml(a){
+  const dis = ppkDarfAendern() ? '' : ' disabled';
+  const seite = a.id === 'ues_ac' ? 'AC' : (a.id === 'ues_dc' ? 'DC' : '');
+  const liste = abKatalog.filter(k => k.kategorie === a.komp && (!seite || !String((k.daten && k.daten.seite) || '').trim() || String(k.daten.seite).toUpperCase().includes(seite)));
+  const gewaehlt = ppkDaten.w['_komp_' + a.id] || '';
+  const ausAb = ppkKompAusAnlagenbuch(a.id);
+  const erstes = ausAb ? `wie im Anlagenbuch: ${abKompName(ausAb)}` : (liste.length ? '– Komponente wählen –' : '– Komponenten-Liste ist leer –');
+  return `<label class="ab-feld ab-breit ppk-komp"><span>Aus der Komponenten-Liste übernehmen</span>
+    <select class="sp-inp" data-ppk-komp="${a.id}"${dis}><option value="">${esc(erstes)}</option>
+    ${liste.map(k => `<option value="${k.id}"${k.id === gewaehlt ? ' selected' : ''}>${esc(abKompName(k))}</option>`).join('')}</select>
+    <small class="ab-klein">Hersteller, Type und Kenndaten werden grau vorausgefüllt und lassen sich überschreiben.</small></label>`;
+}
+document.addEventListener('change', e => {
+  const el = e.target;
+  if(!el || !el.dataset || !el.dataset.ppkKomp || !ppkDaten || !ppkDarfAendern()) return;
+  const a = ppkAbschnitt(el.dataset.ppkKomp);
+  ppkDaten.w['_komp_' + a.id] = el.value;
+  // Neue Komponente: bisher eingetippte Kenndaten dieses Abschnitts verwerfen,
+  // damit die Daten der gewaehlten Komponente sichtbar werden
+  a.felder.forEach(fd => { if(fd.a && (fd.t === 'text' || fd.t === 'num') && !['wr_anzahl', 'mod_strang', 'u_system'].includes(fd.a)) delete ppkDaten.w[ppkFeldKey(fd)]; });
+  ppkSpeichernVerzoegert();
+  ppkZeichnen();
+});
 
 // ── Eingaben ──────────────────────────────────────────────────────────────
 function ppkSetzen(k, v){ ppkDaten.w[k] = v; ppkSpeichernVerzoegert(); }
@@ -7496,10 +7716,11 @@ document.addEventListener('input', e => {
   ppkSpeichernVerzoegert();
 });
 document.addEventListener('click', e => {
-  const t = e.target.closest ? e.target.closest('#ppk-inhalt [data-ppk-seg], #ppk-inhalt [data-ppk-multi], #ppk-inhalt [data-ppk-mx], #ppk-inhalt [data-ppk-mx-alle], #ppk-inhalt [data-ppk-schnell]') : null;
+  const t = e.target.closest ? e.target.closest('#ppk-inhalt [data-ppk-seg], #ppk-inhalt [data-ppk-multi], #ppk-inhalt [data-ppk-mx], #ppk-inhalt [data-ppk-mx-alle], #ppk-inhalt [data-ppk-schnell], #ppk-inhalt [data-ppk-an]') : null;
   if(!t || !ppkDaten || !ppkDarfAendern()) return;
   const w = ppkDaten.w;
-  if(t.dataset.ppkSeg){ const k = t.dataset.ppkSeg; w[k] = (w[k] === t.dataset.v) ? '' : t.dataset.v; }
+  if(t.dataset.ppkAn){ w['_an_' + t.dataset.ppkAn] = t.dataset.v === '1'; }
+  else if(t.dataset.ppkSeg){ const k = t.dataset.ppkSeg; w[k] = (w[k] === t.dataset.v) ? '' : t.dataset.v; }
   else if(t.dataset.ppkMulti){ const k = t.dataset.ppkMulti; const a = Array.isArray(w[k]) ? w[k] : []; w[k] = a.includes(t.dataset.v) ? a.filter(x => x !== t.dataset.v) : [...a, t.dataset.v]; }
   else if(t.dataset.ppkMx){ const k = t.dataset.ppkMx; const m = (w[k] && typeof w[k] === 'object') ? w[k] : {}; m[t.dataset.zelle] = !m[t.dataset.zelle]; w[k] = m; }
   else if(t.dataset.ppkMxAlle){ const k = t.dataset.ppkMxAlle; const m = {}; for(let z = 0; z < 3; z++) for(let s = 0; s < 4; s++) m[z + '_' + s] = true; w[k] = m; }
@@ -7609,7 +7830,9 @@ async function ppkErstellen(){
     };
     const haken = name => { try { form.getCheckBox(name).check(); } catch(e){ hinweise.push(`Kästchen „${name}“`); } };
 
-    PPK_TEILE.forEach(t => t.abschnitte.forEach(a => a.felder.forEach(fd => {
+    PPK_TEILE.forEach(t => t.abschnitte.forEach(a => {
+      if(!ppkAbschnittAn(a, auto)){ if(a.leer) text(a.leer, 'nicht vorhanden'); return; }
+      a.felder.forEach(fd => {
       if(!ppkSichtbar(fd)) return;
       const { v } = ppkWert(fd, auto);
       if(fd.t === 'text' || fd.t === 'num') text(fd.f, v);
@@ -7619,7 +7842,8 @@ async function ppkErstellen(){
       else if(fd.t === 'multi'){ (Array.isArray(v) ? v : []).forEach(x => { const o = fd.o.find(([lab]) => lab === x); if(o) haken(o[1]); }); }
       else if(fd.t === 'pruef'){ if(v === 'i. O.' || v === 'nicht i. O.'){ haken(fd.an); haken(v === 'i. O.' ? fd.io[0] : fd.io[1]); } }
       else if(fd.t === 'matrix'){ const m = ppkDaten.w[fd.k] || {}; fd.zeilen.forEach(([, boxen], zi) => boxen.forEach((b, si) => { if(m[zi + '_' + si]) haken(cbx(b)); })); }
-    })));
+      });
+    }));
     // Kopfzeilen der Folgeseiten
     const kopf = { betreiber: ppkWert({ f: 'Anlagenbetreiber', a: 'betreiber' }, auto).v, adresse: ppkWert({ f: 'Anlagenadresse', a: 'adresse' }, auto).v,
       tel: ppkWert({ f: 'TelefonNr', a: 'telefon' }, auto).v, befund: ppkWert({ f: 'Zu Befund Nr' }, auto).v };

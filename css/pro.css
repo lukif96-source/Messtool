@@ -1190,3 +1190,7 @@ html body.pp .fk-titel { font-weight: 600; margin-bottom: 2px; }
 html body.pp .fk-info { font-size: .8rem; color: var(--mute); margin: 0 0 10px; line-height: 1.4; }
 html body.pp .fk-zeile { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 6px 0; border-top: 1px solid var(--line); font-size: .88rem; }
 html body.pp .fk-zeile .ppk-seg { flex: 0 1 260px; }
+
+/* Modul-Auswahl (Matrix) */
+html body.pp .app-dialog .md-feld { display: flex; flex-direction: column; gap: 4px; margin: 0 0 12px; text-align: left; }
+html body.pp .app-dialog .md-feld span { font-size: .8rem; color: var(--mute); }

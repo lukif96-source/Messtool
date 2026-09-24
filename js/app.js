@@ -714,7 +714,7 @@ function istGeschuetzt(p){ return !!(p && (p.geschuetzt || p.locked || p.signatu
 // Diese Schluessel gehoeren nicht zum Anlagenplan, sondern sind Metadaten
 // im selben config-Feld. Sie stehen an EINER Stelle, damit beim Speichern
 // nie wieder einer vergessen wird.
-const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt', '_beschreibung', '_anlagenbuch'];
+const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt', '_beschreibung', '_anlagenbuch', '_modul'];
 
 function buildProjectConfig(proj, fallbackEmail){
   const cfg = {};
@@ -725,6 +725,7 @@ function buildProjectConfig(proj, fallbackEmail){
   if(proj.group) cfg._group = proj.group;
   if(proj.beschreibung) cfg._beschreibung = proj.beschreibung;
   if(proj.anlagenbuch) cfg._anlagenbuch = proj.anlagenbuch;
+  if(proj.modul_komp) cfg._modul = proj.modul_komp;
   // Unterschriften werden NIE weggeschrieben, auch nicht im entsperrten
   // Zustand. Das war die Stelle, an der beim Entsperren alles verschwand.
   if(proj.signature) cfg._signature = proj.signature;
@@ -1584,11 +1585,12 @@ async function editModuleWp(){
   if(!canEditHardware()) return toast('Keine Berechtigung — nur Planer/Admin');
   const proj = getCurrentProject();
   if(!proj) return toast('Kein Projekt geöffnet');
-  const input = await appEingabe('Modulleistung in Wp:', proj.model_wp || 465);
-  if(input === null) return;
-  const wp = parseInt(input, 10);
-  if(!wp || wp <= 0 || wp > 1000) return toast('Bitte eine gültige Wp-Zahl zwischen 1 und 1000 eingeben');
+  await katalogBereit();
+  const wahl = await modulDialog(proj);
+  if(!wahl) return;
+  const wp = wahl.wp;
   proj.model_wp = wp;
+  proj.modul_komp = wahl.komp || null;
   proj.updated_at = new Date().toISOString();
   saveProjectsLocal();
   g('d-wp').textContent = wp;
@@ -2531,7 +2533,8 @@ async function renameInverterQuick(wrId){
   const data = plan[wrId];
   if(!data) return toast('Wechselrichter nicht gefunden');
   const current = data.name || `WR ${wrId}`;
-  const input = await appEingabe(`Name für WR ${wrId}:`, current);
+  await katalogBereit();
+  const input = await appEingabe(`Name für WR ${wrId}:`, current, { vorschlaege: wrVorschlaege() });
   if(input === null) return; // abgebrochen
   const newName = input.trim() || `WR ${wrId}`;
   if(newName === current) return;
@@ -2567,6 +2570,7 @@ function openInverterEditor(wrId){
 
   g('inverter-editor-title').textContent = `WR ${wrId} bearbeiten`;
   g('inv-edit-name').value = _inverterEditorState.name;
+  katalogBereit().then(() => { const dl = g('wr-vorschlaege'); if(dl) dl.innerHTML = wrVorschlaege().map(n => `<option value="${esc(n)}">`).join(''); });
   g('inv-edit-mppts').value = _inverterEditorState.mppts;
   g('inv-edit-inputs').value = _inverterEditorState.inputs;
 
@@ -4396,6 +4400,7 @@ async function fetchProjectsFromCloud(){
           group: cloudConfig._group || null,
           beschreibung: cloudConfig._beschreibung || '',
           anlagenbuch: cloudConfig._anlagenbuch || null,
+          modul_komp: cloudConfig._modul || null,
           model_wp: cloudProj.modul_wp || 465, 
           plan: planOnly, 
           locked: !!lockMeta.locked,
@@ -5130,7 +5135,7 @@ document.addEventListener('visibilitychange', () => {
 // ── Eigene Dialoge statt confirm()/prompt() des Browsers ──────────────────
 // Gleiche Bedienung wie vorher (true/false bzw. Text/null), aber im App-Design.
 // Erster Absatz der Meldung = Ueberschrift, der Rest = Erklaerung.
-function appDialog({ titel = '', text = '', wert = null, ok = 'OK', abbrechen = 'Abbrechen', gefahr = false } = {}){
+function appDialog({ titel = '', text = '', wert = null, ok = 'OK', abbrechen = 'Abbrechen', gefahr = false, vorschlaege = null } = {}){
   return new Promise(resolve => {
     const vorher = document.activeElement;
     const ov = document.createElement('div');
@@ -5138,7 +5143,8 @@ function appDialog({ titel = '', text = '', wert = null, ok = 'OK', abbrechen = 
     ov.innerHTML = `<div class="app-dialog" role="alertdialog" aria-modal="true" aria-labelledby="app-dialog-titel">
         <h2 id="app-dialog-titel"></h2>
         <p class="app-dialog-text"></p>
-        ${wert !== null ? '<input type="text" class="sp-inp app-dialog-eingabe" autocomplete="off">' : ''}
+        ${wert !== null ? `<input type="text" class="sp-inp app-dialog-eingabe" autocomplete="off"${vorschlaege && vorschlaege.length ? ' list="app-dialog-liste"' : ''}>` : ''}
+        ${vorschlaege && vorschlaege.length ? `<datalist id="app-dialog-liste">${vorschlaege.map(v => `<option value="${esc(v)}">`).join('')}</datalist>` : ''}
         <div class="app-dialog-knoepfe">
           <button type="button" class="btn btn-ghost" data-antwort="nein"></button>
           <button type="button" class="btn ${gefahr ? 'app-dialog-gefahr' : 'btn-primary'}" data-antwort="ja"></button>
@@ -5189,7 +5195,7 @@ function appFrage(msg, opt = {}){
 }
 function appEingabe(msg, wert = '', opt = {}){
   const [titel, text] = _dialogTeile(msg);
-  return appDialog({ titel, text, wert: String(wert ?? ''), ok: opt.ok || 'Übernehmen' });
+  return appDialog({ titel, text, wert: String(wert ?? ''), ok: opt.ok || 'Übernehmen', vorschlaege: opt.vorschlaege || null });
 }
 
 // ── Sicherung auf dem Geraet + Sync-Status ────────────────────────────────
@@ -5983,18 +5989,19 @@ async function anlagenbuchRendern(){
 // Wechselrichter automatisch dem Katalog zuordnen, wenn der Name passt
 function abWrVorschlaege(){
   const plan = getCurrentPlan();
-  const wrKatalog = abKatalog.filter(k => k.kategorie === 'wechselrichter');
   let geaendert = false;
   Object.keys(plan).forEach(wr => {
     if(abDaten.wr[wr]) return;
     const name = String((plan[wr] && plan[wr].name) || '').toLowerCase().replace(/\s+/g, '');
     if(!name) return;
-    const treffer = wrKatalog.filter(k => {
-      const t = k.typ.toLowerCase().replace(/\s+/g, '');
-      return t && (name.includes(t) || t.includes(name));
-    });
-    if(treffer.length === 1){ abDaten.wr[wr] = treffer[0].id; geaendert = true; }
+    const treffer = wrKatalogTreffer(name);
+    if(treffer){ abDaten.wr[wr] = treffer.id; geaendert = true; }
   });
+  // Modul aus der Matrix uebernehmen, solange im Anlagenbuch keins gewaehlt ist
+  const proj = getCurrentProject();
+  if(proj && proj.modul_komp && abKomp(proj.modul_komp) && !(abDaten.modul && abDaten.modul.komponente)){
+    abSetzen('modul.komponente', proj.modul_komp); geaendert = true;
+  }
   if(geaendert && abDarfAendern()) abSpeichernVerzoegert();
 }
 
@@ -7424,7 +7431,7 @@ function ppkAuto(){
   const mod = ppkKomp('modul');
   const md = kd(mod);
   const plan = getCurrentPlan();
-  const wrK = w._komp_wr && abKomp(w._komp_wr) ? [abKomp(w._komp_wr)] : Object.keys(plan).map(wr => abKomp(ab.wr && ab.wr[wr])).filter(Boolean);
+  const wrK = w._komp_wr && abKomp(w._komp_wr) ? [abKomp(w._komp_wr)] : Object.keys(plan).map(wr => abKomp(ab.wr && ab.wr[wr]) || wrKatalogTreffer(plan[wr] && plan[wr].name)).filter(Boolean);
   const wd = kd(wrK[0]);
   const sp = ppkKomp('speicher');
   const uac = ppkKomp('ues_ac'), udc = ppkKomp('ues_dc');
@@ -7522,9 +7529,9 @@ const ppkAbschnitt = id => PPK_TEILE.flatMap(t => t.abschnitte).find(a => a.id =
 function ppkKompAusAnlagenbuch(id){
   const proj = getCurrentProject();
   const ab = (proj && proj.anlagenbuch) || {};
-  if(id === 'modul') return abKomp(ab.modul && ab.modul.komponente);
+  if(id === 'modul') return abKomp(ab.modul && ab.modul.komponente) || abKomp(proj && proj.modul_komp);
   if(id === 'speicher') return abKomp(ab.speicher && ab.speicher.komponente);
-  if(id === 'wr'){ const plan = getCurrentPlan(); return Object.keys(plan).map(wr => abKomp(ab.wr && ab.wr[wr])).find(Boolean) || null; }
+  if(id === 'wr'){ const plan = getCurrentPlan(); return Object.keys(plan).map(wr => abKomp(ab.wr && ab.wr[wr]) || wrKatalogTreffer(plan[wr] && plan[wr].name)).find(Boolean) || null; }
   if(id === 'ues_ac' || id === 'ues_dc'){
     const k = abKomp(ab.ueberspannung && ab.ueberspannung.komponente);
     const s = String((k && k.daten && k.daten.seite) || '').toUpperCase();
@@ -7954,4 +7961,70 @@ function projektAuswahlHtml(){
 function projektAuswahlFiltern(q){
   const t = String(q || '').trim().toLowerCase();
   document.querySelectorAll('.pa-projekt').forEach(b => { b.hidden = !!t && !(b.dataset.suche || '').includes(t); });
+}
+
+// ── Matrix: Module und Wechselrichter aus der Komponenten-Liste ───────────
+// Die Liste ist fuer alle lesbar, die PPK, Anlagenbuch oder Katalog haben.
+async function katalogBereit(){
+  if(abKatalog.length) return;
+  try { await abKatalogLaden(); } catch(_){}   // ohne Liste: eigene Eingabe
+}
+// WR-Katalogeintrag, dessen Typ im Namen steckt (genau ein Treffer)
+function wrKatalogTreffer(name){
+  const n = String(name || '').toLowerCase().replace(/\s+/g, '');
+  if(!n) return null;
+  const treffer = abKatalog.filter(k => {
+    if(k.kategorie !== 'wechselrichter') return false;
+    const t = String(k.typ || '').toLowerCase().replace(/\s+/g, '');
+    return t && (n.includes(t) || t.includes(n));
+  });
+  return treffer.length === 1 ? treffer[0] : null;
+}
+function wrVorschlaege(){
+  const liste = abKatalog.filter(k => k.kategorie === 'wechselrichter').map(abKompName);
+  Object.values(PROJECTS).forEach(p => Object.keys(p.plan || {}).forEach(k => {
+    const n = !isNaN(parseInt(k, 10)) && p.plan[k] && String(p.plan[k].name || '').trim();
+    if(n && !/^WR\s*\d+$/i.test(n)) liste.push(n);
+  }));
+  return [...new Set(liste)].slice(0, 60);
+}
+function modulDialog(proj){
+  return new Promise(resolve => {
+    const module = abKatalog.filter(k => k.kategorie === 'modul');
+    const ov = document.createElement('div');
+    ov.className = 'app-dialog-overlay';
+    ov.innerHTML = `<div class="app-dialog" role="dialog" aria-modal="true" aria-labelledby="md-titel">
+      <h2 id="md-titel">Solarmodul</h2>
+      <label class="ab-feld md-feld"><span>Aus der Komponenten-Liste</span>
+        <select class="sp-inp" id="md-komp"${module.length ? '' : ' disabled'}>
+          <option value="">${module.length ? '– nur Leistung eingeben –' : '– Komponenten-Liste ist leer –'}</option>
+          ${module.map(k => `<option value="${k.id}"${k.id === proj.modul_komp ? ' selected' : ''}>${esc(abKompName(k))}${k.daten && k.daten.wp ? ` · ${esc(k.daten.wp)} Wp` : ''}</option>`).join('')}
+        </select></label>
+      <label class="ab-feld md-feld"><span>Modulleistung (Wp)</span>
+        <input type="text" class="sp-inp" id="md-wp" inputmode="numeric" autocomplete="off" value="${esc(proj.model_wp || 465)}"></label>
+      <div class="app-dialog-knoepfe"><button type="button" class="btn btn-ghost" data-a="nein">Abbrechen</button>
+        <button type="button" class="btn btn-primary" data-a="ja">Übernehmen</button></div></div>`;
+    const sel = ov.querySelector('#md-komp'), wp = ov.querySelector('#md-wp');
+    sel.addEventListener('change', () => {
+      const k = abKomp(sel.value);
+      const w = k && k.daten ? parseInt(String(k.daten.wp || '').replace(',', '.'), 10) : NaN;
+      if(w) wp.value = w;
+    });
+    const ende = v => { document.removeEventListener('keydown', taste, true); ov.remove(); resolve(v); };
+    const ja = () => {
+      const w = parseInt(wp.value, 10);
+      if(!w || w <= 0 || w > 1000){ toast('Bitte eine gültige Wp-Zahl zwischen 1 und 1000 eingeben'); wp.focus(); return; }
+      ende({ wp: w, komp: sel.value || null });
+    };
+    function taste(e){
+      if(e.key === 'Escape'){ e.preventDefault(); ende(null); }
+      else if(e.key === 'Enter' && document.activeElement === wp){ e.preventDefault(); ja(); }
+    }
+    ov.addEventListener('click', e => { if(e.target === ov) ende(null); });
+    ov.querySelector('[data-a="nein"]').addEventListener('click', () => ende(null));
+    ov.querySelector('[data-a="ja"]').addEventListener('click', ja);
+    document.addEventListener('keydown', taste, true);
+    document.body.appendChild(ov);
+    setTimeout(() => (module.length ? sel : wp).focus(), 30);
+  });
 }

@@ -545,7 +545,7 @@ function istGeschuetzt(p){ return !!(p && (p.geschuetzt || p.locked || p.signatu
 // Diese Schluessel gehoeren nicht zum Anlagenplan, sondern sind Metadaten
 // im selben config-Feld. Sie stehen an EINER Stelle, damit beim Speichern
 // nie wieder einer vergessen wird.
-const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt'];
+const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt', '_beschreibung'];
 
 function buildProjectConfig(proj, fallbackEmail){
   const cfg = {};
@@ -554,6 +554,7 @@ function buildProjectConfig(proj, fallbackEmail){
     ? { locked: true, by: proj.locked_by || fallbackEmail || null, at: proj.locked_at || new Date().toISOString() }
     : { locked: false };
   if(proj.group) cfg._group = proj.group;
+  if(proj.beschreibung) cfg._beschreibung = proj.beschreibung;
   // Unterschriften werden NIE weggeschrieben, auch nicht im entsperrten
   // Zustand. Das war die Stelle, an der beim Entsperren alles verschwand.
   if(proj.signature) cfg._signature = proj.signature;
@@ -4206,6 +4207,7 @@ async function fetchProjectsFromCloud(){
           id: cloudProj.id, 
           name: cloudProj.name || 'Unbenannt', 
           group: cloudConfig._group || null,
+          beschreibung: cloudConfig._beschreibung || '',
           model_wp: cloudProj.modul_wp || 465, 
           plan: planOnly, 
           locked: !!lockMeta.locked,
@@ -5147,11 +5149,16 @@ function springeZuNaechstemOffenen(){
 }
 
 // ── Pruefprotokoll als PDF (Druckansicht -> "Als PDF speichern") ──────────
-function druckePruefprotokoll(){
+// optionen: { win, beschreibung, fotoUrl } – win wird vom Dialog schon im
+// Klick geoeffnet, damit der Popup-Blocker nicht zuschlaegt.
+function druckePruefprotokoll(optionen = {}){
   const proj = getCurrentProject();
   if(!proj) return toast('Bitte zuerst ein Projekt öffnen');
-  const win = window.open('', '_blank');
+  const win = optionen.win || window.open('', '_blank');
   if(!win) return toast('Popup wurde blockiert – bitte Popups für diese Seite erlauben');
+  if(optionen.win) win.document.open();
+  const beschreibung = String(optionen.beschreibung ?? proj.beschreibung ?? '').trim();
+  const fotoUrl = optionen.fotoUrl || '';
   const plan = getCurrentPlan();
   const wp = getCurrentWp();
   const zeit = iso => iso ? new Date(iso).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
@@ -5234,6 +5241,16 @@ function druckePruefprotokoll(){
   .kachel span { color: #6b6b73; font-size: 7.5pt; }
   h2 { font-size: 11pt; margin: 18px 0 6px; display: flex; justify-content: space-between; align-items: baseline; }
   h2 span { color: #6b6b73; font-weight: 500; font-size: 8.5pt; }
+  /* Projektbeschreibung + Anlagenfoto (Seite 1) */
+  .projekt { display: grid; gap: 14px; margin: 0 0 16px; break-inside: avoid; }
+  .projekt.mit-foto { grid-template-columns: 1fr 1fr; align-items: start; }
+  .projekt-text span { display: block; color: #6b6b73; font-size: 7.5pt; margin-bottom: 3px; }
+  .projekt-text p { margin: 0; white-space: pre-line; line-height: 1.5; font-size: 9pt; }
+  .projekt-foto { margin: 0; }
+  .projekt-foto img { width: 100%; max-height: 80mm; object-fit: cover; border-radius: 6px; border: 1px solid #e4e4e7; display: block; }
+  .projekt-foto figcaption { color: #6b6b73; font-size: 7.5pt; margin-top: 3px; }
+  .projekt:not(.mit-foto) .projekt-text { max-width: 150mm; }
+  .projekt.mit-foto:not(:has(.projekt-text)) { grid-template-columns: 1fr; }
   /* Jeder Wechselrichter beginnt auf einer neuen Seite */
   .wr { break-before: page; page-break-before: always; }
   .wr h2 { margin-top: 6px; font-size: 13pt; }
@@ -5278,6 +5295,10 @@ function druckePruefprotokoll(){
     <div><span>Prüfer</span><strong>${esc(pruefer)}</strong></div>
     <div><span>Erstellt am</span><strong>${heute}</strong></div>
   </div>
+  ${(beschreibung || fotoUrl) ? `<div class="projekt${fotoUrl ? ' mit-foto' : ''}">
+    ${beschreibung ? `<div class="projekt-text"><span>Projektbeschreibung</span><p>${esc(beschreibung)}</p></div>` : ''}
+    ${fotoUrl ? `<figure class="projekt-foto"><img src="${esc(fotoUrl)}" alt="Anlagenfoto"><figcaption>Anlagenfoto</figcaption></figure>` : ''}
+  </div>` : ''}
   <div class="kacheln">
     <div class="kachel"><b>${aktiv}</b><span>Strings aktiv</span></div>
     <div class="kachel" style="--f:#2563EB"><b>${module}</b><span>Module</span></div>
@@ -5333,4 +5354,107 @@ function filterUsers(text){
   document.querySelectorAll('#users-list .user-row').forEach(r => {
     r.hidden = !!q && !(r.dataset.suche || '').includes(q);
   });
+}
+
+// ── Pruefprotokoll-Dialog: Projektbeschreibung + Anlagenfoto ──────────────
+// Beides wird am Projekt gespeichert (Beschreibung in der Projekt-Konfig,
+// Foto ueber das bestehende Foto-System mit ziel "wr:anlage"), damit es
+// beim naechsten Export und fuer das ganze Team wieder da ist.
+const ANLAGENFOTO = 'anlage';
+
+async function pruefprotokollDialog(){
+  const proj = getCurrentProject();
+  if(!proj) return toast('Bitte zuerst ein Projekt öffnen');
+  const pid = proj.id;
+  const darf = typeof fotoDarfAendern === 'function' ? fotoDarfAendern() : true;
+  let gewaehlt = null;          // Pfad des gewaehlten Fotos, '' = kein Foto
+  let fotos = [];
+
+  const ov = document.createElement('div');
+  ov.className = 'app-dialog-overlay';
+  ov.innerHTML = `<div class="app-dialog pp-dialog" role="dialog" aria-modal="true" aria-labelledby="ppd-titel">
+      <h2 id="ppd-titel">Prüfprotokoll erstellen</h2>
+      <label class="ppd-label" for="ppd-text">Projektbeschreibung <span>optional</span></label>
+      <textarea id="ppd-text" class="sp-inp ppd-text" rows="4" maxlength="800"
+        placeholder="z. B. Aufdachanlage Halle 3, 3 Wechselrichter, DC-Messung zur Inbetriebnahme"></textarea>
+      <div class="ppd-foto-kopf">
+        <span class="ppd-label">Anlagenfoto <span>optional</span></span>
+        <button type="button" class="btn btn-ghost ppd-neu">${ICON.camera} Foto aufnehmen / wählen</button>
+      </div>
+      <div class="ppd-fotos" role="radiogroup" aria-label="Anlagenfoto auswählen"></div>
+      <p class="ppd-hinweis" hidden>Das Protokoll ist abgeschlossen – Beschreibung und Foto kann nur noch der Admin ändern.</p>
+      <div class="app-dialog-knoepfe">
+        <button type="button" class="btn btn-ghost" data-a="nein">Abbrechen</button>
+        <button type="button" class="btn btn-primary" data-a="ja">Protokoll erstellen</button>
+      </div>
+    </div>`;
+  const ta = ov.querySelector('#ppd-text');
+  const liste = ov.querySelector('.ppd-fotos');
+  const neuBtn = ov.querySelector('.ppd-neu');
+  ta.value = proj.beschreibung || '';
+  if(!darf){ ta.readOnly = true; neuBtn.hidden = true; ov.querySelector('.ppd-hinweis').hidden = false; }
+
+  async function fotosLaden(){
+    if(typeof fotoListeLaden !== 'function') return zeichnen();
+    await fotoListeLaden(pid);
+    const pfade = fotoFuerWr(pid, ANLAGENFOTO).filter(f => !f.wartet).map(f => f.pfad);
+    if(pfade.length) await fotoUrlsHolen(pfade);
+    fotos = fotoFuerWr(pid, ANLAGENFOTO).filter(f => f.url);
+    if(gewaehlt === null) gewaehlt = fotos.length ? fotos[fotos.length - 1].pfad : '';   // neuestes vorwaehlen
+    zeichnen();
+  }
+  function zeichnen(){
+    const kachel = (pfad, inhalt, titel) =>
+      `<button type="button" class="ppd-foto${gewaehlt === pfad ? ' an' : ''}" role="radio" aria-checked="${gewaehlt === pfad}" data-pfad="${esc(pfad)}" title="${esc(titel)}">${inhalt}</button>`;
+    liste.innerHTML = kachel('', '<span class="ppd-kein">Kein Foto</span>', 'Ohne Foto')
+      + fotos.map(f => kachel(f.pfad, `<img src="${esc(f.url)}" alt="">`, f.wartet ? 'wird noch hochgeladen' : 'Anlagenfoto')).join('');
+  }
+  liste.addEventListener('click', e => {
+    const b = e.target.closest('.ppd-foto');
+    if(!b) return;
+    gewaehlt = b.dataset.pfad;
+    zeichnen();
+  });
+  neuBtn.addEventListener('click', () => {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.setAttribute('capture', 'environment');
+    inp.style.display = 'none';
+    inp.onchange = async () => {
+      const d = inp.files && inp.files[0];
+      inp.remove();
+      if(!d) return;
+      neuBtn.disabled = true;
+      await fotoHinzufuegen(pid, ANLAGENFOTO, d);
+      gewaehlt = null;               // neues Foto automatisch waehlen
+      await fotosLaden();
+      neuBtn.disabled = false;
+    };
+    document.body.appendChild(inp);
+    inp.click();
+  });
+
+  function schliessen(){ document.removeEventListener('keydown', taste, true); ov.remove(); }
+  function taste(e){ if(e.key === 'Escape'){ e.preventDefault(); schliessen(); } }
+  ov.addEventListener('click', e => { if(e.target === ov) schliessen(); });
+  ov.querySelector('[data-a="nein"]').addEventListener('click', schliessen);
+  ov.querySelector('[data-a="ja"]').addEventListener('click', () => {
+    // Fenster sofort im Klick oeffnen – sonst blockiert der Browser das Popup
+    const win = window.open('', '_blank');
+    if(!win) return toast('Popup wurde blockiert – bitte Popups für diese Seite erlauben');
+    win.document.write('<p style="font-family:system-ui,sans-serif;padding:24px;color:#6b6b73">Protokoll wird erstellt …</p>');
+    const text = ta.value.trim();
+    if(darf && text !== (proj.beschreibung || '')){
+      proj.beschreibung = text;
+      saveProjectToCloud(pid, true);
+    }
+    const foto = fotos.find(f => f.pfad === gewaehlt);
+    schliessen();
+    druckePruefprotokoll({ win, beschreibung: text, fotoUrl: foto ? foto.url : '' });
+  });
+
+  document.addEventListener('keydown', taste, true);
+  document.body.appendChild(ov);
+  setTimeout(() => ta.focus(), 30);
+  fotosLaden();
 }

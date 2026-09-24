@@ -1118,3 +1118,15 @@ html body.pp .ab-dialog { max-width: 560px; max-height: calc(100vh - 32px); over
   html body.pp .main-tabs::-webkit-scrollbar { display: none; }
   html body.pp .main-tab { flex: none !important; min-width: auto !important; padding: 11px 13px !important; font-size: .84rem !important; white-space: nowrap; }
 }
+
+/* Reiter Komponenten + Firmendaten-Uebersicht im Anlagenbuch */
+.komponenten-view { display: none; }
+.komponenten-view.active { display: block; }
+html body.pp.tab-komponenten .dashboard { display: none !important; }
+html body.pp .ab-sum-info { font-weight: 400; font-size: .8rem; color: var(--mute); margin-left: 6px; }
+html body.pp .komp-stempel { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+html body.pp .komp-stempel img { max-height: 90px; max-width: 220px; border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff; padding: 4px; }
+html body.pp .ab-firma dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 8px 0 0; font-size: .88rem; }
+html body.pp .ab-firma dt { color: var(--mute); }
+html body.pp .ab-firma dd { margin: 0; white-space: pre-line; }
+html body.pp .ab-klein a, html body.pp .ab-firma a { color: var(--brand-text); font-weight: 600; }

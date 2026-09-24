@@ -5162,6 +5162,7 @@ function druckePruefprotokoll(){
   let aktiv = 0, fertig = 0, offen = 0, krit = 0, module = 0;
   const auffaellig = [];
   const proWr = {};
+  const wrSumme = {};   // je WR: Strings, fertig, offen, auffaellig, Module
   getAllFullIds().forEach(id => {
     const it = APP_STATE[id];
     if(!it || it.stat !== 'JA') return;
@@ -5172,6 +5173,10 @@ function druckePruefprotokoll(){
     if(ev.level === 'crit' || st === 'ERROR'){ krit++; auffaellig.push({ id, msgs: ev.msgs }); }
     const wr = id.split('.')[0];
     const status = (ev.level === 'crit' || st === 'ERROR') ? ['krit', 'Auffällig'] : (st === 'COMPLETE' ? ['ok', 'OK'] : ['offen', 'Offen']);
+    const sw = wrSumme[wr] = wrSumme[wr] || { n: 0, fertig: 0, offen: 0, krit: 0, module: 0 };
+    sw.n++; sw.module += Number(it.mod) || 0;
+    if(st === 'COMPLETE') sw.fertig++; else sw.offen++;
+    if(status[0] === 'krit') sw.krit++;
     const f = k => ev.fields[k] ? ` class="z ${ev.fields[k]}"` : ' class="z"';
     (proWr[wr] = proWr[wr] || []).push(`<tr>
       <td class="id">${esc(id)}</td><td>${esc(it.planName || '—')}</td><td>${esc(it.gak || '—')}</td>
@@ -5185,9 +5190,18 @@ function druckePruefprotokoll(){
   const unterschrift = (sig, rolle) => (sig && sig.dataUrl)
     ? `<div class="sig"><img src="${sig.dataUrl}" alt="Unterschrift ${rolle}"><div class="sig-l"></div><div><strong>${esc(sig.name || '')}</strong> · ${rolle}</div><div class="klein">digital unterschrieben am ${zeit(sig.at)}</div></div>`
     : `<div class="sig"><div class="sig-leer"></div><div class="sig-l"></div><div>${rolle}</div><div class="klein">Ort, Datum, Unterschrift</div></div>`;
+  const heuteKurz = new Date().toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  // Jeder Wechselrichter auf einer eigenen Seite – mit eigener Kopfzeile und
+  // Zwischensumme, damit jede Seite fuer sich verstaendlich ist.
   const wrHtml = Object.keys(proWr).map(Number).sort((a, b) => a - b).map(wr => {
     const name = (plan[wr] && plan[wr].name) ? plan[wr].name : 'WR ' + wr;
-    return `<section class="wr"><h2>${esc(name)} <span>WR ${wr} · ${proWr[wr].length} Strings</span></h2>
+    const s = wrSumme[wr];
+    return `<section class="wr">
+      <div class="wr-kopf"><span>Prüfprotokoll · ${esc(proj.name || '')}</span><span>${heuteKurz}</span></div>
+      <h2>${esc(name)} <span>WR ${wr}</span></h2>
+      <div class="wr-summe"><span><b>${s.n}</b> Strings</span><span><b>${s.module}</b> Module</span>
+        <span><b>${(s.module * wp / 1000).toFixed(2)}</b> kWp</span><span class="ok"><b>${s.fertig}</b> fertig</span>
+        <span class="offen"><b>${s.offen}</b> offen</span><span class="krit"><b>${s.krit}</b> auffällig</span></div>
       <table><thead><tr><th>Klemme</th><th>Plan-String</th><th>GAK</th><th class="z">Module</th><th class="z">Uoc (V)</th>
       <th class="z">Isc (A)</th><th class="z">Riso (MΩ)</th><th>Status</th><th>Bemerkung</th></tr></thead>
       <tbody>${proWr[wr].join('')}</tbody></table></section>`;
@@ -5220,6 +5234,15 @@ function druckePruefprotokoll(){
   .kachel span { color: #6b6b73; font-size: 7.5pt; }
   h2 { font-size: 11pt; margin: 18px 0 6px; display: flex; justify-content: space-between; align-items: baseline; }
   h2 span { color: #6b6b73; font-weight: 500; font-size: 8.5pt; }
+  /* Jeder Wechselrichter beginnt auf einer neuen Seite */
+  .wr { break-before: page; page-break-before: always; }
+  .wr h2 { margin-top: 6px; font-size: 13pt; }
+  .wr-kopf { display: flex; justify-content: space-between; color: #6b6b73; font-size: 7.5pt; border-bottom: 2px solid #93BD14; padding-bottom: 5px; }
+  .wr-summe { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 8.5pt; color: #52525b; margin: 0 0 8px; }
+  .wr-summe b { color: #18181b; font-variant-numeric: tabular-nums; }
+  .wr-summe .ok b { color: #15803d; } .wr-summe .offen b { color: #b45309; } .wr-summe .krit b { color: #c8261c; }
+  thead { display: table-header-group; }
+  @media screen { .wr { margin-top: 36px; padding-top: 18px; border-top: 1px dashed #d4d4d8; } }
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   th { text-align: left; font-weight: 600; color: #3f3f46; background: #f4f4f5; border-bottom: 1px solid #d4d4d8; padding: 5px 6px; font-size: 8pt; }
   td { border-bottom: 1px solid #ececef; padding: 4px 6px; vertical-align: top; }
@@ -5267,7 +5290,16 @@ function druckePruefprotokoll(){
   <div class="unterschriften">${unterschrift(proj.signature, 'Prüfer')}${unterschrift(proj.abnahme, 'Abnahme')}</div>
   <footer><span>SOLPRO Messtool</span><span>${esc(proj.name || '')} · ${heute}</span></footer>
 </div>
-<script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 400); });<\/script>
+<script>
+  // Erst drucken, wenn die Schrift (Inter) wirklich geladen ist – sonst zeigt
+  // die erste Druckvorschau eine Ersatzschrift und "Als PDF speichern" sieht
+  // danach anders aus (andere Umbrueche).
+  window.addEventListener('load', function(){
+    var bereit = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+    var notfall = new Promise(function(r){ setTimeout(r, 3000); });
+    Promise.race([bereit, notfall]).then(function(){ setTimeout(function(){ window.print(); }, 150); });
+  });
+<\/script>
 </body></html>`);
   win.document.close();
 }

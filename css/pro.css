@@ -1243,3 +1243,9 @@ html body.pp .korb-karte .project-card-title { color: var(--ink2); }
 html body.pp .korb-knoepfe { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 html body.pp .korb-chip { color: var(--mute) !important; }
 html body.pp .korb-hinweis { font-size: .78rem; color: var(--mute); margin-top: 6px; }
+
+/* Aktionen-Menue am WR: klappt nach rechts auf, bleibt im Bild */
+html body.pp .bulk-dropdown-menu { left: 0; right: auto; max-width: calc(100vw - 24px); padding: 4px !important; scroll-margin-bottom: 84px; }
+html body.pp .bulk-dropdown-item { white-space: nowrap; }
+html body.pp .bulk-dropdown-btn .bulk-pfeil { transition: transform .15s; }
+html body.pp .bulk-dropdown:has(.bulk-dropdown-menu.show) .bulk-pfeil { transform: rotate(180deg); }

@@ -2166,30 +2166,30 @@ function renderMatrix(remoteOverride = null){
       <div class="wr-bulk-bar no-print">
         <span class="bulk-label">Bulk:</span>
         <div class="bulk-dropdown">
-          <button class="bulk-dropdown-btn" onclick="toggleBulkDropdown(${wr})">
+          <button class="bulk-dropdown-btn" onclick="toggleBulkDropdown(${wr})" aria-haspopup="true" aria-expanded="false">
             <span>Aktionen</span>
-            <span>▼</span>
+            <svg class="ico bulk-pfeil" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
           </button>
           <div class="bulk-dropdown-menu" id="bulk-dropdown-${wr}">
             <button class="bulk-dropdown-item" onclick="bulkSetStat(${wr}, 'JA'); toggleBulkDropdown(${wr});">
-              <span></span> <span>Alle auf JA</span>
+              <span>Alle auf JA</span>
             </button>
             <button class="bulk-dropdown-item" onclick="bulkSetStat(${wr}, 'NEIN'); toggleBulkDropdown(${wr});">
-              <span></span> <span>Alle auf NEIN</span>
+              <span>Alle auf NEIN</span>
             </button>
             <div class="bulk-dropdown-divider"></div>
             <button class="bulk-dropdown-item" onclick="bulkSetModules(${wr}); toggleBulkDropdown(${wr});">
-              <span></span> <span>Module setzen...</span>
+              <span>Module setzen...</span>
             </button>
             <button class="bulk-dropdown-item" onclick="bulkApplyGakSchema(${wr}); toggleBulkDropdown(${wr});">
-              <span></span> <span>GAK-Schema anwenden</span>
+              <span>GAK-Schema anwenden</span>
             </button>
             <div class="bulk-dropdown-divider"></div>
             <button class="bulk-dropdown-item danger" onclick="bulkClearMeasurements(${wr}); toggleBulkDropdown(${wr});">
-              <span></span> <span>Messwerte löschen (WR ${wr})</span>
+              <span>Messwerte löschen (WR ${wr})</span>
             </button>
             <button class="bulk-dropdown-item danger" onclick="bulkClearAllNotes(); toggleBulkDropdown(${wr});">
-              <span></span> <span>Alle Bemerkungen löschen</span>
+              <span>Alle Bemerkungen löschen</span>
             </button>
           </div>
         </div>
@@ -3198,7 +3198,22 @@ function toggleBulkDropdown(wrId){
     if(menu.id !== `bulk-dropdown-${wrId}`) menu.classList.remove('show');
   });
   
-  dropdown.classList.toggle('show');
+  const offen = dropdown.classList.toggle('show');
+  const knopf = dropdown.parentElement && dropdown.parentElement.querySelector('.bulk-dropdown-btn');
+  if(knopf) knopf.setAttribute('aria-expanded', String(offen));
+  if(!offen) return;
+  // Dorthin aufklappen, wo Platz ist – sonst ragt das Menue ueber den Rand
+  dropdown.style.left = '0'; dropdown.style.right = 'auto';
+  const breite = document.documentElement.clientWidth || window.innerWidth;
+  const r = dropdown.getBoundingClientRect();
+  // Nur nach links klappen, wenn rechts kein Platz ist UND links genug
+  if(breite > 0 && knopf && r.right > breite - 8 && knopf.getBoundingClientRect().right - r.width >= 8){
+    dropdown.style.left = 'auto'; dropdown.style.right = '0';
+  }
+  // Unten am Bildschirm: Menue ins Bild rollen, damit alle Eintraege erreichbar sind
+  if(dropdown.getBoundingClientRect().bottom > window.innerHeight - 8){
+    try { dropdown.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch(_){ dropdown.scrollIntoView(false); }
+  }
 }
 
 // Dropdown schließen wenn man außerhalb klickt
@@ -3207,6 +3222,7 @@ document.addEventListener('click', (e) => {
     document.querySelectorAll('.bulk-dropdown-menu').forEach(menu => {
       menu.classList.remove('show');
     });
+    document.querySelectorAll('.bulk-dropdown-btn[aria-expanded="true"]').forEach(k => k.setAttribute('aria-expanded', 'false'));
   }
 });
 

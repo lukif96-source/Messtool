@@ -1160,3 +1160,16 @@ html body.pp .ppk-auto-feld { background: var(--pa3) !important; color: var(--in
 html body.pp .ppk-sig canvas { display: block; width: 100%; max-width: 600px; height: 160px; margin-top: 6px; border: 1px dashed var(--line2); border-radius: var(--r-sm); background: #fff; touch-action: none; }
 html body.pp .ppk-sig-knoepfe { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; max-width: 600px; }
 html body.pp .ppk-hinweis { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; background: var(--brand-soft); border: 1px solid var(--brand-line); border-radius: var(--r-sm); padding: 10px 12px; font-size: .86rem; }
+
+/* Startbildschirm: Arbeitsbereiche */
+html body.pp .bg-trenner { grid-column: 1 / -1; font-size: .8rem; font-weight: 600; color: var(--mute); margin: 12px 0 -4px; text-align: left; }
+html body.pp .bg-arbeit[data-arbeit="ppk"] { --c: var(--c-green); }
+html body.pp .bg-arbeit[data-arbeit="anlagenbuch"] { --c: var(--c-teal); }
+/* Projektauswahl in PPK / Anlagenbuch */
+html body.pp .pa-suche { text-align: left !important; min-height: 42px !important; max-width: 520px; margin: 10px 0; }
+html body.pp .pa-liste { display: grid; gap: 8px; max-width: 520px; }
+html body.pp .pa-projekt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 12px 14px;
+  background: var(--pa2); border: 1px solid var(--line); border-radius: var(--r); cursor: pointer; font: inherit; color: var(--ink); box-shadow: var(--sh); }
+html body.pp .pa-projekt:hover { border-color: var(--brand); }
+html body.pp .pa-projekt span { font-size: .8rem; color: var(--mute); }
+html body.pp .pa-projekt[hidden] { display: none; }

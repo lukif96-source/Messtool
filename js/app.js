@@ -790,7 +790,7 @@ function zeigeBereichsWahl(){
           <span class="bg-info">${x.info}</span>
           <span class="bg-zahl">${n === 1 ? '1 Projekt' : n + ' Projekte'}</span>
         </button>`;
-      }).join('');
+      }).join('') + arbeitsbereichKartenHtml();
     }
   }
   const nutzer = g('bg-nutzer');
@@ -813,6 +813,7 @@ async function waehleBereich(b){
     } catch(e){}
   }
   CURRENT_BEREICH = b;
+  delete document.body.dataset.arbeit;
   CURRENT_PROJECT_ID = null;
   APP_STATE = {};
   currentProjectGroupFilter = '__all__';
@@ -830,10 +831,13 @@ async function waehleBereich(b){
 function aktualisiereBereichsAnzeige(){
   const chip = g('bereich-chip');
   if(chip){
-    chip.hidden = !CURRENT_BEREICH;
+    chip.hidden = !CURRENT_BEREICH && !document.body.dataset.arbeit;
     if(CURRENT_BEREICH){
       g('bereich-chip-icon').innerHTML = BEREICHE[CURRENT_BEREICH].icon;
       g('bereich-chip-name').textContent = BEREICHE[CURRENT_BEREICH].name;
+    } else if(document.body.dataset.arbeit){
+      g('bereich-chip-icon').innerHTML = '';
+      g('bereich-chip-name').textContent = 'Alle Bereiche';
     }
   }
   document.body.dataset.bereich = CURRENT_BEREICH || '';
@@ -3883,7 +3887,7 @@ async function debugCloudProjects(){
 // sichern, bevor CURRENT_PROJECT_ID sich ändert.
 async function flushPendingProjectEdits(){
   clearTimeout(cloudSyncTimeout);
-  if(CURRENT_PROJECT_ID && supabaseClient && currentUser){
+  if(CURRENT_PROJECT_ID && supabaseClient && currentUser && sollAutoSpeichern()){
     try { await saveProjectToCloud(CURRENT_PROJECT_ID); } catch(e){}
   }
 }
@@ -3901,7 +3905,8 @@ async function selectProject(id){
 
   // Neues Lock versuchen
   console.log('Lock-Test: Versuche Lock für Projekt', id);
-  const lockSuccess = await lockProject(id);
+  // Nur wer DC-Werte bearbeitet, braucht die Bearbeitungssperre
+  const lockSuccess = darfDcSchreiben() ? await lockProject(id) : true;
   console.log('Lock-Test: Lock-Ergebnis', lockSuccess);
 
   if (!lockSuccess) {
@@ -4319,7 +4324,7 @@ async function fetchProjectsFromCloud(){
   // Cloud-Stand — z.B. wenn man kurz nach dem Ändern der Modulzahl auf
   // "Aktualisieren" klickt.
   clearTimeout(cloudSyncTimeout);
-  if(CURRENT_PROJECT_ID){
+  if(CURRENT_PROJECT_ID && sollAutoSpeichern()){
     try { await saveProjectToCloud(CURRENT_PROJECT_ID); } catch(e){}
   }
   try {
@@ -4385,6 +4390,9 @@ async function saveProjectToCloudNow(projectId, skipRender){
       updated_at: updatedAt,
       bereich: projektBereich(proj)
     };
+    // Wer keine DC-Werte bearbeiten darf, schreibt die Messwerte nie mit –
+    // so kann ein reines Ansehen keine neueren Werte von Kollegen ueberschreiben.
+    if(!darfDcSchreiben()) delete payload.data;
     // Genau diesen Stand merken: nur wenn er ankommt, gilt er als gesichert
     const _gesendet = projectId === CURRENT_PROJECT_ID ? JSON.stringify(stateData) : null;
     const _abVersion = abVersion;
@@ -4528,7 +4536,8 @@ async function doLogout(){
 function flushCloudSync(){
   clearTimeout(cloudSyncTimeout);
   if(supabaseClient && currentUser && CURRENT_PROJECT_ID){
-    return saveProjectToCloud(CURRENT_PROJECT_ID);
+    // Reine Leser haben nichts hochzuladen
+    return sollAutoSpeichern() ? saveProjectToCloud(CURRENT_PROJECT_ID) : Promise.resolve(true);
   }
   return Promise.resolve(false);
 }
@@ -5847,8 +5856,7 @@ async function anlagenbuchRendern(){
   if(!darf('anlagenbuch')){ box.innerHTML = '<div class="ab-leer">Für das Anlagenbuch fehlt dir die Berechtigung.</div>'; return; }
   const proj = getCurrentProject();
   if(!proj){
-    box.innerHTML = `<div class="ab-leer"><h2>Anlagenbuch</h2><p>Bitte zuerst ein Projekt öffnen – das Anlagenbuch gehört immer zu einer Anlage.</p>
-      <button class="btn btn-primary" onclick="switchMainTab('projects')">Projekt auswählen</button></div>`;
+    box.innerHTML = `<div class="ab-leer"><h2>Anlagenbuch</h2><p>Für welches Projekt?</p>${projektAuswahlHtml()}</div>`;
     return;
   }
   // Angaben: eigener, noch nicht hochgeladener Entwurf hat Vorrang
@@ -7374,8 +7382,7 @@ async function ppkRendern(){
   if(!darf('ppk')){ box.innerHTML = '<div class="ab-leer">Für das AC-Prüfprotokoll fehlt dir die Berechtigung.</div>'; return; }
   const proj = getCurrentProject();
   if(!proj){
-    box.innerHTML = `<div class="ab-leer"><h2>PPK – AC-Prüfprotokoll</h2><p>Bitte zuerst ein Projekt öffnen – links im Menü unter „Projekte“.</p>
-      <button class="btn btn-primary" onclick="toggleSidebar()">Projekt wählen</button></div>`;
+    box.innerHTML = `<div class="ab-leer"><h2>PPK – AC-Prüfprotokoll</h2><p>Für welches Projekt?</p>${projektAuswahlHtml()}</div>`;
     return;
   }
   box.innerHTML = '<div class="ab-leer">Lade PPK …</div>';
@@ -7672,4 +7679,55 @@ async function ppkErstellen(){
     meld('');
     toastError('PPK konnte nicht erstellt werden', e);
   }
+}
+
+// ── Arbeitsbereiche (AC, Dokumentation) auf dem Startbildschirm ───────────
+function darfDcSchreiben(){ return darf('messwerte') || darf('hardware'); }
+function sollAutoSpeichern(){ return darfDcSchreiben() || abOffen; }
+const ICON_AB = {
+  ac: '<svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+  doku: '<svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>'
+};
+function arbeitsbereichKartenHtml(){
+  const karten = [];
+  if(darf('ppk')) karten.push(['ppk', 'AC-Prüfprotokoll', 'Prüfbefund nach ÖVE/ÖNORM E 8101', ICON_AB.ac]);
+  if(darf('anlagenbuch')) karten.push(['anlagenbuch', 'Anlagendokumentation', 'Anlagenbuch für den Kunden erstellen', ICON_AB.doku]);
+  if(!karten.length) return '';
+  return '<div class="bg-trenner">Arbeitsbereiche</div>' + karten.map(([tab, name, info, icon]) =>
+    `<button type="button" class="bg-karte bg-arbeit" data-arbeit="${tab}" onclick="waehleArbeit('${tab}')">
+      <span class="bg-icon" aria-hidden="true">${icon}</span><span class="bg-name">${name}</span>
+      <span class="bg-info">${info}</span><span class="bg-zahl">alle Bereiche</span></button>`).join('');
+}
+async function waehleArbeit(tab){
+  if(!tabErlaubt(tab)) return;
+  if(CURRENT_PROJECT_ID){
+    try { await flushPendingProjectEdits(); if(currentProjectLock) await unlockProject(CURRENT_PROJECT_ID); } catch(e){}
+  }
+  CURRENT_BEREICH = null;
+  document.body.dataset.arbeit = tab;
+  CURRENT_PROJECT_ID = null;
+  APP_STATE = {};
+  currentProjectGroupFilter = '__all__';
+  const gate = g('bereich-gate');
+  if(gate) gate.hidden = true;
+  document.body.classList.remove('bereich-offen');
+  aktualisiereBereichsAnzeige();
+  renderMatrix();
+  if(typeof updateKPIs === 'function') updateKPIs();
+  renderProjectUI();
+  if(g('project-grid')) renderProjectGrid();
+  switchMainTab(tab);
+}
+
+// Projektauswahl mit Suche (fuer PPK und Anlagenbuch ohne offenes Projekt)
+function projektAuswahlHtml(){
+  const ids = bereichProjektIds().sort((a, b) => String(PROJECTS[b].updated_at || '').localeCompare(String(PROJECTS[a].updated_at || '')));
+  if(!ids.length) return '<p class="ab-klein">Keine Projekte sichtbar – ggf. muss dir der Admin Projekte zuweisen.</p>';
+  return `<input type="search" class="sp-inp pa-suche" placeholder="Projekt suchen …" oninput="projektAuswahlFiltern(this.value)" autocomplete="off">
+    <div class="pa-liste">${ids.map(id => { const p = PROJECTS[id]; return `<button type="button" class="pa-projekt" data-suche="${esc(((p.name || '') + ' ' + (p.group || '')).toLowerCase())}" onclick="selectProject('${id}')">
+      <strong>${esc(p.name || 'Unbenannt')}</strong><span>${esc(BEREICHE[projektBereich(p)] ? BEREICHE[projektBereich(p)].name : '')}${p.group ? ' · ' + esc(p.group) : ''}</span></button>`; }).join('')}</div>`;
+}
+function projektAuswahlFiltern(q){
+  const t = String(q || '').trim().toLowerCase();
+  document.querySelectorAll('.pa-projekt').forEach(b => { b.hidden = !!t && !(b.dataset.suche || '').includes(t); });
 }

@@ -1235,3 +1235,11 @@ html body.pp .mg-kal { display: flex; flex-direction: column; gap: 2px; font-siz
 @media (max-width: 900px) and (orientation: landscape) {
   html body.pp .main-content { padding-left: calc(10px + var(--safe-left, 0px)); padding-right: calc(10px + var(--safe-right, 0px)); }
 }
+
+/* Papierkorb */
+html body.pp .korb-info { grid-column: 1 / -1; font-size: .84rem; color: var(--mute); background: var(--pa3); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; }
+html body.pp .korb-karte { cursor: default; }
+html body.pp .korb-karte .project-card-title { color: var(--ink2); }
+html body.pp .korb-knoepfe { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+html body.pp .korb-chip { color: var(--mute) !important; }
+html body.pp .korb-hinweis { font-size: .78rem; color: var(--mute); margin-top: 6px; }

@@ -582,8 +582,10 @@ function qsBerechnen(){
 function renderProjectGrid(){
   const grid = g('project-grid');
   const ids = bereichProjektIds();
+  const korb = papierkorbIds();
+  if(currentProjectGroupFilter === '__papierkorb__' && !korb.length) currentProjectGroupFilter = '__all__';
   
-  if(ids.length === 0){
+  if(ids.length === 0 && !korb.length){
     if(g('project-group-bar')) g('project-group-bar').innerHTML = '';
     grid.innerHTML = `
       <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--muted);">
@@ -608,12 +610,12 @@ function renderProjectGrid(){
       if(gr) groupCounts[gr] = (groupCounts[gr]||0) + 1; else ungrouped++;
     });
     const groupNames = Object.keys(groupCounts).sort();
-    if(groupNames.length === 0 && archiviert === 0){
+    if(groupNames.length === 0 && archiviert === 0 && !korb.length){
       groupBar.innerHTML = '';
       currentProjectGroupFilter = '__all__';
     } else {
       if(currentProjectGroupFilter !== '__all__' && currentProjectGroupFilter !== '__none__'
-         && currentProjectGroupFilter !== '__archiv__' && !groupNames.includes(currentProjectGroupFilter)){
+         && currentProjectGroupFilter !== '__archiv__' && currentProjectGroupFilter !== '__papierkorb__' && !groupNames.includes(currentProjectGroupFilter)){
         currentProjectGroupFilter = '__all__';
       }
       const offeneAnzahl = ids.length - archiviert;
@@ -623,11 +625,16 @@ function renderProjectGrid(){
         chips += `<button class="wr-tab ${currentProjectGroupFilter==='__none__'?'active':''}" onclick="selectProjectGroupFilter('__none__')">Ohne Gruppe <span style="opacity:0.6;">(${ungrouped})</span></button>`;
       }
       if(archiviert > 0){
-        chips += `<button class="wr-tab archiv-chip ${currentProjectGroupFilter==='__archiv__'?'active':''}" onclick="selectProjectGroupFilter('__archiv__')" title="Unterschriebene Protokolle — schreibgeschützt und vor Löschen gesichert">Archiv <span style="opacity:0.6;">(${archiviert})</span></button>`;
+        chips += `<button class="wr-tab archiv-chip ${currentProjectGroupFilter==='__archiv__'?'active':''}" onclick="selectProjectGroupFilter('__archiv__')" title="Unterschriebene und archivierte Projekte">Archiv <span style="opacity:0.6;">(${archiviert})</span></button>`;
+      }
+      if(korb.length){
+        chips += `<button class="wr-tab korb-chip ${currentProjectGroupFilter==='__papierkorb__'?'active':''}" onclick="selectProjectGroupFilter('__papierkorb__')" title="Gelöschte Projekte – wiederherstellbar">Papierkorb <span style="opacity:0.6;">(${korb.length})</span></button>`;
       }
       groupBar.innerHTML = chips;
     }
   }
+
+  if(currentProjectGroupFilter === '__papierkorb__' && !projectSearchTerm){ grid.innerHTML = papierkorbHtml(korb); return; }
 
   const visibleIds = ids.filter(id => {
     const p = PROJECTS[id];
@@ -678,7 +685,10 @@ function renderProjectGrid(){
                 <button onclick="openBereichModal('${id}', event); closeProjectMenus();"><span></span> Bereich ändern</button>
                 <button onclick="openAssignModal('${id}', event); closeProjectMenus();"><span></span> Bauleitung zuweisen</button>
                 <button onclick="openHistoryModal('${id}', event); closeProjectMenus();"><span></span> Versionen &amp; Wiederherstellen</button>
-                ${canDelete ? `<button class="danger" onclick="deleteProject('${id}', event); closeProjectMenus();"><span></span> Projekt löschen</button>` : ''}
+                ${proj.locked ? '' : (proj.archiviert
+                  ? `<button onclick="projektArchivieren('${id}', false, event); closeProjectMenus();"><span></span> Aus dem Archiv holen</button>`
+                  : `<button onclick="projektArchivieren('${id}', true, event); closeProjectMenus();"><span></span> Archivieren</button>`)}
+                ${canDelete ? `<button class="danger" onclick="deleteProject('${id}', event); closeProjectMenus();"><span></span> In den Papierkorb</button>` : ''}
               </div>
             </div>` : ''}
           </div>
@@ -704,7 +714,7 @@ function renderProjectGrid(){
 // Ein Projekt gilt als archiviert, sobald es gesperrt (unterschrieben) ist.
 // Die Datenbank schuetzt es dann zusaetzlich: nur Admins duerfen es aendern,
 // geloescht werden kann es gar nicht, und sein Verlauf bleibt verschont.
-function istArchiviert(p){ return !!(p && p.locked); }
+function istArchiviert(p){ return !!(p && (p.locked || p.archiviert)); }
 
 // Ein Protokoll, das jemals unterschrieben oder gesperrt war, bleibt
 // dauerhaft geschuetzt — auch wenn es zur Endbearbeitung wieder
@@ -715,7 +725,7 @@ function istGeschuetzt(p){ return !!(p && (p.geschuetzt || p.locked || p.signatu
 // Diese Schluessel gehoeren nicht zum Anlagenplan, sondern sind Metadaten
 // im selben config-Feld. Sie stehen an EINER Stelle, damit beim Speichern
 // nie wieder einer vergessen wird.
-const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt', '_beschreibung', '_anlagenbuch', '_modul'];
+const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt', '_beschreibung', '_anlagenbuch', '_modul', '_archiviert', '_papierkorb'];
 
 function buildProjectConfig(proj, fallbackEmail){
   const cfg = {};
@@ -727,6 +737,8 @@ function buildProjectConfig(proj, fallbackEmail){
   if(proj.beschreibung) cfg._beschreibung = proj.beschreibung;
   if(proj.anlagenbuch) cfg._anlagenbuch = proj.anlagenbuch;
   if(proj.modul_komp) cfg._modul = proj.modul_komp;
+  if(proj.archiviert) cfg._archiviert = proj.archiviert;
+  if(proj.papierkorb) cfg._papierkorb = proj.papierkorb;
   // Unterschriften werden NIE weggeschrieben, auch nicht im entsperrten
   // Zustand. Das war die Stelle, an der beim Entsperren alles verschwand.
   if(proj.signature) cfg._signature = proj.signature;
@@ -793,6 +805,7 @@ function onProjectSearch(value){
 }
 
 let PROJECTS = {};
+let PAPIERKORB = {};   // geloeschte Projekte – wiederherstellbar, nur Admin loescht endgueltig
 let CURRENT_PROJECT_ID = null;
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -3901,7 +3914,7 @@ async function openProjectsModal(){
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
         <button class="btn btn-ghost" onclick="selectProject('${id}')" style="padding:6px 10px;">Öffnen</button>
         ${darf('projekt_verwalten') ? `<button class="btn btn-ghost" onclick="renameProject('${id}', event)" style="padding:6px 10px;" title="Projekt umbenennen">Umbenennen</button>` : ''}
-        ${darf('projekt_loeschen') ? `<button class="btn btn-ghost" onclick="deleteProject('${id}', event)" style="padding:6px 10px; color:#ef4444; border-color:#ef4444;">Löschen</button>` : ''}
+        ${darf('projekt_loeschen') ? `<button class="btn btn-ghost" onclick="deleteProject('${id}', event)" style="padding:6px 10px; color:#ef4444; border-color:#ef4444;">Papierkorb</button>` : ''}
       </div>
     </div>
   `;
@@ -4082,35 +4095,38 @@ async function updateProjectConfigInCloud(id) {
   }
 }
 
+// "Loeschen" legt ein Projekt in den Papierkorb. Es verschwindet aus allen
+// Listen, bleibt aber komplett erhalten und laesst sich wiederherstellen.
+// Endgueltig loeschen kann nur der Admin – aus dem Papierkorb heraus.
 async function deleteProject(id, event){
-  if(!darf('projekt_loeschen')){ if(event) event.stopPropagation(); return toast('Keine Berechtigung zum Löschen'); }
-  // Gesperrte Protokolle sind auch serverseitig vor dem Loeschen geschuetzt.
-  // Der Hinweis hier erspart den Fehlschlag und erklaert den Weg.
-  if(PROJECTS[id] && istGeschuetzt(PROJECTS[id])){
-    if(event) event.stopPropagation();
-    return toast(PROJECTS[id].locked
-      ? 'Unterschriebenes Protokoll — geschützt, kann nicht gelöscht werden'
-      : 'Dieses Protokoll war unterschrieben — es bleibt dauerhaft vor dem Löschen geschützt');
-  }
   if(event) event.stopPropagation();
-  if(id === CURRENT_PROJECT_ID) return toast('Aktives Projekt kann nicht gelöscht werden');
-  if(!await appFrage('Projekt wirklich löschen?')) return;
-  delete PROJECTS[id];
-  saveProjectsLocal();
-  let cloudOk = true;
-  if(supabaseClient && currentUser){
-    try {
-      const { error } = await supabaseClient.from('pv_projects').delete().eq('id', id);
-      if(error) throw error;
-    } catch(e){
-      cloudOk = false;
-      toastError('Lokal entfernt, aber Löschen in der Cloud fehlgeschlagen — Projekt taucht beim nächsten Laden eventuell wieder auf', e);
-    }
+  if(!darf('projekt_loeschen')) return toast('Keine Berechtigung zum Löschen');
+  const proj = PROJECTS[id];
+  if(!proj) return;
+  // Unterschriebene/gesperrte Protokolle: nur der Admin darf sie in den
+  // Papierkorb legen. Endgueltig loeschen verhindert der Server weiterhin.
+  const geschuetzt = istGeschuetzt(proj);
+  if(geschuetzt && currentUserRole !== 'admin'){
+    return toast('Unterschriebenes bzw. gesperrtes Protokoll – nur der Admin kann es in den Papierkorb legen');
   }
-  if(g('projects-modal') && g('projects-modal').classList.contains('show')) openProjectsModal();
-  renderProjectUI();
-  if(g('project-grid')) renderProjectGrid();
-  if(cloudOk) toast('Projekt gelöscht');
+  if(id === CURRENT_PROJECT_ID) return toast('Das geöffnete Projekt kann nicht gelöscht werden – zuerst ein anderes öffnen');
+  if(!supabaseClient || !currentUser) return toast('Nur mit Internetverbindung möglich');
+  if(await projektFremdGeoeffnet(id)) return;
+  if(!await appFrage(`„${proj.name}“ in den Papierkorb legen?\n\nDas Projekt verschwindet aus allen Listen und kann jederzeit wiederhergestellt werden.${geschuetzt ? '\n\nAchtung: Das Protokoll ist unterschrieben bzw. gesperrt.' : ''}`)) return;
+  const eintrag = { at: new Date().toISOString(), by: anzeigeName() || currentUser.email };
+  try {
+    await projektMetaSetzen(id, '_papierkorb', eintrag);
+    proj.papierkorb = eintrag;
+    delete PROJECTS[id];
+    PAPIERKORB[id] = proj;
+    saveProjectsLocal();
+    if(g('projects-modal') && g('projects-modal').classList.contains('show')) openProjectsModal();
+    renderProjectUI();
+    if(g('project-grid')) renderProjectGrid();
+    toast('In den Papierkorb gelegt – dort wiederherstellbar');
+  } catch(e){
+    toastError('Konnte nicht in den Papierkorb gelegt werden', e);
+  }
 }
 
 async function renameProject(id, event){
@@ -4390,6 +4406,7 @@ async function fetchProjectsFromCloud(){
     cloudFetchSucceeded = true;
     cloudProjectIds = new Set((data || []).map(cloudProj => cloudProj.id));
     PROJECTS = {};
+    PAPIERKORB = {};
     (data || []).forEach(cloudProj => {
         const cloudConfig = cloudProj.config || {};
         const planOnly = {};
@@ -4402,6 +4419,8 @@ async function fetchProjectsFromCloud(){
           beschreibung: cloudConfig._beschreibung || '',
           anlagenbuch: cloudConfig._anlagenbuch || null,
           modul_komp: cloudConfig._modul || null,
+          archiviert: cloudConfig._archiviert || null,
+          papierkorb: cloudConfig._papierkorb || null,
           model_wp: cloudProj.modul_wp || 465, 
           plan: planOnly, 
           locked: !!lockMeta.locked,
@@ -4420,7 +4439,9 @@ async function fetchProjectsFromCloud(){
           // anzeigen, ohne dass ein zweiter Cloud-Abruf noetig waere.
           measurements: cloudProj.data || null
         };
-        PROJECTS[cloudProj.id] = cloudProject;
+        // Papierkorb liegt getrennt – so taucht er in keiner Liste auf
+        if(cloudProject.papierkorb) PAPIERKORB[cloudProj.id] = cloudProject;
+        else PROJECTS[cloudProj.id] = cloudProject;
       });
   } catch(e){ toastError('Keine Verbindung zur Cloud', e); }
   renderProjectUI();
@@ -8257,4 +8278,100 @@ async function anlagenbuchNurSpeichern(proj){
   } finally {
     if(ind) ind.classList.remove('syncing');
   }
+}
+
+// ── Archiv (von Hand) und Papierkorb ──────────────────────────────────────
+function papierkorbIds(){
+  if(!darf('projekt_loeschen')) return [];
+  return Object.keys(PAPIERKORB).filter(id => !CURRENT_BEREICH || projektBereich(PAPIERKORB[id]) === CURRENT_BEREICH)
+    .sort((a, b) => String(PAPIERKORB[b].papierkorb.at || '').localeCompare(String(PAPIERKORB[a].papierkorb.at || '')));
+}
+// Einen Metadaten-Schluessel im Projekt setzen, auf dem FRISCHEN Stand der
+// Cloud – so werden zwischenzeitliche Aenderungen von Kollegen nicht ueberschrieben.
+async function projektMetaSetzen(id, schluessel, wert){
+  const { data: zeile, error: e1 } = await supabaseClient.from('pv_projects').select('config').eq('id', id).single();
+  if(e1) throw e1;
+  const cfg = { ...((zeile && zeile.config) || {}) };
+  if(wert === null || wert === undefined) delete cfg[schluessel]; else cfg[schluessel] = wert;
+  const { data, error } = await supabaseClient.from('pv_projects').update({ config: cfg }).eq('id', id).select('id');
+  if(error) throw error;
+  if(!data || !data.length) throw new Error('Keine Berechtigung für dieses Projekt');
+}
+// Hat gerade jemand anderes das Projekt zum Bearbeiten offen? Dessen naechstes
+// Speichern wuerde die Markierung sonst wieder entfernen.
+async function projektFremdGeoeffnet(id){
+  try {
+    const { data } = await supabaseClient.from('project_locks').select('user_id, user_name, expires_at').eq('project_id', id).maybeSingle();
+    if(data && currentUser && data.user_id !== currentUser.id && new Date(data.expires_at) > new Date()){
+      toast(`Das Projekt ist gerade bei ${data.user_name || 'einem Kollegen'} geöffnet – bitte später nochmal`);
+      return true;
+    }
+  } catch(_){}
+  return false;
+}
+async function projektArchivieren(id, an, event){
+  if(event) event.stopPropagation();
+  if(!darf('projekt_verwalten')) return toast('Keine Berechtigung');
+  const proj = PROJECTS[id];
+  if(!proj) return;
+  if(!supabaseClient || !currentUser) return toast('Nur mit Internetverbindung möglich');
+  if(id !== CURRENT_PROJECT_ID && await projektFremdGeoeffnet(id)) return;
+  const wert = an ? { at: new Date().toISOString(), by: anzeigeName() || currentUser.email } : null;
+  try {
+    await projektMetaSetzen(id, '_archiviert', wert);
+    if(an) proj.archiviert = wert; else delete proj.archiviert;
+    saveProjectsLocal();
+    renderProjectUI();
+    if(g('project-grid')) renderProjectGrid();
+    toast(an ? 'Archiviert – zu finden unter „Archiv“' : 'Aus dem Archiv geholt');
+  } catch(e){
+    toastError(an ? 'Konnte nicht archiviert werden' : 'Konnte nicht aus dem Archiv geholt werden', e);
+  }
+}
+async function projektWiederherstellen(id){
+  const proj = PAPIERKORB[id];
+  if(!proj || !darf('projekt_loeschen')) return;
+  try {
+    await projektMetaSetzen(id, '_papierkorb', null);
+    delete proj.papierkorb;
+    delete PAPIERKORB[id];
+    PROJECTS[id] = proj;
+    saveProjectsLocal();
+    renderProjectUI();
+    if(g('project-grid')) renderProjectGrid();
+    toast(`„${proj.name}“ wiederhergestellt`);
+  } catch(e){
+    toastError('Konnte nicht wiederhergestellt werden', e);
+  }
+}
+async function projektEndgueltigLoeschen(id){
+  if(currentUserRole !== 'admin') return toast('Endgültig löschen kann nur der Admin');
+  const proj = PAPIERKORB[id];
+  if(!proj) return;
+  const ok = await appDialog({ titel: 'Endgültig löschen?', text: `„${proj.name}“ wird mit allen Messwerten unwiderruflich gelöscht. Das lässt sich nicht rückgängig machen.`, ok: 'Endgültig löschen', gefahr: true });
+  if(!ok) return;
+  try {
+    const { data, error } = await supabaseClient.from('pv_projects').delete().eq('id', id).select('id');
+    if(error) throw error;
+    if(!data || !data.length) throw new Error('Das Projekt ist geschützt oder schon gelöscht');
+    delete PAPIERKORB[id];
+    if(g('project-grid')) renderProjectGrid();
+    toast('Endgültig gelöscht');
+  } catch(e){
+    toastError('Konnte nicht gelöscht werden', e);
+  }
+}
+function papierkorbHtml(ids){
+  const zeit = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' }); };
+  return `<div class="korb-info">Gelöschte Projekte sind aus allen Listen verschwunden, bleiben aber vollständig erhalten.
+    ${currentUserRole === 'admin' ? 'Endgültig löschen kannst nur du als Admin.' : 'Endgültig löschen kann nur der Admin.'}</div>`
+    + ids.map(id => { const p = PAPIERKORB[id]; const k = p.papierkorb || {};
+      return `<div class="project-card korb-karte">
+        <div class="project-card-header"><div class="project-card-title">${esc(p.name)}</div></div>
+        <div class="project-card-meta">Gelöscht am ${esc(zeit(k.at))}${k.by ? ` von ${esc(k.by)}` : ''}${p.group ? ` · ${esc(p.group)}` : ''}</div>
+        ${istGeschuetzt(p) ? '<div class="korb-hinweis">Unterschriebenes Protokoll – bleibt vor dem endgültigen Löschen geschützt.</div>' : ''}
+        <div class="korb-knoepfe">
+          ${!istGeschuetzt(p) || currentUserRole === 'admin' ? `<button type="button" class="btn btn-primary" onclick="projektWiederherstellen('${id}')">Wiederherstellen</button>` : '<span class="ab-klein">Wiederherstellen kann nur der Admin.</span>'}
+          ${currentUserRole === 'admin' && !istGeschuetzt(p) ? `<button type="button" class="btn btn-ghost ab-gefahr" onclick="projektEndgueltigLoeschen('${id}')">Endgültig löschen</button>` : ''}
+        </div></div>`; }).join('');
 }

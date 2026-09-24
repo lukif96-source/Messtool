@@ -8149,7 +8149,12 @@ async function pdfArchivZeigen(boxId, pid, art, neuLaden){
   const proj = getCurrentProject();
   if(!el || !proj || proj.id !== pid) return;
   const liste = archivCache[schluessel];
-  const datum = n => { const m = n.match(/^(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})/); return m ? `${m[3]}.${m[2]}.${m[1]} · ${m[4]}:${m[5]} Uhr (UTC)` : n; };
+  const datum = n => {
+    const m = n.match(/^(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})/);   // Dateiname in UTC
+    if(!m) return n;
+    const d = new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:00Z`);
+    return `${d.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' })} · ${d.toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+  };
   el.innerHTML = liste.length ? `<details class="pdf-archiv"><summary>Im Projekt abgelegt (${liste.length})</summary>
     <ul>${liste.map(n => `<li><button type="button" class="btn btn-ghost ab-mini" data-archiv="${esc(pid + '/archiv/' + n)}">${esc(art)} vom ${esc(datum(n))}</button></li>`).join('')}</ul></details>` : '';
 }

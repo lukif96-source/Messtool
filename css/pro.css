@@ -1133,3 +1133,30 @@ html body.pp .ab-klein a, html body.pp .ab-firma a { color: var(--brand-text); f
 
 /* Anleitung und Querschnitt nur im Menü links, nicht in der Reiterleiste */
 html body.pp #tab-anleitung, html body.pp #tab-querschnitt { display: none !important; }
+
+/* ══ PPK – AC-Pruefprotokoll ══════════════════════════════════════════════ */
+.ppk-view { display: none; }
+.ppk-view.active { display: block; }
+html body.pp.tab-ppk .dashboard { display: none !important; }
+html body.pp .ppk-teil h2 { display: flex; align-items: center; gap: 10px; font-size: 1.05rem !important; margin: 22px 0 10px; }
+html body.pp .ppk-teil h2 span { display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 8px;
+  background: var(--pri-bg); color: var(--pri-fg); font-size: .9rem; }
+html body.pp .ppk-kopf-rechts { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+html body.pp .ppk-status { font-size: .8rem; color: var(--mute); }
+html body.pp .ppk-seg { display: flex; flex-wrap: wrap; gap: 3px; background: var(--pa3); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 3px; }
+html body.pp .ppk-seg button { flex: 1 1 auto; min-height: 38px; padding: 6px 10px; border: 0; background: transparent; border-radius: 5px;
+  font: inherit; font-size: .84rem; color: var(--ink2); cursor: pointer; }
+html body.pp .ppk-seg button:hover:not(:disabled) { background: var(--pa2); }
+html body.pp .ppk-seg button.an { background: var(--brand); color: var(--brand-ink); font-weight: 600; }
+html body.pp .ppk-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+html body.pp .ppk-chips button { border: 1px solid var(--line2); background: var(--pa2); border-radius: 999px; padding: 7px 12px; font: inherit; font-size: .84rem; color: var(--ink2); cursor: pointer; min-height: 36px; }
+html body.pp .ppk-chips button.an { background: var(--brand-soft); border-color: var(--brand-line); color: var(--brand-text); font-weight: 600; }
+html body.pp .ppk-matrix { overflow-x: auto; }
+html body.pp .ppk-matrix td:not(:first-child), html body.pp .ppk-matrix th:not(:first-child) { text-align: center; }
+html body.pp .ppk-haken { width: 36px; height: 36px; border: 1.5px solid var(--line2); border-radius: 6px; background: var(--pa2); font-weight: 700; font-size: 1rem; color: var(--brand-ink); cursor: pointer; }
+html body.pp .ppk-haken.an { background: var(--brand); border-color: var(--brand); }
+html body.pp .ppk-auto { font-style: normal; font-size: .68rem; font-weight: 500; color: var(--mute); background: var(--pa3); border: 1px solid var(--line); border-radius: 999px; padding: 0 6px; margin-left: 4px; }
+html body.pp .ppk-auto-feld { background: var(--pa3) !important; color: var(--ink2) !important; }
+html body.pp .ppk-sig canvas { display: block; width: 100%; max-width: 600px; height: 160px; margin-top: 6px; border: 1px dashed var(--line2); border-radius: var(--r-sm); background: #fff; touch-action: none; }
+html body.pp .ppk-sig-knoepfe { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; max-width: 600px; }
+html body.pp .ppk-hinweis { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; background: var(--brand-soft); border: 1px solid var(--brand-line); border-radius: var(--r-sm); padding: 10px 12px; font-size: .86rem; }

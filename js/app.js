@@ -292,20 +292,21 @@ function switchMainTab(tab){
   // Monteure sehen den Reiter nicht und landen sonst auf der Uebersicht.
   if(!tabErlaubt(tab)) tab = TAB_REIHE.find(tabErlaubt) || 'anleitung';
   document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.matrix-view, .projects-view, .home-view, .anleitung-view, .querschnitt-view, .anlagenbuch-view, .komponenten-view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.matrix-view, .projects-view, .home-view, .anleitung-view, .querschnitt-view, .anlagenbuch-view, .komponenten-view, .ppk-view').forEach(v => v.classList.remove('active'));
   const tabEl = g(`tab-${tab}`);
   if(tabEl) tabEl.classList.add('active');
   // Am Handy ist die Reiterleiste wischbar: aktiven Reiter ins Bild holen
   if(tabEl && tabEl.scrollIntoView) tabEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   const viewEl = g(`${tab}-view`);
   if(viewEl) viewEl.classList.add('active');
-  document.body.classList.remove('tab-home','tab-matrix','tab-projects','tab-anleitung','tab-querschnitt','tab-anlagenbuch','tab-komponenten');
+  document.body.classList.remove('tab-home','tab-matrix','tab-projects','tab-anleitung','tab-querschnitt','tab-anlagenbuch','tab-komponenten','tab-ppk');
   document.body.classList.add('tab-' + tab);
   if(tab === 'projects') renderProjectGrid();
   if(tab === 'home') renderHomeView();
   if(tab === 'querschnitt') qsInit();
   if(tab === 'anlagenbuch') anlagenbuchRendern();
   if(tab === 'komponenten') komponentenRendern();
+  if(tab === 'ppk') ppkRendern();
   const context = g('scroll-context');
   if(context) context.hidden = tab !== 'matrix';
   if(tab === 'matrix') requestAnimationFrame(updateScrollContext);
@@ -3912,6 +3913,7 @@ async function selectProject(id){
   if(g('projects-view').classList.contains('active')) switchMainTab('matrix');
   renderProjectUI();
   if(document.body.classList.contains('tab-anlagenbuch')) anlagenbuchRendern();
+  if(document.body.classList.contains('tab-ppk')) ppkRendern();
   toast('Projekt geladen');
 }
 
@@ -7041,4 +7043,633 @@ function firmaLogoHochladen(){
   };
   document.body.appendChild(inp);
   inp.click();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//   PPK – AC-PRUEFPROTOKOLL (offizielle Foerder-Vorlage "Pruefbefund")
+//   Fuellt das ausfuellbare Original-PDF (vorlagen/pruefbefund_2022.pdf)
+//   direkt aus. Viele Werte kommen automatisch aus Projekt, Anlagenbuch,
+//   Katalog und Matrix; der Elektriker ergaenzt nur den AC-Teil.
+//   Daten je Projekt in pv_ppk (unabhaengig von der DC-Sperre).
+// ══════════════════════════════════════════════════════════════════════════
+const PPK_VORLAGE = 'vorlagen/pruefbefund_2022.pdf';
+let ppkDaten = null;          // { w: {...}, sig: dataUrl }
+let ppkTimer = null;
+var ppkOffen = false;
+const cbx = n => 'Check Box' + n;
+const PJN = (ja, nein) => [['ja', cbx(ja)], ['nein', cbx(nein)]];
+const PIO = (io, nio) => [['in Ordnung', cbx(io)], ['nicht in Ordnung', cbx(nio)]];
+
+const PPK_TEILE = [
+  { teil: 'A', titel: 'Prüfbefund', abschnitte: [
+    { titel: 'Anlage & Betreiber', felder: [
+      { t: 'text', f: 'Anlagenbetreiber', l: 'Anlagenbetreiber', a: 'betreiber' },
+      { t: 'text', f: 'TelefonNr', l: 'Telefon', a: 'telefon' },
+      { t: 'text', f: 'Anlagenadresse', l: 'Anlagenadresse', a: 'adresse', b: 1 },
+      { t: 'text', f: 'Postadresse', l: 'Postadresse', a: 'postadresse', b: 1 },
+      { t: 'text', f: 'Zu Befund Nr', l: 'Befund-Nr.' }
+    ]},
+    { titel: 'Art der Prüfung', felder: [
+      { t: 'seg', k: 'art', l: 'Dieser Befund dient als', a: 'art', o: [['Erstprüfung', cbx(17)], ['Außerordentliche Erstprüfung', cbx(18)], ['Wiederkehrende Prüfung', cbx(19)]] }
+    ]},
+    { titel: 'Umfang der Überprüfung', felder: [
+      { t: 'text', f: 'Anlagenteil Geprüft nach', l: 'Geprüft nach', a: 'norm_teil' },
+      { t: 'matrix', k: 'umfang', l: 'Zutreffendes antippen',
+        spalten: ['Versorgung, Schutzmaßnahmen', 'Verteiler', 'Betriebsmittel', 'Blitzschutz'],
+        zeilen: [['Technische Unterlagen vorhanden', [1, 2, 3, 4]], ['Prüfbefund vorhanden', [5, 6, 7, 8]], ['Anlagenzustand in Ordnung', [9, 10, 11, 12]]] }
+    ]},
+    { titel: 'Ergebnis der Prüfung', felder: [
+      { t: 'seg', k: 'ergebnis', l: 'Die Anlage ist', o: [['in Ordnung', cbx(20)], ['geringfügige Mängel', cbx(21)], ['nicht in Ordnung', cbx(22)]] },
+      { t: 'num', f: 'Wochen zu beheben sind', l: 'Mängel beheben innerhalb von (Wochen)', nur: ['ergebnis', 'geringfügige Mängel'] },
+      { t: 'multi', k: 'gefahr', l: 'Maßnahmen', nur: ['ergebnis', 'nicht in Ordnung'],
+        o: [['Gefahr für Leben bzw. Sachwerte', cbx(23)], ['Anlage spannungslos geschaltet', cbx(24)], ['Abschaltung nicht möglich', cbx(25)], ['Meldung an die Behörde erstattet', cbx(26)]] }
+    ]},
+    { titel: 'Datum & Unterschrift', felder: [
+      { t: 'date', f: 'Datum der Überprüfung', l: 'Datum der Überprüfung', a: 'heute' },
+      { t: 'text', f: 'Name des Prüfers', l: 'Name des Prüfers', a: 'pruefer' },
+      { t: 'date', f: 'Datum der nächsten Überprüfung', l: 'Datum der nächsten Überprüfung' },
+      { t: 'text', f: 'Ort;Seite2', l: 'Ort', a: 'ort' },
+      { t: 'date', f: 'am;Seite2', l: 'am', a: 'heute' },
+      { t: 'text', f: 'Name, Seite2', l: 'Anlagenverantwortlicher (nimmt zur Kenntnis)', a: 'betreiber' },
+      { t: 'sig', l: 'Unterschrift Prüfer' }
+    ]}
+  ]},
+  { teil: 'B', titel: 'Anlagendokumentation', abschnitte: [
+    { titel: 'Allgemeine Angaben', felder: [
+      { t: 'text', f: 'Jahr', l: 'Errichtungsjahr', a: 'jahr' },
+      { t: 'text', f: 'Wesentliche Änderungen an der Anlage Jahr', l: 'Wesentliche Änderungen (Jahr)' },
+      { t: 'text', f: 'Anlage ausgeführt nach Norm', l: 'Anlage ausgeführt nach (Norm)', a: 'norm' },
+      { t: 'multi', k: 'richtl1', l: 'OVE-Richtlinien', o: [['R 11', cbx(27)], ['R 6-2-1', cbx(28)], ['R 6-2-2', cbx(29)]] },
+      { t: 'area', f: ['Von der Behörde wurden folgende Auflagen erteilt', 'Von der Behörde wurden folgende Auflagen erteilt2'], l: 'Behördliche Auflagen' },
+      { t: 'date', f: 'Datum der letzten Anlagenüberprüfung', l: 'Datum der letzten Anlagenüberprüfung' },
+      { t: 'text', f: 'Zählpunktnummer', l: 'Zählpunktnummer', a: 'zaehlpunkt', b: 1 }
+    ]},
+    { titel: 'Art der PV-Anlage', felder: [
+      { t: 'seg', k: 'anlagenart', l: 'Betriebsart', a: 'anlagenart', o: [['Netzparallelbetrieb', cbx(31)], ['Inselbetrieb (DC)', cbx(30)], ['Inselbetrieb (AC)', cbx(33)]] }
+    ]},
+    { titel: 'Solarmodule & PV-Generator', felder: [
+      { t: 'text', f: 'Hersteller', l: 'Hersteller', a: 'm_hersteller' }, { t: 'text', f: 'Lieferant', l: 'Lieferant' },
+      { t: 'text', f: 'Type', l: 'Type', a: 'm_typ', b: 1 },
+      { t: 'seg', k: 'rueckstrom', l: 'Rückstromfähig', o: PJN(34, 35) },
+      { t: 'num', f: 'Nennleistung', l: 'Nennleistung (Wp)', a: 'm_wp' }, { t: 'num', f: 'Leerlaufspg UDC', l: 'Leerlaufspannung Uoc (V)', a: 'm_uoc' },
+      { t: 'num', f: 'Kurzschlussstrom ISC', l: 'Kurzschlussstrom Isc (A)', a: 'm_isc' }, { t: 'num', f: 'Betriebsstrom IMPP', l: 'Betriebsstrom Impp (A)' },
+      { t: 'num', f: 'Max zulässige Systemsp', l: 'Max. zulässige Systemspannung (V)' },
+      { t: 'num', f: 'Anzahl Module Strang', l: 'Anzahl Module / Strang', a: 'mod_strang' },
+      { t: 'num', f: 'Systemnennsp', l: 'Systemnennspannung (V)', a: 'u_system' },
+      { t: 'num', f: 'Gesamtleistung Nennbedingungen', l: 'Gesamtleistung (kWp)', a: 'kwp' },
+      { t: 'num', f: 'Gesamtstrom Nennbedingungen', l: 'Gesamtstrom (A)' }
+    ]},
+    { titel: 'Modulmontage', felder: [
+      { t: 'seg', k: 'statik', l: 'Statische Vorbemessung Montagesystem', o: [['ja (s. Beilage)', cbx(36)], ['nein', cbx(37)]] },
+      { t: 'text', f: 'Ausrichtung n Himmelsrichtung', l: 'Ausrichtung (Grad)', a: 'ausrichtung' },
+      { t: 'num', f: 'Modulneigung', l: 'Modulneigung (Grad)', a: 'neigung' },
+      { t: 'seg', k: 'montage', l: 'Montageart', o: [['Dachintegriert', cbx(38)], ['Dachparallel', cbx(39)], ['aufgeständert', cbx(40)], ['Fassade', cbx(41)], ['Sonstige', cbx(42)]] },
+      { t: 'text', f: 'Modulmontage Sonstige', l: 'Sonstige Montageart', nur: ['montage', 'Sonstige'] }
+    ]},
+    { titel: 'Laderegler (falls vorhanden)', optional: 1, felder: [
+      { t: 'text', f: 'Hersteller_2', l: 'Hersteller' }, { t: 'text', f: 'Lieferant_2', l: 'Lieferant' }, { t: 'text', f: 'Type_2', l: 'Type' },
+      { t: 'num', f: 'Nennstrom', l: 'Nennstrom (A)' },
+      { t: 'seg', k: 'regler', l: 'Reglerfunktion', o: [['Shunt', cbx(43)], ['Zweipunkt', cbx(44)], ['Parallel', cbx(45)], ['MPP', cbx(46)], ['Serie', cbx(47)]] },
+      { t: 'seg', k: 'regler_temp', l: 'Temperaturkompensation mit externem Messfühler', o: PJN(48, 49) },
+      { t: 'seg', k: 'regler_u', l: 'Laderegler mit Spannungsfühler', o: PJN(50, 51) }
+    ]},
+    { titel: 'Stromspeicher (falls vorhanden)', optional: 1, felder: [
+      { t: 'text', f: 'Hersteller_3', l: 'Hersteller', a: 's_hersteller' }, { t: 'text', f: 'Lieferant_3', l: 'Lieferant' },
+      { t: 'text', f: 'Type_3', l: 'Type', a: 's_typ' }, { t: 'text', f: 'Bauart', l: 'Bauart' },
+      { t: 'seg', k: 'saeurewanne', l: 'Säurewanne', o: PJN(52, 53) },
+      { t: 'text', f: 'Aufstellungsort', l: 'Aufstellungsort', a: 's_ort' },
+      { t: 'multi', k: 'wartungsfrei', l: 'Ausführung', o: [['wartungsfrei', cbx(54)]] },
+      { t: 'num', f: 'Nennspannung', l: 'Nennspannung (V)', a: 's_spannung' }, { t: 'num', f: 'Zellenanzahl', l: 'Zellenanzahl' },
+      { t: 'text', f: 'Kapazität', l: 'Kapazität (Ah/10)' }, { t: 'text', f: 'Anschlußleitung', l: 'Anschlussleitung (mm²)' },
+      { t: 'num', f: 'Hauptabsicherung', l: 'Hauptabsicherung (A)' },
+      { t: 'seg', k: 'belueftung', l: 'Raum Be-/Entlüftung', o: [['statisch', cbx(55)], ['mechanisch', cbx(56)]] }
+    ]},
+    { titel: 'Wechselrichter', felder: [
+      { t: 'text', f: 'Hersteller_4', l: 'Hersteller', a: 'w_hersteller' }, { t: 'text', f: 'Lieferant_4', l: 'Lieferant' },
+      { t: 'text', f: 'Type_4', l: 'Type', a: 'w_typ', b: 1 },
+      { t: 'seg', k: 'wrart', l: 'Art', a: 'wrart', o: [['Netzgekoppelt', cbx(58)], ['Inselwechselrichter', cbx(57)]] },
+      { t: 'num', f: 'Anzahl WR', l: 'Anzahl Wechselrichter', a: 'wr_anzahl' },
+      { t: 'multi', k: 'modulwr', l: 'Bauform', o: [['Modulwechselrichter', cbx(61)]] },
+      { t: 'seg', k: 'trenntrafo', l: 'Trenntrafo', o: PJN(64, 65) },
+      { t: 'seg', k: 'rcmu', l: 'WR mit allstromsensitivem RCMU', o: PJN(67, 68) },
+      { t: 'seg', k: 'iso_ueb', l: 'Isolationsüberwachungsgerät', o: PJN(69, 70) },
+      { t: 'seg', k: 'netzfrei', l: 'Automatische Netzfreischaltstelle', o: PJN(71, 72) },
+      { t: 'text', f: 'Sonstige integrierte Schutzgeräte', l: 'Sonstige integrierte Schutzgeräte', b: 1 },
+      { t: 'num', f: 'von', l: 'DC-Eingangsspannungsbereich von (V)' }, { t: 'num', f: 'bis', l: 'bis (V)' },
+      { t: 'num', f: 'Max Eingangsspannung', l: 'Max. Eingangsspannung (V)' }, { t: 'num', f: 'Max Eingangsstrom', l: 'Max. Eingangsstrom (A)' },
+      { t: 'num', f: 'Nennspannung_2', l: 'AC-Nennspannung (V)' }, { t: 'num', f: 'ACNennleistung', l: 'AC-Nennleistung (kW)', a: 'w_kw' },
+      { t: 'text', f: 'Gehäuse Schutzart', l: 'Gehäuse-Schutzart', a: 'w_ip' }, { t: 'text', f: 'Temperaturbereich', l: 'Temperaturbereich' },
+      { t: 'seg', k: 'inselfaehig', l: 'Wechselrichter inselbetriebsfähig', o: PJN(73, 74) },
+      { t: 'text', f: 'Ort; Seite4', l: 'Wechselrichter-/AC-Freischaltstelle – Ort', b: 1 }
+    ]},
+    { titel: 'Überspannungsschutz AC', felder: [
+      { t: 'text', f: 'Klasse', l: 'Klasse', a: 'uesk_ac' }, { t: 'text', f: 'Type_5', l: 'Type' },
+      { t: 'num', f: 'IIMP', l: 'Iimp (kA)' }, { t: 'num', f: 'IN', l: 'In (kA)' }, { t: 'num', f: 'UC', l: 'Uc (V)' },
+      { t: 'text', f: 'Montageort', l: 'Montageort' }
+    ]},
+    { titel: 'Netzeinspeisung', felder: [
+      { t: 'multi', k: 'phasen', l: 'Einspeisung über', o: [['L1', cbx(75)], ['L2', cbx(76)], ['L3', cbx(77)]] },
+      { t: 'text', f: 'Einspeisepunkt Ort', l: 'Einspeisepunkt (Ort)' }, { t: 'text', f: 'Art des Zählers', l: 'Art des Zählers' },
+      { t: 'seg', k: 'einspeisung', l: 'Art der Einspeisung', o: [['Überschusseinspeisung', cbx(78)], ['Volleinspeisung', cbx(79)]] }
+    ]},
+    { titel: 'DC-Installation', felder: [
+      { t: 'titel', l: 'Modulverbindungsleitung' },
+      { t: 'text', f: 'Spannungsfestigkeit', l: 'Spannungsfestigkeit' }, { t: 'text', f: 'Lieferant_5', l: 'Lieferant' },
+      { t: 'seg', k: 'db_mvl', l: 'Datenblatt vorhanden', o: PJN(80, 81) },
+      { t: 'text', f: 'Leitungstype', l: 'Leitungstype' }, { t: 'text', f: 'Querschnitt', l: 'Querschnitt' },
+      { t: 'seg', k: 'klemm', l: 'Klemmverbindung', o: PJN(82, 83) }, { t: 'seg', k: 'steck', l: 'Steckverbindung', o: PJN(84, 85) },
+      { t: 'titel', l: 'Sonstige DC-Verbindungsleitung' },
+      { t: 'text', f: 'Spannungsfestigkeit_2', l: 'Spannungsfestigkeit' }, { t: 'text', f: 'Lieferant_6', l: 'Lieferant' },
+      { t: 'seg', k: 'db_dcl', l: 'Datenblatt vorhanden', o: PJN(86, 87) },
+      { t: 'text', f: 'Leitungstype_2', l: 'Leitungstype' }, { t: 'text', f: 'Querschnitt_2', l: 'Querschnitt' },
+      { t: 'text', f: 'Verlegung der Leitung', l: 'Verlegung der Leitung', b: 1 },
+      { t: 'titel', l: 'Schutzziel' },
+      { t: 'seg', k: 'kse', l: 'Kurzschlusseinrichtung', o: [['vorhanden', cbx(88)], ['nicht vorhanden', cbx(89)]] },
+      { t: 'num', f: 'Anzahl', l: 'Abschalteinrichtung – Anzahl' }, { t: 'text', f: 'Type_6', l: 'Type' },
+      { t: 'num', f: 'Strom', l: 'Strom (A)' }, { t: 'num', f: 'Spannung', l: 'Spannung (V)' },
+      { t: 'seg', k: 'abs_wr', l: 'Im WR integriert', o: PJN(90, 91) },
+      { t: 'seg', k: 'abs_ext', l: 'Externe Freischalteinrichtung', o: [['ja (empfohlen)', cbx(92)], ['nein', cbx(93)]] },
+      { t: 'text', f: 'Ort Freischalteinrichtung In unmittelbarer Nähe der Module empfohlen', l: 'Ort der Freischalteinrichtung', a: 'dc_frei', b: 1 },
+      { t: 'multi', k: 'baulich', l: 'Bauliche Maßnahmen', o: [['Brandgeschützte Verlegung im Gebäude', cbx(94)], ['Verlegung außerhalb des Gebäudes', cbx(95)]] },
+      { t: 'area', f: ['Bauliche Maßnahmen', 'Bauliche Maßnahmen1', 'Bauliche Maßnahmen2'], l: 'Weitere bauliche Maßnahmen' }
+    ]},
+    { titel: 'Generatoranschlusskasten (GAK)', optional: 1, felder: [
+      { t: 'text', f: 'Einbauten', l: 'Einbauten', b: 1 }, { t: 'text', f: 'Schutzart', l: 'Schutzart' },
+      { t: 'text', f: 'Aufstellungsort_2', l: 'Aufstellungsort' }, { t: 'text', f: 'Stranganschlüsse', l: 'Stranganschlüsse' }
+    ]},
+    { titel: 'Überspannungsschutz DC', felder: [
+      { t: 'text', f: 'Lieferant_7', l: 'Lieferant' }, { t: 'seg', k: 'db_ueds', l: 'Datenblatt vorhanden', o: [['ja', cbx(96)], ['nein', cbx(97)]] },
+      { t: 'text', f: 'Klasse_2', l: 'Klasse', a: 'uesk_dc' }, { t: 'text', f: 'Type_7', l: 'Type' },
+      { t: 'num', f: 'IIMP_2', l: 'Iimp (kA)' }, { t: 'num', f: 'IN_2', l: 'In (kA)' }, { t: 'num', f: 'UC_2', l: 'Uc (V)' },
+      { t: 'text', f: 'Montageort_2', l: 'Montageort' }
+    ]},
+    { titel: 'Potentialausgleich & Blitzschutz', schnell: 1, felder: [
+      { t: 'seg', k: 'hpa', l: 'Hauptpotentialausgleich ordnungsgemäß', o: PJN(98, 99) },
+      { t: 'seg', k: 'pa_pv', l: 'Potentialausgleich der PV-Anlage ordnungsgemäß', o: PJN(100, 101) },
+      { t: 'seg', k: 'blitz', l: 'Blitzschutzanlage', o: [['vorhanden', cbx(102)], ['nicht vorhanden', cbx(103)]] },
+      { t: 'seg', k: 'blitz_vs', l: 'Blitzschutz entspricht den Vorschriften', o: [['ja', cbx(104)], ['nein', cbx(105)], ['nicht geprüft', cbx(106)]] },
+      { t: 'seg', k: 'blitz_prot', l: 'Blitzschutz-Protokoll', o: [['vorhanden', cbx(107)], ['nur RA-Messung', cbx(108)]] },
+      { t: 'seg', k: 'uess_ac', l: 'Überspannungsschutz AC', o: [['in Ordnung', cbx(109)], ['nicht in Ordnung', cbx(110)], ['nicht vorhanden', cbx(111)]] },
+      { t: 'seg', k: 'uess_dc', l: 'Überspannungsschutz DC', o: [['in Ordnung', cbx(112)], ['nicht in Ordnung', cbx(113)], ['nicht vorhanden', cbx(114)]] },
+      { t: 'multi', k: 'richtl2', l: 'Anlage ausgeführt nach', o: [['R 11', cbx(115)], ['R 6-2-1', cbx(116)], ['R 6-2-2', cbx(117)]] }
+    ]},
+    { titel: 'Installation & Netzanschluss (AC)', felder: [
+      { t: 'text', f: 'Netzbetreiber', l: 'Netzbetreiber' }, { t: 'num', f: 'Nennspg', l: 'Nennspannung (V)' },
+      { t: 'num', f: 'Absicherung', l: 'Absicherung (A)' },
+      { t: 'text', f: 'Ort_2', l: 'Hausanschluss / Hauptsicherungskasten – Ort', b: 1 },
+      { t: 'seg', k: 'tafel', l: 'Beschriftungstafel (Rücklieferer PV-Anlage)', o: PJN(120, 121) },
+      { t: 'seg', k: 'selbstfrei', l: 'Selbstständige Freischalteinrichtung', o: PJN(122, 123) },
+      { t: 'text', f: 'Hauptleitung', l: 'Hauptleitung (mm²)' }, { t: 'text', f: 'Bauart der Hauptsicherung', l: 'Bauart der Hauptsicherung' },
+      { t: 'num', f: 'mm²Absicherung der Hauptleitung', l: 'Absicherung der Hauptleitung (A)' }, { t: 'text', f: 'inauf', l: 'Hauptleitung in/auf' },
+      { t: 'text', f: 'Vorzählerleitung', l: 'Vorzählerleitung (mm²)' }, { t: 'text', f: 'Bauart der Vorzählersicherung', l: 'Bauart der Vorzählersicherung' },
+      { t: 'num', f: 'Absicherung der Vorzählerleitung', l: 'Absicherung der Vorzählerleitung (A)' }, { t: 'text', f: 'inauf_2', l: 'Vorzählerleitung in/auf' },
+      { t: 'text', f: 'Zählerplatz Standort', l: 'Zählerplatz (Standort)' }, { t: 'text', f: 'Verlegung', l: 'Verlegung' },
+      { t: 'area', f: ['Art und Verlegung der Leitungen und KabelQuerschnitte Zuleitungen PVGenerator bis WRRow1'], l: 'Art und Verlegung der Leitungen/Querschnitte (PV-Generator bis WR)' }
+    ]},
+    { titel: 'Organisatorisches & Kennzeichnung', schnell: 1, felder: [
+      { t: 'seg', k: 'org1', l: 'Bekanntgabe besonderer Gefahren für Einsatzkräfte', o: PJN(124, 125) },
+      { t: 'seg', k: 'org2', l: 'Informationen und Planungsunterlagen zur Verfügung gestellt', o: PJN(126, 127) },
+      { t: 'seg', k: 'org3', l: 'Einweisung der Einsatzkräfte über Schalthandlungen', o: PJN(128, 129) },
+      { t: 'seg', k: 'hinweis', l: 'Hinweisschild vorhanden', o: PJN(130, 131) },
+      { t: 'seg', k: 'plan', l: 'Übersichtsplan vorhanden', o: PJN(132, 133) },
+      { t: 'seg', k: 'unterw', l: 'Unterweisung des Anlageninhabers erfolgt', o: PJN(134, 135) }
+    ]}
+  ]},
+  { teil: 'C', titel: 'Prüfung', abschnitte: [
+    { titel: 'Besichtigung', schnell: 1, felder: [
+      { t: 'seg', k: 'c_hinweis', l: 'Hinweisschild im HSK vorhanden', o: PJN(136, 137) },
+      { t: 'seg', k: 'c_plan', l: 'Übersichtsplan vorhanden', o: PJN(138, 139) },
+      { t: 'text', f: 'Mechanischer Zustand der elektr Betriebsmittel', l: 'Mechanischer Zustand der elektr. Betriebsmittel', b: 1 },
+      { t: 'text', f: 'Mechanisches GerüstSichtkontrolle', l: 'Mechanisches Gerüst – Sichtkontrolle', b: 1 },
+      { t: 'seg', k: 'c_verb', l: 'Mechanische Verbindungen', o: [['in Ordnung', cbx(140)], ['nicht in Ordnung', cbx(141)], ['nicht zugänglich', cbx(142)]] }
+    ]},
+    { titel: 'Schutzmaßnahmen Gleichstromseite (DC)', schnell: 1, felder: [
+      { t: 'pruef', k: 'dc_si', l: 'Schutzisolierung', an: cbx(143), io: [cbx(144), cbx(145)] },
+      { t: 'pruef', k: 'dc_skl', l: 'Schutzkleinspannung', an: cbx(146), io: [cbx(147), cbx(148)] },
+      { t: 'pruef', k: 'dc_uel', l: 'Sichtprüfung der Überspannungsleiter', an: cbx(149), io: [cbx(150), cbx(151)] },
+      { t: 'pruef', k: 'dc_so', l: 'Sonstige Schutzmaßnahme', an: cbx(152), io: [cbx(153), cbx(154)] },
+      { t: 'text', f: 'Prüfung Sonstige', l: 'Sonstige Schutzmaßnahme – Bezeichnung', nur: ['dc_so', '*'] }
+    ]},
+    { titel: 'Schutzmaßnahmen Wechselstromseite (AC)', schnell: 1, felder: [
+      { t: 'pruef', k: 'ac_null', l: 'Nullung', an: cbx(155), io: [cbx(156), cbx(157)] },
+      { t: 'pruef', k: 'ac_fi', l: 'Fehlerstrom-Schutzschaltung', an: cbx(158), io: [cbx(159), cbx(160)] },
+      { t: 'pruef', k: 'ac_uel', l: 'Sichtprüfung der Überspannungsleiter', an: cbx(161), io: [cbx(162), cbx(163)] },
+      { t: 'pruef', k: 'ac_kse', l: 'Kurzschlusseinrichtung', an: cbx(164), io: [cbx(165), cbx(166)] }
+    ]},
+    { titel: 'Erdung & Schutzpotentialausgleich', schnell: 1, felder: [
+      { t: 'seg', k: 'erd', l: 'Erdungsanlage', o: PIO(167, 168) },
+      { t: 'seg', k: 'spa', l: 'Schutzpotentialausgleich', o: PIO(169, 170) },
+      { t: 'seg', k: 'nod', l: 'Niederohmige Durchgänge', o: PIO(171, 172) }
+    ]},
+    { titel: 'Wechselrichter', schnell: 1, felder: [
+      { t: 'seg', k: 'wr_konf', l: 'Konformitätserklärung vorhanden', o: PIO(173, 174) },
+      { t: 'seg', k: 'wr_ab', l: 'Wechselrichter konform mit Anlagenbuch', o: PIO(175, 176) },
+      { t: 'seg', k: 'wr_db', l: 'Datenblätter vorhanden', o: PIO(177, 178) },
+      { t: 'seg', k: 'wr_kse', l: 'Kurzschlusseinrichtung vorhanden', o: PIO(179, 180) },
+      { t: 'seg', k: 'wr_abs', l: 'Abschalteinrichtung', o: PJN(181, 182) },
+      { t: 'seg', k: 'wr_abs_io', l: 'Abschalteinrichtung – Zustand', o: [['in Ordnung', cbx(183)], ['nicht in Ordnung', cbx(184)]] },
+      { t: 'seg', k: 'wr_bau', l: 'Bauliche Maßnahme', o: [['ja', cbx(185)], ['nein', cbx(186)]] },
+      { t: 'seg', k: 'wr_bau_io', l: 'Bauliche Maßnahme – Zustand', o: [['in Ordnung', cbx(187)], ['nicht in Ordnung', cbx(188)]] }
+    ]},
+    { titel: 'Überspannungsschutz', schnell: 1, felder: [
+      { t: 'seg', k: 'ue_vorh', l: 'Überspannungsschutz vorhanden', o: PJN(189, 190) },
+      { t: 'seg', k: 'ue_io', l: 'Zustand', o: [['in Ordnung', cbx(191)], ['nicht in Ordnung', cbx(192)]] }
+    ]},
+    { titel: 'Verwendete Messgeräte', felder: [
+      { t: 'text', f: 'Hersteller_5', l: 'Messgerät 1 – Hersteller' }, { t: 'text', f: 'Type_8', l: 'Type' }, { t: 'text', f: 'Seriennummer', l: 'Seriennummer' },
+      { t: 'text', f: 'Hersteller_6', l: 'Messgerät 2 – Hersteller' }, { t: 'text', f: 'Type_9', l: 'Type' }, { t: 'text', f: 'Seriennummer_2', l: 'Seriennummer' }
+    ]},
+    { titel: 'Isolationswiderstand Gleichstromseite', felder: [
+      { t: 'riso' },
+      { t: 'num', f: 'UPrüf', l: 'Prüfspannung (V)' }, { t: 'num', f: 'Minimalwert PlusMinus', l: 'Plus/Minus (MΩ)' },
+      { t: 'num', f: 'PlusPE', l: 'Plus/PE (MΩ)' }, { t: 'num', f: 'MinusPE', l: 'Minus/PE (MΩ)' },
+      { t: 'seg', k: 'riso_dc', l: 'Isolationswiderstand ist', o: PIO(193, 194) },
+      { t: 'titel', l: 'Bei Wiederholungsprüfung' },
+      { t: 'num', f: 'UPrüf_2', l: 'Prüfspannung (V)' }, { t: 'num', f: 'Minimalwert', l: 'Minimalwert (MΩ)' },
+      { t: 'num', f: 'PlusPE_2', l: 'Plus/PE (MΩ)' }, { t: 'num', f: 'MinusPE_2', l: 'Minus/PE (MΩ)' },
+      { t: 'seg', k: 'riso_dc2', l: 'Isolationswiderstand ist', o: PIO(195, 196) }
+    ]},
+    { titel: 'Strangmessung (aus der Matrix)', felder: [
+      { t: 'strang' },
+      { t: 'num', f: 'Betriebsstrom', l: 'Solargenerator-Gesamtstrom (A)' }, { t: 'num', f: 'Betriebsspannung', l: 'Betriebsspannung (V)' },
+      { t: 'num', f: 'Temperatur', l: 'Temperatur (°C)', a: 'temp' }, { t: 'text', f: 'Witterung', l: 'Witterung', a: 'wetter' }
+    ]},
+    { titel: 'Isolationswiderstand Wechselstromseite', felder: [
+      { t: 'num', f: 'UPrüf_3', l: 'Prüfspannung (V)' },
+      { t: 'num', f: 'LL', l: 'L/L (MΩ)' }, { t: 'num', f: 'LN', l: 'L/N (MΩ)' },
+      { t: 'num', f: 'LPE', l: 'L/PE (MΩ)' }, { t: 'num', f: 'NPE', l: 'N/PE (MΩ)' },
+      { t: 'num', f: 'L123NPEN', l: 'Wenn nicht einzeln möglich: L1,2,3 – N/PE(N) (MΩ)' },
+      { t: 'seg', k: 'riso_ac', l: 'Isolationswiderstand ist', o: PIO(197, 198) }
+    ]}
+  ]}
+];
+
+// ── Werte ─────────────────────────────────────────────────────────────────
+const PPK_SCHLUESSEL = pid => `pv_ppk_entwurf::${currentUser ? currentUser.id : 'anon'}::${pid}`;
+const ppkEinzeilig = t => String(t || '').replace(/\s*\n\s*/g, ', ').trim();
+function ppkStraenge(){
+  return getAllFullIds().filter(id => APP_STATE[id] && APP_STATE[id].stat === 'JA');
+}
+function ppkAuto(){
+  const proj = getCurrentProject();
+  const ab = (proj && proj.anlagenbuch) || {};
+  const f = abFirma || {};
+  const mod = abKomp(ab.modul && ab.modul.komponente);
+  const md = (mod && mod.daten) || {};
+  const plan = getCurrentPlan();
+  const wrK = Object.keys(plan).map(wr => abKomp(ab.wr && ab.wr[wr])).filter(Boolean);
+  const wd = (wrK[0] && wrK[0].daten) || {};
+  const sp = abKomp(ab.speicher && ab.speicher.komponente);
+  const aktiv = ppkStraenge();
+  const mods = aktiv.map(id => Number(APP_STATE[id].mod) || 0).filter(Boolean);
+  const zaehl = {}; mods.forEach(m => { zaehl[m] = (zaehl[m] || 0) + 1; });
+  const haeufig = Object.keys(zaehl).sort((a, b) => zaehl[b] - zaehl[a])[0] || '';
+  const wp = abZahl(md.wp) || getCurrentWp();
+  const summe = mods.reduce((a, b) => a + b, 0);
+  const uocs = aktiv.map(id => abZahl(APP_STATE[id].uoc)).filter(v => v !== null);
+  const eindeutig = arr => [...new Set(arr.filter(Boolean))].join(' / ');
+  const ba = String(ab.betriebsart || '');
+  const heute = new Date().toISOString().slice(0, 10);
+  return {
+    betreiber: ab.betreiber && ab.betreiber.name, telefon: ab.betreiber && ab.betreiber.kontakt,
+    adresse: ppkEinzeilig(ab.standort && ab.standort.adresse), postadresse: ppkEinzeilig(ab.betreiber && ab.betreiber.adresse),
+    art: 'Erstprüfung', norm_teil: 'ÖVE/ÖNORM E 8101', norm: 'ÖVE/ÖNORM E 8101', heute,
+    pruefer: anzeigeName(), ort: f.ort,
+    jahr: ab.inbetriebnahme ? String(ab.inbetriebnahme).slice(0, 4) : String(new Date().getFullYear()),
+    zaehlpunkt: ab.zaehlpunkt,
+    anlagenart: /DC-gekoppelt/.test(ba) ? 'Inselbetrieb (DC)' : (/AC-gekoppelt/.test(ba) ? 'Inselbetrieb (AC)' : 'Netzparallelbetrieb'),
+    m_hersteller: mod && mod.hersteller, m_typ: mod && mod.typ, m_wp: md.wp || (wp ? String(wp) : ''), m_uoc: md.uoc, m_isc: md.isc,
+    mod_strang: haeufig, u_system: uocs.length ? String(Math.round(Math.max(...uocs))) : '',
+    kwp: summe ? (summe * wp / 1000).toFixed(2).replace('.', ',') : '',
+    ausrichtung: ab.modul && ab.modul.ausrichtung, neigung: ab.modul && ab.modul.neigung,
+    s_hersteller: sp && sp.hersteller, s_typ: sp && sp.typ, s_spannung: sp && sp.daten && sp.daten.spannung, s_ort: ab.speicher && ab.speicher.ort,
+    w_hersteller: eindeutig(wrK.map(k => k.hersteller)), w_typ: eindeutig(wrK.map(k => k.typ)), wrart: 'Netzgekoppelt',
+    wr_anzahl: String(Object.keys(plan).length || ''), w_kw: wd.leistung_kw, w_ip: wd.ip,
+    uesk_ac: ab.ueberspannung && ab.ueberspannung.ac !== 'nicht vorhanden' ? ab.ueberspannung.ac : '',
+    uesk_dc: ab.ueberspannung && ab.ueberspannung.dc !== 'nicht vorhanden' ? ab.ueberspannung.dc : '',
+    dc_frei: ppkEinzeilig(ab.schalter && ab.schalter.dc),
+    temp: ab.pruefung && ab.pruefung.temperatur, wetter: ab.pruefung && ab.pruefung.wetter
+  };
+}
+function ppkFeldKey(fd){ return fd.f ? (Array.isArray(fd.f) ? fd.f[0] : fd.f) : fd.k; }
+function ppkWert(fd, auto){
+  const k = ppkFeldKey(fd);
+  const eigen = ppkDaten && ppkDaten.w ? ppkDaten.w[k] : undefined;
+  if(eigen !== undefined && eigen !== null && eigen !== '') return { v: eigen, auto: false };
+  const a = fd.a && auto ? auto[fd.a] : undefined;
+  return (a !== undefined && a !== null && a !== '') ? { v: a, auto: true } : { v: fd.t === 'multi' ? [] : '', auto: false };
+}
+function ppkSichtbar(fd){
+  if(!fd.nur) return true;
+  const [k, v] = fd.nur;
+  const w = ppkDaten && ppkDaten.w ? ppkDaten.w[k] : '';
+  return v === '*' ? !!w : w === v;
+}
+function ppkDarfAendern(){ return darf('ppk'); }
+
+// ── Reiter zeichnen ───────────────────────────────────────────────────────
+async function ppkRendern(){
+  const box = g('ppk-inhalt');
+  if(!box) return;
+  if(!darf('ppk')){ box.innerHTML = '<div class="ab-leer">Für das AC-Prüfprotokoll fehlt dir die Berechtigung.</div>'; return; }
+  const proj = getCurrentProject();
+  if(!proj){
+    box.innerHTML = `<div class="ab-leer"><h2>PPK – AC-Prüfprotokoll</h2><p>Bitte zuerst ein Projekt öffnen – links im Menü unter „Projekte“.</p>
+      <button class="btn btn-primary" onclick="toggleSidebar()">Projekt wählen</button></div>`;
+    return;
+  }
+  box.innerHTML = '<div class="ab-leer">Lade PPK …</div>';
+  ppkDaten = { w: {} };
+  try {
+    await Promise.all([abKatalogLaden().catch(() => {}), abFirmaLaden().catch(() => {})]);
+    const { data, error } = await supabaseClient.from('pv_ppk').select('daten').eq('project_id', proj.id).maybeSingle();
+    if(error) throw error;
+    if(data && data.daten) ppkDaten = data.daten;
+  } catch(e){ console.warn('PPK laden:', e); toast('PPK konnte nicht aus der Cloud geladen werden – Netz prüfen'); }
+  if(!ppkDaten.w) ppkDaten.w = {};
+  try {
+    const roh = localStorage.getItem(PPK_SCHLUESSEL(proj.id));
+    if(roh){
+      const e = JSON.parse(roh);
+      if(e && e.daten && JSON.stringify(e.daten) !== JSON.stringify(ppkDaten)){
+        ppkDaten = e.daten;
+        toast('Nicht hochgeladene PPK-Eingaben wiederhergestellt');
+        ppkSpeichernVerzoegert();
+      }
+    }
+  } catch(_){}
+  if(getCurrentProject() !== proj) return;
+  ppkZeichnen();
+}
+
+function ppkFeldHtml(fd, auto){
+  if(!ppkSichtbar(fd)) return '';
+  const dis = ppkDarfAendern() ? '' : ' disabled';
+  if(fd.t === 'titel') return `<div class="ab-breit ab-unter">${esc(fd.l)}</div>`;
+  if(fd.t === 'sig'){
+    return `<div class="ab-breit ppk-sig"><span class="ab-feld-titel">${esc(fd.l)}</span>
+      <canvas id="ppk-sig" width="600" height="160"></canvas>
+      <div class="ppk-sig-knoepfe"><span class="ab-klein">Mit Finger oder Maus unterschreiben – kommt ins Feld „Unterschrift“ und zur Stampiglie.</span>
+      <button type="button" class="btn btn-ghost ab-mini" onclick="ppkSigLoeschen()">Löschen</button></div></div>`;
+  }
+  if(fd.t === 'strang'){
+    const ids = ppkStraenge();
+    const zeilen = ids.slice(0, 12).map((id, i) => `<tr><td>${i + 1}</td><td>${esc(id)}</td><td class="z">${esc(APP_STATE[id].uoc || '—')}</td><td class="z">${esc(APP_STATE[id].isc || '—')}</td></tr>`).join('');
+    return `<div class="ab-breit"><table class="ab-tabelle"><thead><tr><th>Strang</th><th>Klemme</th><th class="z">Uoc (V)</th><th class="z">Isc (A)</th></tr></thead>
+      <tbody>${zeilen || '<tr><td colspan="4">Noch keine DC-Messwerte in der Matrix.</td></tr>'}</tbody></table>
+      <p class="ab-klein">${ids.length > 12 ? `Das Formular hat Platz für 12 Stränge – alle ${ids.length} Stränge kommen zusätzlich auf ein Beiblatt.` : 'Die Werte kommen automatisch aus der DC-Messung.'}</p></div>`;
+  }
+  if(fd.t === 'riso'){
+    const w = ppkStraenge().map(id => abZahl(APP_STATE[id].riso)).filter(v => v !== null);
+    if(!w.length) return '';
+    const min = Math.min(...w);
+    return `<div class="ab-breit ppk-hinweis">Kleinster DC-Isolationswert aus der Matrix: <strong>${String(min).replace('.', ',')} MΩ</strong>
+      ${dis ? '' : `<button type="button" class="btn btn-ghost ab-mini" onclick="ppkRisoUebernehmen('${min}')">für Plus/PE und Minus/PE übernehmen</button>`}</div>`;
+  }
+  const { v, auto: istAuto } = ppkWert(fd, auto);
+  const marke = istAuto ? '<em class="ppk-auto">aus Projekt</em>' : '';
+  if(fd.t === 'seg' || fd.t === 'pruef'){
+    const opts = fd.t === 'pruef' ? [['i. O.'], ['nicht i. O.']] : fd.o;
+    return `<div class="ab-feld${fd.o && fd.o.length > 3 ? ' ab-breit' : ''}"><span>${esc(fd.l)} ${marke}</span><div class="ppk-seg">${opts.map(([lab]) =>
+      `<button type="button" class="${v === lab ? 'an' : ''}" data-ppk-seg="${esc(fd.k)}" data-v="${esc(lab)}"${dis}>${esc(lab)}</button>`).join('')}</div></div>`;
+  }
+  if(fd.t === 'multi'){
+    const arr = Array.isArray(v) ? v : [];
+    return `<div class="ab-feld${fd.o.length > 2 ? ' ab-breit' : ''}"><span>${esc(fd.l)}</span><div class="ppk-chips">${fd.o.map(([lab]) =>
+      `<button type="button" class="${arr.includes(lab) ? 'an' : ''}" data-ppk-multi="${esc(fd.k)}" data-v="${esc(lab)}"${dis}>${esc(lab)}</button>`).join('')}</div></div>`;
+  }
+  if(fd.t === 'matrix'){
+    const m = (ppkDaten.w[fd.k] && typeof ppkDaten.w[fd.k] === 'object') ? ppkDaten.w[fd.k] : {};
+    return `<div class="ab-breit"><span class="ab-feld-titel">${esc(fd.l)}</span><div class="ppk-matrix"><table class="ab-tabelle"><thead><tr><th></th>${fd.spalten.map(s => `<th>${esc(s)}</th>`).join('')}</tr></thead><tbody>
+      ${fd.zeilen.map(([lab, boxen], zi) => `<tr><td>${esc(lab)}</td>${boxen.map((b, si) => `<td><button type="button" class="ppk-haken${m[zi + '_' + si] ? ' an' : ''}" data-ppk-mx="${fd.k}" data-zelle="${zi}_${si}"${dis} aria-pressed="${!!m[zi + '_' + si]}">${m[zi + '_' + si] ? '✓' : ''}</button></td>`).join('')}</tr>`).join('')}
+      </tbody></table></div><button type="button" class="btn btn-ghost ab-mini" data-ppk-mx-alle="${fd.k}"${dis}>Alle antippen</button></div>`;
+  }
+  const k = ppkFeldKey(fd);
+  if(fd.t === 'area'){
+    return `<label class="ab-feld ab-breit"><span>${esc(fd.l)} ${marke}</span><textarea class="sp-inp" rows="${fd.f.length}" data-ppk="${esc(k)}"${dis}>${esc(v)}</textarea></label>`;
+  }
+  const art = fd.t === 'date' ? 'date' : 'text';
+  const im = fd.t === 'num' ? ' inputmode="decimal"' : '';
+  return `<label class="ab-feld${fd.b ? ' ab-breit' : ''}"><span>${esc(fd.l)} ${marke}</span><input type="${art}" class="sp-inp${istAuto ? ' ppk-auto-feld' : ''}" data-ppk="${esc(k)}"${im} value="${esc(v)}"${dis}></label>`;
+}
+
+function ppkZeichnen(){
+  const box = g('ppk-inhalt');
+  const proj = getCurrentProject();
+  if(!box || !proj || !ppkDaten) return;
+  const offen = [...box.querySelectorAll('details.ab-kapitel')].map(d => d.open);
+  const hatteZustand = offen.length > 0;
+  const auto = ppkAuto();
+  let nr = 0;
+  box.innerHTML = `
+    <div class="ab-kopf">
+      <div><h1>PPK – AC-Prüfprotokoll</h1><p>${esc(proj.name)} · Förder-Vorlage „Prüfbefund“ nach ÖVE/ÖNORM E 8101</p>
+        <p class="ab-klein">Grau markierte Werte kommen automatisch aus dem Projekt und können überschrieben werden.</p></div>
+      <div class="ppk-kopf-rechts"><span class="ppk-status" id="ppk-status"></span>
+        <button type="button" class="btn btn-primary" onclick="ppkErstellen()">PPK erstellen (PDF)</button></div>
+    </div>
+    <div class="ab-status" id="ppk-meldung" hidden></div>
+    ${PPK_TEILE.map(t => `<div class="ppk-teil"><h2><span>${t.teil}</span>${esc(t.titel)}</h2>
+      ${t.abschnitte.map(a => { const i = nr++; return `<details class="ab-kapitel"${hatteZustand ? (offen[i] ? ' open' : '') : (i === 0 ? ' open' : '')}>
+        <summary><span class="ab-nr">${t.teil}${t.abschnitte.indexOf(a) + 1}</span>${esc(a.titel)}${a.optional ? '<span class="ab-sum-info">optional</span>' : ''}</summary>
+        <div class="ab-raster">${a.schnell && ppkDarfAendern() ? `<div class="ab-breit"><button type="button" class="btn btn-ghost ab-mini" data-ppk-schnell="${esc(t.teil)}|${esc(a.titel)}">Alle Punkte: ja / in Ordnung</button></div>` : ''}
+        ${a.felder.map(fd => ppkFeldHtml(fd, auto)).join('')}</div></details>`; }).join('')}</div>`).join('')}
+    <div class="ab-fuss"><button type="button" class="btn btn-primary" onclick="ppkErstellen()">PPK erstellen (PDF)</button></div>`;
+  ppkSigEinrichten();
+  ppkStatus();
+}
+
+// ── Eingaben ──────────────────────────────────────────────────────────────
+function ppkSetzen(k, v){ ppkDaten.w[k] = v; ppkSpeichernVerzoegert(); }
+document.addEventListener('input', e => {
+  const el = e.target;
+  if(!el || !el.dataset || !el.dataset.ppk || !el.closest || !el.closest('#ppk-inhalt') || !ppkDaten || !ppkDarfAendern()) return;
+  ppkDaten.w[el.dataset.ppk] = el.value;
+  el.classList.remove('ppk-auto-feld');
+  ppkSpeichernVerzoegert();
+});
+document.addEventListener('click', e => {
+  const t = e.target.closest ? e.target.closest('#ppk-inhalt [data-ppk-seg], #ppk-inhalt [data-ppk-multi], #ppk-inhalt [data-ppk-mx], #ppk-inhalt [data-ppk-mx-alle], #ppk-inhalt [data-ppk-schnell]') : null;
+  if(!t || !ppkDaten || !ppkDarfAendern()) return;
+  const w = ppkDaten.w;
+  if(t.dataset.ppkSeg){ const k = t.dataset.ppkSeg; w[k] = (w[k] === t.dataset.v) ? '' : t.dataset.v; }
+  else if(t.dataset.ppkMulti){ const k = t.dataset.ppkMulti; const a = Array.isArray(w[k]) ? w[k] : []; w[k] = a.includes(t.dataset.v) ? a.filter(x => x !== t.dataset.v) : [...a, t.dataset.v]; }
+  else if(t.dataset.ppkMx){ const k = t.dataset.ppkMx; const m = (w[k] && typeof w[k] === 'object') ? w[k] : {}; m[t.dataset.zelle] = !m[t.dataset.zelle]; w[k] = m; }
+  else if(t.dataset.ppkMxAlle){ const k = t.dataset.ppkMxAlle; const m = {}; for(let z = 0; z < 3; z++) for(let s = 0; s < 4; s++) m[z + '_' + s] = true; w[k] = m; }
+  else if(t.dataset.ppkSchnell){
+    const [teil, titel] = t.dataset.ppkSchnell.split('|');
+    const ab = PPK_TEILE.find(x => x.teil === teil).abschnitte.find(x => x.titel === titel);
+    ab.felder.forEach(fd => {
+      if(fd.t === 'pruef') w[fd.k] = 'i. O.';
+      else if(fd.t === 'seg'){ const pos = fd.o.find(([lab]) => lab === 'in Ordnung' || lab === 'ja' || lab === 'vorhanden'); if(pos) w[fd.k] = pos[0]; }
+    });
+  }
+  ppkSpeichernVerzoegert();
+  ppkZeichnen();
+});
+function ppkRisoUebernehmen(min){
+  const v = String(min).replace('.', ',');
+  ppkDaten.w['PlusPE'] = v; ppkDaten.w['MinusPE'] = v;
+  ppkSpeichernVerzoegert(); ppkZeichnen();
+}
+
+// Unterschrift
+function ppkSigEinrichten(){
+  const c = g('ppk-sig');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.strokeStyle = '#1e3a8a';
+  if(ppkDaten.sig){ const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, c.width, c.height); img.src = ppkDaten.sig; }
+  if(!ppkDarfAendern()) return;
+  let zieht = false;
+  const pos = e => { const r = c.getBoundingClientRect(); const p = e.touches ? e.touches[0] : e; return [(p.clientX - r.left) * c.width / r.width, (p.clientY - r.top) * c.height / r.height]; };
+  const start = e => { zieht = true; const [x, y] = pos(e); ctx.beginPath(); ctx.moveTo(x, y); e.preventDefault(); };
+  const zug = e => { if(!zieht) return; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); e.preventDefault(); };
+  const ende = () => { if(!zieht) return; zieht = false; ppkDaten.sig = c.toDataURL('image/png'); ppkSpeichernVerzoegert(); };
+  c.addEventListener('mousedown', start); c.addEventListener('mousemove', zug); window.addEventListener('mouseup', ende);
+  c.addEventListener('touchstart', start, { passive: false }); c.addEventListener('touchmove', zug, { passive: false }); c.addEventListener('touchend', ende);
+}
+function ppkSigLoeschen(){
+  const c = g('ppk-sig');
+  if(c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  if(ppkDaten){ delete ppkDaten.sig; ppkSpeichernVerzoegert(); }
+}
+
+// Speichern
+function ppkStatus(t){
+  const el = g('ppk-status');
+  if(el) el.textContent = t !== undefined ? t : (ppkOffen ? 'Wird gespeichert …' : 'Alles gespeichert');
+}
+function ppkSpeichernVerzoegert(){
+  const proj = getCurrentProject();
+  if(!proj || !ppkDaten) return;
+  ppkOffen = true;
+  try { localStorage.setItem(PPK_SCHLUESSEL(proj.id), JSON.stringify({ daten: ppkDaten, at: new Date().toISOString() })); } catch(_){}
+  ppkStatus();
+  clearTimeout(ppkTimer);
+  ppkTimer = setTimeout(() => ppkHochladen(proj.id), 900);
+}
+async function ppkHochladen(pid){
+  if(!supabaseClient || !currentUser || pid !== CURRENT_PROJECT_ID || !ppkDaten) return;
+  const gesendet = JSON.stringify(ppkDaten);
+  try {
+    const { error } = await supabaseClient.from('pv_ppk').upsert({ project_id: pid, daten: ppkDaten, updated_at: new Date().toISOString() });
+    if(error) throw error;
+    if(JSON.stringify(ppkDaten) === gesendet){
+      ppkOffen = false;
+      try { localStorage.removeItem(PPK_SCHLUESSEL(pid)); } catch(_){}
+    }
+    ppkStatus();
+  } catch(e){
+    console.warn('PPK speichern:', e);
+    ppkStatus('Offline – auf dem Gerät gesichert');
+    clearTimeout(ppkTimer);
+    ppkTimer = setTimeout(() => ppkHochladen(pid), 30000);
+  }
+}
+window.addEventListener('online', () => { if(ppkOffen && CURRENT_PROJECT_ID) ppkHochladen(CURRENT_PROJECT_ID); });
+
+// ── PDF: Original-Vorlage ausfuellen ──────────────────────────────────────
+function ppkDatum(v){
+  const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : String(v || '');
+}
+async function ppkErstellen(){
+  if(!darf('ppk')) return toast('Keine Berechtigung');
+  const proj = getCurrentProject();
+  if(!proj || !ppkDaten) return toast('Bitte zuerst ein Projekt öffnen');
+  const meld = t => { const el = g('ppk-meldung'); if(el){ el.hidden = !t; el.textContent = t || ''; } };
+  const hinweise = [];
+  try {
+    meld('Vorlage wird geladen …');
+    const L = await abPdfLibLaden();
+    const r = await fetch(PPK_VORLAGE);
+    if(!r.ok) throw new Error('Vorlage nicht gefunden');
+    const pdf = await L.PDFDocument.load(new Uint8Array(await r.arrayBuffer()));
+    const form = pdf.getForm();
+    const font = await pdf.embedFont(L.StandardFonts.Helvetica);
+    const auto = ppkAuto();
+    const text = (name, v) => {
+      if(v === undefined || v === null || String(v).trim() === '') return;
+      try {
+        const tf = form.getTextField(name);
+        let s = abPdfText(String(v));
+        const max = tf.getMaxLength ? tf.getMaxLength() : undefined;
+        if(max && s.length > max) s = s.slice(0, max);
+        try { tf.setFontSize(9); } catch(_){}
+        tf.setText(s);
+      } catch(e){ hinweise.push(`Feld „${name}“`); }
+    };
+    const haken = name => { try { form.getCheckBox(name).check(); } catch(e){ hinweise.push(`Kästchen „${name}“`); } };
+
+    PPK_TEILE.forEach(t => t.abschnitte.forEach(a => a.felder.forEach(fd => {
+      if(!ppkSichtbar(fd)) return;
+      const { v } = ppkWert(fd, auto);
+      if(fd.t === 'text' || fd.t === 'num') text(fd.f, v);
+      else if(fd.t === 'date') text(fd.f, ppkDatum(v));
+      else if(fd.t === 'area'){ const z = String(v || '').split('\n'); fd.f.forEach((n, i) => text(n, i < fd.f.length - 1 ? z[i] : z.slice(i).join(' '))); }
+      else if(fd.t === 'seg'){ const o = fd.o.find(([lab]) => lab === v); if(o) haken(o[1]); }
+      else if(fd.t === 'multi'){ (Array.isArray(v) ? v : []).forEach(x => { const o = fd.o.find(([lab]) => lab === x); if(o) haken(o[1]); }); }
+      else if(fd.t === 'pruef'){ if(v === 'i. O.' || v === 'nicht i. O.'){ haken(fd.an); haken(v === 'i. O.' ? fd.io[0] : fd.io[1]); } }
+      else if(fd.t === 'matrix'){ const m = ppkDaten.w[fd.k] || {}; fd.zeilen.forEach(([, boxen], zi) => boxen.forEach((b, si) => { if(m[zi + '_' + si]) haken(cbx(b)); })); }
+    })));
+    // Kopfzeilen der Folgeseiten
+    const kopf = { betreiber: ppkWert({ f: 'Anlagenbetreiber', a: 'betreiber' }, auto).v, adresse: ppkWert({ f: 'Anlagenadresse', a: 'adresse' }, auto).v,
+      tel: ppkWert({ f: 'TelefonNr', a: 'telefon' }, auto).v, befund: ppkWert({ f: 'Zu Befund Nr' }, auto).v };
+    ['_2', '_3'].forEach(s => { text('Anlagenbetreiber' + s, kopf.betreiber); text('Anlagenadresse' + s, kopf.adresse); text('TelefonNr' + s, kopf.tel); });
+    text('Zu Befund Nr_2', kopf.befund);
+    // Kaestchen, die an einem Wert haengen
+    const w = ppkDaten.w;
+    if(ppkWert({ f: 'Anzahl WR', a: 'wr_anzahl' }, auto).v) haken(cbx(60));
+    if(w.trenntrafo) haken(cbx(63));
+    if(w['Nennspg']) haken(cbx(118));
+    if(w['Absicherung']) haken(cbx(119));
+    // Strangmessung (Formular: 12 Straenge)
+    const ids = ppkStraenge();
+    const uFeld = ['1_3', '2_2', '3_3', '4_2', '5', '6', '7', '8', '9', '10', '11', '12_2'];
+    const iFeld = ['1_4', '2_3', '3_4', '4_3', '5_2', '6_2', '7_2', '8_2', '9_2', '10_2', '11_2', '12_3'];
+    ids.slice(0, 12).forEach((id, i) => { text(uFeld[i], APP_STATE[id].uoc); text(iFeld[i], APP_STATE[id].isc); });
+
+    form.updateFieldAppearances(font);
+    // Befund-Seite VOR dem Entfernen holen – pdf-lib zaehlt die Seiten danach
+    // nicht sofort neu, sonst landet die Unterschrift auf der falschen Seite.
+    const befund = pdf.getPage(2);
+    pdf.removePage(0);   // Seite 1 = Info der Foerderstelle, gehoert nicht zum Protokoll
+
+    // Unterschrift und Stampiglie auf dem Befund (Seite 2 der Vorlage)
+    let sig = null;
+    if(ppkDaten.sig){ try { sig = await pdf.embedPng(ppkDaten.sig); } catch(_){} }
+    let stempel = null;
+    const stK = abKatalog.find(k => k.kategorie === 'stempel' && k.pfad && /image/.test(k.mime || ''));
+    if(stK){ try { stempel = await abBildEinbetten(pdf, await abBytes(await abDateiLink(stK.pfad))); } catch(_){ hinweise.push('Firmenstempel'); } }
+    const setze = (img, x, y, mw, mh) => { const s = Math.min(mw / img.width, mh / img.height); befund.drawImage(img, { x, y, width: img.width * s, height: img.height * s }); };
+    if(sig){ setze(sig, 360, 356, 190, 34); setze(sig, 460, 174, 110, 60); }
+    if(stempel) setze(stempel, 330, 174, 125, 85);
+
+    // Beiblatt, wenn mehr als 12 Straenge
+    if(ids.length > 12){
+      const fR = font, fB = await pdf.embedFont(L.StandardFonts.HelveticaBold);
+      const doc = new AbPdf(L, pdf, fR, fB, `Beiblatt zum Prüfbefund · ${proj.name}`);
+      doc.seite();
+      doc.text('Beiblatt: Messung der einzelnen Stränge', doc.rl, doc.y - 6, 14, fB); doc.y -= 28;
+      doc.hinweis(`Ergänzung zu Abschnitt 3.2.3 (Funktionsprüfung) – alle ${ids.length} Stränge.`);
+      doc.tabelle([{ t: 'Strang', w: 10, r: 1 }, { t: 'Klemme', w: 16 }, { t: 'Module', w: 12, r: 1 }, { t: 'Uoc (V)', w: 16, r: 1 }, { t: 'Isc (A)', w: 16, r: 1 }, { t: 'Riso (MOhm)', w: 16, r: 1 }],
+        ids.map((id, i) => [String(i + 1), id, String(APP_STATE[id].mod || ''), APP_STATE[id].uoc || '—', APP_STATE[id].isc || '—', APP_STATE[id].riso || '—']));
+    }
+
+    pdf.setTitle(`Prüfbefund ${proj.name || ''}`);
+    pdf.setCreator('SOLPRO Messtool');
+    const bytes = await pdf.save();
+    window.__ppkLetztesPdf = bytes;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    a.download = `PPK_${String(proj.name || 'Projekt').replace(/[^\wäöüÄÖÜß.-]+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    meld(hinweise.length ? `Fertig – nicht ausgefüllt: ${hinweise.slice(0, 5).join(', ')}${hinweise.length > 5 ? ' …' : ''}` : `Fertig – ${pdf.getPageCount()} Seiten`);
+    toast('PPK erstellt');
+  } catch(e){
+    meld('');
+    toastError('PPK konnte nicht erstellt werden', e);
+  }
 }

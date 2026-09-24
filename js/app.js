@@ -725,7 +725,7 @@ function istGeschuetzt(p){ return !!(p && (p.geschuetzt || p.locked || p.signatu
 // Diese Schluessel gehoeren nicht zum Anlagenplan, sondern sind Metadaten
 // im selben config-Feld. Sie stehen an EINER Stelle, damit beim Speichern
 // nie wieder einer vergessen wird.
-const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt', '_beschreibung', '_anlagenbuch', '_modul', '_archiviert', '_papierkorb'];
+const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt', '_beschreibung', '_anlagenbuch', '_modul', '_archiviert', '_papierkorb', '_messung'];
 
 function buildProjectConfig(proj, fallbackEmail){
   const cfg = {};
@@ -739,6 +739,7 @@ function buildProjectConfig(proj, fallbackEmail){
   if(proj.modul_komp) cfg._modul = proj.modul_komp;
   if(proj.archiviert) cfg._archiviert = proj.archiviert;
   if(proj.papierkorb) cfg._papierkorb = proj.papierkorb;
+  if(proj.messung) cfg._messung = proj.messung;
   // Unterschriften werden NIE weggeschrieben, auch nicht im entsperrten
   // Zustand. Das war die Stelle, an der beim Entsperren alles verschwand.
   if(proj.signature) cfg._signature = proj.signature;
@@ -4403,11 +4404,11 @@ function printBlankMeasurementSheet(){
     const pageNumHtml = pageEntries.length > 1
       ? `<div style="text-align:right;font-size:8pt;color:#a1a1aa;margin-top:4px;">Seite ${idx + 1} von ${pageEntries.length}</div>`
       : '';
-    pagesHtml += `<div class="sheet"><div class="header"><div><div class="brand">SOLPRO</div><div class="title">DC-Strangmessung / Inbetriebnahme</div></div><div class="meta"><div class="meta-row"><span>Projekt:</span> <strong>${proj.name}</strong></div><div class="meta-row"><span>Datum:</span> <strong>${dateStr}</strong></div><div class="meta-row"><span>Wechselrichter:</span> <strong>WR ${wr}</strong></div><div class="meta-row"><span>Prüfer:</span> <strong>${prueferName}</strong></div></div></div><div class="env-zone"><div class="env-box"><div class="env-label">Einstrahlung (W/m²)</div></div><div class="env-box"><div class="env-label">Modultemperatur (°C)</div></div><div class="env-box" style="flex: 1.5;"><div class="env-label">Eingesetztes Messgerät (Typ / S/N)</div></div></div><table><thead><tr><th style="width:10%;">Klemme</th><th style="width:14%;">GAK</th><th style="width:7%;">Mods</th><th style="width:12%;">Uoc (V)</th><th style="width:12%;">Isc (A)</th><th style="width:13%;">Riso (MΩ)</th><th style="width:32%;">Bemerkung</th></tr></thead><tbody>${rowsHtml}</tbody></table>${lockStampHtml}<div class="footer">${pruferSigBoxHtml}${abnahmeSigBoxHtml}</div>${pageNumHtml}</div>`;
+    pagesHtml += `<div class="sheet"><div class="header"><div><div class="brand">SOLPRO</div><div class="title">DC-Strangmessung / Inbetriebnahme</div></div><div class="meta"><div class="meta-row"><span>Projekt:</span> <strong>${proj.name}</strong></div><div class="meta-row"><span>Datum:</span> <strong>${dateStr}</strong></div><div class="meta-row"><span>Wechselrichter:</span> <strong>WR ${wr}</strong></div><div class="meta-row"><span>Prüfer:</span> <strong>${prueferName}</strong></div></div></div><div class="env-zone"><div class="env-box"><div class="env-label">Eingesetztes Messgerät (Typ / S/N)</div><div class="env-wert">${esc(messungGeraetText(proj))}</div></div></div><table><thead><tr><th style="width:10%;">Klemme</th><th style="width:14%;">GAK</th><th style="width:7%;">Mods</th><th style="width:12%;">Uoc (V)</th><th style="width:12%;">Isc (A)</th><th style="width:13%;">Riso (MΩ)</th><th style="width:32%;">Bemerkung</th></tr></thead><tbody>${rowsHtml}</tbody></table>${lockStampHtml}<div class="footer">${pruferSigBoxHtml}${abnahmeSigBoxHtml}</div>${pageNumHtml}</div>`;
   });
   if(pagesHtml === '') { toast('Keine aktiven Strings!'); win.close(); return; }
   
-  win.document.write(`<!DOCTYPE html><html><head><title>Messblatt ${proj.name}</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"><style>@page { size: A4 landscape; margin: 12mm; } body { font-family: 'Inter', sans-serif; color: #18181b; background: #fff; margin:0; padding:0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .sheet { page-break-after: always; display: flex; flex-direction: column; min-height: calc(100vh - 24mm); } .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #18181b; padding-bottom: 12px; margin-bottom: 24px; } .brand { font-size: 20pt; font-weight: 900; color: #16a34a; letter-spacing: -0.05em; margin-bottom: 4px; text-transform: uppercase; } .title { font-size: 14pt; font-weight: 700; color: #3f3f46; text-transform: uppercase; } .meta { display: grid; grid-template-columns: 1fr 1fr; column-gap: 30px; row-gap: 6px; font-size: 10pt; color: #3f3f46; } .meta-row { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dotted #e4e4e7; } .meta-row span { color: #71717a; } .env-zone { display: flex; gap: 20px; margin-bottom: 24px; } .env-box { flex: 1; border: 2px solid #e4e4e7; border-radius: 8px; position: relative; height: 50px; background: #fafafa; } .env-label { position: absolute; top: -8px; left: 12px; background: #fff; padding: 0 6px; font-size: 8pt; font-weight: 700; color: #a1a1aa; text-transform: uppercase; } table { width: 100%; border-collapse: collapse; margin-bottom: auto; } th { background: #f4f4f5; border: 1px solid #d4d4d8; padding: 10px 8px; font-size: 9pt; font-weight: 700; text-transform: uppercase; color: #52525b; } td { border: 1px solid #d4d4d8; padding: 12px 8px; text-align: center; font-size: 11pt; color: #18181b; } tr:nth-child(even) td { background-color: #fafafa; } .write-line { height: 20px; border-bottom: 2px solid #a1a1aa; width: 70%; margin: 0 auto; } .footer { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 10px; } .sig-box { width: 260px; text-align: center; font-size: 9pt; color: #71717a; text-transform: uppercase;} .sig-line { border-bottom: 1px solid #18181b; height: 30px; margin-bottom: 6px; }</style></head><body onload="setTimeout(()=>{window.print();}, 500)" onafterprint="setTimeout(()=>{window.close();}, 100)">${pagesHtml}</body></html>`);
+  win.document.write(`<!DOCTYPE html><html><head><title>Messblatt ${proj.name}</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"><style>@page { size: A4 landscape; margin: 12mm; } body { font-family: 'Inter', sans-serif; color: #18181b; background: #fff; margin:0; padding:0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .sheet { page-break-after: always; display: flex; flex-direction: column; min-height: calc(100vh - 24mm); } .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #18181b; padding-bottom: 12px; margin-bottom: 24px; } .brand { font-size: 20pt; font-weight: 900; color: #16a34a; letter-spacing: -0.05em; margin-bottom: 4px; text-transform: uppercase; } .title { font-size: 14pt; font-weight: 700; color: #3f3f46; text-transform: uppercase; } .meta { display: grid; grid-template-columns: 1fr 1fr; column-gap: 30px; row-gap: 6px; font-size: 10pt; color: #3f3f46; } .meta-row { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dotted #e4e4e7; } .meta-row span { color: #71717a; } .env-zone { display: flex; gap: 20px; margin-bottom: 24px; } .env-box { flex: 1; border: 2px solid #e4e4e7; border-radius: 8px; position: relative; height: 50px; background: #fafafa; } .env-label { position: absolute; top: -8px; left: 12px; background: #fff; padding: 0 6px; font-size: 8pt; font-weight: 700; color: #a1a1aa; text-transform: uppercase; } .env-wert { padding: 16px 14px 0; font-size: 11pt; font-weight: 600; } table { width: 100%; border-collapse: collapse; margin-bottom: auto; } th { background: #f4f4f5; border: 1px solid #d4d4d8; padding: 10px 8px; font-size: 9pt; font-weight: 700; text-transform: uppercase; color: #52525b; } td { border: 1px solid #d4d4d8; padding: 12px 8px; text-align: center; font-size: 11pt; color: #18181b; } tr:nth-child(even) td { background-color: #fafafa; } .write-line { height: 20px; border-bottom: 2px solid #a1a1aa; width: 70%; margin: 0 auto; } .footer { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 10px; } .sig-box { width: 260px; text-align: center; font-size: 9pt; color: #71717a; text-transform: uppercase;} .sig-line { border-bottom: 1px solid #18181b; height: 30px; margin-bottom: 6px; }</style></head><body onload="setTimeout(()=>{window.print();}, 500)" onafterprint="setTimeout(()=>{window.close();}, 100)">${pagesHtml}</body></html>`);
   win.document.close();
 }
 
@@ -4445,6 +4446,7 @@ async function fetchProjectsFromCloud(){
           modul_komp: cloudConfig._modul || null,
           archiviert: cloudConfig._archiviert || null,
           papierkorb: cloudConfig._papierkorb || null,
+          messung: cloudConfig._messung || null,
           model_wp: cloudProj.modul_wp || 465, 
           plan: planOnly, 
           locked: !!lockMeta.locked,
@@ -5506,6 +5508,7 @@ function druckePruefprotokoll(optionen = {}){
   .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 16px; margin: 14px 0; }
   .meta div span { display: block; color: #6b6b73; font-size: 7.5pt; }
   .meta div strong { font-weight: 600; }
+  .meta .breit { grid-column: span 2; }
   .kacheln { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px; }
   .kachel { border: 1px solid #e4e4e7; border-radius: 6px; padding: 8px 10px; border-top: 3px solid var(--f, #93BD14); }
   .kachel b { display: block; font-size: 14pt; font-variant-numeric: tabular-nums; }
@@ -5571,6 +5574,8 @@ function druckePruefprotokoll(optionen = {}){
     <div><span>Anlagenleistung aktiv</span><strong>${kwp} kWp</strong></div>
     <div><span>Prüfer</span><strong>${esc(pruefer)}</strong></div>
     <div><span>Erstellt am</span><strong>${heute}</strong></div>
+    <div class="breit"><span>Messgerät</span><strong>${esc(messungGeraetText(proj) || '—')}</strong></div>
+    ${proj.messung && proj.messung.upruef ? `<div><span>Prüfspannung Riso</span><strong>${esc(proj.messung.upruef)} V</strong></div>` : ''}
   </div>
   ${(beschreibung || fotoUrl) ? `<div class="projekt${fotoUrl ? ' mit-foto' : ''}">
     ${beschreibung ? `<div class="projekt-text"><span>Projektbeschreibung</span><p>${esc(beschreibung)}</p></div>` : ''}
@@ -5648,6 +5653,10 @@ async function pruefprotokollDialog(){
   if(!proj) return toast('Bitte zuerst ein Projekt öffnen');
   const pid = proj.id;
   const darfAendern = typeof fotoDarfAendern === 'function' ? fotoDarfAendern() : true;
+  const darfMessung = canEditMeasurement();
+  if(!abFirma && (darf('ppk') || darf('anlagenbuch') || darf('katalog'))){ try { await abFirmaLaden(); } catch(_){} }
+  const mgListe = messgeraeteListe();
+  const mgAkt = (proj.messung && proj.messung.geraet) || {};
   let gewaehlt = null;          // Pfad des gewaehlten Fotos, '' = kein Foto
   let fotos = [];
 
@@ -5658,6 +5667,15 @@ async function pruefprotokollDialog(){
       <label class="ppd-label" for="ppd-text">Projektbeschreibung <span>optional</span></label>
       <textarea id="ppd-text" class="sp-inp ppd-text" rows="4" maxlength="800"
         placeholder="z. B. Aufdachanlage Halle 3, 3 Wechselrichter, DC-Messung zur Inbetriebnahme"></textarea>
+      <span class="ppd-label">Messgerät <span>steht im Protokoll</span></span>
+      ${mgListe.length ? `<select id="ppd-mg" class="sp-inp ppd-mg-wahl"${darfMessung ? '' : ' disabled'}><option value="">– aus der Messgeräte-Liste übernehmen –</option>
+        ${mgListe.map(m => `<option value="${esc(m.id)}">${esc(messgeraetName(m))}</option>`).join('')}</select>` : ''}
+      <div class="ppd-mg">
+        <input id="ppd-mg-h" class="sp-inp" placeholder="Hersteller" value="${esc(mgAkt.hersteller || '')}"${darfMessung ? '' : ' readonly'}>
+        <input id="ppd-mg-t" class="sp-inp" placeholder="Typ" value="${esc(mgAkt.typ || '')}"${darfMessung ? '' : ' readonly'}>
+        <input id="ppd-mg-sn" class="sp-inp" placeholder="Seriennummer" value="${esc(mgAkt.sn || '')}"${darfMessung ? '' : ' readonly'}>
+        <label class="ppd-mg-kal"><span>Kalibriert am</span><input id="ppd-mg-kal" type="date" class="sp-inp" value="${esc(mgAkt.kal || '')}"${darfMessung ? '' : ' readonly'}></label>
+      </div>
       <div class="ppd-foto-kopf">
         <span class="ppd-label">Anlagenfoto <span>optional</span></span>
         <button type="button" class="btn btn-ghost ppd-neu">${ICON.camera} Foto aufnehmen / wählen</button>
@@ -5670,6 +5688,15 @@ async function pruefprotokollDialog(){
       </div>
     </div>`;
   const ta = ov.querySelector('#ppd-text');
+  const mgWahl = ov.querySelector('#ppd-mg');
+  if(mgWahl) mgWahl.addEventListener('change', () => {
+    const m = mgListe.find(x => x.id === mgWahl.value);
+    if(!m) return;
+    ov.querySelector('#ppd-mg-h').value = m.hersteller || '';
+    ov.querySelector('#ppd-mg-t').value = m.typ || '';
+    ov.querySelector('#ppd-mg-sn').value = m.sn || '';
+    ov.querySelector('#ppd-mg-kal').value = m.kal || '';
+  });
   const liste = ov.querySelector('.ppd-fotos');
   const neuBtn = ov.querySelector('.ppd-neu');
   ta.value = proj.beschreibung || '';
@@ -5725,10 +5752,20 @@ async function pruefprotokollDialog(){
     if(!win) return toast('Popup wurde blockiert – bitte Popups für diese Seite erlauben');
     win.document.write('<p style="font-family:system-ui,sans-serif;padding:24px;color:#6b6b73">Protokoll wird erstellt …</p>');
     const text = ta.value.trim();
+    let speichern = false;
     if(darfAendern && text !== (proj.beschreibung || '')){
       proj.beschreibung = text;
-      saveProjectToCloud(pid, true);
+      speichern = true;
     }
+    if(darfMessung){
+      const v = id => ov.querySelector(id).value.trim();
+      const neu = { hersteller: v('#ppd-mg-h'), typ: v('#ppd-mg-t'), sn: v('#ppd-mg-sn'), kal: v('#ppd-mg-kal') };
+      if(JSON.stringify(neu) !== JSON.stringify({ hersteller: mgAkt.hersteller || '', typ: mgAkt.typ || '', sn: mgAkt.sn || '', kal: mgAkt.kal || '' })){
+        proj.messung = { ...(proj.messung || {}), geraet: (neu.hersteller || neu.typ || neu.sn) ? neu : null };
+        speichern = true;
+      }
+    }
+    if(speichern){ proj.updated_at = new Date().toISOString(); saveProjectsLocal(); saveProjectToCloud(pid, true); }
     const foto = fotos.find(f => f.pfad === gewaehlt);
     schliessen();
     (async () => {
@@ -5928,7 +5965,6 @@ const AB_KAPITEL = [
     ['pruefung.datum', 'Prüfdatum', 'date'], ['pruefung.pruefer', 'Prüfer'],
     ['@messgeraet', 'Messgerät aus der Liste'],
     ['pruefung.geraet', 'Messgerät (Hersteller, Typ, Seriennummer)'], ['pruefung.kalibrierung', 'Kalibriert am', 'date'],
-    ['pruefung.temperatur', 'Modultemperatur (°C, optional)', 'num'],
     ['pruefung.wetter', 'Witterung', 'text', 'z. B. sonnig, wolkenlos'],
     ['pruefung.besichtigung', 'Besichtigung', 'select', AB_ERGEBNIS],
     ['pruefung.erprobung', 'Erprobung', 'select', AB_ERGEBNIS],
@@ -6060,6 +6096,14 @@ function abWrVorschlaege(){
   });
   // Modul aus der Matrix uebernehmen, solange im Anlagenbuch keins gewaehlt ist
   const proj = getCurrentProject();
+  // Messgeraet und Pruefdatum aus der DC-Messung des Projekts
+  const ms = proj && proj.messung;
+  if(ms && ms.geraet && !abWert('pruefung.geraet')){
+    abSetzen('pruefung.geraet', messungGeraetText(proj, true));
+    if(ms.geraet.kal && !abWert('pruefung.kalibrierung')) abSetzen('pruefung.kalibrierung', ms.geraet.kal);
+    geaendert = true;
+  }
+  if(ms && ms.datum && !abWert('pruefung.datum')){ abSetzen('pruefung.datum', ms.datum); geaendert = true; }
   if(proj && proj.modul_komp && abKomp(proj.modul_komp) && !(abDaten.modul && abDaten.modul.komponente)){
     abSetzen('modul.komponente', proj.modul_komp); geaendert = true;
   }
@@ -6865,7 +6909,7 @@ async function anlagenbuchErstellen(){
         kap(k.titel);
         doc.ueberschrift('Prüfbedingungen');
         doc.kv([['Prüfdatum', datum(pr.datum)], ['Prüfer', pr.pruefer], ['Messgerät', pr.geraet], ['Kalibriert am', datum(pr.kalibrierung)],
-          ['Modultemperatur', pr.temperatur ? `${pr.temperatur} °C` : ''], ['Witterung', pr.wetter]]);
+          ['Witterung', pr.wetter]]);
         doc.ueberschrift('Erstprüfung – Besichtigung, Erprobung, Messung');
         doc.tabelle([{ t: 'Prüfpunkt', w: 50 }, { t: 'Messwert', w: 25 }, { t: 'Ergebnis', w: 25 }], [
           ['Besichtigung', '', erg(pr.besichtigung)],
@@ -6877,13 +6921,13 @@ async function anlagenbuchErstellen(){
           ['Leerlaufspannung Uoc / Kurzschlussstrom Isc', `${fertig} von ${aktive.length} Strings`, erg(messungAuto)]
         ]);
         if(pr.bemerkung){ doc.ueberschrift('Bemerkungen'); doc.absatz(pr.bemerkung); }
-        // Kontrollberechnung: Soll-Uoc = Module x Uoc(STC), optional temperaturkorrigiert
-        const uocM = abZahl(md.uoc), tk = abZahl(md.tk_uoc), T = abZahl(pr.temperatur);
-        const tFaktor = (tk !== null && T !== null) ? (1 + tk / 100 * (T - 25)) : 1;
+        // Kontrollberechnung: Soll-Uoc = Module x Uoc(STC) – ohne Temperaturkorrektur (wird nicht gemessen)
+        const uocM = abZahl(md.uoc);
+        const tFaktor = 1;
         const mitSoll = uocM !== null;
         doc.ueberschrift('Messwerte je Wechselrichter');
         doc.hinweis(mitSoll
-          ? `Kontrollberechnung: Soll-Uoc = Modulanzahl × Uoc(STC) ${tk !== null && T !== null ? `× Temperaturkorrektur (${fmt(tk)} %/K, ${T} °C)` : '(ohne Temperaturkorrektur)'}. Abweichungen über 10 % sind markiert.`
+          ? 'Kontrollberechnung: Soll-Uoc = Modulanzahl × Uoc(STC). Abweichungen über 10 % sind markiert.'
           : 'Für die Kontrollberechnung im Katalog beim Solarmodul Uoc hinterlegen.');
         wrNrn.forEach(wr => {
           const ids = aktive.filter(id => id.split('.')[0] === String(wr));
@@ -7539,7 +7583,7 @@ const PPK_TEILE = [
     { titel: 'Strangmessung (aus der Matrix)', felder: [
       { t: 'strang' },
       { t: 'num', f: 'Betriebsstrom', l: 'Solargenerator-Gesamtstrom (A)' }, { t: 'num', f: 'Betriebsspannung', l: 'Betriebsspannung (V)' },
-      { t: 'num', f: 'Temperatur', l: 'Temperatur (°C)', a: 'temp' }, { t: 'text', f: 'Witterung', l: 'Witterung', a: 'wetter' }
+      { t: 'text', f: 'Witterung', l: 'Witterung', a: 'wetter' }
     ]},
     { titel: 'Isolationswiderstand Wechselstromseite', felder: [
       { t: 'num', f: 'UPrüf_3', l: 'Prüfspannung (V)' },
@@ -7608,7 +7652,7 @@ function ppkAuto(){
     ues_dc_lief: kd(udc).lieferant, ues_dc_db: udc && udc.pfad ? 'ja' : '',
     dc_typ: kb.dc_typ, dc_qs: kb.dc_querschnitt ? `${kb.dc_querschnitt} mm²` : '', dc_verl: kb.dc_verlegung,
     dc_frei: ppkEinzeilig(ab.schalter && ab.schalter.dc),
-    temp: ab.pruefung && ab.pruefung.temperatur, wetter: ab.pruefung && ab.pruefung.wetter
+    wetter: ab.pruefung && ab.pruefung.wetter, u_pruef: proj && proj.messung && proj.messung.upruef
   };
   // Messgeraete: eigene Auswahl, sonst das erste Geraet der Liste
   [1, 2].forEach(n => {
@@ -7649,6 +7693,7 @@ const PPK_FELD_ZUSATZ = {
   'Ort Freischalteinrichtung In unmittelbarer Nähe der Module empfohlen': ['ort_dc_frei'],
   'Einbauten': ['gak'], 'Schutzart': ['schutzart'], 'Aufstellungsort_2': ['ort_technik'],
   'Lieferant_7': [null, 'ues_dc_lief'], 'Klasse_2': ['ues_klasse'], 'Type_7': [null, 'ues_dc_typ'], 'IIMP_2': ['ues_iimp', 'ues_dc_iimp'],
+  'UPrüf': [null, 'u_pruef'],
   'IN_2': ['ues_in', 'ues_dc_in'], 'UC_2': ['ues_uc_dc', 'ues_dc_uc'], 'Montageort_2': ['ues_ort'],
   'Hersteller_5': [null, 'mg1_h'], 'Type_8': [null, 'mg1_t'], 'Seriennummer': [null, 'mg1_sn'],
   'Hersteller_6': [null, 'mg2_h'], 'Type_9': [null, 'mg2_t'], 'Seriennummer_2': [null, 'mg2_sn'],
@@ -8308,7 +8353,12 @@ document.addEventListener('input', e => {
 function ppkMessgeraet(n){
   const v = ppkDaten && ppkDaten.w ? ppkDaten.w['_mg' + n] : undefined;
   const liste = messgeraeteListe();
-  if(v === undefined) return n === 1 ? liste[0] || null : null;
+  if(v === undefined){
+    if(n !== 1) return null;
+    const p = getCurrentProject();
+    const eigen = p && p.messung && p.messung.geraet;   // Geraet der DC-Messung dieses Projekts
+    return eigen ? (liste.find(m => m.sn && m.sn === eigen.sn) || { id: '_projekt', ...eigen }) : (liste[0] || null);
+  }
   return liste.find(m => m.id === v) || null;
 }
 function ppkMessHtml(){
@@ -8447,4 +8497,162 @@ function papierkorbHtml(ids){
           ${!istGeschuetzt(p) || currentUserRole === 'admin' ? `<button type="button" class="btn btn-primary" onclick="projektWiederherstellen('${id}')">Wiederherstellen</button>` : '<span class="ab-klein">Wiederherstellen kann nur der Admin.</span>'}
           ${currentUserRole === 'admin' && !istGeschuetzt(p) ? `<button type="button" class="btn btn-ghost ab-gefahr" onclick="projektEndgueltigLoeschen('${id}')">Endgültig löschen</button>` : ''}
         </div></div>`; }).join('');
+}
+
+// ── Messgeraet des Projekts ───────────────────────────────────────────────
+function messungGeraetText(p, ohneKal){
+  const m = p && p.messung && p.messung.geraet;
+  if(!m) return '';
+  const t = [[m.hersteller, m.typ].filter(Boolean).join(' '), m.sn ? `SN ${m.sn}` : ''].filter(Boolean).join(', ');
+  if(ohneKal || !m.kal) return t;
+  const d = new Date(m.kal);
+  return `${t} · kalibriert ${isNaN(d) ? m.kal : d.toLocaleDateString('de-AT')}`;
+}
+
+// ── Messwerte-Import (Benning BTEC-Export, Excel) ─────────────────────────
+// Aufbau: je Wechselrichter ein Block mit "Wechselrichter", "Prüfgerät",
+// "Name des Prüfers" und darunter je Strang eine Zeile (Testzeit, Strang,
+// RPE, Uoc "772 V", Isc "11.62 A", RISO "19.1 MΩ bei 1000 V").
+// "Strang n" wird dem n-ten aktiven String des Wechselrichters zugeordnet –
+// in derselben Reihenfolge wie die String-Nummern der App (1.1.1, 1.1.2, 1.2.1 …).
+function benningLesen(zeilen){
+  const erg = { messungen: [], geraet: null, pruefer: '', datum: '', upruef: '' };
+  let wr = null;
+  const zahl = s => { const m = String(s || '').replace(',', '.').match(/(\d+(?:\.\d+)?)/); return m ? m[1] : ''; };
+  zeilen.forEach(z => {
+    const a = String(z[0] ?? '').trim(), b = String(z[1] ?? '').trim();
+    if(a === 'Wechselrichter'){ wr = parseInt(b, 10) || null; return; }
+    if(a === 'Prüfgerät' && b){
+      const m = b.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+      erg.geraet = { hersteller: 'Benning', typ: (m ? m[1] : b).trim(), sn: m ? m[2].trim() : '', kal: '' };
+      return;
+    }
+    if(a === 'Name des Prüfers'){ erg.pruefer = b; return; }
+    const d = a.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+    if(d && wr && /^\d+$/.test(b)){
+      const riso = String(z[5] ?? '');
+      const up = riso.match(/bei\s*(\d+)\s*V/i);
+      if(up && !erg.upruef) erg.upruef = up[1];
+      if(!erg.datum) erg.datum = `${d[3]}-${d[2]}-${d[1]}`;
+      erg.messungen.push({ wr, strang: parseInt(b, 10), zeit: a, uoc: zahl(z[3]), isc: zahl(z[4]), riso: zahl(riso) });
+    }
+  });
+  return erg;
+}
+function messwerteImportieren(){
+  const proj = getCurrentProject();
+  if(!proj) return toast('Bitte zuerst das Projekt öffnen, in das die Messwerte sollen');
+  if(!canEditMeasurement()) return toast('Keine Berechtigung – Messwerte kannst du in diesem Projekt nicht ändern');
+  if(typeof XLSX === 'undefined') return toast('Excel-Leser nicht geladen – Internetverbindung prüfen');
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.xlsx,.xls,.csv'; inp.style.display = 'none';
+  inp.onchange = async () => {
+    const datei = inp.files && inp.files[0];
+    inp.remove();
+    if(!datei) return;
+    try {
+      const wb = XLSX.read(new Uint8Array(await datei.arrayBuffer()), { type: 'array' });
+      let zeilen = null;
+      for(const name of wb.SheetNames){
+        const z = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: false, defval: '' });
+        if(z.some(r => String(r[0]).trim() === 'Testzeit')){ zeilen = z; break; }
+      }
+      if(!zeilen) return toast('In der Datei wurden keine Strangmessungen gefunden (Blatt „PV Prüfergebnisse“ fehlt)');
+      const erg = benningLesen(zeilen);
+      if(!erg.messungen.length) return toast('Keine Messwerte in der Datei gefunden');
+      if(!abFirma && (darf('ppk') || darf('anlagenbuch') || darf('katalog'))){ try { await abFirmaLaden(); } catch(_){} }
+      importVorschau(proj, erg);
+    } catch(e){
+      toastError('Datei konnte nicht gelesen werden', e);
+    }
+  };
+  document.body.appendChild(inp);
+  inp.click();
+}
+function importZuordnen(erg){
+  const plan = getCurrentPlan();
+  const slots = {};
+  const zeilen = erg.messungen.map(m => {
+    if(!plan[m.wr]) return { ...m, fehler: `WR ${m.wr} gibt es im Projekt nicht` };
+    if(!slots[m.wr]) slots[m.wr] = getAllFullIds().filter(id => id.split('.')[0] === String(m.wr) && APP_STATE[id].stat === 'JA' && Number(APP_STATE[id].mod) > 0);
+    const id = slots[m.wr][m.strang - 1];
+    if(!id) return { ...m, fehler: `WR ${m.wr} hat nur ${slots[m.wr].length} aktive Strings` };
+    const it = APP_STATE[id];
+    const werte = {};
+    let konflikt = false;
+    [['uoc', m.uoc], ['isc', m.isc], ['riso', m.riso]].forEach(([f, v]) => {
+      const n = v === '' ? '' : normaliseNumber(f, v);
+      if(n === null || n === '') return;
+      werte[f] = n;
+      if(it[f] && String(it[f]) !== n) konflikt = true;
+    });
+    return { ...m, id, gak: it.gak || '', werte, konflikt, gleich: Object.keys(werte).every(f => String(it[f] || '') === werte[f]) };
+  });
+  return zeilen;
+}
+function importVorschau(proj, erg){
+  const zeilen = importZuordnen(erg);
+  const ok = zeilen.filter(z => !z.fehler);
+  const konflikte = ok.filter(z => z.konflikt).length;
+  const fehler = zeilen.filter(z => z.fehler);
+  const wrs = [...new Set(zeilen.map(z => z.wr))].sort((a, b) => a - b);
+  const g2 = erg.geraet;
+  const inListe = g2 && messgeraeteListe().find(m => m.sn && m.sn === g2.sn);
+  if(g2 && inListe && inListe.kal) g2.kal = inListe.kal;
+  const ov = document.createElement('div');
+  ov.className = 'app-dialog-overlay';
+  ov.innerHTML = `<div class="app-dialog imp-dialog" role="dialog" aria-modal="true" aria-labelledby="imp-titel">
+    <h2 id="imp-titel">Messwerte importieren</h2>
+    <p class="app-dialog-text">${ok.length} Stränge aus ${wrs.length} Wechselrichtern${erg.pruefer ? ` · Prüfer ${esc(erg.pruefer)}` : ''}${erg.datum ? ` · ${esc(new Date(erg.datum).toLocaleDateString('de-AT'))}` : ''}.
+      Strang n wird dem n-ten aktiven String des Wechselrichters zugeordnet – bitte kurz prüfen.</p>
+    ${fehler.length ? `<div class="imp-warn">${fehler.length} Messung(en) ohne passenden String: ${esc([...new Set(fehler.map(f => f.fehler))].join(' · '))}</div>` : ''}
+    <div class="imp-liste">${wrs.map(wr => { const zs = zeilen.filter(z => z.wr === wr); return `<details${wrs.length <= 2 ? ' open' : ''}><summary>WR ${wr} <span>${zs.filter(z => !z.fehler).length} Stränge${zs.some(z => z.konflikt) ? ' · weicht teils ab' : ''}</span></summary>
+      <table class="ab-tabelle"><thead><tr><th>Strang</th><th>→ String</th><th class="z">Uoc</th><th class="z">Isc</th><th class="z">Riso</th></tr></thead><tbody>
+      ${zs.map(z => z.fehler ? `<tr class="imp-fehlt"><td>${z.strang}</td><td colspan="4">${esc(z.fehler)}</td></tr>`
+        : `<tr class="${z.konflikt ? 'imp-konflikt' : (z.gleich ? 'imp-gleich' : '')}"><td>${z.strang}</td><td>${esc(z.id)}${z.gak ? ` <small>${esc(z.gak)}</small>` : ''}</td>
+          <td class="z">${esc(z.werte.uoc || '—')}</td><td class="z">${esc(z.werte.isc || '—')}</td><td class="z">${esc(z.werte.riso || '—')}</td></tr>`).join('')}
+      </tbody></table></details>`; }).join('')}</div>
+    ${konflikte ? `<label class="ab-check"><input type="checkbox" id="imp-ueber"> <span>${konflikte} String(s) haben schon andere Werte – überschreiben (sonst bleiben sie unverändert)</span></label>` : ''}
+    ${g2 ? `<label class="ab-check"><input type="checkbox" id="imp-geraet" checked> <span>Messgerät ins Projekt übernehmen: ${esc(messgeraetName(g2))}</span></label>` : ''}
+    ${g2 && !inListe && darf('katalog') ? `<label class="ab-check"><input type="checkbox" id="imp-liste" checked> <span>Messgerät in die Messgeräte-Liste der Firmendaten aufnehmen</span></label>` : ''}
+    <div class="app-dialog-knoepfe"><button type="button" class="btn btn-ghost" data-a="nein">Abbrechen</button>
+      <button type="button" class="btn btn-primary" data-a="ja"${ok.length ? '' : ' disabled'}>Übernehmen</button></div></div>`;
+  const schliessen = () => { document.removeEventListener('keydown', taste, true); ov.remove(); };
+  function taste(e){ if(e.key === 'Escape'){ e.preventDefault(); schliessen(); } }
+  ov.addEventListener('click', e => { if(e.target === ov) schliessen(); });
+  ov.querySelector('[data-a="nein"]').addEventListener('click', schliessen);
+  ov.querySelector('[data-a="ja"]').addEventListener('click', () => {
+    const ueber = !!(ov.querySelector('#imp-ueber') || {}).checked;
+    const mitGeraet = !!(ov.querySelector('#imp-geraet') || {}).checked;
+    const inDieListe = !!(ov.querySelector('#imp-liste') || {}).checked;
+    schliessen();
+    importUebernehmen(proj, erg, zeilen, { ueber, mitGeraet, inDieListe });
+  });
+  document.addEventListener('keydown', taste, true);
+  document.body.appendChild(ov);
+}
+function importUebernehmen(proj, erg, zeilen, opt){
+  if(proj !== getCurrentProject() || !canEditMeasurement()) return toast('Das Projekt wurde inzwischen gewechselt oder gesperrt – Import abgebrochen');
+  saveStateToHistory('Messwerte-Import (Benning)');
+  let felder = 0, strings = 0, uebersprungen = 0;
+  zeilen.forEach(z => {
+    if(z.fehler) return;
+    if(z.konflikt && !opt.ueber){ uebersprungen++; return; }
+    const it = APP_STATE[z.id];
+    let geaendert = false;
+    Object.keys(z.werte).forEach(f => { if(String(it[f] || '') !== z.werte[f]){ it[f] = z.werte[f]; felder++; geaendert = true; } });
+    if(geaendert){ it._manualChange = true; strings++; }
+  });
+  if(opt.mitGeraet && erg.geraet){
+    proj.messung = { ...(proj.messung || {}), geraet: { hersteller: erg.geraet.hersteller, typ: erg.geraet.typ, sn: erg.geraet.sn, kal: erg.geraet.kal || '' },
+      datum: erg.datum || (proj.messung && proj.messung.datum) || '', pruefer: erg.pruefer || '', upruef: erg.upruef || '' };
+  }
+  if(opt.inDieListe && erg.geraet && darf('katalog')){
+    abFirma = abFirma || {};
+    abFirma.messgeraete = [...messgeraeteListe(), { id: 'mg' + Date.now(), hersteller: erg.geraet.hersteller, typ: erg.geraet.typ, sn: erg.geraet.sn, kal: '' }];
+    firmaSpeichern();
+  }
+  offlineSichern();
+  bulkPersistAndRender();
+  toast(`${strings} Strings übernommen (${felder} Werte)${uebersprungen ? ` – ${uebersprungen} mit abweichenden Werten nicht überschrieben` : ''}`);
 }

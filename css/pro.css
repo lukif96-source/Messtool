@@ -1249,3 +1249,22 @@ html body.pp .bulk-dropdown-menu { left: 0; right: auto; max-width: calc(100vw -
 html body.pp .bulk-dropdown-item { white-space: nowrap; }
 html body.pp .bulk-dropdown-btn .bulk-pfeil { transition: transform .15s; }
 html body.pp .bulk-dropdown:has(.bulk-dropdown-menu.show) .bulk-pfeil { transform: rotate(180deg); }
+
+/* Messgeraet im Pruefprotokoll-Dialog */
+html body.pp .ppd-mg-wahl { width: 100%; margin: 4px 0 6px; }
+html body.pp .ppd-mg { display: grid; grid-template-columns: 1fr 1fr 1fr 150px; gap: 6px; align-items: end; margin-bottom: 12px; }
+html body.pp .ppd-mg-kal { display: flex; flex-direction: column; gap: 2px; font-size: .72rem; color: var(--mute); }
+@media (max-width: 600px) { html body.pp .ppd-mg { grid-template-columns: 1fr 1fr; } }
+/* Messwerte-Import */
+html body.pp .imp-dialog { max-width: 720px; width: calc(100vw - 32px); }
+html body.pp .imp-liste { max-height: 48vh; overflow: auto; margin: 10px 0; border: 1px solid var(--line); border-radius: var(--r-sm); }
+html body.pp .imp-liste details { border-bottom: 1px solid var(--line); }
+html body.pp .imp-liste summary { padding: 10px 12px; cursor: pointer; font-weight: 600; }
+html body.pp .imp-liste summary span { font-weight: 400; color: var(--mute); font-size: .84rem; margin-left: 6px; }
+html body.pp .imp-liste table { margin: 0; }
+html body.pp .imp-liste small { color: var(--mute); }
+html body.pp .imp-konflikt td { background: color-mix(in srgb, var(--c-amber) 14%, transparent); }
+html body.pp .imp-gleich td { color: var(--mute); }
+html body.pp .imp-fehlt td { color: var(--c-rose); }
+html body.pp .imp-warn { background: color-mix(in srgb, var(--c-rose) 10%, transparent); border: 1px solid color-mix(in srgb, var(--c-rose) 35%, transparent); border-radius: var(--r-sm); padding: 8px 10px; font-size: .84rem; margin: 8px 0; }
+html body.pp .imp-dialog .ab-check { margin: 6px 0; }

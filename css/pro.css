@@ -1052,3 +1052,69 @@ html body.pp .recht.abweichend span { color: var(--brand-text); font-weight: 600
 html body.pp .recht.abweichend span::after { content: ' · angepasst'; font-weight: 400; color: var(--mute); font-size: .75rem; }
 html body.pp .rechte-admin { font-size: .8rem; color: var(--mute); }
 html body.pp .rechte-reset { margin-top: 8px; }
+
+/* ══ Anlagenbuch ══════════════════════════════════════════════════════════ */
+.anlagenbuch-view { display: none; }
+.anlagenbuch-view.active { display: block; }
+html body.pp.tab-anlagenbuch .dashboard { display: none !important; }
+html body.pp .ab-leer { padding: 32px 8px; color: var(--mute); }
+html body.pp .ab-leer h2 { margin-bottom: 8px; }
+html body.pp .ab-leer .btn { margin-top: 14px; }
+html body.pp .ab-kopf { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 16px; }
+html body.pp .ab-kopf h1 { font-size: 1.6rem !important; margin: 0; }
+html body.pp .ab-kopf p { color: var(--mute); font-size: .88rem; margin-top: 2px; }
+html body.pp .ab-info { background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); color: var(--ink); border-radius: var(--r); padding: 10px 12px; font-size: .86rem; margin-bottom: 12px; }
+html body.pp .ab-status { background: var(--brand-soft); border: 1px solid var(--brand-line); color: var(--ink); border-radius: var(--r); padding: 10px 12px; font-size: .86rem; margin-bottom: 12px; }
+html body.pp .ab-status[hidden] { display: none; }
+html body.pp .ab-kapitel { background: var(--pa2); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh); margin-bottom: 10px; overflow: hidden; }
+html body.pp .ab-kapitel > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; padding: 14px 16px; font-weight: 600; font-size: .95rem; }
+html body.pp .ab-kapitel > summary::-webkit-details-marker { display: none; }
+html body.pp .ab-kapitel > summary::after { content: '▾'; margin-left: auto; color: var(--mute); }
+html body.pp .ab-kapitel[open] > summary { border-bottom: 1px solid var(--line); }
+html body.pp .ab-kapitel[open] > summary::after { content: '▴'; }
+html body.pp .ab-nr { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--brand-soft); color: var(--brand-text); font-size: .8rem; font-weight: 700; flex: none; }
+html body.pp .ab-raster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; padding: 16px; }
+html body.pp .ab-raster-eng { padding: 0; margin: 10px 0 14px; }
+html body.pp .ab-block { padding: 16px; }
+html body.pp .ab-feld { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+html body.pp .ab-feld > span, html body.pp .ab-feld-titel { font-size: .8rem; font-weight: 500; color: var(--ink2); }
+html body.pp .ab-breit { grid-column: 1 / -1; }
+html body.pp .ab-feld .sp-inp, html body.pp .ab-wr .sp-inp { text-align: left !important; min-height: 40px !important; font-size: .9rem !important; width: 100%; }
+html body.pp .ab-feld textarea.sp-inp { min-height: 76px !important; padding: 9px 10px !important; line-height: 1.45; resize: vertical; font-family: var(--f) !important; }
+html body.pp .ab-feld input[type="file"] { font-size: .85rem; }
+html body.pp .ab-hinweis { font-size: .75rem; color: var(--mute); }
+html body.pp .ab-check { display: flex; align-items: center; gap: 10px; font-size: .9rem; padding: 6px 0; cursor: pointer; grid-column: 1 / -1; }
+html body.pp .ab-check input { width: 18px; height: 18px; accent-color: var(--brand); flex: none; }
+html body.pp .ab-tabelle { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: .86rem; }
+html body.pp .ab-tabelle th { text-align: left; font-weight: 500; color: var(--mute); font-size: .76rem; padding: 6px; border-bottom: 1px solid var(--line); }
+html body.pp .ab-tabelle td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+html body.pp .ab-tabelle .z { text-align: right; }
+html body.pp .ab-tabelle .klein, html body.pp .ab-klein { color: var(--mute); font-size: .8rem; }
+html body.pp .ab-unter { font-size: .8rem; font-weight: 600; color: var(--mute); margin: 16px 0 6px; }
+html body.pp .ab-unter:first-child { margin-top: 0; }
+html body.pp .ab-liste { list-style: none; margin: 0 0 10px; padding: 0; }
+html body.pp .ab-liste li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+html body.pp .ab-liste small { color: var(--mute); }
+html body.pp .ab-aktionen { display: inline-flex; gap: 4px; flex: none; align-items: center; }
+html body.pp .ab-mini { padding: 4px 10px !important; min-height: 30px; font-size: .78rem !important; }
+html body.pp .ab-gefahr { color: var(--krit) !important; }
+html body.pp .ab-ok { color: var(--brand-text); font-size: .78rem; font-weight: 600; }
+html body.pp .ab-fehlt { color: var(--warn); font-size: .78rem; }
+html body.pp .ab-fuss { display: flex; justify-content: flex-end; margin: 16px 0 40px; }
+html body.pp .ab-dialog { max-width: 560px; max-height: calc(100vh - 32px); overflow: auto; }
+@media screen and (max-width: 900px) {
+  html body.pp .ab-raster { grid-template-columns: 1fr; padding: 12px; }
+  html body.pp .ab-liste li { flex-direction: column; align-items: flex-start; }
+  html body.pp .ab-kopf .ab-erstellen { width: 100%; justify-content: center; }
+  /* Sechs Reiter am Handy: Anleitung steht zusaetzlich im Menue */
+  html body.pp #tab-anleitung { display: none !important; }
+  html body.pp .ab-wr { overflow-x: auto; }
+}
+
+/* Handy: Reiterleiste seitlich wischbar statt gequetscht */
+@media screen and (max-width: 900px) {
+  html body.pp .main-tabs { overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap !important; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  html body.pp .main-tabs::-webkit-scrollbar { display: none; }
+  html body.pp .main-tab { flex: none !important; min-width: auto !important; padding: 11px 13px !important; font-size: .84rem !important; white-space: nowrap; }
+}

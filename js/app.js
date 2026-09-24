@@ -279,17 +279,21 @@ function switchMainTab(tab){
   // Querschnittberechnung nur fuer Planer und Admin – Bauleitung und
   // Monteure sehen den Reiter nicht und landen sonst auf der Uebersicht.
   if(tab === 'querschnitt' && !darf('querschnitt')) tab = 'home';
+  if(tab === 'anlagenbuch' && !darf('anlagenbuch')) tab = 'home';
   document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.matrix-view, .projects-view, .home-view, .anleitung-view, .querschnitt-view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.matrix-view, .projects-view, .home-view, .anleitung-view, .querschnitt-view, .anlagenbuch-view').forEach(v => v.classList.remove('active'));
   const tabEl = g(`tab-${tab}`);
   if(tabEl) tabEl.classList.add('active');
+  // Am Handy ist die Reiterleiste wischbar: aktiven Reiter ins Bild holen
+  if(tabEl && tabEl.scrollIntoView) tabEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   const viewEl = g(`${tab}-view`);
   if(viewEl) viewEl.classList.add('active');
-  document.body.classList.remove('tab-home','tab-matrix','tab-projects','tab-anleitung','tab-querschnitt');
+  document.body.classList.remove('tab-home','tab-matrix','tab-projects','tab-anleitung','tab-querschnitt','tab-anlagenbuch');
   document.body.classList.add('tab-' + tab);
   if(tab === 'projects') renderProjectGrid();
   if(tab === 'home') renderHomeView();
   if(tab === 'querschnitt') qsInit();
+  if(tab === 'anlagenbuch') anlagenbuchRendern();
   const context = g('scroll-context');
   if(context) context.hidden = tab !== 'matrix';
   if(tab === 'matrix') requestAnimationFrame(updateScrollContext);
@@ -646,7 +650,7 @@ function istGeschuetzt(p){ return !!(p && (p.geschuetzt || p.locked || p.signatu
 // Diese Schluessel gehoeren nicht zum Anlagenplan, sondern sind Metadaten
 // im selben config-Feld. Sie stehen an EINER Stelle, damit beim Speichern
 // nie wieder einer vergessen wird.
-const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt', '_beschreibung'];
+const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt', '_beschreibung', '_anlagenbuch'];
 
 function buildProjectConfig(proj, fallbackEmail){
   const cfg = {};
@@ -656,6 +660,7 @@ function buildProjectConfig(proj, fallbackEmail){
     : { locked: false };
   if(proj.group) cfg._group = proj.group;
   if(proj.beschreibung) cfg._beschreibung = proj.beschreibung;
+  if(proj.anlagenbuch) cfg._anlagenbuch = proj.anlagenbuch;
   // Unterschriften werden NIE weggeschrieben, auch nicht im entsperrten
   // Zustand. Das war die Stelle, an der beim Entsperren alles verschwand.
   if(proj.signature) cfg._signature = proj.signature;
@@ -3894,6 +3899,7 @@ async function selectProject(id){
   if(supabaseClient && currentUser) await fetchCloudDataManually();
   if(g('projects-view').classList.contains('active')) switchMainTab('matrix');
   renderProjectUI();
+  if(document.body.classList.contains('tab-anlagenbuch')) anlagenbuchRendern();
   toast('Projekt geladen');
 }
 
@@ -4319,6 +4325,7 @@ async function fetchProjectsFromCloud(){
           name: cloudProj.name || 'Unbenannt', 
           group: cloudConfig._group || null,
           beschreibung: cloudConfig._beschreibung || '',
+          anlagenbuch: cloudConfig._anlagenbuch || null,
           model_wp: cloudProj.modul_wp || 465, 
           plan: planOnly, 
           locked: !!lockMeta.locked,
@@ -4366,6 +4373,7 @@ async function saveProjectToCloudNow(projectId, skipRender){
     };
     // Genau diesen Stand merken: nur wenn er ankommt, gilt er als gesichert
     const _gesendet = projectId === CURRENT_PROJECT_ID ? JSON.stringify(stateData) : null;
+    const _abVersion = abVersion;
     const { error } = await supabaseClient.from('pv_projects').upsert(payload);
     if(syncIndicator) syncIndicator.classList.remove('syncing');
     if(error) {
@@ -4379,6 +4387,7 @@ async function saveProjectToCloudNow(projectId, skipRender){
       const off = g('offline-indicator'); if(off) off.classList.remove('offline');
       showSaveIndicator('saved');
       if(_gesendet !== null) syncErfolg(projectId, _gesendet);
+      abNachUpload(projectId, _abVersion);
       if(!skipRender) renderMatrixDebounced(); // Debounced nach Cloud-Save
       return true;
     }
@@ -5137,14 +5146,15 @@ function _standAlsMap(obj){
   return m;
 }
 function syncStandMerken(){ syncStand = _standAlsMap(APP_STATE); syncFehler = false; updateSyncStatus(); }
-function syncStandZuruecksetzen(){ syncStand = null; syncFehler = false; syncLetzterUpload = null; updateSyncStatus(); }
+function syncStandZuruecksetzen(){ syncStand = null; syncFehler = false; syncLetzterUpload = null; abOffen = false; abDaten = null; updateSyncStatus(); }
 
 function syncAenderungen(){
-  if(!syncStand || !APP_STATE) return 0;
+  const ab = abOffen ? 1 : 0;
+  if(!syncStand || !APP_STATE) return ab;
   const ids = new Set([...Object.keys(syncStand), ...Object.keys(APP_STATE)]);
   let n = 0;
   ids.forEach(k => { if(JSON.stringify(APP_STATE[k]) !== syncStand[k]) n++; });
-  return n;
+  return n + ab;
 }
 
 function syncErfolg(pid, gesendet){
@@ -5276,6 +5286,7 @@ function druckePruefprotokoll(optionen = {}){
   if(optionen.win) win.document.open();
   const beschreibung = String(optionen.beschreibung ?? proj.beschreibung ?? '').trim();
   const fotoUrl = optionen.fotoUrl || '';
+  const wrFotos = optionen.wrFotos || [];
   const plan = getCurrentPlan();
   const wp = getCurrentWp();
   const zeit = iso => iso ? new Date(iso).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
@@ -5376,6 +5387,12 @@ function druckePruefprotokoll(optionen = {}){
   .wr-summe b { color: #18181b; font-variant-numeric: tabular-nums; }
   .wr-summe .ok b { color: #15803d; } .wr-summe .offen b { color: #b45309; } .wr-summe .krit b { color: #c8261c; }
   thead { display: table-header-group; }
+  .fotos { break-before: page; page-break-before: always; }
+  .foto-raster { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .foto-raster figure { margin: 0; break-inside: avoid; }
+  .foto-raster img { width: 100%; height: 62mm; object-fit: cover; border-radius: 6px; border: 1px solid #e4e4e7; display: block; }
+  .foto-raster figcaption { color: #6b6b73; font-size: 7.5pt; margin-top: 3px; }
+  @media screen { .fotos { margin-top: 36px; padding-top: 18px; border-top: 1px dashed #d4d4d8; } }
   @media screen { .wr { margin-top: 36px; padding-top: 18px; border-top: 1px dashed #d4d4d8; } }
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   th { text-align: left; font-weight: 600; color: #3f3f46; background: #f4f4f5; border-bottom: 1px solid #d4d4d8; padding: 5px 6px; font-size: 8pt; }
@@ -5426,6 +5443,9 @@ function druckePruefprotokoll(optionen = {}){
   ${auffHtml}
   ${wrHtml || '<p>Keine aktiven Strings.</p>'}
   <div class="unterschriften">${unterschrift(proj.signature, 'Prüfer')}${unterschrift(proj.abnahme, 'Abnahme')}</div>
+  ${wrFotos.length ? `<section class="fotos"><div class="wr-kopf"><span>Prüfprotokoll · ${esc(proj.name || '')}</span><span>${heuteKurz}</span></div>
+    <h2>Fotodokumentation <span>${wrFotos.length} ${wrFotos.length === 1 ? 'Foto' : 'Fotos'}</span></h2>
+    <div class="foto-raster">${wrFotos.map(f => `<figure><img src="${esc(f.url)}" alt=""><figcaption>WR ${f.wr} – ${esc(f.name)}</figcaption></figure>`).join('')}</div></section>` : ''}
   <footer><span>SOLPRO Messtool</span><span>${esc(proj.name || '')} · ${heute}</span></footer>
 </div>
 <script>
@@ -5568,11 +5588,1114 @@ async function pruefprotokollDialog(){
     }
     const foto = fotos.find(f => f.pfad === gewaehlt);
     schliessen();
-    druckePruefprotokoll({ win, beschreibung: text, fotoUrl: foto ? foto.url : '' });
+    (async () => {
+      let wrFotos = [];
+      try { wrFotos = await wrFotosSammeln(pid); } catch(_){}
+      druckePruefprotokoll({ win, beschreibung: text, fotoUrl: foto ? foto.url : '', wrFotos });
+    })();
   });
 
   document.addEventListener('keydown', taste, true);
   document.body.appendChild(ov);
   setTimeout(() => ta.focus(), 30);
   fotosLaden();
+}
+
+// Alle Fotos der Wechselrichter eines Projekts (mit Links) – fuer Protokoll und Anlagenbuch
+async function wrFotosSammeln(pid){
+  if(typeof fotoListeLaden !== 'function') return [];
+  await fotoListeLaden(pid);
+  const plan = getCurrentPlan();
+  const wrs = Object.keys(plan).map(Number).sort((a, b) => a - b);
+  const pfade = wrs.flatMap(wr => fotoFuerWr(pid, wr)).filter(f => !f.wartet).map(f => f.pfad);
+  if(pfade.length) await fotoUrlsHolen(pfade);
+  return wrs.flatMap(wr => fotoFuerWr(pid, wr).filter(f => f.url)
+    .map(f => ({ wr, name: (plan[wr] && plan[wr].name) || 'WR ' + wr, url: f.url })));
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//   ANLAGENBUCH (Dokumentation nach OVE/ONORM E 8101)
+//   Eigener Reiter, nur mit Recht "anlagenbuch" (Standard: nur Admin).
+//   Angaben liegen im Projekt (config._anlagenbuch), Komponenten mit
+//   Datenblaettern im Katalog (pv_komponenten), projektbezogene Dokumente in
+//   pv_projekt_dokumente. Daraus entsteht EIN PDF inkl. angehaengter
+//   Datenblaetter (pdf-lib).
+// ══════════════════════════════════════════════════════════════════════════
+var abVersion = 0;          // zaehlt Aenderungen am Anlagenbuch
+var abOffen = false;        // Aenderungen noch nicht in der Cloud
+let abDaten = null;         // Anlagenbuch des offenen Projekts
+let abKatalog = [];         // pv_komponenten
+let abDokumente = [];       // pv_projekt_dokumente des Projekts
+let abSpeicherTimer = null;
+const AB_BUCKET = 'pv-dokumente';
+const AB_MAX_DATEI = 25 * 1024 * 1024;
+const AB_PDFLIB = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+
+const AB_KAT = {
+  modul: 'Solarmodul', wechselrichter: 'Wechselrichter', speicher: 'Stromspeicher',
+  unterkonstruktion: 'Unterkonstruktion', schutz: 'Überspannungsschutz', stempel: 'Firmenstempel', sonstiges: 'Sonstiges'
+};
+const AB_KAT_DATEN = {
+  modul: [['wp', 'Nennleistung (Wp)'], ['uoc', 'Uoc bei STC (V)'], ['isc', 'Isc bei STC (A)'], ['tk_uoc', 'Temperaturkoeffizient Uoc (%/K, z. B. -0,27)']],
+  wechselrichter: [['leistung_kw', 'AC-Nennleistung (kW)'], ['ip', 'Schutzart (z. B. IP66)']],
+  speicher: [['kapazitaet', 'Kapazität (kWh)'], ['spannung', 'Nennspannung (V)']],
+  schutz: [['typ', 'Ableiter-Typ (z. B. Typ I+II)'], ['seite', 'Einsatz (DC / AC)']],
+  unterkonstruktion: [], stempel: [], sonstiges: []
+};
+const AB_DOK_KAT = {
+  schaltplan: 'Schaltplan', stringplan: 'Stringplan', zertifikat: 'Zertifikat / Konformität',
+  netzbetreiber: 'Netzbetreiber (Anmeldung, Fertigmeldung)', datenblatt: 'Datenblatt', sonstiges: 'Sonstiges'
+};
+const AB_ERGEBNIS = ['i. O.', 'nicht i. O.', 'nicht zutreffend'];
+const AB_NORMEN = 'ÖVE/ÖNORM E 8101 – Elektrische Niederspannungsanlagen\n'
+  + 'ÖVE/ÖNORM EN 62446-1 – Dokumentation und Prüfung netzgekoppelter PV-Anlagen\n'
+  + 'OVE R 11-1 – PV-Anlagen: Schutz von Einsatzkräften\n'
+  + 'OVE R 6-2-1 / R 6-2-2 – Blitz- und Überspannungsschutz';
+const AB_BESTAETIGUNG = 'Hiermit wird bestätigt, dass die in diesem Anlagenbuch beschriebene Photovoltaikanlage nach den angeführten '
+  + 'Normen und Richtlinien errichtet und einer Erstprüfung gemäß ÖVE/ÖNORM E 8101 (Besichtigung, Erprobung, Messung) '
+  + 'unterzogen wurde. Die Ergebnisse sind in Kapitel 5 dokumentiert.';
+
+// [pfad, beschriftung, typ, optionen/platzhalter]
+const AB_KAPITEL = [
+  { nr: 1, titel: 'Allgemeine Angaben & Stammdaten', felder: [
+    ['betreiber.name', 'Anlagenbetreiber – Name'], ['betreiber.kontakt', 'Kontakt (Telefon, E-Mail)'],
+    ['betreiber.adresse', 'Adresse des Betreibers', 'area'],
+    ['standort.adresse', 'Anlagenadresse (Standort)', 'area'],
+    ['standort.grundstueck', 'Grundstücksnummer'], ['standort.kg', 'Katastralgemeinde (KG-Nr.)'],
+    ['zaehlpunkt', 'Zählpunktnummer (33-stellig, AT…)', 'zp'],
+    ['inbetriebnahme', 'Datum der Erstinbetriebnahme', 'date'],
+    ['aenderungen', 'Wesentliche nachträgliche Änderungen', 'area', 'Datum und Art der Änderung'],
+    ['normen', 'Angewendete Normen und Richtlinien', 'area'],
+    ['@beschreibung', 'Anlagenbeschreibung', 'area', 'Kurzbeschreibung der Anlage']
+  ]},
+  { nr: 2, titel: 'Art der PV-Anlage & Komponenten', felder: [
+    ['betriebsart', 'Betriebsart', 'select', ['Netzparallelbetrieb', 'Netzparallelbetrieb mit Speicher', 'Inselbetrieb (AC-gekoppelt)', 'Inselbetrieb (DC-gekoppelt)']],
+    ['modul.komponente', 'Solarmodul (aus Katalog)', 'katalog', 'modul'],
+    ['modul.ausrichtung', 'Ausrichtung', 'text', 'z. B. Süd (180°) oder Ost/West'],
+    ['modul.neigung', 'Neigungswinkel (°)', 'num'],
+    ['montage.komponente', 'Unterkonstruktion (aus Katalog)', 'katalog', 'unterkonstruktion'],
+    ['montage.text', 'Art der Montage', 'area', 'z. B. Dachhaken, Triangel-Aufständerung, Ballastierung'],
+    ['@wr', 'Wechselrichter'],
+    ['speicher.komponente', 'Stromspeicher (aus Katalog, leer = kein Speicher)', 'katalog', 'speicher'],
+    ['speicher.ort', 'Aufstellungsort des Speichers'],
+    ['speicher.lueftung', 'Be- und Entlüftung Batterieraum']
+  ]},
+  { nr: 3, titel: 'Verkabelung & Schutzorgane', felder: [
+    ['kabel.dc_querschnitt', 'DC-Solarkabel – Querschnitt (mm²)'], ['kabel.dc_laenge', 'DC – Leitungslängen (m)'],
+    ['kabel.dc_verlegung', 'DC – Verlegeart', 'text', 'z. B. im Freien UV-beständig, im Kabelkanal'],
+    ['kabel.ac_querschnitt', 'AC-Zuleitung – Querschnitt (mm²)'], ['kabel.ac_laenge', 'AC – Leitungslänge (m)'],
+    ['kabel.ac_verlegung', 'AC – Verlegeart', 'text', 'z. B. unter Putz, im Kabelkanal'],
+    ['schalter.dc', 'DC-Freischaltung – Position und Typ', 'area', 'möglichst nahe am Generator'],
+    ['schalter.ac', 'AC-seitige Netztrennung – Position und Typ', 'area'],
+    ['ueberspannung.dc', 'Überspannungsschutz DC-seitig', 'select', ['Typ I', 'Typ II', 'Typ I+II', 'Typ III', 'nicht vorhanden']],
+    ['ueberspannung.ac', 'Überspannungsschutz AC-seitig', 'select', ['Typ I', 'Typ II', 'Typ I+II', 'Typ III', 'nicht vorhanden']],
+    ['ueberspannung.komponente', 'Ableiter (aus Katalog)', 'katalog', 'schutz']
+  ]},
+  { nr: 4, titel: 'Sicherheit für Einsatzkräfte (OVE R 11-1)', felder: [
+    ['r11.kennzeichnung', 'Kennzeichnung der Leitungswege und Hinweisschilder', 'check'],
+    ['r11.abschottung', 'Brandabschottungen bei Durchführungen', 'check'],
+    ['r11.notaus', 'Not-Aus- bzw. Feuerwehrschalter', 'check'],
+    ['r11.freischaltung', 'Automatische Freischalteinrichtung direkt am Generator', 'check'],
+    ['r11.plan', 'Übersichtsplan für die Feuerwehr beim Hausanschluss', 'check'],
+    ['r11.text', 'Weitere Maßnahmen', 'area']
+  ]},
+  { nr: 5, titel: 'Prüf- und Messergebnisse (ÖVE/ÖNORM E 8101)', felder: [
+    ['pruefung.datum', 'Prüfdatum', 'date'], ['pruefung.pruefer', 'Prüfer'],
+    ['pruefung.geraet', 'Messgerät (Hersteller, Typ, Seriennummer)'], ['pruefung.kalibrierung', 'Kalibriert am', 'date'],
+    ['pruefung.einstrahlung', 'Einstrahlung (W/m²)', 'num'], ['pruefung.temperatur', 'Modultemperatur (°C)', 'num'],
+    ['pruefung.wetter', 'Witterung', 'text', 'z. B. sonnig, wolkenlos'],
+    ['pruefung.besichtigung', 'Besichtigung', 'select', AB_ERGEBNIS],
+    ['pruefung.erprobung', 'Erprobung', 'select', AB_ERGEBNIS],
+    ['pruefung.schutzleiter_wert', 'Niederohmigkeit Schutz-/Potentialausgleichsleiter (Ω)', 'num'],
+    ['pruefung.schutzleiter', 'Schutzleiter – Ergebnis', 'select', AB_ERGEBNIS],
+    ['pruefung.riso_ac_wert', 'Isolationswiderstand AC (MΩ)', 'num'],
+    ['pruefung.riso_ac', 'Isolationswiderstand AC – Ergebnis', 'select', AB_ERGEBNIS],
+    ['pruefung.ens', 'Funktionsprüfung Schutzeinrichtungen / Kuppelschalter (ENS)', 'select', AB_ERGEBNIS],
+    ['pruefung.bemerkung', 'Bemerkungen zur Prüfung', 'area']
+  ]},
+  { nr: 6, titel: 'Rechtliche Bestätigung', felder: [
+    ['errichter.firma', 'Befugtes Elektrotechnik-Unternehmen'], ['errichter.konzession', 'Gewerbeberechtigung / Konzession'],
+    ['errichter.adresse', 'Adresse des Unternehmens', 'area'],
+    ['errichter.verantwortlich', 'Verantwortliche Person'], ['errichter.ort', 'Ort der Unterzeichnung'],
+    ['bestaetigung', 'Bestätigungstext', 'area']
+  ]}
+];
+
+// ── Daten-Helfer ──────────────────────────────────────────────────────────
+function abNeu(){
+  return { normen: AB_NORMEN, bestaetigung: AB_BESTAETIGUNG, betriebsart: 'Netzparallelbetrieb', wr: {}, zusatz: [] };
+}
+function abWert(pfad){
+  if(pfad === '@beschreibung'){ const p = getCurrentProject(); return (p && p.beschreibung) || ''; }
+  return pfad.split('.').reduce((o, k) => (o && o[k] !== undefined) ? o[k] : undefined, abDaten) ?? '';
+}
+function abSetzen(pfad, wert){
+  if(pfad === '@beschreibung'){ const p = getCurrentProject(); if(p) p.beschreibung = wert; return; }
+  const teile = pfad.split('.');
+  let o = abDaten;
+  teile.slice(0, -1).forEach(k => { if(!o[k] || typeof o[k] !== 'object') o[k] = {}; o = o[k]; });
+  o[teile[teile.length - 1]] = wert;
+}
+const abZahl = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return isNaN(n) ? null : n; };
+const abKomp = id => abKatalog.find(k => k.id === id) || null;
+const abKompName = k => k ? `${k.hersteller} ${k.typ}` : '';
+function abDarfAendern(){ return darf('anlagenbuch') && (currentUserRole === 'admin' || !isProtocolLocked()); }
+const AB_ENTWURF = pid => `pv_ab_entwurf::${currentUser ? currentUser.id : 'anon'}::${pid}`;
+
+function abSpeichernVerzoegert(){
+  const proj = getCurrentProject();
+  if(!proj || !abDaten) return;
+  abVersion++;
+  abOffen = true;
+  proj.anlagenbuch = abDaten;
+  try { localStorage.setItem(AB_ENTWURF(proj.id), JSON.stringify({ daten: abDaten, beschreibung: proj.beschreibung || '', at: new Date().toISOString() })); } catch(_){}
+  updateSyncStatus();
+  clearTimeout(abSpeicherTimer);
+  abSpeicherTimer = setTimeout(() => {
+    // Nur das gerade offene Projekt speichern (sonst wuerden Messwerte eines
+    // anderen Projekts mit leerem Stand ueberschrieben)
+    if(proj.id === CURRENT_PROJECT_ID) saveProjectToCloud(proj.id, true);
+  }, 900);
+}
+function abNachUpload(pid, version){
+  if(pid !== CURRENT_PROJECT_ID || version !== abVersion) return;
+  abOffen = false;
+  try { localStorage.removeItem(AB_ENTWURF(pid)); } catch(_){}
+}
+
+// ── Laden ─────────────────────────────────────────────────────────────────
+async function abKatalogLaden(){
+  if(!supabaseClient || !currentUser) return;
+  const { data, error } = await supabaseClient.from('pv_komponenten').select('*').order('kategorie').order('hersteller').order('typ');
+  if(error) throw error;
+  abKatalog = data || [];
+}
+async function abDokumenteLaden(pid){
+  abDokumente = [];
+  if(!supabaseClient || !currentUser) return;
+  const { data, error } = await supabaseClient.from('pv_projekt_dokumente').select('*').eq('project_id', pid).order('kategorie').order('erstellt_am');
+  if(error) throw error;
+  abDokumente = data || [];
+}
+
+// ── Reiter zeichnen ───────────────────────────────────────────────────────
+async function anlagenbuchRendern(){
+  const box = g('ab-inhalt');
+  if(!box) return;
+  if(!darf('anlagenbuch')){ box.innerHTML = '<div class="ab-leer">Für das Anlagenbuch fehlt dir die Berechtigung.</div>'; return; }
+  const proj = getCurrentProject();
+  if(!proj){
+    box.innerHTML = `<div class="ab-leer"><h2>Anlagenbuch</h2><p>Bitte zuerst ein Projekt öffnen – das Anlagenbuch gehört immer zu einer Anlage.</p>
+      <button class="btn btn-primary" onclick="switchMainTab('projects')">Projekt auswählen</button></div>`;
+    return;
+  }
+  // Angaben: eigener, noch nicht hochgeladener Entwurf hat Vorrang
+  abDaten = proj.anlagenbuch ? JSON.parse(JSON.stringify(proj.anlagenbuch)) : abNeu();
+  if(!abDaten.wr) abDaten.wr = {};
+  if(!Array.isArray(abDaten.zusatz)) abDaten.zusatz = [];
+  try {
+    const roh = localStorage.getItem(AB_ENTWURF(proj.id));
+    if(roh){
+      const e = JSON.parse(roh);
+      if(e && e.daten && JSON.stringify(e.daten) !== JSON.stringify(proj.anlagenbuch || null)){
+        abDaten = e.daten;
+        if(typeof e.beschreibung === 'string') proj.beschreibung = e.beschreibung;
+        toast('Nicht hochgeladene Anlagenbuch-Angaben wiederhergestellt');
+        abSpeichernVerzoegert();
+      }
+    }
+  } catch(_){}
+  if(!abDaten.pruefung) abDaten.pruefung = {};
+  if(!abDaten.pruefung.pruefer) abDaten.pruefung.pruefer = (proj.signature && proj.signature.name) || anzeigeName();
+
+  box.innerHTML = '<div class="ab-leer">Lade Anlagenbuch …</div>';
+  try { await Promise.all([abKatalogLaden(), abDokumenteLaden(proj.id)]); }
+  catch(e){ console.warn('Anlagenbuch laden:', e); toast('Katalog/Dokumente konnten nicht geladen werden – Netz prüfen'); }
+  if(getCurrentProject() !== proj) return;
+  abWrVorschlaege();
+  abZeichnen();
+}
+
+// Wechselrichter automatisch dem Katalog zuordnen, wenn der Name passt
+function abWrVorschlaege(){
+  const plan = getCurrentPlan();
+  const wrKatalog = abKatalog.filter(k => k.kategorie === 'wechselrichter');
+  let geaendert = false;
+  Object.keys(plan).forEach(wr => {
+    if(abDaten.wr[wr]) return;
+    const name = String((plan[wr] && plan[wr].name) || '').toLowerCase().replace(/\s+/g, '');
+    if(!name) return;
+    const treffer = wrKatalog.filter(k => {
+      const t = k.typ.toLowerCase().replace(/\s+/g, '');
+      return t && (name.includes(t) || t.includes(name));
+    });
+    if(treffer.length === 1){ abDaten.wr[wr] = treffer[0].id; geaendert = true; }
+  });
+  if(geaendert && abDarfAendern()) abSpeichernVerzoegert();
+}
+
+function abFeldHtml([pfad, label, typ, opt]){
+  const wert = abWert(pfad);
+  const dis = abDarfAendern() ? '' : ' disabled';
+  const brt = (typ === 'area') ? ' ab-breit' : '';
+  if(pfad === '@wr') return abWrTabelleHtml();
+  if(typ === 'area'){
+    return `<label class="ab-feld${brt}"><span>${esc(label)}</span><textarea class="sp-inp" rows="3" data-ab="${pfad}" placeholder="${esc(opt || '')}"${dis}>${esc(wert)}</textarea></label>`;
+  }
+  if(typ === 'select'){
+    return `<label class="ab-feld"><span>${esc(label)}</span><select class="sp-inp" data-ab="${pfad}"${dis}>`
+      + ['', ...opt].map(o => `<option value="${esc(o)}"${o === wert ? ' selected' : ''}>${esc(o || '– bitte wählen –')}</option>`).join('')
+      + '</select></label>';
+  }
+  if(typ === 'katalog'){
+    const liste = abKatalog.filter(k => k.kategorie === opt);
+    return `<label class="ab-feld"><span>${esc(label)}</span><select class="sp-inp" data-ab="${pfad}"${dis}>`
+      + `<option value="">${liste.length ? '– keine Auswahl –' : '– Katalog ist leer –'}</option>`
+      + liste.map(k => `<option value="${k.id}"${k.id === wert ? ' selected' : ''}>${esc(abKompName(k))}</option>`).join('')
+      + '</select></label>';
+  }
+  if(typ === 'check'){
+    return `<label class="ab-check"><input type="checkbox" data-ab="${pfad}"${wert ? ' checked' : ''}${dis}> <span>${esc(label)}</span></label>`;
+  }
+  const art = typ === 'date' ? 'date' : 'text';
+  const im = typ === 'num' ? ' inputmode="decimal"' : '';
+  let hinweis = '';
+  if(typ === 'zp'){
+    const z = String(wert || '').replace(/\s+/g, '');
+    hinweis = `<small class="ab-hinweis" data-zp>${z ? (/^AT[0-9A-Z]{31}$/i.test(z) ? '✓ gültiges Format' : 'Format: AT + 31 Zeichen (33 gesamt)') : ''}</small>`;
+  }
+  return `<label class="ab-feld"><span>${esc(label)}</span><input type="${art}" class="sp-inp" data-ab="${pfad}"${im} value="${esc(wert)}" placeholder="${esc(typ !== 'zp' ? (opt || '') : 'AT0010000000000000001000000000000')}"${dis}>${hinweis}</label>`;
+}
+
+function abWrTabelleHtml(){
+  const plan = getCurrentPlan();
+  const dis = abDarfAendern() ? '' : ' disabled';
+  const liste = abKatalog.filter(k => k.kategorie === 'wechselrichter');
+  const zeilen = Object.keys(plan).map(Number).sort((a, b) => a - b).map(wr => {
+    const ids = Object.keys(APP_STATE).filter(id => id.split('.')[0] === String(wr) && APP_STATE[id].stat === 'JA');
+    const k = abKomp(abDaten.wr[wr]);
+    return `<tr><td>WR ${wr}</td><td>${esc((plan[wr] && plan[wr].name) || '—')}</td><td class="z">${ids.length}</td>
+      <td><select class="sp-inp" data-ab="wr.${wr}"${dis}><option value="">${liste.length ? '– Typ wählen –' : '– Katalog ist leer –'}</option>
+      ${liste.map(x => `<option value="${x.id}"${x.id === abDaten.wr[wr] ? ' selected' : ''}>${esc(abKompName(x))}</option>`).join('')}</select></td>
+      <td class="klein">${k ? esc([k.daten && k.daten.leistung_kw ? k.daten.leistung_kw + ' kW' : '', k.daten && k.daten.ip].filter(Boolean).join(' · ')) : ''}</td></tr>`;
+  }).join('');
+  return `<div class="ab-breit ab-wr"><span class="ab-feld-titel">Wechselrichter (aus dem Projekt)</span>
+    <table class="ab-tabelle"><thead><tr><th>Nr.</th><th>Bezeichnung</th><th class="z">Strings</th><th>Typ aus Katalog</th><th>Daten</th></tr></thead>
+    <tbody>${zeilen || '<tr><td colspan="5">Keine Wechselrichter im Projekt</td></tr>'}</tbody></table></div>`;
+}
+
+function abDokumenteHtml(){
+  const auto = abAutoDatenblaetter();
+  const autoIds = new Set(auto.map(a => a.k.id));
+  const zusatzListe = abKatalog.filter(k => k.pfad && !autoIds.has(k.id) && k.kategorie !== 'stempel');
+  const darfDok = abDarfAendern();
+  return `
+    <div class="ab-unter">Datenblätter aus den gewählten Komponenten</div>
+    ${auto.length ? `<ul class="ab-liste">${auto.map(a => `<li><span>${esc(AB_KAT[a.k.kategorie])}: ${esc(abKompName(a.k))}</span>
+        ${a.k.pfad ? '<span class="ab-ok">Datenblatt vorhanden</span>' : '<span class="ab-fehlt">kein Datenblatt im Katalog</span>'}</li>`).join('')}</ul>`
+      : '<p class="ab-klein">Noch keine Komponenten gewählt.</p>'}
+    <div class="ab-unter">Weitere Datenblätter aus dem Katalog</div>
+    ${zusatzListe.length ? zusatzListe.map(k => `<label class="ab-check"><input type="checkbox" data-ab-zusatz="${k.id}"${abDaten.zusatz.includes(k.id) ? ' checked' : ''}${darfDok ? '' : ' disabled'}>
+        <span>${esc(AB_KAT[k.kategorie])}: ${esc(abKompName(k))}</span></label>`).join('') : '<p class="ab-klein">Keine weiteren Datenblätter im Katalog.</p>'}
+    <div class="ab-unter">Projekt-Dokumente (Schaltplan, Stringplan, Zertifikate …)</div>
+    ${abDokumente.length ? `<ul class="ab-liste">${abDokumente.map(d => `<li><span>${esc(AB_DOK_KAT[d.kategorie] || d.kategorie)}: ${esc(d.titel)}</span>
+        <span class="ab-aktionen"><button type="button" class="btn btn-ghost ab-mini" onclick="abDokOeffnen('${d.id}')">Ansehen</button>
+        ${darfDok ? `<button type="button" class="btn btn-ghost ab-mini ab-gefahr" onclick="abDokLoeschen('${d.id}')">Entfernen</button>` : ''}</span></li>`).join('')}</ul>`
+      : '<p class="ab-klein">Noch keine Projekt-Dokumente.</p>'}
+    ${darfDok ? '<button type="button" class="btn btn-ghost" onclick="abDokHochladen()">Dokument hochladen</button>' : ''}`;
+}
+
+function abKatalogHtml(){
+  const pflegen = darf('katalog');
+  const gruppen = Object.keys(AB_KAT).map(kat => {
+    const liste = abKatalog.filter(k => k.kategorie === kat);
+    if(!liste.length) return '';
+    return `<div class="ab-unter">${esc(AB_KAT[kat])}</div><ul class="ab-liste">${liste.map(k => {
+      const d = k.daten || {};
+      const info = (AB_KAT_DATEN[kat] || []).map(([f, l]) => d[f] ? `${l.split(' (')[0]}: ${d[f]}` : '').filter(Boolean).join(' · ');
+      return `<li><span><strong>${esc(abKompName(k))}</strong>${info ? `<br><small>${esc(info)}</small>` : ''}</span>
+        <span class="ab-aktionen">${k.pfad ? `<button type="button" class="btn btn-ghost ab-mini" onclick="abKatalogOeffnen('${k.id}')">Datenblatt</button>` : '<span class="ab-fehlt">ohne Datei</span>'}
+        ${pflegen ? `<button type="button" class="btn btn-ghost ab-mini" onclick="abKatalogDialog('${k.id}')">Bearbeiten</button>
+          <button type="button" class="btn btn-ghost ab-mini ab-gefahr" onclick="abKatalogLoeschen('${k.id}')">Löschen</button>` : ''}</span></li>`;
+    }).join('')}</ul>`;
+  }).join('');
+  return `${gruppen || '<p class="ab-klein">Der Katalog ist noch leer. Lege eure Module, Wechselrichter usw. einmal an – danach sind sie in jedem Projekt auswählbar.</p>'}
+    ${pflegen ? '<button type="button" class="btn btn-primary" onclick="abKatalogDialog()">Komponente hinzufügen</button>' : ''}`;
+}
+
+function abZeichnen(){
+  const box = g('ab-inhalt');
+  const proj = getCurrentProject();
+  if(!box || !proj || !abDaten) return;
+  const gesperrt = !abDarfAendern();
+  box.innerHTML = `
+    <div class="ab-kopf">
+      <div><h1>Anlagenbuch</h1><p>${esc(proj.name)} · Dokumentation nach ÖVE/ÖNORM E 8101</p></div>
+      <button type="button" class="btn btn-primary ab-erstellen" onclick="anlagenbuchErstellen()">Anlagenbuch erstellen (PDF)</button>
+    </div>
+    ${gesperrt ? '<div class="ab-info">Das Protokoll ist abgeschlossen – Änderungen am Anlagenbuch sind nur noch dem Admin möglich.</div>' : ''}
+    <div class="ab-status" id="ab-status" hidden></div>
+    ${AB_KAPITEL.map(k => `<details class="ab-kapitel"${k.nr === 1 ? ' open' : ''}><summary><span class="ab-nr">${k.nr}</span>${esc(k.titel)}</summary>
+      <div class="ab-raster">${k.felder.map(abFeldHtml).join('')}</div></details>`).join('')}
+    <details class="ab-kapitel"><summary><span class="ab-nr">A</span>Datenblätter & Dokumente</summary><div class="ab-block">${abDokumenteHtml()}</div></details>
+    <details class="ab-kapitel"><summary><span class="ab-nr">K</span>Komponenten-Katalog</summary><div class="ab-block">${abKatalogHtml()}</div></details>
+    <div class="ab-fuss"><button type="button" class="btn btn-primary" onclick="anlagenbuchErstellen()">Anlagenbuch erstellen (PDF)</button></div>`;
+}
+
+// Eingaben speichern (ein Listener fuer alles)
+document.addEventListener('input', e => abEingabe(e));
+document.addEventListener('change', e => abEingabe(e));
+function abEingabe(e){
+  const el = e.target;
+  if(!el || !el.closest || !el.closest('#ab-inhalt') || !abDaten) return;
+  if(!abDarfAendern()) return;
+  if(el.dataset.abZusatz){
+    const id = el.dataset.abZusatz;
+    abDaten.zusatz = abDaten.zusatz.filter(x => x !== id);
+    if(el.checked) abDaten.zusatz.push(id);
+    if(e.type === 'change') abSpeichernVerzoegert();
+    return;
+  }
+  const pfad = el.dataset.ab;
+  if(!pfad) return;
+  // Textfelder bei jeder Eingabe, Auswahl/Checkbox bei Aenderung
+  if(e.type === 'input' && (el.tagName === 'SELECT' || el.type === 'checkbox')) return;
+  abSetzen(pfad, el.type === 'checkbox' ? el.checked : el.value);
+  if(pfad === 'zaehlpunkt'){
+    const h = el.parentElement.querySelector('[data-zp]');
+    const z = el.value.replace(/\s+/g, '');
+    if(h) h.textContent = z ? (/^AT[0-9A-Z]{31}$/i.test(z) ? '✓ gültiges Format' : 'Format: AT + 31 Zeichen (33 gesamt)') : '';
+  }
+  abSpeichernVerzoegert();
+  if(el.tagName === 'SELECT' && (pfad.endsWith('.komponente') || pfad.startsWith('wr.'))){
+    // Datenblatt-Liste und WR-Daten aktualisieren
+    const offen = [...document.querySelectorAll('#ab-inhalt details.ab-kapitel')].map(d => d.open);
+    abZeichnen();
+    document.querySelectorAll('#ab-inhalt details.ab-kapitel').forEach((d, i) => { d.open = !!offen[i]; });
+  }
+}
+
+// ── Katalog pflegen ───────────────────────────────────────────────────────
+function abDateiEndung(datei){
+  const t = (datei.type || '').toLowerCase();
+  if(t === 'application/pdf') return 'pdf';
+  if(t === 'image/png') return 'png';
+  if(t === 'image/webp') return 'webp';
+  if(t === 'image/jpeg') return 'jpg';
+  return null;
+}
+function abDateiPruefen(datei){
+  if(!datei) return 'Keine Datei gewählt';
+  if(!abDateiEndung(datei)) return 'Nur PDF, JPG, PNG oder WEBP möglich';
+  if(datei.size > AB_MAX_DATEI) return 'Die Datei ist größer als 25 MB';
+  return null;
+}
+async function abHochladen(pfad, datei){
+  const { error } = await supabaseClient.storage.from(AB_BUCKET).upload(pfad, datei, { contentType: datei.type, upsert: false });
+  if(error) throw error;
+}
+async function abDateiLink(pfad){
+  const { data, error } = await supabaseClient.storage.from(AB_BUCKET).createSignedUrl(pfad, 600);
+  if(error) throw error;
+  return data.signedUrl;
+}
+async function abKatalogOeffnen(id){
+  const k = abKomp(id);
+  if(!k || !k.pfad) return;
+  const w = window.open('', '_blank');
+  try { const url = await abDateiLink(k.pfad); if(w) w.location = url; else location.assign(url); }
+  catch(e){ if(w) w.close(); toastError('Datenblatt konnte nicht geöffnet werden', e); }
+}
+
+function abKatalogDialog(id){
+  if(!darf('katalog')) return toast('Keine Berechtigung für den Katalog');
+  const k = id ? abKomp(id) : null;
+  const ov = document.createElement('div');
+  ov.className = 'app-dialog-overlay';
+  ov.innerHTML = `<div class="app-dialog ab-dialog" role="dialog" aria-modal="true" aria-labelledby="abk-titel">
+      <h2 id="abk-titel">${k ? 'Komponente bearbeiten' : 'Komponente hinzufügen'}</h2>
+      <div class="ab-raster ab-raster-eng">
+        <label class="ab-feld"><span>Kategorie</span><select class="sp-inp" id="abk-kat">
+          ${Object.keys(AB_KAT).map(x => `<option value="${x}"${(k ? k.kategorie : 'modul') === x ? ' selected' : ''}>${esc(AB_KAT[x])}</option>`).join('')}</select></label>
+        <label class="ab-feld"><span>Hersteller</span><input class="sp-inp" id="abk-hersteller" maxlength="80" value="${esc(k ? k.hersteller : '')}"></label>
+        <label class="ab-feld ab-breit"><span>Typ / Modell</span><input class="sp-inp" id="abk-typ" maxlength="120" value="${esc(k ? k.typ : '')}"></label>
+        <div class="ab-breit ab-raster ab-raster-eng" id="abk-daten"></div>
+        <label class="ab-feld ab-breit"><span>${k && k.pfad ? 'Datenblatt ersetzen (optional)' : 'Datenblatt (PDF oder Bild, optional)'}</span>
+          <input type="file" id="abk-datei" accept="application/pdf,image/jpeg,image/png,image/webp"></label>
+      </div>
+      <div class="app-dialog-knoepfe"><button type="button" class="btn btn-ghost" data-a="nein">Abbrechen</button>
+        <button type="button" class="btn btn-primary" data-a="ja">Speichern</button></div>
+    </div>`;
+  const datenBox = ov.querySelector('#abk-daten');
+  const katSel = ov.querySelector('#abk-kat');
+  const datenZeichnen = () => {
+    const felder = AB_KAT_DATEN[katSel.value] || [];
+    datenBox.innerHTML = felder.map(([f, l]) => `<label class="ab-feld"><span>${esc(l)}</span>
+      <input class="sp-inp" data-abk="${f}" value="${esc(k && k.daten && k.daten[f] != null ? k.daten[f] : '')}"></label>`).join('');
+  };
+  katSel.addEventListener('change', datenZeichnen);
+  datenZeichnen();
+  const schliessen = () => ov.remove();
+  ov.addEventListener('click', e => { if(e.target === ov) schliessen(); });
+  ov.querySelector('[data-a="nein"]').addEventListener('click', schliessen);
+  ov.querySelector('[data-a="ja"]').addEventListener('click', async () => {
+    const hersteller = ov.querySelector('#abk-hersteller').value.trim();
+    const typ = ov.querySelector('#abk-typ').value.trim();
+    if(!hersteller || !typ) return toast('Bitte Hersteller und Typ angeben');
+    const daten = {};
+    datenBox.querySelectorAll('[data-abk]').forEach(i => { if(i.value.trim()) daten[i.dataset.abk] = i.value.trim(); });
+    const datei = ov.querySelector('#abk-datei').files[0];
+    if(datei){ const f = abDateiPruefen(datei); if(f) return toast(f); }
+    const btn = ov.querySelector('[data-a="ja"]');
+    btn.disabled = true; btn.textContent = 'Speichere …';
+    try {
+      let pfad = k ? k.pfad : null;
+      const alt = pfad;
+      if(datei){
+        pfad = `bibliothek/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${abDateiEndung(datei)}`;
+        await abHochladen(pfad, datei);
+      }
+      const zeile = { kategorie: katSel.value, hersteller, typ, daten, pfad,
+        dateiname: datei ? datei.name : (k ? k.dateiname : null), groesse: datei ? datei.size : (k ? k.groesse : null), mime: datei ? datei.type : (k ? k.mime : null) };
+      const antwort = k
+        ? await supabaseClient.from('pv_komponenten').update(zeile).eq('id', k.id)
+        : await supabaseClient.from('pv_komponenten').insert(zeile);
+      if(antwort.error) throw antwort.error;
+      if(datei && alt && alt !== pfad) await supabaseClient.storage.from(AB_BUCKET).remove([alt]);
+      schliessen();
+      toast('Komponente gespeichert');
+      await abKatalogLaden();
+      abZeichnenBehalten();
+    } catch(e){
+      btn.disabled = false; btn.textContent = 'Speichern';
+      toastError('Speichern fehlgeschlagen', e);
+    }
+  });
+  document.body.appendChild(ov);
+  setTimeout(() => ov.querySelector('#abk-hersteller').focus(), 30);
+}
+
+async function abKatalogLoeschen(id){
+  const k = abKomp(id);
+  if(!k || !darf('katalog')) return;
+  if(!(await appFrage(`Komponente löschen?\n\n„${abKompName(k)}“ wird aus dem Katalog gelöscht. In Projekten, in denen sie ausgewählt ist, fehlt sie danach im Anlagenbuch.`))) return;
+  try {
+    const { error } = await supabaseClient.from('pv_komponenten').delete().eq('id', id);
+    if(error) throw error;
+    if(k.pfad) await supabaseClient.storage.from(AB_BUCKET).remove([k.pfad]);
+    toast('Komponente gelöscht');
+    await abKatalogLaden();
+    abZeichnenBehalten();
+  } catch(e){ toastError('Löschen fehlgeschlagen', e); }
+}
+
+function abZeichnenBehalten(){
+  const offen = [...document.querySelectorAll('#ab-inhalt details.ab-kapitel')].map(d => d.open);
+  abZeichnen();
+  document.querySelectorAll('#ab-inhalt details.ab-kapitel').forEach((d, i) => { d.open = !!offen[i]; });
+}
+
+// ── Projekt-Dokumente ─────────────────────────────────────────────────────
+function abDokHochladen(){
+  const proj = getCurrentProject();
+  if(!proj || !abDarfAendern()) return toast('Keine Berechtigung');
+  const ov = document.createElement('div');
+  ov.className = 'app-dialog-overlay';
+  ov.innerHTML = `<div class="app-dialog ab-dialog" role="dialog" aria-modal="true" aria-labelledby="abd-titel">
+      <h2 id="abd-titel">Dokument hochladen</h2>
+      <div class="ab-raster ab-raster-eng">
+        <label class="ab-feld"><span>Art</span><select class="sp-inp" id="abd-kat">
+          ${Object.keys(AB_DOK_KAT).map(x => `<option value="${x}">${esc(AB_DOK_KAT[x])}</option>`).join('')}</select></label>
+        <label class="ab-feld"><span>Titel</span><input class="sp-inp" id="abd-titel-in" maxlength="120" placeholder="z. B. Schaltplan DC"></label>
+        <label class="ab-feld ab-breit"><span>Datei (PDF oder Bild, max. 25 MB)</span><input type="file" id="abd-datei" accept="application/pdf,image/jpeg,image/png,image/webp"></label>
+      </div>
+      <div class="app-dialog-knoepfe"><button type="button" class="btn btn-ghost" data-a="nein">Abbrechen</button>
+        <button type="button" class="btn btn-primary" data-a="ja">Hochladen</button></div>
+    </div>`;
+  const schliessen = () => ov.remove();
+  ov.addEventListener('click', e => { if(e.target === ov) schliessen(); });
+  ov.querySelector('[data-a="nein"]').addEventListener('click', schliessen);
+  ov.querySelector('#abd-datei').addEventListener('change', e => {
+    const t = ov.querySelector('#abd-titel-in');
+    const f = e.target.files[0];
+    if(f && !t.value) t.value = f.name.replace(/\.[^.]+$/, '');
+  });
+  ov.querySelector('[data-a="ja"]').addEventListener('click', async () => {
+    const datei = ov.querySelector('#abd-datei').files[0];
+    const fehler = abDateiPruefen(datei);
+    if(fehler) return toast(fehler);
+    const titel = ov.querySelector('#abd-titel-in').value.trim() || datei.name;
+    const btn = ov.querySelector('[data-a="ja"]');
+    btn.disabled = true; btn.textContent = 'Lade hoch …';
+    try {
+      const pfad = `${proj.id}/dok/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${abDateiEndung(datei)}`;
+      await abHochladen(pfad, datei);
+      const { error } = await supabaseClient.from('pv_projekt_dokumente').insert({
+        project_id: proj.id, titel, kategorie: ov.querySelector('#abd-kat').value, pfad,
+        dateiname: datei.name, groesse: datei.size, mime: datei.type, erstellt_von: currentUser.id
+      });
+      if(error){ await supabaseClient.storage.from(AB_BUCKET).remove([pfad]); throw error; }
+      schliessen();
+      toast('Dokument hochgeladen');
+      await abDokumenteLaden(proj.id);
+      abZeichnenBehalten();
+    } catch(e){
+      btn.disabled = false; btn.textContent = 'Hochladen';
+      toastError('Hochladen fehlgeschlagen', e);
+    }
+  });
+  document.body.appendChild(ov);
+}
+async function abDokOeffnen(id){
+  const d = abDokumente.find(x => x.id === id);
+  if(!d) return;
+  const w = window.open('', '_blank');
+  try { const url = await abDateiLink(d.pfad); if(w) w.location = url; else location.assign(url); }
+  catch(e){ if(w) w.close(); toastError('Dokument konnte nicht geöffnet werden', e); }
+}
+async function abDokLoeschen(id){
+  const d = abDokumente.find(x => x.id === id);
+  const proj = getCurrentProject();
+  if(!d || !proj || !abDarfAendern()) return;
+  if(!(await appFrage(`Dokument entfernen?\n\n„${d.titel}“ wird aus dem Projekt gelöscht.`))) return;
+  try {
+    const { error } = await supabaseClient.from('pv_projekt_dokumente').delete().eq('id', id);
+    if(error) throw error;
+    await supabaseClient.storage.from(AB_BUCKET).remove([d.pfad]);
+    toast('Dokument entfernt');
+    await abDokumenteLaden(proj.id);
+    abZeichnenBehalten();
+  } catch(e){ toastError('Entfernen fehlgeschlagen', e); }
+}
+
+// Datenblaetter der gewaehlten Komponenten (ohne Doppelte)
+function abAutoDatenblaetter(){
+  const ids = [];
+  const dazu = (id, rolle) => { const k = abKomp(id); if(k && !ids.some(x => x.k.id === k.id)) ids.push({ k, rolle }); };
+  if(!abDaten) return ids;
+  dazu(abDaten.modul && abDaten.modul.komponente, 'modul');
+  Object.keys(abDaten.wr || {}).forEach(wr => dazu(abDaten.wr[wr], 'wr'));
+  dazu(abDaten.speicher && abDaten.speicher.komponente, 'speicher');
+  dazu(abDaten.montage && abDaten.montage.komponente, 'montage');
+  dazu(abDaten.ueberspannung && abDaten.ueberspannung.komponente, 'schutz');
+  return ids;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//   PDF-ERZEUGUNG
+// ══════════════════════════════════════════════════════════════════════════
+function abPdfLibLaden(){
+  if(window.PDFLib) return Promise.resolve(window.PDFLib);
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = AB_PDFLIB;
+    s.onload = () => window.PDFLib ? res(window.PDFLib) : rej(new Error('pdf-lib nicht verfügbar'));
+    s.onerror = () => rej(new Error('PDF-Bibliothek konnte nicht geladen werden – Internetverbindung prüfen'));
+    document.head.appendChild(s);
+  });
+}
+
+// Standardschrift (WinAnsi): Zeichen ausserhalb ersetzen
+const AB_WINANSI = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
+function abPdfText(t){
+  return String(t ?? '')
+    .replace(/Ω/g, 'Ohm').replace(/→/g, '->').replace(/≤/g, '<=').replace(/≥/g, '>=')
+    .replace(/[\t  ]/g, ' ')
+    .replace(/./gu, ch => {
+      const c = ch.codePointAt(0);
+      if((c >= 32 && c <= 126) || (c >= 160 && c <= 255) || AB_WINANSI.includes(ch)) return ch;
+      return c === 10 ? ch : '?';
+    });
+}
+function abUmbrechen(text, font, size, maxW){
+  const out = [];
+  String(text).split('\n').forEach(abs => {
+    let zeile = '';
+    abs.split(/\s+/).filter(w => w !== '').forEach(wort => {
+      let w = wort;
+      const probe = zeile ? zeile + ' ' + w : w;
+      if(font.widthOfTextAtSize(probe, size) <= maxW){ zeile = probe; return; }
+      if(zeile) out.push(zeile);
+      while(font.widthOfTextAtSize(w, size) > maxW && w.length > 1){
+        let i = w.length - 1;
+        while(i > 1 && font.widthOfTextAtSize(w.slice(0, i), size) > maxW) i--;
+        out.push(w.slice(0, i)); w = w.slice(i);
+      }
+      zeile = w;
+    });
+    out.push(zeile);
+  });
+  return out;
+}
+
+class AbPdf {
+  constructor(L, pdf, fR, fB, kopfText){
+    this.L = L; this.pdf = pdf; this.fR = fR; this.fB = fB; this.kopfText = kopfText;
+    this.W = 595.28; this.H = 841.89; this.rl = 52; this.rr = 52; this.ro = 66; this.ru = 60;
+    this.page = null; this.y = 0; this.kapitel = [];
+  }
+  get breite(){ return this.W - this.rl - this.rr; }
+  farbe(hex){ const n = parseInt(hex.slice(1), 16); return this.L.rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255); }
+  text(t, x, y, size, font, farbe = '#18181b'){ this.page.drawText(abPdfText(t), { x, y, size, font, color: this.farbe(farbe) }); }
+  linie(y, farbe = '#e4e4e7', dicke = 0.5){ this.page.drawLine({ start: { x: this.rl, y }, end: { x: this.W - this.rr, y }, thickness: dicke, color: this.farbe(farbe) }); }
+  seite(){
+    this.page = this.pdf.addPage([this.W, this.H]);
+    this.y = this.H - this.ro;
+    this.text(this.kopfText, this.rl, this.H - 36, 7.5, this.fR, '#6b6b73');
+    this.page.drawLine({ start: { x: this.rl, y: this.H - 42 }, end: { x: this.W - this.rr, y: this.H - 42 }, thickness: 1.2, color: this.farbe('#93BD14') });
+    return this.page;
+  }
+  platz(h){ if(this.y - h < this.ru) this.seite(); }
+  neuesKapitel(titel){
+    this.seite();
+    this.kapitel.push({ titel, seite: this.pdf.getPageCount() });
+    this.text(titel, this.rl, this.y - 6, 17, this.fB);
+    this.y -= 32;
+  }
+  ueberschrift(t){
+    this.platz(44);
+    this.y -= 6;
+    this.text(t, this.rl, this.y - 11, 11, this.fB);
+    this.y -= 18;
+  }
+  absatz(t, { size = 9.5, font = this.fR, farbe = '#18181b', einzug = 0 } = {}){
+    if(!String(t || '').trim()) return;
+    abUmbrechen(abPdfText(t), font, size, this.breite - einzug).forEach(z => {
+      this.platz(size * 1.5);
+      this.text(z, this.rl + einzug, this.y - size, size, font, farbe);
+      this.y -= size * 1.45;
+    });
+    this.y -= 4;
+  }
+  hinweis(t){ this.absatz(t, { size: 8.5, farbe: '#6b6b73' }); }
+  kv(paare){
+    const lw = 170, size = 9, vw = this.breite - lw - 8;
+    const zeilen = paare.filter(p => p && p[1] !== undefined && p[1] !== null && String(p[1]).trim() !== '');
+    if(!zeilen.length){ this.hinweis('Keine Angaben.'); return; }
+    zeilen.forEach(([k, v]) => {
+      const wz = abUmbrechen(abPdfText(v), this.fR, size, vw);
+      const kz = abUmbrechen(abPdfText(k), this.fB, size, lw - 8);
+      const h = Math.max(wz.length, kz.length) * size * 1.4 + 7;
+      this.platz(h);
+      kz.forEach((z, i) => this.text(z, this.rl, this.y - size - 2 - i * size * 1.4, size, this.fB, '#3f3f46'));
+      wz.forEach((z, i) => this.text(z, this.rl + lw, this.y - size - 2 - i * size * 1.4, size, this.fR));
+      this.y -= h;
+      this.linie(this.y + 2);
+    });
+    this.y -= 8;
+  }
+  zelle(t, x, w, y, size, font, farbe, rechts){
+    let s = abPdfText(t ?? '');
+    let n = 0;
+    while(s.length > 1 && font.widthOfTextAtSize(s, size) > w - 8 && n++ < 200) s = s.slice(0, -2) + '…';
+    const tw = font.widthOfTextAtSize(s, size);
+    this.page.drawText(s, { x: rechts ? x + w - 4 - tw : x + 4, y, size, font, color: this.farbe(farbe) });
+  }
+  tabelle(spalten, zeilen){
+    const size = 8, summe = spalten.reduce((s, c) => s + c.w, 0);
+    const br = spalten.map(c => c.w / summe * this.breite);
+    const xs = []; let x = this.rl; br.forEach(b => { xs.push(x); x += b; });
+    const kopf = () => {
+      this.platz(34);
+      this.page.drawRectangle({ x: this.rl, y: this.y - 16, width: this.breite, height: 16, color: this.farbe('#f4f4f5') });
+      spalten.forEach((c, i) => this.zelle(c.t, xs[i], br[i], this.y - 11, size, this.fB, '#3f3f46', c.r));
+      this.y -= 16;
+    };
+    kopf();
+    zeilen.forEach(z => {
+      if(this.y - 14 < this.ru){ this.seite(); kopf(); }
+      z.forEach((zelle, i) => {
+        const o = (zelle && typeof zelle === 'object') ? zelle : { t: zelle };
+        if(o.hinter) this.page.drawRectangle({ x: xs[i], y: this.y - 14, width: br[i], height: 14, color: this.farbe(o.hinter) });
+        this.zelle(o.t, xs[i], br[i], this.y - 10, size, o.fett ? this.fB : this.fR, o.farbe || '#18181b', spalten[i].r);
+      });
+      this.y -= 14;
+      this.linie(this.y, '#ececef', 0.4);
+    });
+    this.y -= 10;
+  }
+  haken(label, an){
+    this.platz(16);
+    const y = this.y - 11;
+    this.page.drawRectangle({ x: this.rl, y: y - 1, width: 9, height: 9, borderColor: this.farbe('#52525b'), borderWidth: 0.8 });
+    if(an){
+      this.page.drawLine({ start: { x: this.rl + 1.8, y: y + 3.5 }, end: { x: this.rl + 3.8, y: y + 1.2 }, thickness: 1.3, color: this.farbe('#15803d') });
+      this.page.drawLine({ start: { x: this.rl + 3.8, y: y + 1.2 }, end: { x: this.rl + 7.6, y: y + 7 }, thickness: 1.3, color: this.farbe('#15803d') });
+    }
+    this.text(label, this.rl + 16, y, 9.5, this.fR);
+    this.y -= 16;
+  }
+  bild(img, maxW, maxH, x = this.rl){
+    const s = Math.min(maxW / img.width, maxH / img.height, 10);
+    const w = img.width * s, h = img.height * s;
+    this.page.drawImage(img, { x, y: this.y - h, width: w, height: h });
+    return h;
+  }
+}
+
+async function abBytes(url){
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return new Uint8Array(await r.arrayBuffer());
+}
+async function abBildEinbetten(pdf, bytes){
+  const png = bytes[0] === 0x89 && bytes[1] === 0x50;
+  return png ? pdf.embedPng(bytes) : pdf.embedJpg(bytes);
+}
+
+function abStatus(t){
+  const el = g('ab-status');
+  if(!el) return;
+  el.hidden = !t;
+  el.textContent = t || '';
+}
+
+async function anlagenbuchErstellen(){
+  if(!darf('anlagenbuch')) return toast('Keine Berechtigung');
+  const proj = getCurrentProject();
+  if(!proj || !abDaten) return toast('Bitte zuerst ein Projekt öffnen');
+  const knoepfe = [...document.querySelectorAll('#ab-inhalt .ab-erstellen, #ab-inhalt .ab-fuss .btn')];
+  knoepfe.forEach(b => b.disabled = true);
+  const hinweise = [];
+  try {
+    abStatus('PDF-Bibliothek wird geladen …');
+    const L = await abPdfLibLaden();
+    const pdf = await L.PDFDocument.create();
+    const fR = await pdf.embedFont(L.StandardFonts.Helvetica);
+    const fB = await pdf.embedFont(L.StandardFonts.HelveticaBold);
+    const heute = new Date().toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const datum = iso => iso ? new Date(iso).toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+    const plan = getCurrentPlan();
+    const d = abDaten;
+    const doc = new AbPdf(L, pdf, fR, fB, `Anlagenbuch · ${proj.name}`);
+    const modul = abKomp(d.modul && d.modul.komponente);
+    const md = (modul && modul.daten) || {};
+    const wp = abZahl(md.wp) || getCurrentWp();
+    const aktive = getAllFullIds().filter(id => APP_STATE[id] && APP_STATE[id].stat === 'JA');
+    const module = aktive.reduce((s, id) => s + (Number(APP_STATE[id].mod) || 0), 0);
+    const kwp = (module * wp / 1000);
+    const wrNrn = Object.keys(plan).map(Number).sort((a, b) => a - b);
+    const fmt = (n, st = 2) => (n === null || n === undefined || isNaN(n)) ? '' : Number(n).toLocaleString('de-AT', { minimumFractionDigits: st, maximumFractionDigits: st });
+
+    // Bilder laden
+    abStatus('Fotos werden geladen …');
+    const logoEl = document.querySelector('#auth-gate .brand-logo--light');
+    let logo = null;
+    try { if(logoEl) logo = await pdf.embedPng(logoEl.getAttribute('src')); } catch(_){}
+    const fotos = { anlage: null, wr: [] };
+    if(typeof fotoListeLaden === 'function'){
+      try {
+        await fotoListeLaden(proj.id);
+        const alle = [ANLAGENFOTO, ...wrNrn].flatMap(z => fotoFuerWr(proj.id, z));
+        const pfade = alle.filter(f => !f.wartet).map(f => f.pfad);
+        if(pfade.length) await fotoUrlsHolen(pfade);
+        const an = fotoFuerWr(proj.id, ANLAGENFOTO).filter(f => f.url);
+        if(an.length) fotos.anlage = await abBildEinbetten(pdf, await abBytes(an[an.length - 1].url));
+        for(const wr of wrNrn){
+          for(const f of fotoFuerWr(proj.id, wr).filter(f => f.url)){
+            try { fotos.wr.push({ wr, img: await abBildEinbetten(pdf, await abBytes(f.url)) }); } catch(_){ hinweise.push(`Ein Foto von WR ${wr} konnte nicht geladen werden`); }
+          }
+        }
+      } catch(e){ hinweise.push('Fotos konnten nicht vollständig geladen werden'); }
+    }
+    const stempelK = abKatalog.find(k => k.kategorie === 'stempel' && k.pfad && /image/.test(k.mime || ''));
+    let stempel = null;
+    if(stempelK){ try { stempel = await abBildEinbetten(pdf, await abBytes(await abDateiLink(stempelK.pfad))); } catch(_){ hinweise.push('Firmenstempel konnte nicht geladen werden'); } }
+    let unterschrift = null;
+    if(proj.signature && proj.signature.dataUrl){ try { unterschrift = await pdf.embedPng(proj.signature.dataUrl); } catch(_){} }
+
+    // ── Deckblatt ──
+    abStatus('Seiten werden erstellt …');
+    const deck = pdf.addPage([doc.W, doc.H]);
+    doc.page = deck;
+    deck.drawRectangle({ x: 0, y: doc.H - 10, width: doc.W, height: 10, color: doc.farbe('#93BD14') });
+    if(logo){ const s = 54 / logo.height; deck.drawImage(logo, { x: doc.rl, y: doc.H - 96, width: logo.width * s, height: 54 }); }
+    doc.text('Anlagenbuch', doc.rl, doc.H - 170, 34, fB);
+    doc.text('Photovoltaikanlage · Dokumentation nach ÖVE/ÖNORM E 8101', doc.rl, doc.H - 194, 12, fR, '#52525b');
+    doc.text(proj.name || '', doc.rl, doc.H - 236, 18, fB);
+    const deckInfo = [
+      ['Anlagenbetreiber', d.betreiber && d.betreiber.name],
+      ['Standort', d.standort && d.standort.adresse ? String(d.standort.adresse).replace(/\n/g, ', ') : ''],
+      ['DC-Nennleistung', kwp ? `${fmt(kwp)} kWp` : ''],
+      ['Erstinbetriebnahme', datum(d.inbetriebnahme)]
+    ].filter(x => x[1]);
+    let dy = doc.H - 270;
+    deckInfo.forEach(([k, v]) => { doc.text(k, doc.rl, dy, 9, fR, '#6b6b73'); doc.text(v, doc.rl + 130, dy, 10, fB); dy -= 18; });
+    if(fotos.anlage){
+      const maxW = doc.breite, maxH = 300;
+      const s = Math.min(maxW / fotos.anlage.width, maxH / fotos.anlage.height);
+      const w = fotos.anlage.width * s, h = fotos.anlage.height * s;
+      deck.drawImage(fotos.anlage, { x: doc.rl + (maxW - w) / 2, y: dy - 20 - h, width: w, height: h });
+    }
+    deck.drawLine({ start: { x: doc.rl, y: 92 }, end: { x: doc.W - doc.rr, y: 92 }, thickness: 0.6, color: doc.farbe('#e4e4e7') });
+    doc.text(`Errichter: ${(d.errichter && d.errichter.firma) || '—'}`, doc.rl, 74, 9, fR, '#52525b');
+    doc.text(`Erstellt am ${heute} mit SOLPRO Messtool`, doc.rl, 60, 9, fR, '#52525b');
+
+    // Inhaltsverzeichnis: Seite reservieren, spaeter fuellen
+    const tocSeite = pdf.addPage([doc.W, doc.H]);
+
+    // ── 1 Stammdaten ──
+    doc.neuesKapitel('1  Allgemeine Angaben & Stammdaten');
+    doc.ueberschrift('Anlagenbetreiber');
+    doc.kv([['Name', d.betreiber && d.betreiber.name], ['Adresse', d.betreiber && d.betreiber.adresse], ['Kontakt', d.betreiber && d.betreiber.kontakt]]);
+    doc.ueberschrift('Standort');
+    doc.kv([['Anlagenadresse', d.standort && d.standort.adresse], ['Grundstücksnummer', d.standort && d.standort.grundstueck],
+      ['Katastralgemeinde', d.standort && d.standort.kg], ['Zählpunktnummer', d.zaehlpunkt]]);
+    doc.ueberschrift('Errichtung & Änderungen');
+    doc.kv([['Erstinbetriebnahme', datum(d.inbetriebnahme)], ['Wesentliche Änderungen', d.aenderungen || 'keine']]);
+    doc.ueberschrift('Angewendete Normen und Richtlinien');
+    String(d.normen || '').split('\n').filter(z => z.trim()).forEach(z => doc.absatz('•  ' + z.trim(), { size: 9.5 }));
+    if(proj.beschreibung){ doc.ueberschrift('Anlagenbeschreibung'); doc.absatz(proj.beschreibung); }
+
+    // ── 2 Komponenten ──
+    doc.neuesKapitel('2  Art der PV-Anlage & Komponenten');
+    doc.kv([['Betriebsart', d.betriebsart], ['DC-Nennleistung gesamt', kwp ? `${fmt(kwp)} kWp` : ''],
+      ['Anzahl Module', String(module)], ['Anzahl Wechselrichter', String(wrNrn.length)]]);
+    doc.ueberschrift('Solarmodule');
+    doc.kv([['Hersteller', modul && modul.hersteller], ['Typ', modul && modul.typ], ['Nennleistung je Modul', wp ? `${wp} Wp` : ''],
+      ['Modulanzahl', String(module)], ['Gesamtleistung', kwp ? `${fmt(kwp)} kWp` : ''],
+      ['Uoc / Isc bei STC', (md.uoc || md.isc) ? `${md.uoc || '—'} V / ${md.isc || '—'} A` : ''],
+      ['Ausrichtung', d.modul && d.modul.ausrichtung], ['Neigungswinkel', d.modul && d.modul.neigung ? `${d.modul.neigung}°` : '']]);
+    doc.ueberschrift('Modulmontage / Trägersystem');
+    const uk = abKomp(d.montage && d.montage.komponente);
+    doc.kv([['System', uk ? abKompName(uk) : ''], ['Art der Montage', d.montage && d.montage.text]]);
+    doc.ueberschrift('Wechselrichter');
+    doc.tabelle([{ t: 'WR', w: 5 }, { t: 'Bezeichnung', w: 16 }, { t: 'Hersteller / Typ', w: 24 }, { t: 'kW', w: 7, r: 1 }, { t: 'IP', w: 7 },
+      { t: 'MPPT', w: 6, r: 1 }, { t: 'Strings', w: 7, r: 1 }, { t: 'Module', w: 7, r: 1 }, { t: 'kWp DC', w: 9, r: 1 }],
+      wrNrn.map(wr => {
+        const k = abKomp(d.wr && d.wr[wr]); const kd = (k && k.daten) || {};
+        const ids = aktive.filter(id => id.split('.')[0] === String(wr));
+        const m = ids.reduce((s, id) => s + (Number(APP_STATE[id].mod) || 0), 0);
+        return [String(wr), (plan[wr] && plan[wr].name) || '', k ? abKompName(k) : '—', kd.leistung_kw || '', kd.ip || '',
+          String((plan[wr] && plan[wr].mppts) || ''), String(ids.length), String(m), fmt(m * wp / 1000)];
+      }));
+    doc.ueberschrift('Stromspeicher');
+    const sp = abKomp(d.speicher && d.speicher.komponente);
+    if(sp){
+      const sd = sp.daten || {};
+      doc.kv([['Hersteller', sp.hersteller], ['Typ', sp.typ], ['Kapazität', sd.kapazitaet ? `${sd.kapazitaet} kWh` : ''],
+        ['Nennspannung', sd.spannung ? `${sd.spannung} V` : ''], ['Aufstellungsort', d.speicher.ort], ['Be- und Entlüftung', d.speicher.lueftung]]);
+    } else doc.hinweis('Kein Stromspeicher vorhanden.');
+
+    // ── 3 Verkabelung ──
+    doc.neuesKapitel('3  Verkabelung & Schutzorgane');
+    const kb = d.kabel || {};
+    doc.ueberschrift('DC-Leitungen (Solarkabel)');
+    doc.kv([['Querschnitt', kb.dc_querschnitt ? `${kb.dc_querschnitt} mm²` : ''], ['Leitungslängen', kb.dc_laenge ? `${kb.dc_laenge} m` : ''], ['Verlegeart', kb.dc_verlegung]]);
+    doc.ueberschrift('AC-Zuleitung');
+    doc.kv([['Querschnitt', kb.ac_querschnitt ? `${kb.ac_querschnitt} mm²` : ''], ['Leitungslänge', kb.ac_laenge ? `${kb.ac_laenge} m` : ''], ['Verlegeart', kb.ac_verlegung]]);
+    doc.ueberschrift('Schalteinrichtungen');
+    doc.kv([['DC-Freischaltung', d.schalter && d.schalter.dc], ['AC-seitige Netztrennung', d.schalter && d.schalter.ac]]);
+    doc.ueberschrift('Überspannungs- und Blitzschutz (OVE R 6-2-1 / R 6-2-2)');
+    const ab = abKomp(d.ueberspannung && d.ueberspannung.komponente);
+    doc.kv([['DC-seitig', d.ueberspannung && d.ueberspannung.dc], ['AC-seitig', d.ueberspannung && d.ueberspannung.ac], ['Ableiter', ab ? abKompName(ab) : '']]);
+
+    // ── 4 Einsatzkraefte ──
+    doc.neuesKapitel('4  Sicherheit für Einsatzkräfte (OVE R 11-1)');
+    const r11 = d.r11 || {};
+    AB_KAPITEL[3].felder.filter(f => f[2] === 'check').forEach(f => doc.haken(f[1], !!r11[f[0].split('.')[1]]));
+    doc.y -= 6;
+    if(r11.text){ doc.ueberschrift('Weitere Maßnahmen'); doc.absatz(r11.text); }
+
+    // ── 5 Pruefung ──
+    doc.neuesKapitel('5  Prüf- und Messergebnisse (ÖVE/ÖNORM E 8101)');
+    const pr = d.pruefung || {};
+    doc.ueberschrift('Prüfbedingungen');
+    doc.kv([['Prüfdatum', datum(pr.datum)], ['Prüfer', pr.pruefer], ['Messgerät', pr.geraet], ['Kalibriert am', datum(pr.kalibrierung)],
+      ['Einstrahlung', pr.einstrahlung ? `${pr.einstrahlung} W/m²` : ''], ['Modultemperatur', pr.temperatur ? `${pr.temperatur} °C` : ''], ['Witterung', pr.wetter]]);
+    const risoWerte = aktive.map(id => abZahl(APP_STATE[id].riso)).filter(v => v !== null);
+    const risoMin = risoWerte.length ? Math.min(...risoWerte) : null;
+    const auff = aktive.filter(id => evaluateString(id).level === 'crit' || getStringStatus(id) === 'ERROR');
+    const fertig = aktive.filter(id => getStringStatus(id) === 'COMPLETE').length;
+    const erg = v => ({ t: v || '—', farbe: v === 'nicht i. O.' ? '#c8261c' : (v === 'i. O.' ? '#15803d' : '#18181b'), fett: !!v });
+    doc.ueberschrift('Erstprüfung – Besichtigung, Erprobung, Messung');
+    doc.tabelle([{ t: 'Prüfpunkt', w: 50 }, { t: 'Messwert', w: 25 }, { t: 'Ergebnis', w: 25 }], [
+      ['Besichtigung', '', erg(pr.besichtigung)],
+      ['Erprobung', '', erg(pr.erprobung)],
+      ['Niederohmigkeit Schutz-/Potentialausgleichsleiter', pr.schutzleiter_wert ? `${pr.schutzleiter_wert} Ohm` : '', erg(pr.schutzleiter)],
+      ['Isolationswiderstand DC (kleinster Stringwert)', risoMin !== null ? `${fmt(risoMin, 1)} MOhm` : '', erg(risoMin === null ? '' : (risoMin >= 1 ? 'i. O.' : 'nicht i. O.'))],
+      ['Isolationswiderstand AC', pr.riso_ac_wert ? `${pr.riso_ac_wert} MOhm` : '', erg(pr.riso_ac)],
+      ['Funktionsprüfung Schutzeinrichtungen / ENS', '', erg(pr.ens)],
+      ['Leerlaufspannung Uoc / Kurzschlussstrom Isc', `${fertig} von ${aktive.length} Strings`, erg(aktive.length ? (auff.length ? 'nicht i. O.' : (fertig === aktive.length ? 'i. O.' : '')) : '')]
+    ]);
+    if(pr.bemerkung){ doc.ueberschrift('Bemerkungen'); doc.absatz(pr.bemerkung); }
+
+    // Kontrollberechnung: Soll-Uoc = Module x Uoc(STC), temperaturkorrigiert
+    const uocM = abZahl(md.uoc), iscM = abZahl(md.isc), tk = abZahl(md.tk_uoc);
+    const T = abZahl(pr.temperatur), G = abZahl(pr.einstrahlung);
+    const tFaktor = (tk !== null && T !== null) ? (1 + tk / 100 * (T - 25)) : 1;
+    const mitSoll = uocM !== null;
+    doc.ueberschrift('Messwerte je Wechselrichter');
+    doc.hinweis(mitSoll
+      ? `Kontrollberechnung: Soll-Uoc = Modulanzahl × Uoc(STC) ${tk !== null && T !== null ? `× Temperaturkorrektur (${fmt(tk)} %/K, ${T} °C)` : '(ohne Temperaturkorrektur)'}`
+        + (iscM !== null && G ? `; Soll-Isc = Isc(STC) × ${G}/1000 W/m²` : '') + '. Abweichungen über 10 % sind markiert.'
+      : 'Für die Kontrollberechnung im Katalog beim Solarmodul Uoc und Isc hinterlegen.');
+    wrNrn.forEach(wr => {
+      const ids = aktive.filter(id => id.split('.')[0] === String(wr));
+      if(!ids.length) return;
+      doc.platz(60);
+      doc.text(`WR ${wr} – ${(plan[wr] && plan[wr].name) || ''}`, doc.rl, doc.y - 10, 9.5, fB);
+      doc.y -= 16;
+      const spalten = mitSoll
+        ? [{ t: 'Klemme', w: 9 }, { t: 'Module', w: 7, r: 1 }, { t: 'Uoc V', w: 9, r: 1 }, { t: 'Soll V', w: 9, r: 1 }, { t: 'Abw.', w: 8, r: 1 },
+           { t: 'Isc A', w: 8, r: 1 }, { t: 'Soll A', w: 8, r: 1 }, { t: 'Abw.', w: 8, r: 1 }, { t: 'Riso MOhm', w: 11, r: 1 }, { t: 'Status', w: 11 }]
+        : [{ t: 'Klemme', w: 12 }, { t: 'Plan-String', w: 16 }, { t: 'Module', w: 9, r: 1 }, { t: 'Uoc V', w: 12, r: 1 },
+           { t: 'Isc A', w: 12, r: 1 }, { t: 'Riso MOhm', w: 14, r: 1 }, { t: 'Status', w: 14 }];
+      doc.tabelle(spalten, ids.map(id => {
+        const it = APP_STATE[id];
+        const ev = evaluateString(id); const st = getStringStatus(id);
+        const krit = ev.level === 'crit' || st === 'ERROR';
+        const status = krit ? { t: 'Auffällig', farbe: '#c8261c', fett: true } : (st === 'COMPLETE' ? { t: 'OK', farbe: '#15803d' } : { t: 'Offen', farbe: '#b45309' });
+        const feld = f => ({ t: it[f] || '—', farbe: ev.fields[f] ? '#c8261c' : '#18181b', fett: !!ev.fields[f] });
+        if(!mitSoll) return [id, it.planName || '—', String(it.mod || ''), feld('uoc'), feld('isc'), feld('riso'), status];
+        const n = Number(it.mod) || 0;
+        const uSoll = n ? n * uocM * tFaktor : null;
+        const iSoll = (iscM !== null && G) ? iscM * G / 1000 : null;
+        const u = abZahl(it.uoc), i = abZahl(it.isc);
+        const abw = (ist, soll, grenze) => {
+          if(ist === null || !soll) return { t: '' };
+          const p = (ist - soll) / soll * 100;
+          return { t: `${p > 0 ? '+' : ''}${fmt(p, 1)} %`, farbe: Math.abs(p) > grenze ? '#b45309' : '#6b6b73', fett: Math.abs(p) > grenze };
+        };
+        return [id, String(n || ''), feld('uoc'), uSoll ? fmt(uSoll, 1) : '', abw(u, uSoll, 10), feld('isc'),
+          iSoll ? fmt(iSoll, 2) : '', abw(i, iSoll, 15), feld('riso'), status];
+      }));
+    });
+    if(auff.length){
+      doc.ueberschrift(`Auffälligkeiten (${auff.length})`);
+      auff.forEach(id => doc.absatz(`${id}: ${(evaluateString(id).msgs || []).join(' · ') || 'Wert außerhalb des gültigen Bereichs'}`, { size: 9, farbe: '#c8261c' }));
+    }
+
+    // ── 6 Bestaetigung ──
+    doc.neuesKapitel('6  Rechtliche Bestätigung');
+    const er = d.errichter || {};
+    doc.kv([['Elektrotechnik-Unternehmen', er.firma], ['Gewerbeberechtigung / Konzession', er.konzession],
+      ['Adresse', er.adresse], ['Verantwortliche Person', er.verantwortlich]]);
+    doc.absatz(d.bestaetigung || AB_BESTAETIGUNG, { size: 10 });
+    doc.platz(150);
+    doc.y -= 20;
+    const boxY = doc.y, boxH = 110, boxW = (doc.breite - 24) / 2;
+    const p6 = doc.page;
+    p6.drawRectangle({ x: doc.rl, y: boxY - boxH, width: boxW, height: boxH, borderColor: doc.farbe('#d4d4d8'), borderWidth: 0.8 });
+    p6.drawRectangle({ x: doc.rl + boxW + 24, y: boxY - boxH, width: boxW, height: boxH, borderColor: doc.farbe('#d4d4d8'), borderWidth: 0.8 });
+    if(unterschrift){
+      const s = Math.min((boxW - 20) / unterschrift.width, 60 / unterschrift.height);
+      p6.drawImage(unterschrift, { x: doc.rl + 10, y: boxY - 74, width: unterschrift.width * s, height: unterschrift.height * s });
+    }
+    doc.text(`${er.ort || ''}${er.ort ? ', ' : ''}${datum(proj.signature && proj.signature.at) || heute}`, doc.rl + 10, boxY - boxH + 24, 8.5, fR, '#3f3f46');
+    doc.text(`Unterschrift ${er.verantwortlich || (proj.signature && proj.signature.name) || ''}`, doc.rl + 10, boxY - boxH + 10, 8, fR, '#6b6b73');
+    if(stempel){
+      const s = Math.min((boxW - 20) / stempel.width, (boxH - 30) / stempel.height);
+      p6.drawImage(stempel, { x: doc.rl + boxW + 34, y: boxY - boxH + 22, width: stempel.width * s, height: stempel.height * s });
+    }
+    doc.text('Firmenstempel (Stampiglie)', doc.rl + boxW + 34, boxY - boxH + 10, 8, fR, '#6b6b73');
+    doc.y = boxY - boxH - 10;
+
+    // ── Anhang A: Fotos ──
+    if(fotos.anlage || fotos.wr.length){
+      doc.neuesKapitel('Anhang A  Fotodokumentation');
+      if(fotos.anlage){
+        doc.platz(320);
+        const h = doc.bild(fotos.anlage, doc.breite, 300);
+        doc.y -= h + 4; doc.text('Anlagenfoto', doc.rl, doc.y - 8, 8, fR, '#6b6b73'); doc.y -= 22;
+      }
+      const spW = (doc.breite - 16) / 2, spH = 190;
+      for(let i = 0; i < fotos.wr.length; i += 2){
+        doc.platz(spH + 26);
+        let hMax = 0;
+        [fotos.wr[i], fotos.wr[i + 1]].forEach((f, j) => {
+          if(!f) return;
+          const x = doc.rl + j * (spW + 16);
+          const h = doc.bild(f.img, spW, spH, x);
+          hMax = Math.max(hMax, h);
+          doc.text(`WR ${f.wr} – ${(plan[f.wr] && plan[f.wr].name) || ''}`, x, doc.y - h - 12, 8, fR, '#6b6b73');
+        });
+        doc.y -= hMax + 24;
+      }
+    }
+
+    // ── Anhang B: Datenblaetter & Dokumente ──
+    const anhang = [
+      ...abAutoDatenblaetter().map(a => ({ titel: `${AB_KAT[a.k.kategorie]}: ${abKompName(a.k)}`, pfad: a.k.pfad, mime: a.k.mime })),
+      ...(d.zusatz || []).map(abKomp).filter(Boolean).map(k => ({ titel: `${AB_KAT[k.kategorie]}: ${abKompName(k)}`, pfad: k.pfad, mime: k.mime })),
+      ...abDokumente.map(x => ({ titel: `${AB_DOK_KAT[x.kategorie] || x.kategorie}: ${x.titel}`, pfad: x.pfad, mime: x.mime }))
+    ].filter(a => a.pfad);
+    const eindeutig = anhang.filter((a, i) => anhang.findIndex(b => b.pfad === a.pfad) === i);
+    if(eindeutig.length){
+      doc.neuesKapitel('Anhang B  Datenblätter & Dokumente');
+      const listeSeite = doc.page, listeY = doc.y;
+      const eintraege = [];
+      for(let i = 0; i < eindeutig.length; i++){
+        const a = eindeutig[i];
+        abStatus(`Dokumente werden eingebunden (${i + 1}/${eindeutig.length}) …`);
+        const start = pdf.getPageCount() + 1;
+        try {
+          const { data, error } = await supabaseClient.storage.from(AB_BUCKET).download(a.pfad);
+          if(error) throw error;
+          const bytes = new Uint8Array(await data.arrayBuffer());
+          if(/pdf/.test(a.mime || data.type)){
+            const src = await L.PDFDocument.load(bytes, { ignoreEncryption: true });
+            const kopien = await pdf.copyPages(src, src.getPageIndices());
+            kopien.forEach(p => pdf.addPage(p));
+          } else {
+            const img = await abBildEinbetten(pdf, bytes);
+            doc.seite();
+            doc.text(a.titel, doc.rl, doc.y - 10, 11, fB); doc.y -= 24;
+            doc.bild(img, doc.breite, doc.H - doc.ro - doc.ru - 40);
+          }
+          eintraege.push({ titel: a.titel, seite: start });
+        } catch(e){
+          console.warn('Anhang:', a.titel, e);
+          hinweise.push(`„${a.titel}“ konnte nicht eingebunden werden`);
+          eintraege.push({ titel: a.titel + ' (liegt separat bei)', seite: null });
+        }
+      }
+      doc.page = listeSeite; doc.y = listeY;
+      doc.tabelle([{ t: 'Nr.', w: 6 }, { t: 'Dokument', w: 80 }, { t: 'Seite', w: 14, r: 1 }],
+        eintraege.map((e, i) => [String(i + 1), e.titel, e.seite ? String(e.seite) : '—']));
+    }
+
+    // ── Inhaltsverzeichnis ──
+    doc.page = tocSeite; doc.y = doc.H - doc.ro;
+    doc.text(doc.kopfText, doc.rl, doc.H - 36, 7.5, fR, '#6b6b73');
+    tocSeite.drawLine({ start: { x: doc.rl, y: doc.H - 42 }, end: { x: doc.W - doc.rr, y: doc.H - 42 }, thickness: 1.2, color: doc.farbe('#93BD14') });
+    doc.text('Inhaltsverzeichnis', doc.rl, doc.y - 6, 17, fB); doc.y -= 40;
+    doc.kapitel.forEach(k => {
+      doc.text(k.titel, doc.rl, doc.y, 11, fR);
+      const nr = String(k.seite); const w = fR.widthOfTextAtSize(nr, 11);
+      doc.text(nr, doc.W - doc.rr - w, doc.y, 11, fR);
+      const tw = fR.widthOfTextAtSize(abPdfText(k.titel), 11);
+      tocSeite.drawLine({ start: { x: doc.rl + tw + 8, y: doc.y + 2 }, end: { x: doc.W - doc.rr - w - 8, y: doc.y + 2 }, thickness: 0.5, color: doc.farbe('#d4d4d8'), dashArray: [1, 3] });
+      doc.y -= 22;
+    });
+
+    // Seitenzahlen
+    const seiten = pdf.getPages();
+    seiten.forEach((p, i) => {
+      if(i === 0) return;
+      const t = `Seite ${i + 1} von ${seiten.length}`;
+      const { width } = p.getSize();
+      p.drawText(t, { x: width - 52 - fR.widthOfTextAtSize(t, 7.5), y: 22, size: 7.5, font: fR, color: doc.farbe('#6b6b73') });
+    });
+
+    pdf.setTitle(`Anlagenbuch ${proj.name || ''}`);
+    pdf.setAuthor((d.errichter && d.errichter.firma) || 'SOLPRO');
+    pdf.setCreator('SOLPRO Messtool');
+    abStatus('PDF wird gespeichert …');
+    const bytes = await pdf.save();
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Anlagenbuch_${String(proj.name || 'Projekt').replace(/[^\wäöüÄÖÜß.-]+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    window.__abLetztesPdf = bytes;
+    abStatus(hinweise.length ? `Fertig mit Hinweisen: ${hinweise.join(' · ')}` : `Fertig – ${seiten.length} Seiten`);
+    toast(`Anlagenbuch erstellt (${seiten.length} Seiten)`);
+  } catch(e){
+    abStatus('');
+    toastError('Anlagenbuch konnte nicht erstellt werden', e);
+  } finally {
+    knoepfe.forEach(b => b.disabled = false);
+  }
 }

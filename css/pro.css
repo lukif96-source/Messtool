@@ -1035,3 +1035,20 @@ html body.pp .ppd-foto img { width: 100%; height: 100%; object-fit: cover; displ
 html body.pp .ppd-foto.an { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
 html body.pp .ppd-kein { font-size: .75rem; color: var(--mute); }
 html body.pp .ppd-hinweis { font-size: .8rem; color: var(--warn); margin: 6px 0 0; }
+
+/* Benutzerverwaltung: Rechte je Person */
+html body.pp .user-row { flex-wrap: wrap; }
+html body.pp .rechte-box { flex: 1 1 100%; width: 100%; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+html body.pp .rechte-box > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; font-size: .84rem; font-weight: 600; color: var(--ink2); }
+html body.pp .rechte-box > summary::-webkit-details-marker { display: none; }
+html body.pp .rechte-box > summary::after { content: '▾'; color: var(--mute); margin-left: 8px; }
+html body.pp .rechte-box[open] > summary::after { content: '▴'; }
+html body.pp .rechte-status { margin-left: auto; font-weight: 500; font-size: .78rem; color: var(--mute); }
+html body.pp .rechte-gruppe { margin: 10px 0 2px; }
+html body.pp .rechte-titel { font-size: .72rem; font-weight: 600; color: var(--mute); margin-bottom: 2px; }
+html body.pp .recht { display: flex; align-items: center; gap: 8px; font-size: .85rem; padding: 4px 0; cursor: pointer; color: var(--ink); }
+html body.pp .recht input { width: 16px; height: 16px; accent-color: var(--brand); flex: none; }
+html body.pp .recht.abweichend span { color: var(--brand-text); font-weight: 600; }
+html body.pp .recht.abweichend span::after { content: ' · angepasst'; font-weight: 400; color: var(--mute); font-size: .75rem; }
+html body.pp .rechte-admin { font-size: .8rem; color: var(--mute); }
+html body.pp .rechte-reset { margin-top: 8px; }

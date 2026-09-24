@@ -39,6 +39,106 @@ const ICON = (() => {
   };
 })();
 
+// ══════════════════════════════════════════════════════════════════════════
+//   BENUTZERRECHTE
+//   Jede Funktion hat ein eigenes Recht. Die Rolle (Admin/Planer/Bauleitung)
+//   gibt die Voreinstellung vor – genau so, wie die App sich bisher verhielt.
+//   Der Admin kann pro Person einzelne Rechte ein- oder ausschalten
+//   (gespeichert in profiles.rechte, nur Abweichungen vom Standard).
+//   Admin hat immer alle Rechte. Anlagenbuch und Katalog prueft zusaetzlich
+//   die Datenbank (pv_hat_recht).
+// ══════════════════════════════════════════════════════════════════════════
+const RECHTE = [
+  { k: 'projekt_anlegen',   g: 'Projekte',          l: 'Projekte anlegen und PVSOL-Import',                 std: ['admin', 'planner'] },
+  { k: 'projekt_verwalten', g: 'Projekte',          l: 'Projekte umbenennen, Gruppe/Bereich, Bauleitung zuweisen', std: ['admin', 'planner'] },
+  { k: 'projekt_loeschen',  g: 'Projekte',          l: 'Projekte löschen',                                  std: ['admin', 'planner'] },
+  { k: 'messwerte',         g: 'Matrix',            l: 'Messwerte eintragen',                               std: ['admin', 'planner', 'site'] },
+  { k: 'hardware',          g: 'Matrix',            l: 'Wechselrichter, MPPTs und Module bearbeiten',       std: ['admin', 'planner'] },
+  { k: 'wr_loeschen',       g: 'Matrix',            l: 'Wechselrichter löschen',                            std: ['admin'] },
+  { k: 'fotos',             g: 'Matrix',            l: 'Fotos aufnehmen und löschen',                       std: ['admin', 'planner', 'site'] },
+  { k: 'matrix_reset',      g: 'Matrix',            l: 'Matrix zurücksetzen',                               std: ['admin', 'planner'] },
+  { k: 'unterschreiben',    g: 'Protokoll',         l: 'Protokoll unterschreiben',                          std: ['admin', 'planner', 'site'] },
+  { k: 'sperren',           g: 'Protokoll',         l: 'Protokoll sperren und entsperren',                  std: ['admin'] },
+  { k: 'versionen',         g: 'Protokoll',         l: 'Versionen ansehen und wiederherstellen',            std: ['admin', 'planner', 'site'] },
+  { k: 'export',            g: 'Export & Werkzeuge', l: 'Prüfprotokoll und Exporte (PDF, Excel, CSV)',       std: ['admin', 'planner', 'site'] },
+  { k: 'querschnitt',       g: 'Export & Werkzeuge', l: 'Querschnittberechnung',                             std: ['admin', 'planner'] },
+  { k: 'vorlagen',          g: 'Export & Werkzeuge', l: 'Projekt-Vorlagen',                                  std: ['admin', 'planner'] },
+  { k: 'anlagenbuch',       g: 'Anlagenbuch',       l: 'Anlagenbuch sehen und erstellen',                   std: ['admin'] },
+  { k: 'katalog',           g: 'Anlagenbuch',       l: 'Komponenten-Katalog pflegen',                       std: ['admin'] }
+];
+let currentUserRechte = {};
+
+function darf(k){
+  if(currentUserRole === 'admin') return true;
+  if(currentUserRechte && Object.prototype.hasOwnProperty.call(currentUserRechte, k)) return !!currentUserRechte[k];
+  const r = RECHTE.find(x => x.k === k);
+  return !!(r && currentUserRole && r.std.includes(currentUserRole));
+}
+
+// Knoepfe/Bereiche mit data-recht ein- oder ausblenden
+function rechteAnwenden(){
+  document.querySelectorAll('[data-recht]').forEach(el => el.classList.toggle('hidden-role', !darf(el.dataset.recht)));
+}
+
+// ── Benutzerverwaltung: Rechte je Person ──────────────────────────────────
+const _benutzerRechte = {};
+
+function rechteZellenHtml(u){
+  if(u.role === 'admin') return '<div class="rechte-box"><span class="rechte-admin">Admin – hat immer alle Rechte</span></div>';
+  const eig = (u.rechte && typeof u.rechte === 'object') ? u.rechte : {};
+  _benutzerRechte[u.id] = { role: u.role, rechte: { ...eig } };
+  const angepasst = RECHTE.filter(r => Object.prototype.hasOwnProperty.call(eig, r.k) && !!eig[r.k] !== r.std.includes(u.role)).length;
+  const gruppen = [...new Set(RECHTE.map(r => r.g))];
+  return `<details class="rechte-box">
+    <summary>Rechte <span class="rechte-status">${angepasst ? angepasst + ' angepasst' : 'Standard der Rolle'}</span></summary>
+    ${gruppen.map(gr => `<div class="rechte-gruppe"><div class="rechte-titel">${esc(gr)}</div>${RECHTE.filter(r => r.g === gr).map(r => {
+        const std = r.std.includes(u.role);
+        const an = Object.prototype.hasOwnProperty.call(eig, r.k) ? !!eig[r.k] : std;
+        return `<label class="recht${an !== std ? ' abweichend' : ''}"><input type="checkbox" ${an ? 'checked' : ''}
+          onchange="rechtSetzen('${u.id}', '${r.k}', this.checked, this)"> <span>${esc(r.l)}</span></label>`;
+      }).join('')}</div>`).join('')}
+    <button type="button" class="btn btn-ghost rechte-reset" onclick="rechteZuruecksetzen('${u.id}')">Auf Standard der Rolle zurücksetzen</button>
+  </details>`;
+}
+
+async function rechtSetzen(uid, k, wert, el){
+  if(currentUserRole !== 'admin') return toast('Nur für Admins');
+  const b = _benutzerRechte[uid];
+  const r = RECHTE.find(x => x.k === k);
+  if(!b || !r) return;
+  const std = r.std.includes(b.role);
+  const neu = { ...b.rechte };
+  if(wert === std) delete neu[k]; else neu[k] = wert;
+  try {
+    const { error } = await supabaseClient.from('profiles').update({ rechte: neu }).eq('id', uid);
+    if(error) throw error;
+    b.rechte = neu;
+    if(el){
+      const lbl = el.closest('.recht');
+      if(lbl) lbl.classList.toggle('abweichend', wert !== std);
+      const box = el.closest('.rechte-box');
+      const st = box && box.querySelector('.rechte-status');
+      const n = RECHTE.filter(x => Object.prototype.hasOwnProperty.call(neu, x.k)).length;
+      if(st) st.textContent = n ? n + ' angepasst' : 'Standard der Rolle';
+    }
+    toast('Recht gespeichert – gilt beim nächsten Öffnen der App');
+  } catch(e){
+    if(el) el.checked = !wert;
+    toastError('Recht konnte nicht gespeichert werden', e);
+  }
+}
+
+async function rechteZuruecksetzen(uid){
+  if(currentUserRole !== 'admin') return toast('Nur für Admins');
+  if(!(await appFrage('Rechte zurücksetzen?\n\nAlle individuellen Anpassungen dieser Person werden entfernt. Es gilt wieder der Standard der Rolle.', { gefahr: false }))) return;
+  try {
+    const { error } = await supabaseClient.from('profiles').update({ rechte: {} }).eq('id', uid);
+    if(error) throw error;
+    toast('Auf Standard zurückgesetzt');
+    loadAllUsers();
+  } catch(e){ toastError('Zurücksetzen fehlgeschlagen', e); }
+}
+
 function esc(value){
   return String(value ?? '').replace(/[&<>'"]/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -178,7 +278,7 @@ function buildFilterBar(){
 function switchMainTab(tab){
   // Querschnittberechnung nur fuer Planer und Admin – Bauleitung und
   // Monteure sehen den Reiter nicht und landen sonst auf der Uebersicht.
-  if(tab === 'querschnitt' && !(currentUserRole === 'admin' || currentUserRole === 'planner')) tab = 'home';
+  if(tab === 'querschnitt' && !darf('querschnitt')) tab = 'home';
   document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.matrix-view, .projects-view, .home-view, .anleitung-view, .querschnitt-view').forEach(v => v.classList.remove('active'));
   const tabEl = g(`tab-${tab}`);
@@ -421,7 +521,7 @@ function renderProjectGrid(){
       <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--muted);">
         <div style="font-size:3rem; margin-bottom:16px;"></div>
         <div style="font-size:1.1rem; font-weight:700; margin-bottom:8px;">Keine Projekte</div>
-        ${currentUserRole !== 'site' ? '<button class="btn btn-primary" onclick="openNewProjectModal()">+ Neues Projekt</button>' : ''}
+        ${darf('projekt_anlegen') ? '<button class="btn btn-primary" onclick="openNewProjectModal()">+ Neues Projekt</button>' : ''}
       </div>
     `;
     return;
@@ -492,7 +592,8 @@ function renderProjectGrid(){
     
     const prog = getProjectProgress(proj);
     const pct = prog.total ? Math.round(prog.done / prog.total * 100) : 0;
-    const canManage = currentUserRole !== 'site';
+    const canManage = darf('projekt_verwalten');
+    const canDelete = darf('projekt_loeschen');
 
     return `
       <div class="project-card ${isActive ? 'active' : ''}" role="button" tabindex="0" aria-label="Projekt ${esc(proj.name)} öffnen" onclick="selectProject('${id}'); switchMainTab('matrix');" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
@@ -509,7 +610,7 @@ function renderProjectGrid(){
                 <button onclick="openBereichModal('${id}', event); closeProjectMenus();"><span></span> Bereich ändern</button>
                 <button onclick="openAssignModal('${id}', event); closeProjectMenus();"><span></span> Bauleitung zuweisen</button>
                 <button onclick="openHistoryModal('${id}', event); closeProjectMenus();"><span></span> Versionen &amp; Wiederherstellen</button>
-                <button class="danger" onclick="deleteProject('${id}', event); closeProjectMenus();"><span></span> Projekt löschen</button>
+                ${canDelete ? `<button class="danger" onclick="deleteProject('${id}', event); closeProjectMenus();"><span></span> Projekt löschen</button>` : ''}
               </div>
             </div>` : ''}
           </div>
@@ -744,7 +845,7 @@ function renderHomeProjektwahl(ids){
 let bereichModalProjektId = null;
 function openBereichModal(id, event){
   if(event){ event.stopPropagation(); event.preventDefault(); }
-  if(currentUserRole !== 'admin' && currentUserRole !== 'planner') return toast('Nur Planer oder Admin');
+  if(!darf('projekt_verwalten')) return toast('Keine Berechtigung');
   const proj = PROJECTS[id];
   if(!proj) return;
   bereichModalProjektId = id;
@@ -874,6 +975,7 @@ function loadTemplatesFromStorage(){
 }
 
 function showTemplateModal(){
+  if(!darf('vorlagen')) return toast('Keine Berechtigung');
   renderTemplateOptions();
   g('template-modal').classList.add('show');
 }
@@ -955,6 +1057,7 @@ async function deleteSelectedTemplate(){
 
 // Export-Funktionen erweitern
 function exportCSV(){
+  if(!darf('export')) return toast('Keine Berechtigung für Exporte');
   const project = getCurrentProject();
   if(!project) return toast('Kein Projekt geöffnet');
   
@@ -1217,7 +1320,7 @@ function renderSidebarProjects(){
     if(items.length === 0) return '';
     const open = sbExpandedGroups.has(key);
     const children = items.sort(sortByName).map(id => renderSbProjectItem(id)).join('');
-    const showGroupActions = currentUserRole && currentUserRole !== 'site' && key !== '__none__';
+    const showGroupActions = currentUserRole && darf('projekt_verwalten') && key !== '__none__';
     
     return `<div class="sb-proj-group ${open ? 'open' : ''}" data-group="${safeAttr(key)}">
       <div style="display:flex; align-items:center;">
@@ -1243,7 +1346,7 @@ function renderSbProjectItem(id){
   const proj = PROJECTS[id];
   if(!proj) return '';
   const isActive = id === CURRENT_PROJECT_ID;
-  const showActions = currentUserRole && currentUserRole !== 'site';
+  const showActions = currentUserRole && darf('projekt_verwalten');
   return `<div class="sb-proj-item ${isActive ? 'active' : ''}"
     role="button" tabindex="0"
     onclick="selectSbProject('${esc(id).replace(/'/g, "\\&#39;")}')"
@@ -1497,12 +1600,13 @@ function isProtocolLocked(){
 
 function canEditMeasurement(){
   if(currentUserRole === 'admin') return true;
+  if(!darf('messwerte')) return false;
   if(isProtocolLocked()) return false;
   return true; 
 }
 function canEditHardware(){
   if(currentUserRole === 'admin') return true;
-  if(currentUserRole === 'planner') return !isProtocolLocked();
+  if(darf('hardware')) return !isProtocolLocked();
   return false;
 }
 // Umbenennen ist risikoärmer als volle Hardware-Änderungen (MPPTs/Eingänge/Löschen),
@@ -1514,8 +1618,8 @@ function canRenameInverter(){
 }
 
 async function toggleProtocolLock(){
-  if(currentUserRole !== 'admin'){
-    toast('Nur Admins können das Protokoll sperren/entsperren');
+  if(!darf('sperren')){
+    toast('Keine Berechtigung zum Sperren/Entsperren');
     return;
   }
   const p = getCurrentProject();
@@ -1593,7 +1697,7 @@ function updateLockUI(){
         ? `<strong>${kopf}</strong> &middot; ${teile.join(' &middot; ')}`
         : `<strong>${kopf}</strong> &middot; gesperrt durch <strong>${esc(lockedBy)}</strong> am <strong>${esc(lockedAt)}</strong>`;
       const unlockBtn = g('lock-banner-unlock');
-      if(unlockBtn) unlockBtn.style.display = (currentUserRole === 'admin') ? 'inline-flex' : 'none';
+      if(unlockBtn) unlockBtn.style.display = darf('sperren') ? 'inline-flex' : 'none';
     }
   }
   
@@ -1722,6 +1826,7 @@ function istAbnahmeSchritt(proj){
 }
 
 function openSignatureModal(){
+  if(!darf('unterschreiben')) return toast('Keine Berechtigung zum Unterschreiben');
   if(!canEditMeasurement()) return toast('Keine Berechtigung zum Unterschreiben');
   const proj = getCurrentProject();
   if(!proj) return;
@@ -2395,7 +2500,7 @@ function openInverterEditor(wrId){
   refreshInverterEditorInfo();
 
   // Buttons je nach Rolle
-  const admin = currentUserRole === 'admin';
+  const admin = darf('wr_loeschen');
   g('inv-editor-delete-section').style.display = admin ? 'block' : 'none';
 
   refreshInverterEditorWarnings();
@@ -2623,7 +2728,7 @@ function regenerateAppStatePreservingMeasurements(){
 
 async function confirmDeleteInverterFromEditor(){
   if(!_inverterEditorWrId) return;
-  if(currentUserRole !== 'admin') return toast('Nur Admins können WRs löschen');
+  if(!darf('wr_loeschen')) return toast('Keine Berechtigung zum Löschen von Wechselrichtern');
   const wrId = _inverterEditorWrId;
   const plan = getCurrentPlan();
   const data = plan[wrId];
@@ -2639,7 +2744,7 @@ async function confirmDeleteInverterFromEditor(){
 }
 
 async function deleteInverter(wrId, skipConfirm){
-  if(currentUserRole !== 'admin') return toast('Nur Admins können WRs löschen');
+  if(!darf('wr_loeschen')) return toast('Keine Berechtigung zum Löschen von Wechselrichtern');
   const plan = getCurrentPlan();
   if(!plan[wrId]) return;
   if(!skipConfirm){
@@ -3026,7 +3131,7 @@ document.addEventListener('keydown', (e) => {
   // Strg+N = Neues Projekt
   if((e.ctrlKey || e.metaKey) && e.key === 'n') {
     e.preventDefault();
-    if(currentUserRole !== 'site') {
+    if(darf('projekt_anlegen')) {
       openNewProjectModal();
     } else {
       toast('Keine Berechtigung für neue Projekte');
@@ -3526,7 +3631,7 @@ function updateKPIs(){
 }
 
 function openPVSOLModal(){
-  if(currentUserRole === 'site') return toast('Nur Planer/Admin');
+  if(!darf('projekt_anlegen')) return toast('Keine Berechtigung');
   pendingPVSOLData = null;
   g('pvsol-file-input').value = '';
   g('pvsol-file-label').textContent = 'JSON-Datei auswählen';
@@ -3717,8 +3822,8 @@ async function openProjectsModal(){
       </div>
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
         <button class="btn btn-ghost" onclick="selectProject('${id}')" style="padding:6px 10px;">Öffnen</button>
-        ${currentUserRole !== 'site' ? `<button class="btn btn-ghost" onclick="renameProject('${id}', event)" style="padding:6px 10px;" title="Projekt umbenennen">Umbenennen</button>` : ''}
-        ${currentUserRole !== 'site' ? `<button class="btn btn-ghost" onclick="deleteProject('${id}', event)" style="padding:6px 10px; color:#ef4444; border-color:#ef4444;">Löschen</button>` : ''}
+        ${darf('projekt_verwalten') ? `<button class="btn btn-ghost" onclick="renameProject('${id}', event)" style="padding:6px 10px;" title="Projekt umbenennen">Umbenennen</button>` : ''}
+        ${darf('projekt_loeschen') ? `<button class="btn btn-ghost" onclick="deleteProject('${id}', event)" style="padding:6px 10px; color:#ef4444; border-color:#ef4444;">Löschen</button>` : ''}
       </div>
     </div>
   `;
@@ -3793,6 +3898,7 @@ async function selectProject(id){
 }
 
 function openNewProjectModal(){
+  if(!darf('projekt_anlegen')) return toast('Keine Berechtigung');
   g('np-name').value = '';
   g('np-group').value = currentProjectGroupFilter && currentProjectGroupFilter !== '__all__' && currentProjectGroupFilter !== '__none__' ? currentProjectGroupFilter : '';
   const groupList = g('np-group-suggestions');
@@ -3896,6 +4002,7 @@ async function updateProjectConfigInCloud(id) {
 }
 
 async function deleteProject(id, event){
+  if(!darf('projekt_loeschen')){ if(event) event.stopPropagation(); return toast('Keine Berechtigung zum Löschen'); }
   // Gesperrte Protokolle sind auch serverseitig vor dem Loeschen geschuetzt.
   // Der Hinweis hier erspart den Fehlschlag und erklaert den Weg.
   if(PROJECTS[id] && istGeschuetzt(PROJECTS[id])){
@@ -3929,7 +4036,7 @@ async function renameProject(id, event){
   if(event) event.stopPropagation();
   const proj = PROJECTS[id];
   if(!proj) return;
-  if(currentUserRole === 'site') return toast('Keine Berechtigung');
+  if(!darf('projekt_verwalten')) return toast('Keine Berechtigung');
   const newName = await appEingabe('Projekt umbenennen:', proj.name || '');
   if(newName === null) return;
   const trimmed = newName.trim();
@@ -3968,7 +4075,7 @@ async function setProjectGroup(id, event){
   if(event) event.stopPropagation();
   const proj = PROJECTS[id];
   if(!proj) return;
-  if(currentUserRole === 'site') return toast('Keine Berechtigung');
+  if(!darf('projekt_verwalten')) return toast('Keine Berechtigung');
   const existingGroups = [...new Set(bereichProjektIds().map(pid => PROJECTS[pid].group).filter(Boolean))].sort();
   const hint = existingGroups.length ? `\n\nVorhandene Gruppen: ${existingGroups.join(', ')}` : '';
   const input = await appEingabe('Gruppe für dieses Projekt (leer lassen zum Entfernen):' + hint, proj.group || '');
@@ -4003,7 +4110,7 @@ async function setProjectGroup(id, event){
 
 async function editGroup(oldName, event) {
   if(event) { event.stopPropagation(); event.preventDefault(); }
-  if(currentUserRole === 'site') return toast('Keine Berechtigung');
+  if(!darf('projekt_verwalten')) return toast('Keine Berechtigung');
   const action = await appEingabe(`Gruppe "${oldName}" bearbeiten:\n\n- Neuen Namen eingeben zum Umbenennen.\n- ODER "LÖSCHEN" eintippen, um die Gruppe komplett aufzulösen (Die Projekte bleiben dabei erhalten).`, oldName);
   
   if(action === null) return;
@@ -4061,6 +4168,7 @@ function getAllFullIds(){
 }
 
 function exportSmartScriptExcel(){
+  if(!darf('export')) return toast('Keine Berechtigung für Exporte');
   const proj = getCurrentProject();
   const rows = [['Etikett']]; let cnt = 0;
   getAllFullIds().forEach(fullId => {
@@ -4080,6 +4188,7 @@ function exportSmartScriptExcel(){
 }
 
 function exportStringNumbersExcel(){
+  if(!darf('export')) return toast('Keine Berechtigung für Exporte');
   const proj = getCurrentProject();
   const rows = [['String']]; let cnt = 0;
   getAllFullIds().forEach(fullId => {
@@ -4097,6 +4206,7 @@ function exportStringNumbersExcel(){
 }
 
 function doExcel(){
+  if(!darf('export')) return toast('Keine Berechtigung für Exporte');
   const proj = getCurrentProject();
   const rows = [[ 'Klemme', 'Plan-String', 'GAK', 'Status', 'Module', 'Leistung (kWp)', 'Uoc (V)', 'Isc (A)', 'Riso (MOhm)', 'Bemerkung' ]];
   getAllFullIds().forEach(fullId => {
@@ -4113,6 +4223,7 @@ function doExcel(){
 }
 
 function printBlankMeasurementSheet(){
+  if(!darf('export')) return toast('Keine Berechtigung für Exporte');
   const proj = getCurrentProject();
   if(!proj) return;
   const dateStr = new Date().toLocaleDateString('de-AT');
@@ -4340,7 +4451,7 @@ async function fetchCloudDataManually(silent = false){
 }
 
 async function factoryResetCloud(){
-  if(currentUserRole === 'site') return toast('Nicht erlaubt');
+  if(!darf('matrix_reset')) return toast('Keine Berechtigung');
   if(!await appFrage("Matrix komplett zurücksetzen?")) return;
   APP_STATE = generateState(getCurrentPlan());
   renderMatrix(null);
@@ -4439,6 +4550,7 @@ async function onAuthenticated(user){
     const isPlannerUp = currentUserRole === 'admin' || currentUserRole === 'planner';
     document.querySelectorAll('.role-gate-admin').forEach(el => el.classList.toggle('hidden-role', !isAdmin));
     document.querySelectorAll('.role-gate-planner').forEach(el => el.classList.toggle('hidden-role', !isPlannerUp));
+    rechteAnwenden();
     if(!isPlannerUp && document.body.classList.contains('tab-querschnitt')) switchMainTab('home');
     g('user-badge').style.display = 'flex';
     aktualisiereNamensAnzeige();
@@ -4463,12 +4575,14 @@ async function loadMyProfile(){
       currentUserRole = 'site';
       currentUserBereiche = [];
       currentUserDisplayName = '';
+      currentUserRechte = {};
     } else {
       currentUserRole = data.role || 'site';
       currentUserDisplayName = (data.display_name || '').trim();
+      currentUserRechte = (data.rechte && typeof data.rechte === 'object') ? data.rechte : {};
       currentUserBereiche = Array.isArray(data.bereiche) ? data.bereiche : [];
     }
-  } catch(e){ currentUserRole = 'site'; currentUserBereiche = []; }
+  } catch(e){ currentUserRole = 'site'; currentUserBereiche = []; currentUserRechte = {}; }
   // Ab hier steht fest, WER angemeldet ist — jetzt gilt dessen eigene
   // Darstellung und nicht mehr die zuletzt am Geraet verwendete.
   if(window.PV_DESIGN) PV_DESIGN.neuLaden();
@@ -4537,7 +4651,7 @@ function closeUsersModal(evt){ if(!evt || evt.target === g('users-modal')) g('us
 async function loadAllUsers(){
   const listEl = g('users-list'); listEl.innerHTML = 'Lade...';
   try {
-    const { data, error } = await supabaseClient.from('profiles').select('id, email, role, bereiche, display_name').order('created_at', { ascending: true });
+    const { data, error } = await supabaseClient.from('profiles').select('id, email, role, bereiche, display_name, rechte').order('created_at', { ascending: true });
     if(error){ listEl.innerHTML = `Fehler: ${error.message}`; return; }
     listEl.innerHTML = data.map(u => `
       <div class="user-row" data-suche="${esc(((u.display_name || '') + ' ' + (u.email || '')).toLowerCase())}">
@@ -4548,6 +4662,7 @@ async function loadAllUsers(){
           <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
         </select>
         ${bereicheZellenHtml(u)}
+        ${rechteZellenHtml(u)}
       </div>`).join('');
   } catch(e){ listEl.innerHTML = `Fehler: ${e.message}`; }
 }
@@ -4555,7 +4670,7 @@ async function loadAllUsers(){
 async function changeUserRole(userId, newRole){
   try {
     const { error } = await supabaseClient.from('profiles').update({ role: newRole }).eq('id', userId);
-    if(error) toastError('Rolle konnte nicht geändert werden', error); else toast('Rolle geändert');
+    if(error) toastError('Rolle konnte nicht geändert werden', error); else { toast('Rolle geändert'); loadAllUsers(); }
   } catch(e){ toastError('Rolle konnte nicht geändert werden', e); }
 }
 
@@ -4566,7 +4681,7 @@ let assignModalProjectId = null;
 
 function openAssignModal(id, event){
   if(event) event.stopPropagation();
-  if(currentUserRole === 'site') return toast('Keine Berechtigung');
+  if(!darf('projekt_verwalten')) return toast('Keine Berechtigung');
   if(!supabaseClient || !currentUser) return toast('Nur mit Cloud-Anmeldung verfügbar');
   const proj = PROJECTS[id];
   if(!proj) return;
@@ -4639,6 +4754,7 @@ let historyModalProjectId = null;
 
 function openHistoryModal(id, event){
   if(event) event.stopPropagation();
+  if(!darf('versionen')) return toast('Keine Berechtigung');
   if(!supabaseClient || !currentUser) return toast('Nur mit Cloud-Anmeldung verfügbar');
   const target = id || CURRENT_PROJECT_ID;
   const proj = PROJECTS[target];
@@ -4717,6 +4833,7 @@ async function loadProjectHistory(projectId){
 }
 
 async function restoreHistoryVersion(historyId, projectId){
+  if(!darf('versionen')) return toast('Keine Berechtigung');
   const proj = PROJECTS[projectId];
   if(!proj) return;
   if(!canEditMeasurement()) return toast('Protokoll gesperrt — Wiederherstellen nicht möglich');
@@ -5363,6 +5480,7 @@ function filterUsers(text){
 const ANLAGENFOTO = 'anlage';
 
 async function pruefprotokollDialog(){
+  if(!darf('export')) return toast('Keine Berechtigung für Exporte');
   const proj = getCurrentProject();
   if(!proj) return toast('Bitte zuerst ein Projekt öffnen');
   const pid = proj.id;

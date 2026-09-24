@@ -19,7 +19,7 @@ let fotoSendetGerade = false;
 let fotoViewer = null;       // { pid, wr, liste, index }
 
 function fotoZiel(wr){ return 'wr:' + wr; }
-function fotoDarfAendern(){ return darf('fotos') && (currentUserRole === 'admin' || !isProtocolLocked()); }
+function fotoDarfAendern(){ return darf('fotos') && (currentUserRole === 'admin' || !nurAdminAenderbar()); }
 function fotoCloudBereit(){ return !!(supabaseClient && currentUser && supabaseClient.storage); }
 
 /* ---------- Warteschlange (IndexedDB) ---------- */

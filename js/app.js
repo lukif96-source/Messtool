@@ -1687,22 +1687,29 @@ function isProtocolLocked(){
   return !!(p && p.locked);
 }
 
+// Ein einmal unterschriebenes Protokoll darf laut Datenbank nur noch der
+// Admin aendern – auch wenn es zur Endbearbeitung entsperrt ist. Die App
+// haelt sich an dieselbe Regel, sonst gaebe es Eingaben, die nie ankommen.
+function nurAdminAenderbar(){
+  const p = getCurrentProject();
+  return isProtocolLocked() || !!(p && istGeschuetzt(p));
+}
 function canEditMeasurement(){
   if(currentUserRole === 'admin') return true;
   if(!darf('messwerte')) return false;
-  if(isProtocolLocked()) return false;
+  if(nurAdminAenderbar()) return false;
   return true; 
 }
 function canEditHardware(){
   if(currentUserRole === 'admin') return true;
-  if(darf('hardware')) return !isProtocolLocked();
+  if(darf('hardware')) return !nurAdminAenderbar();
   return false;
 }
 // Umbenennen ist risikoärmer als volle Hardware-Änderungen (MPPTs/Eingänge/Löschen),
 // deshalb darf die Bauleitung (site) das auch — nur eben nicht den Rest des Editors.
 function canRenameInverter(){
   if(canEditHardware()) return true;
-  if(currentUserRole === 'site') return !isProtocolLocked();
+  if(currentUserRole === 'site') return !nurAdminAenderbar();
   return false;
 }
 
@@ -1996,6 +2003,7 @@ function updateRoleHint(){
     banner.style.display = 'flex';
     g('role-hint-text').textContent = isProtocolLocked()
       ? 'Protokoll gesperrt — keine Änderungen möglich.'
+      : nurAdminAenderbar() ? 'Unterschriebenes Protokoll — Änderungen nur noch durch den Admin.'
       : 'Bauleitungs-Modus: Du kannst nur Messwerte (Uoc/Isc/Riso) und Bemerkungen eintragen. Hardware ist read-only.';
   } else {
     banner.style.display = 'none';
@@ -6584,7 +6592,56 @@ async function abBytes(url){
 }
 async function abBildEinbetten(pdf, bytes){
   const png = bytes[0] === 0x89 && bytes[1] === 0x50;
-  return png ? pdf.embedPng(bytes) : pdf.embedJpg(bytes);
+  if(png) return pdf.embedPng(bytes);
+  // Handy-Fotos liegen oft quer im JPEG und tragen nur eine Dreh-Angabe (EXIF).
+  // Browser beachten sie, pdf-lib nicht – daher vorher aufrichten.
+  if(jpegAusrichtung(bytes) !== 1){
+    try { return pdf.embedJpg(await jpegAufrichten(bytes)); } catch(e){ console.warn('Bild aufrichten:', e); }
+  }
+  return pdf.embedJpg(bytes);
+}
+// EXIF-Ausrichtung eines JPEG (1 = normal, 3 = 180°, 6 = 90° rechts, 8 = 90° links …)
+function jpegAusrichtung(b){
+  if(!b || b[0] !== 0xFF || b[1] !== 0xD8) return 1;
+  let i = 2;
+  while(i + 9 < b.length){
+    if(b[i] !== 0xFF) return 1;
+    const marker = b[i + 1], laenge = (b[i + 2] << 8) | b[i + 3];
+    if(marker === 0xDA) return 1;   // ab hier Bilddaten
+    if(marker === 0xE1 && b[i + 4] === 0x45 && b[i + 5] === 0x78 && b[i + 6] === 0x69 && b[i + 7] === 0x66){
+      const t = i + 10;   // TIFF-Kopf
+      const le = b[t] === 0x49;
+      const u16 = o => le ? (b[o] | (b[o + 1] << 8)) : ((b[o] << 8) | b[o + 1]);
+      const u32 = o => (le ? (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) : ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3])) >>> 0;
+      const ifd = t + u32(t + 4);
+      if(ifd + 2 > b.length) return 1;
+      const n = u16(ifd);
+      for(let k = 0; k < n; k++){
+        const e = ifd + 2 + k * 12;
+        if(e + 10 > b.length) break;
+        if(u16(e) === 0x0112){ const o = u16(e + 8); return o >= 1 && o <= 8 ? o : 1; }
+      }
+      return 1;
+    }
+    i += 2 + laenge;
+  }
+  return 1;
+}
+// Bild ueber den Browser (der die Dreh-Angabe beachtet) neu als JPEG zeichnen
+async function jpegAufrichten(bytes){
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
+  try {
+    const img = await new Promise((ok, fehler) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fehler; i.src = url; });
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, 0, 0);
+    const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.92));
+    return new Uint8Array(await blob.arrayBuffer());
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 function abStatus(t){

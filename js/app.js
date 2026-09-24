@@ -680,15 +680,15 @@ function renderProjectGrid(){
             <div class="pc-menu-wrap">
               <button class="pc-menu-btn" title="Projekt-Aktionen" aria-haspopup="true" onclick="toggleProjectMenu('${id}', event)">⋯</button>
               <div class="pc-menu" id="pc-menu-${id}" onclick="event.stopPropagation()">
-                <button onclick="renameProject('${id}', event); closeProjectMenus();"><span></span> Umbenennen</button>
-                <button onclick="setProjectGroup('${id}', event); closeProjectMenus();"><span></span> Gruppe zuweisen</button>
-                <button onclick="openBereichModal('${id}', event); closeProjectMenus();"><span></span> Bereich ändern</button>
-                <button onclick="openAssignModal('${id}', event); closeProjectMenus();"><span></span> Bauleitung zuweisen</button>
-                <button onclick="openHistoryModal('${id}', event); closeProjectMenus();"><span></span> Versionen &amp; Wiederherstellen</button>
+                <button onclick="renameProject('${id}', event); closeProjectMenus();">Umbenennen</button>
+                <button onclick="setProjectGroup('${id}', event); closeProjectMenus();">Gruppe zuweisen</button>
+                <button onclick="openBereichModal('${id}', event); closeProjectMenus();">Bereich ändern</button>
+                <button onclick="openAssignModal('${id}', event); closeProjectMenus();">Bauleitung zuweisen</button>
+                <button onclick="openHistoryModal('${id}', event); closeProjectMenus();">Versionen &amp; Wiederherstellen</button>
                 ${proj.locked ? '' : (proj.archiviert
-                  ? `<button onclick="projektArchivieren('${id}', false, event); closeProjectMenus();"><span></span> Aus dem Archiv holen</button>`
-                  : `<button onclick="projektArchivieren('${id}', true, event); closeProjectMenus();"><span></span> Archivieren</button>`)}
-                ${canDelete ? `<button class="danger" onclick="deleteProject('${id}', event); closeProjectMenus();"><span></span> In den Papierkorb</button>` : ''}
+                  ? `<button onclick="projektArchivieren('${id}', false, event); closeProjectMenus();">Aus dem Archiv holen</button>`
+                  : `<button onclick="projektArchivieren('${id}', true, event); closeProjectMenus();">Archivieren</button>`)}
+                ${canDelete ? `<button class="danger" onclick="deleteProject('${id}', event); closeProjectMenus();">In den Papierkorb</button>` : ''}
               </div>
             </div>` : ''}
           </div>
@@ -2467,7 +2467,7 @@ function applyMeasurementFlags(){
       bar.style.display = 'flex';
       bar.classList.add('has-crit');
       bar.classList.remove('has-warn');
-      bar.innerHTML = `<span></span><span><strong>${nCrit}</strong> ${nCrit === 1 ? 'Wert' : 'Werte'} unplausibel</span>`
+      bar.innerHTML = `<svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><span><strong>${nCrit}</strong> ${nCrit === 1 ? 'Wert' : 'Werte'} unplausibel</span>`
         + `<button type="button" class="ab-jump" onclick="jumpToNextFlag()">Zum nächsten →</button>`;
     }
   }

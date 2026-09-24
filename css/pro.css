@@ -1268,3 +1268,6 @@ html body.pp .imp-gleich td { color: var(--mute); }
 html body.pp .imp-fehlt td { color: var(--c-rose); }
 html body.pp .imp-warn { background: color-mix(in srgb, var(--c-rose) 10%, transparent); border: 1px solid color-mix(in srgb, var(--c-rose) 35%, transparent); border-radius: var(--r-sm); padding: 8px 10px; font-size: .84rem; margin: 8px 0; }
 html body.pp .imp-dialog .ab-check { margin: 6px 0; }
+
+/* Offline-Anzeige: Punkt statt leerem Platzhalter */
+html body.pp .off-punkt { width: 7px; height: 7px; border-radius: 50%; background: var(--c-amber); flex: 0 0 auto; }

@@ -73,6 +73,7 @@ const RECHTE = [
   { k: 'export',            g: 'Export & Werkzeuge', l: 'Prüfprotokoll und Exporte (PDF, Excel, CSV)',       std: ['admin', 'planner', 'site', 'elektriker'] },
   { k: 'querschnitt',       g: 'Export & Werkzeuge', l: 'Querschnittberechnung (Menü)',                      std: ['admin', 'planner', 'elektriker'] },
   { k: 'vorlagen',          g: 'Export & Werkzeuge', l: 'Projekt-Vorlagen',                                  std: ['admin', 'planner'] },
+  { k: 'einteilung',        g: 'Export & Werkzeuge', l: 'Wochenübersicht der Busse (Bild/PDF für die Gruppe)', std: ['admin'] },
   { k: 'anlagenbuch',       g: 'Anlagenbuch',       l: 'Reiter Anlagenbuch sehen und erstellen',            std: ['admin', 'buero'] },
   { k: 'katalog',           g: 'Anlagenbuch',       l: 'Reiter Komponenten: Katalog und Firmendaten pflegen', std: ['admin'] }
 ];
@@ -8824,4 +8825,476 @@ function mmFertig(){
       ${alles && darf('export') ? '<button type="button" class="btn btn-primary" onclick="messmodusBeenden(); pruefprotokollDialog();">Prüfprotokoll erstellen</button>'
         : (!alles ? `<button type="button" class="btn btn-primary" onclick="messmodusStarten()">Offene Strings messen</button>` : '')}
     </div></div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//   TAGESEINTEILUNG aus der Taifun-Plantafel (HTML-Export)
+//   Wochenuebersicht: Spalten = Busse, Zeilen = Tage, Zellen = BVHs.
+//   Selbst eintragen oder aus der Taifun-Datei vorausfuellen; Ausgabe als
+//   Bild (WhatsApp-Gruppe) oder PDF.
+// ══════════════════════════════════════════════════════════════════════════
+const EINTEILUNG_TRUPPS_STD = ['SOL 2', 'SOL 3', 'SOL 4', 'SOL 12', 'SOL 16'];
+let einteilung = null;       // { datei, stand, spalten, termine, tage }
+let bvhNamen = null;         // Projekt-Nr. (oder Adresse) -> BVH-Name
+let bvhTimer = null;
+
+const tagIso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const zeitHM = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+function truppName(s){ const m = String(s || '').match(/SOL\s*(\d+)/i); return m ? 'SOL ' + m[1] : String(s || '').replace(/\s+/g, ' ').trim(); }
+function personName(s){ return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase().replace(/(^|[\s\-.])(\p{L})/gu, (a, b, c) => b + c.toUpperCase()); }
+function truppSort(a, b){ const n = s => { const m = s.match(/^SOL (\d+)$/); return m ? Number(m[1]) : 1000; }; return n(a) - n(b) || a.localeCompare(b); }
+
+function taifunDekodieren(buf){
+  const b = new Uint8Array(buf);
+  let enc = 'utf-8';
+  if(b[0] === 0xFF && b[1] === 0xFE) enc = 'utf-16le';
+  else if(b[0] === 0xFE && b[1] === 0xFF) enc = 'utf-16be';
+  else if(b.length > 3 && b[1] === 0 && b[3] === 0) enc = 'utf-16le';
+  return new TextDecoder(enc).decode(buf);
+}
+function taifunLesen(html){
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const tab = doc.querySelector('table');
+  if(!tab) throw new Error('In der Datei ist keine Plantafel');
+  doc.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+  const zeilen = [...tab.rows];
+  const belegt = [], zellen = [];
+  zeilen.forEach((tr, r) => {
+    belegt[r] = belegt[r] || [];
+    let c = 0;
+    [...tr.cells].forEach(td => {
+      while(belegt[r][c]) c++;
+      const rs = Math.max(1, td.rowSpan || 1), cs = Math.max(1, td.colSpan || 1);
+      for(let i = 0; i < rs; i++){ belegt[r + i] = belegt[r + i] || []; for(let k = 0; k < cs; k++) belegt[r + i][c + k] = true; }
+      zellen.push({ r, c, rs, cs, text: (td.textContent || '').replace(/\u00a0/g, ' ').trim(), farbe: (td.getAttribute('bgcolor') || '').toUpperCase() });
+      c += cs;
+    });
+  });
+  // Kopf: Zeile 0 = Trupps, Zeile 1 = Mitarbeiter (Spalte 0 = Uhrzeit)
+  const spalten = [];
+  zellen.filter(z => z.r === 0 && z.c > 0).forEach(z => { for(let k = 0; k < z.cs; k++) spalten[z.c + k] = { trupp: truppName(z.text), name: '' }; });
+  zellen.filter(z => z.r === 1 && z.c > 0).forEach(z => { for(let k = 0; k < z.cs; k++) if(spalten[z.c + k]) spalten[z.c + k].name = personName(z.text); });
+  // Zeitachse aus der ersten Spalte
+  const zeit = [];
+  zellen.filter(z => z.r >= 2 && z.c === 0).forEach(z => {
+    const m = z.text.match(/(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+    if(m) zeit[z.r] = new Date(+m[3], +m[2] - 1, +m[1], m[4] ? +m[4] : 0, m[5] ? +m[5] : 0);
+  });
+  const letzte = zeit.reduce((a, d, i) => d ? i : a, 0);
+  const ende = r => zeit[r] || new Date((zeit[letzte] || new Date()).getTime() + 3 * 3600e3);
+  const termine = zellen.filter(z => z.r >= 2 && z.c > 0 && z.text && zeit[z.r]).map(z => ({
+    von: zeit[z.r], bis: ende(z.r + z.rs), spalten: Array.from({ length: z.cs }, (_, k) => z.c + k), text: z.text,
+    urlaub: /^urlaub/i.test(z.text) || z.farbe === '#C4D64F'
+  }));
+  const tage = [...new Set(zeit.filter(Boolean).map(tagIso))].sort();
+  return { spalten, termine, tage };
+}
+// Einsatz-Text zerlegen: Name, Strasse, PLZ Ort, Arbeitsauftrag, Projekt/Auftrag, Hinweise
+function taifunFelder(text){
+  const zeilen = String(text).replace(/&#\$2022;|&#8226;/g, '•').split(/\r?\n/).map(z => z.replace(/\s+/g, ' ').trim());
+  const iPlz = zeilen.findIndex(z => /^(A-|D-)?\d{4,5}\s+\S/.test(z));
+  const iAuftrag = zeilen.findIndex(z => /^\d+\.\s*Arbeitsauftrag/i.test(z));
+  const iProjekt = zeilen.findIndex(z => /Projekt:\s*\S+/i.test(z));
+  let name = [], strasse = '', ort = '';
+  if(iPlz >= 0 && (iAuftrag < 0 || iPlz < iAuftrag)){
+    ort = zeilen[iPlz];
+    const kopf = zeilen.slice(0, iPlz).filter(Boolean);
+    if(kopf.length){ strasse = kopf[kopf.length - 1]; name = kopf.slice(0, -1).filter(z => !/^z\.?\s?Hd\.?/i.test(z)); }
+  } else {
+    name = zeilen.slice(0, iAuftrag >= 0 ? iAuftrag : 1).filter(Boolean);
+  }
+  const zp = zeilen[iProjekt] || '';
+  const pm = zp.match(/Projekt:\s*(\S+)/i), am = zp.match(/Auftrag:\s*(\S+)/i);
+  const ab = Math.max(iPlz, iAuftrag, iProjekt);
+  const hinweise = zeilen.slice(ab + 1).filter(z => z && z !== '•');
+  return { name: name.join(', '), strasse, ort, arbeitsauftrag: iAuftrag >= 0 ? zeilen[iAuftrag].replace(/\s+/g, ' ') : '',
+    projekt: pm ? pm[1] : '', auftrag: am ? am[1] : '', hinweise };
+}
+function bvhSchluessel(f){ return f.projekt || [f.strasse, f.ort].filter(Boolean).join(', ') || f.name; }
+function bvhName(f){ const k = bvhSchluessel(f); return (bvhNamen && bvhNamen[k]) || f.name || ''; }
+async function bvhNamenLaden(){
+  if(bvhNamen) return;
+  try { bvhNamen = JSON.parse(localStorage.getItem('pv_bvh_namen')) || {}; } catch(_){ bvhNamen = {}; }
+  if(supabaseClient && currentUser && (darf('katalog') || darf('anlagenbuch') || darf('ppk'))){
+    try {
+      const { data } = await supabaseClient.from('pv_einstellungen').select('wert').eq('schluessel', 'bvh_namen').maybeSingle();
+      if(data && data.wert) bvhNamen = { ...bvhNamen, ...data.wert };
+    } catch(_){}
+  }
+}
+function bvhNameSetzen(k, name){
+  if(!k) return;
+  bvhNamen = bvhNamen || {};
+  if(name) bvhNamen[k] = name; else delete bvhNamen[k];
+  try { localStorage.setItem('pv_bvh_namen', JSON.stringify(bvhNamen)); } catch(_){}
+  if(!darf('katalog') || !supabaseClient || !currentUser) return;
+  clearTimeout(bvhTimer);
+  bvhTimer = setTimeout(async () => {
+    try {
+      const { error } = await supabaseClient.from('pv_einstellungen').upsert({ schluessel: 'bvh_namen', wert: bvhNamen, geaendert_am: new Date().toISOString() });
+      if(error) throw error;
+    } catch(e){ console.warn('BVH-Namen speichern:', e); }
+  }, 900);
+}
+
+// Daten fuer einen Tag: je Trupp Mitarbeiter (mit Urlaub) und Einsaetze
+function tagesEinteilung(iso, trupps){
+  const [y, m, d] = iso.split('-').map(Number);
+  const t0 = new Date(y, m - 1, d), t1 = new Date(y, m - 1, d + 1);
+  const arbVon = new Date(y, m - 1, d, 7, 30), arbBis = new Date(y, m - 1, d, 16, 0);
+  return trupps.map(trupp => {
+    const cols = einteilung.spalten.map((s, i) => s && s.trupp === trupp ? i : -1).filter(i => i >= 0);
+    const leute = [...new Set(cols.map(i => einteilung.spalten[i].name).filter(Boolean))];
+    const amTag = einteilung.termine.filter(t => t.von < t1 && t.bis > t0 && t.spalten.some(c => cols.includes(c)));
+    const urlaub = new Set();
+    const gruppen = new Map();
+    amTag.forEach(t => {
+      const namen = [...new Set(t.spalten.filter(c => cols.includes(c)).map(c => einteilung.spalten[c].name))];
+      if(t.urlaub){ namen.forEach(n => urlaub.add(n)); return; }
+      const g2 = gruppen.get(t.text) || { text: t.text, felder: taifunFelder(t.text), von: t.von, bis: t.bis, leute: new Set() };
+      if(t.von < g2.von) g2.von = t.von;
+      if(t.bis > g2.bis) g2.bis = t.bis;
+      namen.forEach(n => g2.leute.add(n));
+      gruppen.set(t.text, g2);
+    });
+    const einsaetze = [...gruppen.values()].sort((a, b) => a.von - b.von).map(e => {
+      const vonOffen = e.von <= arbVon, bisOffen = e.bis >= arbBis;   // beginnt vor bzw. endet nach der Arbeitszeit
+      const weiter = e.bis > t1 ? new Date(e.bis.getTime() - 1) : null;
+      const zeit = vonOffen && bisOffen ? 'ganztägig' : (vonOffen ? `bis ${zeitHM(e.bis)}` : (bisOffen ? `ab ${zeitHM(e.von)}` : `${zeitHM(e.von)}–${zeitHM(e.bis)}`));
+      return { ...e, leute: [...e.leute], zeit,
+        bisTag: weiter ? weiter.toLocaleDateString('de-AT', { weekday: 'short', day: '2-digit', month: '2-digit' }) : '' };
+    });
+    return { trupp, leute: leute.map(n => ({ name: n, urlaub: urlaub.has(n) })), einsaetze };
+  });
+}
+
+// ── Wochenuebersicht: Daten ───────────────────────────────────────────────
+// { wochen: { 'Montag-ISO': { busse: [{ name, leute, tage: { iso: 'BVH\nBVH' } }], wochenende, geaendert } },
+//   vorlage: [{ name, leute }], vorlageGeaendert }
+const EINT_SPEICHER = 'pv_einteilung_v1';
+let eint = null;
+let eintWoche = null;        // Montag der angezeigten Woche (ISO)
+let eintTimer = null;
+function montagVon(d){ const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; }
+function kalenderwoche(d){
+  const x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  x.setUTCDate(x.getUTCDate() + 4 - (x.getUTCDay() || 7));
+  return Math.ceil(((x - new Date(Date.UTC(x.getUTCFullYear(), 0, 1))) / 864e5 + 1) / 7);
+}
+const isoDatum = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
+function wochenTage(montag, mitWE){ const m = isoDatum(montag); return Array.from({ length: mitWE ? 7 : 5 }, (_, i) => tagIso(new Date(m.getFullYear(), m.getMonth(), m.getDate() + i))); }
+async function eintLaden(){
+  if(eint) return;
+  try { eint = JSON.parse(localStorage.getItem(EINT_SPEICHER)); } catch(_){ eint = null; }
+  if(!eint || !eint.wochen) eint = { wochen: {}, vorlage: EINTEILUNG_TRUPPS_STD.map(n => ({ name: n, leute: '' })), vorlageGeaendert: '' };
+  if(supabaseClient && currentUser && (darf('katalog') || darf('anlagenbuch') || darf('ppk'))){
+    try {
+      const { data } = await supabaseClient.from('pv_einstellungen').select('wert').eq('schluessel', 'einteilung').maybeSingle();
+      const w = data && data.wert;
+      if(w && w.wochen){
+        Object.entries(w.wochen).forEach(([k, v]) => { const l = eint.wochen[k]; if(!l || String(v.geaendert || '') > String(l.geaendert || '')) eint.wochen[k] = v; });
+        if(w.vorlage && String(w.vorlageGeaendert || '') >= String(eint.vorlageGeaendert || '')){ eint.vorlage = w.vorlage; eint.vorlageGeaendert = w.vorlageGeaendert || ''; }
+      }
+    } catch(_){}
+  }
+}
+function eintSpeichern(){
+  const grenze = tagIso(new Date(Date.now() - 70 * 864e5));   // aeltere Wochen als 10 Wochen weg
+  Object.keys(eint.wochen).forEach(k => { if(k < grenze) delete eint.wochen[k]; });
+  try { localStorage.setItem(EINT_SPEICHER, JSON.stringify(eint)); } catch(_){}
+  const st = g('eint-status');
+  if(!darf('katalog') || !supabaseClient || !currentUser){ if(st) st.textContent = 'Auf diesem Gerät gespeichert'; return; }
+  if(st) st.textContent = 'Wird gespeichert …';
+  clearTimeout(eintTimer);
+  eintTimer = setTimeout(async () => {
+    try {
+      const { error } = await supabaseClient.from('pv_einstellungen').upsert({ schluessel: 'einteilung', wert: eint, geaendert_am: new Date().toISOString() });
+      if(error) throw error;
+      const s2 = g('eint-status'); if(s2) s2.textContent = 'Gespeichert';
+    } catch(e){ const s2 = g('eint-status'); if(s2) s2.textContent = 'Nur auf diesem Gerät gespeichert – Verbindung prüfen'; }
+  }, 900);
+}
+function eintWocheHolen(montag){
+  if(!eint.wochen[montag]) eint.wochen[montag] = { busse: eint.vorlage.map(b => ({ name: b.name, leute: b.leute, tage: {} })), wochenende: false, geaendert: '' };
+  return eint.wochen[montag];
+}
+function eintGeaendert(w, vorlageAuch){
+  w.geaendert = new Date().toISOString();
+  if(vorlageAuch){ eint.vorlage = w.busse.map(b => ({ name: b.name, leute: b.leute })); eint.vorlageGeaendert = w.geaendert; }
+  eintSpeichern();
+}
+
+// ── Dialog ────────────────────────────────────────────────────────────────
+async function einteilungOeffnen(){
+  if(!darf('einteilung')) return toast('Keine Berechtigung');
+  await eintLaden();
+  await bvhNamenLaden();
+  if(!abFirma && (darf('katalog') || darf('anlagenbuch') || darf('ppk'))){ try { await abFirmaLaden(); } catch(_){} }
+  if(!eintWoche){ const h2 = new Date(); eintWoche = tagIso(montagVon(h2.getDay() === 6 || h2.getDay() === 0 ? new Date(h2.getTime() + 2 * 864e5) : h2)); }
+  eintZeigen();
+}
+function eintZeigen(){
+  let ov = g('einteilung-dialog');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'einteilung-dialog'; ov.className = 'app-dialog-overlay';
+    ov.addEventListener('click', e => { if(e.target === ov) einteilungSchliessen(); });
+    document.body.appendChild(ov);
+    document.addEventListener('keydown', einteilungTaste, true);
+  }
+  const w = eintWocheHolen(eintWoche);
+  const tage = wochenTage(eintWoche, w.wochenende);
+  const kw = kalenderwoche(isoDatum(eintWoche));
+  const kurz = iso => isoDatum(iso).toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit' });
+  const wt = iso => isoDatum(iso).toLocaleDateString('de-AT', { weekday: 'short' });
+  const teilbar = !!(navigator.canShare && navigator.share);
+  const kopierbar = !!(navigator.clipboard && window.ClipboardItem);
+  ov.innerHTML = `<div class="app-dialog ein-dialog" role="dialog" aria-modal="true" aria-labelledby="ein-titel">
+    <div class="ein-kopf"><h2 id="ein-titel">Wochenübersicht</h2>
+      <button type="button" class="mm-x" onclick="einteilungSchliessen()" aria-label="Schließen">${ICON.x}</button></div>
+    <div class="eint-nav">
+      <button type="button" class="btn btn-ghost" onclick="eintWocheWechseln(-7)" aria-label="Vorige Woche">${ICON.chevL}</button>
+      <strong>KW ${kw} · ${esc(kurz(tage[0]))} – ${esc(kurz(tage[tage.length - 1]))}.${isoDatum(eintWoche).getFullYear()}</strong>
+      <button type="button" class="btn btn-ghost" onclick="eintWocheWechseln(7)" aria-label="Nächste Woche">${ICON.chevR}</button>
+      <label class="eint-we"><input type="checkbox" id="eint-we"${w.wochenende ? ' checked' : ''}> Sa/So</label>
+    </div>
+    <p class="app-dialog-text">Je Zelle die BVHs untereinander eintragen. „Urlaub: Name“ wird farbig markiert. Wird automatisch gespeichert.</p>
+    <div class="eint-scroll"><table class="eint-tab">
+      <thead><tr><th class="eint-tagspalte"></th>${w.busse.map((b, bi) => `<th>
+        <div class="eint-bus"><input class="sp-inp eint-busname" data-eint-bus="${bi}" data-feld="name" value="${esc(b.name)}" aria-label="Bus">
+          <button type="button" class="eint-weg" data-eint-weg="${bi}" aria-label="Bus entfernen" title="Bus entfernen">${ICON.x}</button></div>
+        <input class="sp-inp eint-leute" data-eint-bus="${bi}" data-feld="leute" value="${esc(b.leute || '')}" placeholder="Mannschaft">
+      </th>`).join('')}<th class="eint-plus"><button type="button" class="btn btn-ghost" onclick="eintBusDazu()">+ Bus</button></th></tr></thead>
+      <tbody>${tage.map(t => `<tr><th class="eint-tagspalte"><span>${esc(wt(t))}</span>${esc(kurz(t))}</th>
+        ${w.busse.map((b, bi) => `<td><textarea class="sp-inp" rows="3" data-eint-bus="${bi}" data-eint-tag="${t}" placeholder="BVH">${esc((b.tage || {})[t] || '')}</textarea></td>`).join('')}<td></td></tr>`).join('')}
+      </tbody></table></div>
+    <div class="ein-klein" id="eint-status"></div>
+    <div class="app-dialog-knoepfe ein-knoepfe">
+      <button type="button" class="btn btn-ghost" onclick="eintTaifun()">Aus Taifun vorausfüllen</button>
+      <button type="button" class="btn btn-ghost" onclick="einteilungPdf()">PDF</button>
+      ${kopierbar ? '<button type="button" class="btn btn-ghost" onclick="einteilungKopieren()">Bild kopieren</button>' : ''}
+      <button type="button" class="btn btn-primary" onclick="einteilungTeilen()">${teilbar ? 'Teilen (WhatsApp)' : 'Bild speichern'}</button>
+    </div></div>`;
+  ov.querySelector('#eint-we').addEventListener('change', e => { w.wochenende = e.target.checked; eintGeaendert(w); eintZeigen(); });
+  ov.querySelectorAll('textarea[data-eint-tag]').forEach(ta => ta.addEventListener('input', () => {
+    const b = w.busse[+ta.dataset.eintBus];
+    b.tage = b.tage || {};
+    if(ta.value.trim()) b.tage[ta.dataset.eintTag] = ta.value; else delete b.tage[ta.dataset.eintTag];
+    eintGeaendert(w);
+  }));
+  ov.querySelectorAll('input[data-eint-bus]').forEach(inp => inp.addEventListener('input', () => {
+    w.busse[+inp.dataset.eintBus][inp.dataset.feld] = inp.value;
+    eintGeaendert(w, true);
+  }));
+  ov.querySelectorAll('[data-eint-weg]').forEach(b => b.addEventListener('click', async () => {
+    const bus = w.busse[+b.dataset.eintWeg];
+    const voll = Object.values(bus.tage || {}).some(v => String(v).trim());
+    if(voll && !await appFrage(`Bus „${bus.name}“ mit seinen Einträgen aus dieser Woche entfernen?`)) return;
+    w.busse.splice(+b.dataset.eintWeg, 1);
+    eintGeaendert(w, true);
+    eintZeigen();
+  }));
+}
+function eintWocheWechseln(tage){ const m = isoDatum(eintWoche); eintWoche = tagIso(new Date(m.getFullYear(), m.getMonth(), m.getDate() + tage)); eintZeigen(); }
+function eintBusDazu(){ const w = eintWocheHolen(eintWoche); w.busse.push({ name: 'SOL ', leute: '', tage: {} }); eintGeaendert(w, true); eintZeigen(); }
+function einteilungTaste(e){ if(e.key === 'Escape' && g('einteilung-dialog') && !document.querySelector('.app-dialog-overlay:not(#einteilung-dialog)')){ e.preventDefault(); einteilungSchliessen(); } }
+function einteilungSchliessen(){
+  const ov = g('einteilung-dialog');
+  if(ov) ov.remove();
+  document.removeEventListener('keydown', einteilungTaste, true);
+}
+
+// ── Aus der Taifun-Plantafel vorausfuellen ───────────────────────────────
+function eintZellText(t){
+  const aktiv = t.leute.filter(p => !p.urlaub).length;
+  const zeilen = t.einsaetze.map(e => {
+    const f = e.felder, ort = (f.ort || '').replace(/^(A-|D-)?\d{4,5}\s+/, '');
+    const name = bvhName(f);
+    let z = name ? (ort && !name.includes(ort) ? `${name} · ${ort}` : name) : [f.strasse, ort].filter(Boolean).join(', ');
+    if(e.leute.length && e.leute.length < aktiv) z += ` (${e.leute.map(n => n.split(' ')[0]).join(', ')})`;
+    return z;
+  });
+  const urlaub = t.leute.filter(p => p.urlaub).map(p => p.name);
+  if(urlaub.length) zeilen.push('Urlaub: ' + urlaub.join(', '));
+  return [...new Set(zeilen.filter(Boolean))].join('\n');
+}
+function eintTaifun(){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.html,.htm,text/html'; inp.style.display = 'none';
+  inp.onchange = async () => {
+    const datei = inp.files && inp.files[0];
+    inp.remove();
+    if(!datei) return;
+    try {
+      const daten = taifunLesen(taifunDekodieren(await datei.arrayBuffer()));
+      if(!daten.termine.length) return toast('In der Datei wurden keine Einsätze gefunden');
+      einteilung = { ...daten, datei: datei.name };
+      // Woche der Datei anzeigen
+      const ersterTag = daten.tage.find(t => { const wd = isoDatum(t).getDay(); return wd >= 1 && wd <= 5; }) || daten.tage[0];
+      eintWoche = tagIso(montagVon(isoDatum(ersterTag)));
+      const w = eintWocheHolen(eintWoche);
+      const tage = wochenTage(eintWoche, true).filter(t => daten.tage.includes(t));
+      const busseDatei = [...new Set(daten.spalten.filter(Boolean).map(s => s.trupp))];
+      const belegt = w.busse.some(b => tage.some(t => String((b.tage || {})[t] || '').trim()));
+      const ueberschreiben = belegt ? await appFrage('In dieser Woche stehen schon Einträge.\n\nMit den Taifun-Daten überschreiben? (Nein = nur leere Zellen füllen)') : true;
+      let n = 0;
+      w.busse.forEach(b => {
+        const busName = truppName(b.name);
+        if(!busseDatei.includes(busName)) return;
+        if(!String(b.leute || '').trim()){
+          b.leute = [...new Set(daten.spalten.filter(s => s && s.trupp === busName).map(s => s.name))].join(', ');
+        }
+        b.tage = b.tage || {};
+        tage.forEach(t => {
+          if(!ueberschreiben && String(b.tage[t] || '').trim()) return;
+          const text = eintZellText(tagesEinteilung(t, [busName])[0]);
+          if(text){ b.tage[t] = text; n++; } else if(ueberschreiben) delete b.tage[t];
+        });
+      });
+      if(tage.some(t => isoDatum(t).getDay() % 6 === 0 && w.busse.some(b => (b.tage || {})[t]))) w.wochenende = true;
+      eintGeaendert(w, true);
+      eintZeigen();
+      toast(`${n} Zellen aus Taifun übernommen – bitte BVH-Namen prüfen`);
+    } catch(e){
+      toastError('Taifun-Datei konnte nicht gelesen werden', e);
+    }
+  };
+  document.body.appendChild(inp);
+  inp.click();
+}
+
+// ── Bild: Spalten = Busse, Zeilen = Tage (fuer die WhatsApp-Gruppe) ──────
+async function einteilungBild(){
+  const w = eintWocheHolen(eintWoche);
+  const tage = wochenTage(eintWoche, w.wochenende);
+  const busse = w.busse;
+  if(document.fonts && document.fonts.ready){ try { await document.fonts.ready; } catch(_){} }
+  const W = 2200, P = 48, TAG = 190, schrift = '"Inter", "Segoe UI", system-ui, sans-serif';
+  const F = { ink: '#18181b', grau: '#52525b', hell: '#71717a', linie: '#d4d4d8', brand: '#93BD14', brandDunkel: '#4d6b00', zebra: '#f7f9f1', urlaub: '#b45309', kopf: '#eef4dc' };
+  const SW = (W - 2 * P - TAG) / Math.max(busse.length, 1);
+  const c = document.createElement('canvas');
+  c.width = W; c.height = 9000;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, c.height);
+  const setz = (gr, gew = 400) => { x.font = `${gew} ${gr}px ${schrift}`; };
+  const umbrechen = (t, maxW) => {
+    const out = []; let z = '';
+    String(t).split(/\s+/).forEach(wd => { const probe = z ? z + ' ' + wd : wd; if(x.measureText(probe).width > maxW && z){ out.push(z); z = wd; } else z = probe; });
+    if(z) out.push(z);
+    return out;
+  };
+  let y = P;
+  try {
+    const src = (abFirma && abFirma.logo) ? await abDateiLink(abFirma.logo) : (document.querySelector('#auth-gate .brand-logo--light') || {}).src;
+    if(src){
+      const url = URL.createObjectURL(await (await fetch(src)).blob());   // als Datei: fremde Bilder wuerden den Export sperren
+      const img = await new Promise((ok, err) => { const i = new Image(); i.onload = () => ok(i); i.onerror = err; i.src = url; });
+      const hL = 70, wL = img.width * hL / img.height;
+      x.drawImage(img, W - P - wL, y - 4, wL, hL);
+    }
+  } catch(_){}
+  const m0 = isoDatum(tage[0]), m1 = isoDatum(tage[tage.length - 1]);
+  setz(48, 700); x.fillStyle = F.ink; x.fillText('Wochenübersicht', P, y + 44);
+  setz(32, 600); x.fillStyle = F.brandDunkel;
+  x.fillText(`KW ${kalenderwoche(m0)} · ${m0.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit' })} – ${m1.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' })}`, P, y + 92);
+  y += 124;
+  // Kopfzeile: Busse mit Mannschaft
+  const kopfZeilen = busse.map(b => { setz(21, 400); return umbrechen(b.leute || '', SW - 28); });
+  const kopfH = 64 + Math.max(0, ...kopfZeilen.map(z => z.length)) * 28 + 14;
+  x.fillStyle = F.kopf; x.fillRect(P, y, W - 2 * P, kopfH);
+  busse.forEach((b, i) => {
+    const bx = P + TAG + i * SW;
+    setz(32, 700); x.fillStyle = F.ink; x.fillText(b.name || '', bx + 14, y + 44);
+    setz(21, 400); x.fillStyle = F.grau; kopfZeilen[i].forEach((z, k) => x.fillText(z, bx + 14, y + 78 + k * 28));
+  });
+  x.fillStyle = F.brand; x.fillRect(P, y + kopfH - 5, W - 2 * P, 5);
+  const tabOben = y;
+  y += kopfH;
+  // Tageszeilen
+  tage.forEach((t, ti) => {
+    // Je Zeile: BVH-Name fett, "· Ort" und "(Mitarbeiter)" klein und grau darunter
+    const zellen = busse.map(b => String((b.tage || {})[t] || '').split('\n').map(s => s.trim()).filter(Boolean).map(z => {
+      const urlaub = /^urlaub/i.test(z);
+      if(urlaub){ setz(22, 500); return { urlaub, zeilen: umbrechen(z, SW - 30), zusatz: [] }; }
+      const m = z.match(/^(.*?)(?:\s+·\s+([^(]*?))?\s*(?:\(([^)]*)\))?\s*$/);
+      const name = (m && m[1]) || z;
+      const rest = [m && m[2], m && m[3]].filter(v => v && v.trim()).map(v => v.trim()).join(' · ');
+      setz(26, 700); const zeilen = umbrechen(name, SW - 30);
+      setz(21, 400); const zusatz = rest ? umbrechen(rest, SW - 30) : [];
+      return { urlaub, zeilen, zusatz };
+    }));
+    const hZelle = z => z.reduce((s, e) => s + e.zeilen.length * (e.urlaub ? 30 : 34) + e.zusatz.length * 27 + 12, 0);
+    const rowH = Math.max(96, ...zellen.map(z => 26 + hZelle(z)));
+    if(ti % 2) { x.fillStyle = F.zebra; x.fillRect(P, y, W - 2 * P, rowH); }
+    const d = isoDatum(t);
+    setz(28, 700); x.fillStyle = F.ink; x.fillText(d.toLocaleDateString('de-AT', { weekday: 'long' }), P + 14, y + 44);
+    setz(22, 400); x.fillStyle = F.hell; x.fillText(d.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit' }), P + 14, y + 76);
+    zellen.forEach((z, i) => {
+      const bx = P + TAG + i * SW;
+      let yy = y + 44;
+      if(!z.length){ setz(24, 400); x.fillStyle = '#c4c4c9'; x.fillText('–', bx + 14, yy); return; }
+      z.forEach(e => {
+        setz(e.urlaub ? 22 : 26, e.urlaub ? 500 : 700); x.fillStyle = e.urlaub ? F.urlaub : F.ink;
+        e.zeilen.forEach(s => { x.fillText(s, bx + 14, yy); yy += e.urlaub ? 30 : 34; });
+        setz(21, 400); x.fillStyle = F.grau;
+        e.zusatz.forEach(s => { x.fillText(s, bx + 14, yy - 4); yy += 27; });
+        yy += 12;
+      });
+    });
+    y += rowH;
+    x.fillStyle = F.linie; x.fillRect(P, y - 1, W - 2 * P, 2);
+  });
+  // senkrechte Linien
+  x.fillStyle = F.linie;
+  for(let i = 0; i <= busse.length; i++) x.fillRect(P + TAG + i * SW - 1, tabOben, 2, y - tabOben);
+  x.fillRect(P, tabOben, 2, y - tabOben); x.fillRect(W - P - 2, tabOben, 2, y - tabOben);
+  y += 34;
+  setz(20, 400); x.fillStyle = F.hell;
+  x.fillText(`Stand ${new Date().toLocaleString('de-AT', { dateStyle: 'short', timeStyle: 'short' })} · SOLPRO Messtool`, P, y);
+  y += P;
+  const aus = document.createElement('canvas');
+  aus.width = W; aus.height = Math.min(y, c.height);
+  aus.getContext('2d').drawImage(c, 0, 0);
+  return aus;
+}
+const einteilungDateiname = art => `Wochenuebersicht_KW${kalenderwoche(isoDatum(eintWoche))}_${isoDatum(eintWoche).getFullYear()}.${art}`;
+async function einteilungBlob(){ const c = await einteilungBild(); return new Promise(ok => c.toBlob(ok, 'image/png')); }
+async function einteilungTeilen(){
+  try {
+    const blob = await einteilungBlob();
+    const datei = new File([blob], einteilungDateiname('png'), { type: 'image/png' });
+    if(navigator.canShare && navigator.canShare({ files: [datei] })){
+      try { await navigator.share({ files: [datei], title: 'Wochenübersicht' }); return; }
+      catch(e){ if(e && e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = datei.name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    toast('Bild gespeichert – in WhatsApp als Foto senden');
+  } catch(e){ toastError('Bild konnte nicht erstellt werden', e); }
+}
+async function einteilungKopieren(){
+  try {
+    const blob = await einteilungBlob();
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    toast('Bild kopiert – in WhatsApp mit Strg+V einfügen');
+  } catch(e){ toastError('Kopieren nicht möglich – bitte „Bild speichern“ verwenden', e); }
+}
+async function einteilungPdf(){
+  try {
+    const c = await einteilungBild();
+    const L = await abPdfLibLaden();
+    const pdf = await L.PDFDocument.create();
+    const png = await pdf.embedPng(await (await new Promise(ok => c.toBlob(ok, 'image/png'))).arrayBuffer());
+    const wS = 841.89, hS = wS * c.height / c.width;
+    pdf.addPage([wS, hS]).drawImage(png, { x: 0, y: 0, width: wS, height: hS });
+    pdf.setTitle(`Wochenübersicht KW ${kalenderwoche(isoDatum(eintWoche))}`); pdf.setCreator('SOLPRO Messtool');
+    const bytes = await pdf.save();
+    window.__einteilungPdf = bytes;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })); a.download = einteilungDateiname('pdf');
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+  } catch(e){ toastError('PDF konnte nicht erstellt werden', e); }
 }

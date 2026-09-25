@@ -1338,3 +1338,55 @@ html body.pp #messmodus .btn:disabled { opacity: .45; color: var(--ink2) !import
   html body.pp .matrix-statuszeile .messmodus-btn, html body.pp .matrix-statuszeile .naechster-offener {
     width: 100% !important; margin: 0 !important; justify-content: center; min-height: 50px; line-height: 1.2; text-align: center; align-self: stretch; }
 }
+
+/* ══ Tageseinteilung ════════════════════════════════════════════════════ */
+html body.pp .ein-dialog { max-width: 760px; width: calc(100vw - 24px); max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
+html body.pp .ein-kopf { display: flex; justify-content: space-between; align-items: center; }
+html body.pp .ein-kopf h2 { margin: 0; }
+html body.pp .ein-dialog .app-dialog-text a { color: var(--brand-text); font-weight: 600; }
+html body.pp .ein-label { font-size: .75rem; font-weight: 600; color: var(--mute); margin: 10px 0 4px; }
+html body.pp .ein-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+html body.pp .ein-chips button { border: 1px solid var(--line2); background: var(--pa2); color: var(--ink2); border-radius: 999px; padding: 7px 12px; min-height: 38px; font: inherit; font-size: .86rem; cursor: pointer; }
+html body.pp .ein-chips button.an { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); font-weight: 600; }
+html body.pp .ein-liste { flex: 1 1 auto; overflow: auto; margin: 12px 0 4px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 4px 12px; min-height: 120px; }
+html body.pp .ein-trupp { padding: 10px 0; border-bottom: 1px solid var(--line); }
+html body.pp .ein-trupp:last-child { border-bottom: 0; }
+html body.pp .ein-trupp-kopf { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+html body.pp .ein-trupp-kopf strong { background: var(--brand); color: var(--brand-ink); border-radius: 6px; padding: 2px 8px; }
+html body.pp .ein-trupp-kopf span { color: var(--mute); font-size: .86rem; }
+html body.pp .ein-trupp-kopf s { color: var(--mute); }
+html body.pp .ein-einsatz { padding: 6px 0 8px 10px; border-left: 3px solid var(--brand-line); margin: 6px 0; }
+html body.pp .ein-bvh { width: 100%; font-weight: 700; font-size: 1rem; text-align: left !important; }
+html body.pp .ein-bvh.fehlt { border-color: var(--c-amber) !important; background: color-mix(in srgb, var(--c-amber) 8%, transparent) !important; }
+html body.pp .ein-zeile { display: flex; justify-content: space-between; gap: 10px; font-size: .86rem; color: var(--ink2); margin-top: 4px; }
+html body.pp .ein-zeile b { white-space: nowrap; color: var(--brand-text); }
+html body.pp .ein-klein { font-size: .76rem; color: var(--mute); margin-top: 2px; }
+html body.pp .ein-hinweis { font-size: .82rem; color: var(--ink2); margin-top: 4px; }
+html body.pp .ein-leer { color: var(--mute); font-size: .86rem; padding: 4px 0; }
+html body.pp .ein-knoepfe { flex-wrap: wrap; }
+
+/* Wochenuebersicht: Spalten = Busse, Zeilen = Tage */
+html body.pp .ein-dialog { max-width: 1180px; }
+html body.pp .eint-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0 2px; }
+html body.pp .eint-nav strong { font-size: 1.05rem; min-width: 210px; text-align: center; }
+html body.pp .eint-nav .btn { min-height: 40px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
+html body.pp .eint-we { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: .86rem; color: var(--ink2); }
+html body.pp .eint-scroll { flex: 1 1 auto; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-sm); margin: 8px 0; }
+html body.pp .eint-tab { border-collapse: collapse; width: 100%; min-width: 760px; }
+html body.pp .eint-tab th, html body.pp .eint-tab td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 6px; vertical-align: top; text-align: left; }
+html body.pp .eint-tab thead th { background: var(--pa3); position: sticky; top: 0; z-index: 1; min-width: 150px; }
+html body.pp .eint-tagspalte { width: 88px; min-width: 88px !important; font-weight: 600; font-size: .86rem; white-space: nowrap; }
+html body.pp .eint-tagspalte span { display: block; color: var(--mute); font-weight: 500; font-size: .76rem; }
+html body.pp .eint-bus { display: flex; gap: 4px; }
+html body.pp .eint-busname { font-weight: 700; flex: 1; min-width: 0; text-align: left !important; }
+html body.pp .eint-leute { width: 100%; margin-top: 4px; font-size: .8rem; text-align: left !important; }
+html body.pp .eint-weg { border: 0; background: transparent; color: var(--mute); width: 32px; border-radius: 6px; cursor: pointer; flex: 0 0 auto; }
+html body.pp .eint-weg:hover { color: var(--c-rose); background: var(--pa2); }
+html body.pp .eint-tab textarea { width: 100%; min-height: 76px; resize: vertical; font-size: .9rem; text-align: left !important; }
+html body.pp .eint-plus { min-width: 90px !important; background: transparent !important; }
+@media (max-width: 600px) {
+  html body.pp .ein-knoepfe { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px; }
+  html body.pp .ein-knoepfe .btn { width: 100%; min-height: 46px; }
+  html body.pp .ein-knoepfe .btn-primary { grid-column: 1 / -1; order: -1; }
+  html body.pp .eint-we { margin-left: 0; }
+}

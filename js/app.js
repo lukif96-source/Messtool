@@ -35,6 +35,12 @@ const ICON = (() => {
     refresh: svg('<path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/>'),
     home:    svg('<path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/>'),
     factory: svg('<path d="M2 20V9l6 4V9l6 4V5h8v15z"/>'),
+    x:       svg('<path d="M18 6 6 18M6 6l12 12"/>'),
+    more:    svg('<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>'),
+    chevR:   svg('<path d="m9 6 6 6-6 6"/>'),
+    chevL:   svg('<path d="m15 6-6 6 6 6"/>'),
+    arrowR:  svg('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+    check:   svg('<path d="M20 6 9 17l-5-5"/>'),
     sun:     svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>')
   };
 })();
@@ -265,7 +271,7 @@ function setTheme(mode, silent = false){
   if(label) label.textContent = isSun ? 'Dunkelmodus' : 'Hell-Modus';
 
   try { localStorage.setItem('pv_theme', isSun ? 'sun' : 'dark'); } catch(_){}
-  if(!silent) toast(isSun ? 'Baustellen-Modus' : 'Cockpit-Modus');
+  if(!silent) toast(isSun ? 'Heller Modus' : 'Dunkler Modus');
 }
 
 // Bestehender Aufruf aus der Sidebar bleibt funktionsfaehig
@@ -673,17 +679,17 @@ function renderProjectGrid(){
     return `
       <div class="project-card ${isActive ? 'active' : ''}" role="button" tabindex="0" aria-label="Projekt ${esc(proj.name)} öffnen" onclick="selectProject('${id}'); switchMainTab('matrix');" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
         <div class="project-card-header">
-          <div class="project-card-title">${lockedIcon}${isActive ? '✓ ' : ''}${esc(proj.name)}</div>
+          <div class="project-card-title">${lockedIcon}${isActive ? ICON.check + ' ' : ''}${esc(proj.name)}</div>
           <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
             <div class="sync-status ${cloudProjectIds.has(id) ? 'synced' : 'pending'}" title="${cloudProjectIds.has(id) ? 'In der Cloud gespeichert' : 'Nur auf diesem Gerät – wird nach Anmeldung übertragen'}">${cloudProjectIds.has(id) ? '' : ''}</div>
             ${canManage ? `
             <div class="pc-menu-wrap">
-              <button class="pc-menu-btn" title="Projekt-Aktionen" aria-haspopup="true" onclick="toggleProjectMenu('${id}', event)">⋯</button>
+              <button class="pc-menu-btn" title="Projekt-Aktionen" aria-label="Projekt-Aktionen" aria-haspopup="true" onclick="toggleProjectMenu('${id}', event)">${ICON.more}</button>
               <div class="pc-menu" id="pc-menu-${id}" onclick="event.stopPropagation()">
                 <button onclick="renameProject('${id}', event); closeProjectMenus();">Umbenennen</button>
                 <button onclick="setProjectGroup('${id}', event); closeProjectMenus();">Gruppe zuweisen</button>
                 <button onclick="openBereichModal('${id}', event); closeProjectMenus();">Bereich ändern</button>
-                <button onclick="openAssignModal('${id}', event); closeProjectMenus();">Bauleitung zuweisen</button>
+                <button onclick="openAssignModal('${id}', event); closeProjectMenus();">Personen zuweisen</button>
                 <button onclick="openHistoryModal('${id}', event); closeProjectMenus();">Versionen &amp; Wiederherstellen</button>
                 ${proj.locked ? '' : (proj.archiviert
                   ? `<button onclick="projektArchivieren('${id}', false, event); closeProjectMenus();">Aus dem Archiv holen</button>`
@@ -921,7 +927,7 @@ function renderHomeProjektwahl(ids){
   const zeit = p => Date.parse(p.updated_at || 0) || 0;
   const liste = ids.map(id => PROJECTS[id]).sort((a, b) => zeit(b) - zeit(a)).slice(0, 6);
   box.innerHTML = `
-    <div class="hpw-kopf"><span class="hpw-titel">Projekt öffnen</span>${ids.length > liste.length ? `<button type="button" class="hpw-alle" onclick="switchMainTab('projects')">Alle ${ids.length} Projekte →</button>` : ''}</div>
+    <div class="hpw-kopf"><span class="hpw-titel">Projekt öffnen</span>${ids.length > liste.length ? `<button type="button" class="hpw-alle" onclick="switchMainTab('projects')">Alle ${ids.length} Projekte ${ICON.arrowR}</button>` : ''}</div>
     <div class="hpw-liste">${liste.map(p => {
       const prog = getProjectProgress(p);
       const meta = [p.group, prog.total ? `${prog.done} von ${prog.total} gemessen` : null, p.locked ? 'gesperrt' : null].filter(Boolean).join(' · ');
@@ -1414,7 +1420,7 @@ function renderSidebarProjects(){
     return `<div class="sb-proj-group ${open ? 'open' : ''}" data-group="${safeAttr(key)}">
       <div style="display:flex; align-items:center;">
         <button class="sb-proj-group-head" style="flex:1;" type="button" onclick="toggleSbGroup('${safeAttr(key)}', event)" aria-expanded="${open}">
-          <span class="sb-chevron">▶</span>
+          <span class="sb-chevron">${ICON.chevR}</span>
           <span class="sb-group-name">${esc(label)}</span>
           <span class="sb-group-count">${items.length}</span>
         </button>
@@ -1442,7 +1448,7 @@ function renderSbProjectItem(id){
     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"
     title="${esc(proj.name)}${proj.locked ? ' (Protokoll gesperrt)' : ''}">
     ${proj.locked ? '<span class="sb-proj-lock" aria-label="gesperrt">' + ICON.lock + '</span>' : ''}
-    <span class="sb-proj-name">${isActive ? '✓ ' : ''}${esc(proj.name)}</span>
+    <span class="sb-proj-name">${isActive ? ICON.check + ' ' : ''}${esc(proj.name)}</span>
     ${showActions ? `<span class="sb-proj-actions">
       <button class="sb-proj-mini-btn" type="button" onclick="renameProject('${esc(id).replace(/'/g, "\\&#39;")}', event)" title="Umbenennen" aria-label="Umbenennen">${ICON.pencil}</button>
       <button class="sb-proj-mini-btn" type="button" onclick="setProjectGroup('${esc(id).replace(/'/g, "\\&#39;")}', event)" title="Gruppe" aria-label="Gruppe">${ICON.tag}</button>
@@ -2165,7 +2171,7 @@ function renderMatrix(remoteOverride = null){
       <div id="wr-progress-wrap-${wr}">${generateWrProgress(wr, mppts, inputs)}</div>
       ${canHardware ? `
       <div class="wr-bulk-bar no-print">
-        <span class="bulk-label">Bulk:</span>
+        <span class="bulk-label">Alle Strings:</span>
         <div class="bulk-dropdown">
           <button class="bulk-dropdown-btn" onclick="toggleBulkDropdown(${wr})" aria-haspopup="true" aria-expanded="false">
             <span>Aktionen</span>
@@ -2468,7 +2474,7 @@ function applyMeasurementFlags(){
       bar.classList.add('has-crit');
       bar.classList.remove('has-warn');
       bar.innerHTML = `<svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><span><strong>${nCrit}</strong> ${nCrit === 1 ? 'Wert' : 'Werte'} unplausibel</span>`
-        + `<button type="button" class="ab-jump" onclick="jumpToNextFlag()">Zum nächsten →</button>`;
+        + `<button type="button" class="ab-jump" onclick="jumpToNextFlag()">Zum nächsten ${ICON.arrowR}</button>`;
     }
   }
 
@@ -3126,7 +3132,7 @@ function toggleMatrixNav(){
 
 function updateNavToggleLabel(){
   const el = g('nav-toggle-text');
-  if(el) el.textContent = matrixNavMode === 'down' ? 'Weiter: ↓ nächster String' : 'Weiter: → nächstes Feld';
+  if(el) el.textContent = matrixNavMode === 'down' ? 'Weiter: nächster String' : 'Weiter: nächstes Feld';
   const btn = g('btn-nav-mode');
   if(btn) btn.title = matrixNavMode === 'down'
     ? 'Tab/Enter springt zum gleichen Feld des nächsten Strings — zum Umschalten klicken'
@@ -3933,7 +3939,7 @@ async function openProjectsModal(){
     return `
     <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--bg); border:1px solid var(--border); border-radius:12px; flex-wrap:wrap; gap:8px;">
       <div style="min-width:0; flex:1 1 140px; overflow:hidden;">
-        <div style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${lockedIcon}${id === CURRENT_PROJECT_ID ? '✓ ' : ''}${esc(proj.name)}</div>
+        <div style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${lockedIcon}${id === CURRENT_PROJECT_ID ? ICON.check + ' ' : ''}${esc(proj.name)}</div>
         <div style="font-size:0.7rem;color:var(--muted);">${wrCount} WR &middot; ${proj.model_wp} Wp${proj.locked ? ' &middot; <span style="color:#ef4444;">gesperrt</span>' : ''}</div>
       </div>
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -6153,7 +6159,7 @@ function abFeldHtml([pfad, label, typ, opt]){
   let hinweis = '';
   if(typ === 'zp'){
     const z = String(wert || '').replace(/\s+/g, '');
-    hinweis = `<small class="ab-hinweis" data-zp>${z ? (/^AT[0-9A-Z]{31}$/i.test(z) ? '✓ gültiges Format' : 'Format: AT + 31 Zeichen (33 gesamt)') : ''}</small>`;
+    hinweis = `<small class="ab-hinweis" data-zp>${z ? (/^AT[0-9A-Z]{31}$/i.test(z) ? 'Gültiges Format' : 'Format: AT + 31 Zeichen (33 gesamt)') : ''}</small>`;
   }
   return `<label class="ab-feld"><span>${esc(label)}</span><input type="${art}" class="sp-inp" data-ab="${pfad}"${im} value="${esc(wert)}" placeholder="${esc(typ !== 'zp' ? (opt || '') : 'AT0010000000000000001000000000000')}"${dis}>${hinweis}</label>`;
 }
@@ -6269,7 +6275,7 @@ function abEingabe(e){
   if(pfad === 'zaehlpunkt'){
     const h = el.parentElement.querySelector('[data-zp]');
     const z = el.value.replace(/\s+/g, '');
-    if(h) h.textContent = z ? (/^AT[0-9A-Z]{31}$/i.test(z) ? '✓ gültiges Format' : 'Format: AT + 31 Zeichen (33 gesamt)') : '';
+    if(h) h.textContent = z ? (/^AT[0-9A-Z]{31}$/i.test(z) ? 'Gültiges Format' : 'Format: AT + 31 Zeichen (33 gesamt)') : '';
   }
   abSpeichernVerzoegert();
   if(el.tagName === 'SELECT' && (pfad.endsWith('.komponente') || pfad.startsWith('wr.'))){
@@ -7218,7 +7224,7 @@ async function firmaSpeichern(){
     const { error } = await supabaseClient.from('pv_einstellungen')
       .upsert({ schluessel: 'firma', wert: abFirma || {}, geaendert_am: new Date().toISOString() });
     if(error) throw error;
-    if(st) st.textContent = 'Gespeichert ✓';
+    if(st) st.textContent = 'Gespeichert';
   } catch(e){
     if(st) st.textContent = 'Nicht gespeichert – Internetverbindung prüfen';
     toastError('Firmendaten konnten nicht gespeichert werden', e);
@@ -7832,7 +7838,7 @@ function ppkFeldHtml(fd, auto){
   if(fd.t === 'matrix'){
     const m = (ppkDaten.w[fd.k] && typeof ppkDaten.w[fd.k] === 'object') ? ppkDaten.w[fd.k] : {};
     return `<div class="ab-breit"><span class="ab-feld-titel">${esc(fd.l)}</span><div class="ppk-matrix"><table class="ab-tabelle"><thead><tr><th></th>${fd.spalten.map(s => `<th>${esc(s)}</th>`).join('')}</tr></thead><tbody>
-      ${fd.zeilen.map(([lab, boxen], zi) => `<tr><td>${esc(lab)}</td>${boxen.map((b, si) => `<td><button type="button" class="ppk-haken${m[zi + '_' + si] ? ' an' : ''}" data-ppk-mx="${fd.k}" data-zelle="${zi}_${si}"${dis} aria-pressed="${!!m[zi + '_' + si]}">${m[zi + '_' + si] ? '✓' : ''}</button></td>`).join('')}</tr>`).join('')}
+      ${fd.zeilen.map(([lab, boxen], zi) => `<tr><td>${esc(lab)}</td>${boxen.map((b, si) => `<td><button type="button" class="ppk-haken${m[zi + '_' + si] ? ' an' : ''}" data-ppk-mx="${fd.k}" data-zelle="${zi}_${si}"${dis} aria-pressed="${!!m[zi + '_' + si]}">${m[zi + '_' + si] ? ICON.check : ''}</button></td>`).join('')}</tr>`).join('')}
       </tbody></table></div><button type="button" class="btn btn-ghost ab-mini" data-ppk-mx-alle="${fd.k}"${dis}>Alle antippen</button></div>`;
   }
   const k = ppkFeldKey(fd);
@@ -8607,7 +8613,7 @@ function importVorschau(proj, erg){
       Strang n wird dem n-ten aktiven String des Wechselrichters zugeordnet – bitte kurz prüfen.</p>
     ${fehler.length ? `<div class="imp-warn">${fehler.length} Messung(en) ohne passenden String: ${esc([...new Set(fehler.map(f => f.fehler))].join(' · '))}</div>` : ''}
     <div class="imp-liste">${wrs.map(wr => { const zs = zeilen.filter(z => z.wr === wr); return `<details${wrs.length <= 2 ? ' open' : ''}><summary>WR ${wr} <span>${zs.filter(z => !z.fehler).length} Stränge${zs.some(z => z.konflikt) ? ' · weicht teils ab' : ''}</span></summary>
-      <table class="ab-tabelle"><thead><tr><th>Strang</th><th>→ String</th><th class="z">Uoc</th><th class="z">Isc</th><th class="z">Riso</th></tr></thead><tbody>
+      <table class="ab-tabelle"><thead><tr><th>Strang</th><th>String in der App</th><th class="z">Uoc</th><th class="z">Isc</th><th class="z">Riso</th></tr></thead><tbody>
       ${zs.map(z => z.fehler ? `<tr class="imp-fehlt"><td>${z.strang}</td><td colspan="4">${esc(z.fehler)}</td></tr>`
         : `<tr class="${z.konflikt ? 'imp-konflikt' : (z.gleich ? 'imp-gleich' : '')}"><td>${z.strang}</td><td>${esc(z.id)}${z.gak ? ` <small>${esc(z.gak)}</small>` : ''}</td>
           <td class="z">${esc(z.werte.uoc || '—')}</td><td class="z">${esc(z.werte.isc || '—')}</td><td class="z">${esc(z.werte.riso || '—')}</td></tr>`).join('')}
@@ -8655,4 +8661,167 @@ function importUebernehmen(proj, erg, zeilen, opt){
   offlineSichern();
   bulkPersistAndRender();
   toast(`${strings} Strings übernommen (${felder} Werte)${uebersprungen ? ` – ${uebersprungen} mit abweichenden Werten nicht überschrieben` : ''}`);
+}
+
+// ── Messmodus: ein String nach dem anderen, grosse Felder ─────────────────
+// Nutzt dieselben Wege wie die Matrix: saveData (Pruefung, Geraetesicherung,
+// Cloud-Upload), evaluateString (Grobpruefung) und die String-Reihenfolge.
+let mmListe = [], mmPos = 0, mmNurOffen = true, mmWarnungGesehen = null;
+const MM_FELDER = { uoc: ['Uoc', 'V'], isc: ['Isc', 'A'], riso: ['Riso', 'MΩ'] };
+function mmAktive(){ return getAllFullIds().filter(id => APP_STATE[id] && APP_STATE[id].stat === 'JA' && Number(APP_STATE[id].mod) > 0); }
+function mmFortschritt(){ const a = mmAktive(); return { gesamt: a.length, fertig: a.filter(id => getStringStatus(id) === 'COMPLETE').length }; }
+function messmodusStarten(startId){
+  if(!getCurrentProject()) return toast('Bitte zuerst ein Projekt öffnen');
+  if(!canEditMeasurement()) return toast('Messwerte kannst du in diesem Projekt nicht eintragen');
+  const aktive = mmAktive();
+  if(!aktive.length) return toast('Keine aktiven Strings mit Modulanzahl – zuerst die Matrix einrichten');
+  const markiert = document.querySelector('tr.row-focus[data-string-id]');
+  if(!startId && markiert) startId = markiert.dataset.stringId;
+  mmNurOffen = true;
+  let start = startId && aktive.includes(startId) ? startId : aktive.find(id => getStringStatus(id) !== 'COMPLETE');
+  if(!start){ mmNurOffen = false; start = aktive[0]; }
+  mmListe = aktive; mmPos = aktive.indexOf(start); mmWarnungGesehen = null;
+  let ov = g('messmodus');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'messmodus'; ov.className = 'mm-overlay';
+    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Messmodus');
+    document.body.appendChild(ov);
+  }
+  document.body.classList.add('mm-offen');
+  document.addEventListener('keydown', mmTaste, true);
+  mmZeichnen();
+}
+function messmodusBeenden(){
+  const ov = g('messmodus');
+  if(ov) ov.remove();
+  document.body.classList.remove('mm-offen');
+  document.removeEventListener('keydown', mmTaste, true);
+  renderMatrix();
+}
+function mmTaste(e){ if(e.key === 'Escape'){ e.preventDefault(); messmodusBeenden(); } }
+// Vergleich: Spannung je Modul der anderen gemessenen Strings desselben WR (Median)
+function mmErwartung(id){
+  const wr = id.split('.')[0];
+  const werte = mmAktive().filter(x => x !== id && x.split('.')[0] === wr).map(x => {
+    const u = toNum(APP_STATE[x].uoc), m = Number(APP_STATE[x].mod) || 0;
+    return u && m ? u / m : null;
+  }).filter(Boolean).sort((a, b) => a - b);
+  if(werte.length < 2) return null;
+  const jeModul = werte[Math.floor(werte.length / 2)];
+  return { jeModul, uoc: Math.round(jeModul * (Number(APP_STATE[id].mod) || 0)) };
+}
+function mmHinweis(text, art){
+  const el = g('mm-hinweis');
+  if(!el) return;
+  el.textContent = text || '';
+  el.className = 'mm-hinweis' + (art ? ' mm-' + art : '');
+}
+function mmLivePruefung(){
+  const id = mmListe[mmPos], it = APP_STATE[id];
+  if(!it) return;
+  const erw = mmErwartung(id);
+  const u = toNum(g('mm-uoc').value), r = toNum(g('mm-riso').value);
+  const fmt = v => String(Math.round(v * 10) / 10).replace('.', ',');
+  if(r !== null && r > 0 && r < LIMIT_RISO_MIN) return mmHinweis(`Riso unter 1 MΩ – Isolationsfehler, nicht freigeben.`, 'crit');
+  if(erw && u){
+    const abw = (u / it.mod - erw.jeModul) / erw.jeModul;
+    if(Math.abs(abw) > 0.1) return mmHinweis(`${Math.round(abw * 100) > 0 ? '+' : ''}${Math.round(abw * 100)} % gegenüber den anderen Strings (erwartet etwa ${erw.uoc} V) – Modulanzahl oder Wert prüfen.`, 'warn');
+  }
+  mmHinweis(erw ? `Andere Strings von WR ${id.split('.')[0]}: rund ${fmt(erw.jeModul)} V je Modul – bei ${it.mod} Modulen etwa ${erw.uoc} V.` : '');
+}
+function mmZeichnen(){
+  const ov = g('messmodus');
+  if(!ov) return;
+  const proj = getCurrentProject();
+  const id = mmListe[mmPos], it = APP_STATE[id];
+  if(!proj || !it) return messmodusBeenden();
+  const plan = getCurrentPlan(), wr = id.split('.')[0];
+  const { gesamt, fertig } = mmFortschritt();
+  ov.innerHTML = `<div class="mm-karte">
+    <div class="mm-kopf">
+      <div><div class="mm-projekt">${esc(proj.name)}</div><div class="mm-wr">WR ${esc(wr)}${plan[wr] && plan[wr].name ? ' · ' + esc(plan[wr].name) : ''}</div></div>
+      <button type="button" class="mm-x" onclick="messmodusBeenden()" aria-label="Messmodus beenden">${ICON.x}</button>
+    </div>
+    <div class="mm-fortschritt"><div class="mm-balken"><span style="width:${gesamt ? Math.round(fertig / gesamt * 100) : 0}%"></span></div><span>${fertig} von ${gesamt} gemessen</span></div>
+    <div class="mm-string"><strong>${esc(id)}</strong><span>${[it.gak, it.mod + ' Module', it.planName].filter(Boolean).map(x => esc(String(x))).join(' · ')}</span></div>
+    ${Object.keys(MM_FELDER).map(f => `<label class="mm-feld"><span>${MM_FELDER[f][0]} <em>${MM_FELDER[f][1]}</em></span>
+      <input type="text" inputmode="decimal" enterkeyhint="${f === 'riso' ? 'done' : 'next'}" autocomplete="off" id="mm-${f}" data-mm="${f}" value="${esc(it[f] || '')}" placeholder="–"></label>`).join('')}
+    <div class="mm-hinweis" id="mm-hinweis" role="status"></div>
+    <details class="mm-notiz"${it.note ? ' open' : ''}><summary>Bemerkung</summary><input type="text" class="sp-inp" id="mm-note" data-mm="note" value="${esc(it.note || '')}" autocomplete="off" enterkeyhint="done"></details>
+    <label class="mm-nuroffen"><input type="checkbox" id="mm-nuroffen"${mmNurOffen ? ' checked' : ''}> nur offene Strings anspringen</label>
+    <div class="mm-knoepfe">
+      <button type="button" class="btn btn-ghost" onclick="mmSchritt(-1)"${mmPos > 0 ? '' : ' disabled'}>${ICON.chevL} Zurück</button>
+      <button type="button" class="btn btn-primary mm-weiter" onclick="mmWeiter()">Speichern &amp; weiter ${ICON.arrowR}</button>
+    </div>
+  </div>`;
+  const reihe = ['uoc', 'isc', 'riso'];
+  ov.querySelectorAll('[data-mm]').forEach(inp => {
+    inp.addEventListener('input', () => { inp.classList.remove('mm-falsch'); mmLivePruefung(); });
+    inp.addEventListener('keydown', e => {
+      if(e.key !== 'Enter') return;
+      e.preventDefault();
+      const i = reihe.indexOf(inp.dataset.mm);
+      if(i >= 0 && i < reihe.length - 1) g('mm-' + reihe[i + 1]).focus();
+      else mmWeiter();
+    });
+  });
+  mmLivePruefung();
+  const erstes = reihe.map(f => g('mm-' + f)).find(el => !el.value) || g('mm-uoc');
+  setTimeout(() => { try { erstes.focus({ preventScroll: true }); } catch(_){} }, 30);
+}
+function mmWeiter(){
+  const id = mmListe[mmPos], it = APP_STATE[id];
+  if(!it) return;
+  if(!canEditMeasurement()){ toast('Protokoll gesperrt – Änderung nicht möglich'); return messmodusBeenden(); }
+  const neu = {}, fehler = [];
+  Object.keys(MM_FELDER).forEach(f => {
+    const roh = g('mm-' + f).value.trim();
+    if(roh === ''){ neu[f] = ''; return; }
+    const n = normaliseNumber(f, roh);
+    if(n === null){ fehler.push(validationMessage(f)); g('mm-' + f).classList.add('mm-falsch'); }
+    else neu[f] = n;
+  });
+  if(fehler.length) return mmHinweis(fehler.join(' '), 'crit');
+  Object.keys(neu).forEach(f => { if(String(it[f] || '') !== neu[f]) saveData(id, f, neu[f]); });
+  const note = g('mm-note').value.trim();
+  if(String(it.note || '') !== note) saveData(id, 'note', note);
+  // Grobpruefung wie in der Matrix: bei echter Auffaelligkeit einmal anhalten
+  const ev = evaluateString(id);
+  if(ev.level === 'crit' && mmWarnungGesehen !== id){
+    mmWarnungGesehen = id;
+    return mmHinweis(ev.msgs.join(' ') + ' Gespeichert – nochmal „Speichern & weiter“ zum Fortfahren.', 'crit');
+  }
+  mmWarnungGesehen = null;
+  mmSchritt(1);
+}
+function mmSchritt(richtung){
+  const box = g('mm-nuroffen');
+  if(box) mmNurOffen = box.checked;
+  let p = mmPos;
+  do { p += richtung; } while(richtung > 0 && mmNurOffen && p < mmListe.length && getStringStatus(mmListe[p]) === 'COMPLETE');
+  if(p < 0) return;
+  if(p >= mmListe.length){
+    const offen = mmListe.findIndex(x => getStringStatus(x) !== 'COMPLETE');
+    if(mmNurOffen && offen >= 0 && offen !== mmPos){ mmPos = offen; toast('Weiter vorne sind noch Strings offen'); return mmZeichnen(); }
+    return mmFertig();
+  }
+  mmPos = p;
+  mmWarnungGesehen = null;
+  mmZeichnen();
+}
+function mmFertig(){
+  const ov = g('messmodus');
+  if(!ov) return;
+  const { gesamt, fertig } = mmFortschritt();
+  const alles = gesamt && fertig === gesamt;
+  ov.innerHTML = `<div class="mm-karte mm-ende">
+    <div class="mm-kopf"><div><div class="mm-projekt">${esc(getCurrentProject().name)}</div></div>
+      <button type="button" class="mm-x" onclick="messmodusBeenden()" aria-label="Messmodus beenden">${ICON.x}</button></div>
+    <div class="mm-ende-text"><strong>${alles ? 'Alle Strings gemessen' : 'Ende der Liste'}</strong><span>${fertig} von ${gesamt} Strings vollständig</span></div>
+    <div class="mm-knoepfe">
+      <button type="button" class="btn btn-ghost" onclick="messmodusBeenden()">Zur Matrix</button>
+      ${alles && darf('export') ? '<button type="button" class="btn btn-primary" onclick="messmodusBeenden(); pruefprotokollDialog();">Prüfprotokoll erstellen</button>'
+        : (!alles ? `<button type="button" class="btn btn-primary" onclick="messmodusStarten()">Offene Strings messen</button>` : '')}
+    </div></div>`;
 }

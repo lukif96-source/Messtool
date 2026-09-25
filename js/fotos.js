@@ -229,7 +229,7 @@ function fotoOeffnen(wr, index){
     ov.id = 'foto-viewer'; ov.className = 'foto-viewer no-print';
     ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
     ov.innerHTML = `
-      <div class="fv-kopf"><span class="fv-titel" id="fv-titel"></span><button type="button" class="fv-x" onclick="fotoSchliessen()" aria-label="Schließen">✕</button></div>
+      <div class="fv-kopf"><span class="fv-titel" id="fv-titel"></span><button type="button" class="fv-x" onclick="fotoSchliessen()" aria-label="Schließen"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
       <div class="fv-bild"><button type="button" class="fv-nav fv-zurueck" onclick="fotoBlaettern(-1)" aria-label="Vorheriges Foto">‹</button><img id="fv-img" alt=""><button type="button" class="fv-nav fv-weiter" onclick="fotoBlaettern(1)" aria-label="Nächstes Foto">›</button></div>
       <div class="fv-fuss"><span class="fv-info" id="fv-info"></span><button type="button" class="fv-loeschen" id="fv-loeschen" onclick="fotoLoeschen()">Löschen</button></div>`;
     ov.addEventListener('click', e => { if(e.target === ov) fotoSchliessen(); });

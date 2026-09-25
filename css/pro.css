@@ -1271,3 +1271,70 @@ html body.pp .imp-dialog .ab-check { margin: 6px 0; }
 
 /* Offline-Anzeige: Punkt statt leerem Platzhalter */
 html body.pp .off-punkt { width: 7px; height: 7px; border-radius: 50%; background: var(--c-amber); flex: 0 0 auto; }
+
+/* Symbole statt Textzeichen */
+html body.pp .sb-proj-group-head .sb-chevron { width: 14px; display: inline-flex; align-items: center; font-size: inherit; }
+html body.pp .sb-chevron .ico { width: 13px; height: 13px; }
+html body.pp .pc-menu-btn .ico { width: 18px; height: 18px; }
+html body.pp .project-card-title .ico, html body.pp .sb-proj-name .ico { width: 14px; height: 14px; vertical-align: -2px; color: var(--brand-text); }
+html body.pp .ppk-haken .ico { width: 18px; height: 18px; }
+html body.pp .btn .ico, html body.pp .hpw-alle .ico, html body.pp .ab-jump .ico, html body.pp .sb-proj-all-link .ico { vertical-align: -3px; }
+html body.pp #to-top .ico { width: 20px; height: 20px; }
+/* Dunkelmodus: "Aktuell:" steht dort auf hellem Grund – dunkleres Gruen */
+html body.pp:not(.sun-mode) .scroll-context .context-label { color: color-mix(in srgb, var(--brand) 55%, #000) !important; }
+/* "ohne Datei" gut lesbar in beiden Modi */
+html body.pp .ab-fehlt { color: color-mix(in srgb, var(--c-amber) 85%, var(--ink)) !important; }
+
+/* ══ Messmodus ══════════════════════════════════════════════════════════ */
+html body.pp .messmodus-btn { display: inline-flex !important; align-items: center; gap: 7px; }
+html body.mm-offen { overflow: hidden; }
+html body.pp .mm-overlay { position: fixed; inset: 0; z-index: 4000; background: color-mix(in srgb, var(--ink) 45%, transparent);
+  display: flex; align-items: center; justify-content: center; padding: calc(12px + var(--safe-top, 0px)) 12px calc(12px + var(--safe-bottom, 0px)); }
+html body.pp .mm-karte { width: 100%; max-width: 520px; max-height: 100%; overflow: auto; background: var(--pa2); color: var(--ink);
+  border: 1px solid var(--line); border-top: 3px solid var(--brand); border-radius: var(--r); box-shadow: var(--sh-lg); padding: 16px 18px 18px; }
+html body.pp .mm-kopf { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+html body.pp .mm-projekt { font-weight: 700; font-size: 1rem; }
+html body.pp .mm-wr { color: var(--mute); font-size: .86rem; margin-top: 2px; }
+html body.pp .mm-x { border: 0; background: transparent; color: var(--mute); width: 44px; height: 44px; margin: -8px -10px 0 0; border-radius: var(--r-sm); cursor: pointer; }
+html body.pp .mm-x .ico { width: 22px; height: 22px; }
+html body.pp .mm-fortschritt { display: flex; align-items: center; gap: 10px; font-size: .8rem; color: var(--mute); margin: 12px 0 14px; }
+html body.pp .mm-balken { flex: 1; height: 6px; border-radius: 99px; background: var(--pa3); overflow: hidden; }
+html body.pp .mm-balken span { display: block; height: 100%; background: var(--brand); border-radius: 99px; }
+html body.pp .mm-string { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+html body.pp .mm-string strong { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+html body.pp .mm-string span { color: var(--mute); font-size: .88rem; }
+html body.pp .mm-feld { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 12px; margin: 8px 0; }
+html body.pp .mm-feld span { font-weight: 600; font-size: 1rem; }
+html body.pp .mm-feld em { font-style: normal; color: var(--mute); font-weight: 500; font-size: .85rem; }
+html body.pp .mm-feld input { width: 100%; height: 58px; font-size: 1.75rem !important; font-weight: 600; text-align: right; padding: 0 14px;
+  border: 1.5px solid var(--line2); border-radius: var(--r-sm); background: var(--pa1, var(--pa2)); color: var(--ink); font-variant-numeric: tabular-nums; }
+html body.pp .mm-feld input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+html body.pp .mm-feld input.mm-falsch { border-color: var(--c-rose); }
+html body.pp .mm-hinweis { min-height: 1.4em; font-size: .86rem; color: var(--mute); margin: 6px 0 10px; line-height: 1.4; }
+html body.pp .mm-hinweis.mm-warn { color: color-mix(in srgb, var(--c-amber) 85%, var(--ink)); font-weight: 600; }
+html body.pp .mm-hinweis.mm-crit { color: var(--c-rose); font-weight: 600; }
+html body.pp .mm-notiz summary { cursor: pointer; font-size: .86rem; color: var(--ink2); padding: 6px 0; }
+html body.pp .mm-notiz input { width: 100%; margin-top: 4px; text-align: left !important; }
+html body.pp .mm-nuroffen { display: flex; align-items: center; gap: 8px; font-size: .84rem; color: var(--ink2); margin: 10px 0 4px; }
+html body.pp .mm-knoepfe { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-top: 14px; }
+html body.pp .mm-knoepfe .btn { min-height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 1rem; }
+html body.pp .mm-ende-text { display: flex; flex-direction: column; gap: 4px; margin: 18px 0 6px; }
+html body.pp .mm-ende-text strong { font-size: 1.4rem; }
+html body.pp .mm-ende-text span { color: var(--mute); }
+@media (max-width: 600px) {
+  html body.pp .mm-overlay { padding: 0; align-items: stretch; }
+  html body.pp .mm-karte { max-width: none; border-radius: 0; border-left: 0; border-right: 0; padding-top: calc(14px + var(--safe-top, 0px)); padding-bottom: calc(16px + var(--safe-bottom, 0px)); }
+  html body.pp .mm-feld { grid-template-columns: 72px 1fr; }
+}
+/* Messmodus: grosse Ziffern auch am Handy (die 16-px-Regel gilt fuer normale Felder) */
+html body.pp #messmodus .mm-feld input { font-size: 1.75rem !important; }
+html body.pp #messmodus .btn:disabled { opacity: .45; color: var(--ink2) !important; background: transparent !important; border-color: var(--line2) !important; }
+/* Handy: Messmodus und "Nächster offener String" nebeneinander */
+@media (max-width: 600px) {
+  html body.pp .matrix-statuszeile { display: grid; grid-template-columns: 1fr 1fr; }
+  html body.pp .matrix-statuszeile .sync-status { grid-column: 1 / -1; }
+  html body.pp .matrix-statuszeile .messmodus-btn { order: 1; }
+  html body.pp .matrix-statuszeile .naechster-offener { order: 2; }
+  html body.pp .matrix-statuszeile .messmodus-btn, html body.pp .matrix-statuszeile .naechster-offener {
+    width: 100% !important; margin: 0 !important; justify-content: center; min-height: 50px; line-height: 1.2; text-align: center; align-self: stretch; }
+}

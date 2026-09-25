@@ -1390,3 +1390,14 @@ html body.pp .eint-plus { min-width: 90px !important; background: transparent !i
   html body.pp .ein-knoepfe .btn-primary { grid-column: 1 / -1; order: -1; }
   html body.pp .eint-we { margin-left: 0; }
 }
+
+/* PPK: Abschnitt ausfuellen / nicht benoetigt */
+html body.pp .ppk-vorh-klein > span { font-size: .8rem; color: var(--mute); }
+html body.pp .ppk-vorh-klein .ppk-seg { max-width: 300px; }
+html body.pp .ppk-vorh-klein .ppk-seg button { min-height: 34px; font-size: .8rem; }
+/* PPK: Zuweisung */
+html body.pp .ppk-zuweisung { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  font-size: .86rem; background: var(--pa3); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 12px; margin: 0 0 12px; }
+html body.pp .ppk-zuweisung[hidden] { display: none; }
+/* Zuweisen-Dialog: Rolle */
+html body.pp .ub-rolle { font-size: .72rem; color: var(--mute); background: var(--pa3); border-radius: 999px; padding: 1px 8px; margin-left: 4px; }

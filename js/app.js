@@ -853,7 +853,7 @@ function zeigeBereichsWahl(){
   const karten = g('bg-karten');
   if(karten){
     if(!erlaubt.length){
-      karten.innerHTML = '<div class="bg-leer">Dir ist noch kein Bereich freigeschaltet.<br>Bitte melde dich beim Admin.</div>';
+      karten.innerHTML = '<div class="bg-leer">Dir ist noch kein Bereich freigeschaltet.<br>Bitte melde dich beim Admin.</div>' + arbeitsbereichKartenHtml();
     } else {
       const anzahl = b => Object.keys(PROJECTS).filter(id => projektBereich(PROJECTS[id]) === b).length;
       karten.innerHTML = erlaubt.map(b => {
@@ -4839,6 +4839,7 @@ async function changeUserRole(userId, newRole){
 // nur noch Projekte, denen sie hier explizit zugewiesen wurde.
 let assignModalProjectId = null;
 
+let assignNutzer = [];
 function openAssignModal(id, event){
   if(event) event.stopPropagation();
   if(!darf('projekt_verwalten')) return toast('Keine Berechtigung');
@@ -4861,7 +4862,7 @@ async function loadAssignments(projectId){
   const listEl = g('assign-list'); listEl.innerHTML = 'Lade...';
   try {
     const [{ data: siteUsers, error: uErr }, { data: members, error: mErr }] = await Promise.all([
-      supabaseClient.from('profiles').select('id, email, role, bereiche').in('role', ['site', 'elektriker']).order('email', { ascending: true }),
+      supabaseClient.from('profiles').select('id, email, role, bereiche, display_name').in('role', ['site', 'elektriker']).order('email', { ascending: true }),
       supabaseClient.from('pv_project_members').select('user_id').eq('project_id', projectId)
     ]);
     if(uErr) throw uErr;
@@ -4872,9 +4873,12 @@ async function loadAssignments(projectId){
       listEl.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">Keine Bauleitung-Accounts vorhanden. Lege Benutzer in der Benutzerverwaltung an.</div>';
       return;
     }
+    assignNutzer = siteUsers;
+    const bereich = PROJECTS[projectId] ? projektBereich(PROJECTS[projectId]) : null;
+    siteUsers.sort((a, b) => (a.role === 'elektriker' ? 0 : 1) - (b.role === 'elektriker' ? 0 : 1) || String(a.display_name || a.email).localeCompare(String(b.display_name || b.email)));
     listEl.innerHTML = siteUsers.map(u => `
       <div class="user-row">
-        <span class="email">${esc(u.email)}${(Array.isArray(u.bereiche) && PROJECTS[projectId] && u.bereiche.indexOf(projektBereich(PROJECTS[projectId])) < 0) ? ` <span class="ub-hinweis">· Bereich ${esc(BEREICHE[projektBereich(PROJECTS[projectId])].name)} fehlt – sieht das Projekt nicht</span>` : ''}</span>
+        <span class="email"><span class="user-name">${esc(u.display_name || (u.email || '').split('@')[0])}</span> <span class="ub-rolle">${esc(ROLLEN[u.role] || u.role)}</span><span class="user-mail">${esc(u.email)}</span>${(bereich && !(Array.isArray(u.bereiche) && u.bereiche.includes(bereich))) ? ` <span class="ub-hinweis">Bereich ${esc(BEREICHE[bereich].name)} fehlt${currentUserRole === 'admin' ? ' – wird beim Zuweisen freigeschaltet' : ' – Admin muss ihn freischalten'}</span>` : ''}</span>
         <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;white-space:nowrap;">
           <input type="checkbox" ${assignedIds.has(u.id) ? 'checked' : ''} onchange="toggleAssignment('${projectId}', '${u.id}', this.checked)">
           zugewiesen
@@ -4890,11 +4894,25 @@ async function toggleAssignment(projectId, userId, assign){
         project_id: projectId, user_id: userId, assigned_by: currentUser ? currentUser.id : null
       });
       if(error) throw error;
-      toast('Zugewiesen');
+      // Ohne den Bereich des Projekts wuerde die Person es trotz Zuweisung nicht sehen
+      const u = (assignNutzer || []).find(x => x.id === userId);
+      const bereich = PROJECTS[projectId] ? projektBereich(PROJECTS[projectId]) : null;
+      if(u && bereich && !(Array.isArray(u.bereiche) && u.bereiche.includes(bereich)) && currentUserRole === 'admin'){
+        const neu = [...new Set([...(u.bereiche || []), bereich])];
+        const { error: bErr } = await supabaseClient.from('profiles').update({ bereiche: neu }).eq('id', userId);
+        if(bErr) throw bErr;
+        u.bereiche = neu;
+        toast(`Zugewiesen – Bereich ${BEREICHE[bereich].name} für ${u.display_name || u.email} freigeschaltet`);
+        loadAssignments(projectId);
+      } else {
+        toast('Zugewiesen');
+      }
+      if(typeof ppkZuweisungZeigen === 'function') ppkZuweisungZeigen();
     } else {
       const { error } = await supabaseClient.from('pv_project_members').delete().eq('project_id', projectId).eq('user_id', userId);
       if(error) throw error;
       toast('Zuweisung entfernt');
+      if(typeof ppkZuweisungZeigen === 'function') ppkZuweisungZeigen();
     }
   } catch(e){
     toastError('Zuweisung konnte nicht geändert werden', e);
@@ -7710,8 +7728,11 @@ const PPK_FELD_ZUSATZ = {
   'Zählerplatz Standort': ['zaehlerplatz'], 'Verlegung': ['verlegung']
 };
 const PPK_SEG_AUTO = { uess_ac: 'uess_ac', uess_dc: 'uess_dc', ue_vorh: 'ue_vorh', db_ueds: 'ues_dc_db' };
-PPK_TEILE.forEach(t => t.abschnitte.forEach(a => {
+PPK_TEILE.forEach(t => t.abschnitte.forEach((a, i) => {
+  a.nr = t.teil + (i + 1);   // wie im Formular (A1, B5 …)
   Object.assign(a, PPK_ABSCHNITT_ZUSATZ[t.teil + '|' + a.titel] || {});
+  a.schalter = a.id || a.nr;                     // Schluessel fuer "ausfuellen / nicht benoetigt"
+  if(a.felder.some(fd => fd.t === 'sig')) a.pflicht = true;   // Datum & Unterschrift bleibt immer
   a.felder.forEach(fd => {
     const z = typeof fd.f === 'string' ? PPK_FELD_ZUSATZ[fd.f] : null;
     if(z){ if(z[0]) fd.vs = z[0]; if(z[1] && !fd.a) fd.a = z[1]; }
@@ -7740,9 +7761,10 @@ function ppkKomp(id){
 }
 // Optionale Abschnitte: "nicht vorhanden" blendet sie aus und laesst sie im PDF leer
 function ppkAbschnittAn(a, auto){
-  if(!a || !a.optional) return true;
-  const s = ppkDaten && ppkDaten.w ? ppkDaten.w['_an_' + a.id] : undefined;
+  if(!a || a.pflicht) return true;
+  const s = ppkDaten && ppkDaten.w ? ppkDaten.w['_an_' + a.schalter] : undefined;
   if(s === true || s === false) return s;
+  if(!a.optional) return true;
   if(a.id === 'laderegler') return /^Insel/.test(ppkWert({ k: 'anlagenart', a: 'anlagenart' }, auto).v || '');
   if(a.id === 'speicher') return !!(auto && auto.hat_speicher);
   return true;
@@ -7869,24 +7891,27 @@ function ppkZeichnen(){
         <button type="button" class="btn btn-primary" onclick="ppkErstellen()">PPK erstellen (PDF)</button></div>
     </div>
     <div class="ab-status" id="ppk-meldung" hidden></div>
+    <div id="ppk-zuweisung" class="ppk-zuweisung" hidden></div>
     <div id="ppk-archiv"></div>
     ${PPK_TEILE.map(t => `<div class="ppk-teil"><h2><span>${t.teil}</span>${esc(t.titel)}</h2>
       ${t.abschnitte.map(a => { const i = nr++; const an = ppkAbschnittAn(a, auto); return `<details class="ab-kapitel${an ? '' : ' ppk-aus'}"${hatteZustand ? (offen[i] ? ' open' : '') : (i === 0 ? ' open' : '')}>
-        <summary><span class="ab-nr">${t.teil}${t.abschnitte.indexOf(a) + 1}</span>${esc(a.titel)}${a.optional ? `<span class="ab-sum-info">${an ? 'vorhanden' : 'entfällt'}</span>` : ''}</summary>
-        <div class="ab-raster">${a.optional ? ppkVorhandenHtml(a, an) : ''}
+        <summary><span class="ab-nr">${t.teil}${t.abschnitte.indexOf(a) + 1}</span>${esc(a.titel)}${a.optional ? `<span class="ab-sum-info">${an ? 'vorhanden' : 'entfällt'}</span>` : (an ? '' : '<span class="ab-sum-info">nicht benötigt</span>')}</summary>
+        <div class="ab-raster">${a.pflicht ? '' : ppkVorhandenHtml(a, an)}
         ${an ? `${a.komp ? ppkKompHtml(a) : ''}${a.mess ? ppkMessHtml() : ''}${a.schnell && ppkDarfAendern() ? `<div class="ab-breit"><button type="button" class="btn btn-ghost ab-mini" data-ppk-schnell="${esc(t.teil)}|${esc(a.titel)}">Alle Punkte: ja / in Ordnung</button></div>` : ''}
-        ${a.felder.map(fd => ppkFeldHtml(fd, auto)).join('')}` : '<p class="ab-breit ab-klein">Abschnitt entfällt – im PDF steht dort „nicht vorhanden“.</p>'}</div></details>`; }).join('')}</div>`).join('')}
+        ${a.felder.map(fd => ppkFeldHtml(fd, auto)).join('')}` : `<p class="ab-breit ab-klein">${a.optional && a.leer ? 'Abschnitt entfällt – im PDF steht dort „nicht vorhanden“.' : 'Nicht benötigt – der Abschnitt bleibt im PDF leer.'}</p>`}</div></details>`; }).join('')}</div>`).join('')}
     <div class="ab-fuss"><button type="button" class="btn btn-primary" onclick="ppkErstellen()">PPK erstellen (PDF)</button></div>`;
   ppkSigEinrichten();
   ppkStatus();
   pdfArchivZeigen('ppk-archiv', proj.id, 'PPK');
+  ppkZuweisungZeigen();
 }
 
 function ppkVorhandenHtml(a, an){
   const dis = ppkDarfAendern() ? '' : ' disabled';
-  return `<div class="ab-feld ab-breit ppk-vorh"><span>${esc(a.titel)} vorhanden?</span><div class="ppk-seg">
-    <button type="button" class="${an ? 'an' : ''}" data-ppk-an="${a.id}" data-v="1"${dis}>vorhanden</button>
-    <button type="button" class="${an ? '' : 'an'}" data-ppk-an="${a.id}" data-v="0"${dis}>nicht vorhanden</button></div></div>`;
+  const [frage, ja, nein] = a.optional ? [`${a.titel} vorhanden?`, 'vorhanden', 'nicht vorhanden'] : ['Abschnitt ausfüllen?', 'ausfüllen', 'nicht benötigt'];
+  return `<div class="ab-feld ab-breit ppk-vorh${a.optional ? '' : ' ppk-vorh-klein'}"><span>${esc(frage)}</span><div class="ppk-seg">
+    <button type="button" class="${an ? 'an' : ''}" data-ppk-an="${esc(a.schalter)}" data-v="1"${dis}>${ja}</button>
+    <button type="button" class="${an ? '' : 'an'}" data-ppk-an="${esc(a.schalter)}" data-v="0"${dis}>${nein}</button></div></div>`;
 }
 function ppkKompHtml(a){
   const dis = ppkDarfAendern() ? '' : ' disabled';
@@ -8056,14 +8081,19 @@ async function ppkErstellen(){
       tel: ppkWert({ f: 'TelefonNr', a: 'telefon' }, auto).v, befund: ppkWert({ f: 'Zu Befund Nr' }, auto).v };
     ['_2', '_3'].forEach(s => { text('Anlagenbetreiber' + s, kopf.betreiber); text('Anlagenadresse' + s, kopf.adresse); text('TelefonNr' + s, kopf.tel); });
     text('Zu Befund Nr_2', kopf.befund);
-    // Kaestchen, die an einem Wert haengen
+    // Kaestchen, die an einem Wert haengen – nur wenn ihr Abschnitt ausgefuellt wird
     const w = ppkDaten.w;
-    if(ppkWert({ f: 'Anzahl WR', a: 'wr_anzahl' }, auto).v) haken(cbx(60));
-    if(w.trenntrafo) haken(cbx(63));
-    if(w['Nennspg']) haken(cbx(118));
-    if(w['Absicherung']) haken(cbx(119));
+    const abschnittAn = titel => ppkAbschnittAn(PPK_TEILE.flatMap(t => t.abschnitte).find(a => a.id === titel || a.titel === titel), auto);
+    if(abschnittAn('wr')){
+      if(ppkWert({ f: 'Anzahl WR', a: 'wr_anzahl' }, auto).v) haken(cbx(60));
+      if(w.trenntrafo) haken(cbx(63));
+    }
+    if(abschnittAn('Installation & Netzanschluss (AC)')){
+      if(w['Nennspg']) haken(cbx(118));
+      if(w['Absicherung']) haken(cbx(119));
+    }
     // Strangmessung (Formular: 12 Straenge)
-    const ids = ppkStraenge();
+    const ids = abschnittAn('Strangmessung (aus der Matrix)') ? ppkStraenge() : [];
     const uFeld = ['1_3', '2_2', '3_3', '4_2', '5', '6', '7', '8', '9', '10', '11', '12_2'];
     const iFeld = ['1_4', '2_3', '3_4', '4_3', '5_2', '6_2', '7_2', '8_2', '9_2', '10_2', '11_2', '12_3'];
     ids.slice(0, 12).forEach((id, i) => { text(uFeld[i], APP_STATE[id].uoc); text(iFeld[i], APP_STATE[id].isc); });
@@ -9297,4 +9327,27 @@ async function einteilungPdf(){
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
   } catch(e){ toastError('PDF konnte nicht erstellt werden', e); }
+}
+
+// ── PPK: wer ist dem Projekt zugewiesen (fuer Admin/Planer) ───────────────
+let ppkZuweisungCache = {};
+async function ppkZuweisungZeigen(){
+  const el = g('ppk-zuweisung');
+  const proj = getCurrentProject();
+  if(!el || !proj || currentUserRole !== 'admin' || !darf('projekt_verwalten') || !supabaseClient || !currentUser){ if(el) el.hidden = true; return; }
+  try {
+    const { data: m } = await supabaseClient.from('pv_project_members').select('user_id').eq('project_id', proj.id);
+    const ids = (m || []).map(x => x.user_id);
+    let namen = [];
+    if(ids.length){
+      const { data: p } = await supabaseClient.from('profiles').select('id, email, display_name, role').in('id', ids);
+      namen = (p || []).sort((a, b) => (a.role === 'elektriker' ? 0 : 1) - (b.role === 'elektriker' ? 0 : 1))
+        .map(x => `${x.display_name || (x.email || '').split('@')[0]}${x.role === 'elektriker' ? ' (Elektriker)' : ''}`);
+    }
+    const akt = g('ppk-zuweisung');
+    if(!akt || getCurrentProject() !== proj) return;
+    akt.hidden = false;
+    akt.innerHTML = `<span>${namen.length ? 'Zugewiesen: <strong>' + esc(namen.join(', ')) + '</strong>' : 'Noch niemand zugewiesen – der Elektriker sieht das Projekt erst nach dem Zuweisen.'}</span>
+      <button type="button" class="btn btn-ghost ab-mini" onclick="openAssignModal('${proj.id}')">Personen zuweisen</button>`;
+  } catch(_){ el.hidden = true; }
 }

@@ -4,9 +4,9 @@
 //   Updates sofort ankommen – nur ohne Verbindung aus dem Zwischenspeicher
 // * Anfragen an Supabase (Anmeldung, Projekte, Messwerte) werden NIE
 //   zwischengespeichert
-const VERSION = 'pv-matrix-v51';   // bei Aenderungen an dieser Datei hochzaehlen
+const VERSION = 'pv-matrix-v52';   // bei Aenderungen an dieser Datei hochzaehlen
 const HUELLE = ['./', './index.html', './config.js', './manifest.webmanifest',
-  './css/app.css?v=20260922b', './css/pro.css?v=20260925i', './js/app.js?v=20260925i', './js/fotos.js?v=20260925b', './js/sw-registrierung.js?v=20260923b',
+  './css/app.css?v=20260922b', './css/pro.css?v=20260925i', './js/app.js?v=20260925j', './js/fotos.js?v=20260925b', './js/sw-registrierung.js?v=20260923b',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', event => {

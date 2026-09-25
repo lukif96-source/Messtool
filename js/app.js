@@ -7567,8 +7567,9 @@ const PPK_TEILE = [
       { t: 'text', f: 'Prüfung Sonstige', l: 'Sonstige Schutzmaßnahme – Bezeichnung', nur: ['dc_so', '*'] }
     ]},
     { titel: 'Schutzmaßnahmen Wechselstromseite (AC)', schnell: 1, felder: [
-      { t: 'pruef', k: 'ac_null', l: 'Nullung', an: cbx(155), io: [cbx(156), cbx(157)] },
-      { t: 'pruef', k: 'ac_fi', l: 'Fehlerstrom-Schutzschaltung', an: cbx(158), io: [cbx(159), cbx(160)] },
+      { t: 'entweder', k: 'ac_schutz', l: 'Schutzmaßnahme (entweder – oder)', o: [
+        { l: 'Nullung', k: 'ac_null', an: cbx(155), io: [cbx(156), cbx(157)] },
+        { l: 'Fehlerstrom-Schutzschaltung', k: 'ac_fi', an: cbx(158), io: [cbx(159), cbx(160)] }] },
       { t: 'pruef', k: 'ac_uel', l: 'Sichtprüfung der Überspannungsleiter', an: cbx(161), io: [cbx(162), cbx(163)] },
       { t: 'pruef', k: 'ac_kse', l: 'Kurzschlusseinrichtung', an: cbx(164), io: [cbx(165), cbx(166)] }
     ]},
@@ -7848,6 +7849,14 @@ function ppkFeldHtml(fd, auto){
   }
   const { v, auto: istAuto } = ppkWert(fd, auto);
   const marke = istAuto ? '<em class="ppk-auto">aus Projekt</em>' : '';
+  if(fd.t === 'entweder'){
+    const gew = ppkEntwederWahl(fd);
+    const v2 = gew ? (ppkDaten.w[gew.k] || '') : '';
+    return `<div class="ab-feld ab-breit"><span>${esc(fd.l)}</span><div class="ppk-seg">${fd.o.map(o =>
+      `<button type="button" class="${gew === o ? 'an' : ''}" data-ppk-wahl="${esc(fd.k)}" data-v="${esc(o.k)}"${dis}>${esc(o.l)}</button>`).join('')}</div></div>
+      ${gew ? `<div class="ab-feld"><span>${esc(gew.l)} – Ergebnis</span><div class="ppk-seg">${['i. O.', 'nicht i. O.'].map(lab =>
+        `<button type="button" class="${v2 === lab ? 'an' : ''}" data-ppk-seg="${esc(gew.k)}" data-v="${esc(lab)}"${dis}>${esc(lab)}</button>`).join('')}</div></div>` : ''}`;
+  }
   if(fd.t === 'seg' || fd.t === 'pruef'){
     const opts = fd.t === 'pruef' ? [['i. O.'], ['nicht i. O.']] : fd.o;
     return `<div class="ab-feld${fd.o && fd.o.length > 3 ? ' ab-breit' : ''}"><span>${esc(fd.l)} ${marke}</span><div class="ppk-seg">${opts.map(([lab]) =>
@@ -7947,10 +7956,18 @@ document.addEventListener('input', e => {
   ppkSpeichernVerzoegert();
 });
 document.addEventListener('click', e => {
-  const t = e.target.closest ? e.target.closest('#ppk-inhalt [data-ppk-seg], #ppk-inhalt [data-ppk-multi], #ppk-inhalt [data-ppk-mx], #ppk-inhalt [data-ppk-mx-alle], #ppk-inhalt [data-ppk-schnell], #ppk-inhalt [data-ppk-an]') : null;
+  const t = e.target.closest ? e.target.closest('#ppk-inhalt [data-ppk-seg], #ppk-inhalt [data-ppk-multi], #ppk-inhalt [data-ppk-mx], #ppk-inhalt [data-ppk-mx-alle], #ppk-inhalt [data-ppk-schnell], #ppk-inhalt [data-ppk-an], #ppk-inhalt [data-ppk-wahl]') : null;
   if(!t || !ppkDaten || !ppkDarfAendern()) return;
   const w = ppkDaten.w;
   if(t.dataset.ppkAn){ w['_an_' + t.dataset.ppkAn] = t.dataset.v === '1'; }
+  else if(t.dataset.ppkWahl){
+    const fd = PPK_TEILE.flatMap(x => x.abschnitte).flatMap(a => a.felder).find(f => f.t === 'entweder' && f.k === t.dataset.ppkWahl);
+    const alt = ppkEntwederWahl(fd), neu = fd.o.find(o => o.k === t.dataset.v);
+    const ergebnis = alt ? w[alt.k] : '';
+    fd.o.forEach(o => { if(o !== neu) delete w[o.k]; });          // entweder – oder
+    if(alt !== neu && ergebnis && !w[neu.k]) w[neu.k] = ergebnis; // Ergebnis beim Umwaehlen mitnehmen
+    w['_wahl_' + fd.k] = neu.k;
+  }
   else if(t.dataset.ppkSeg){ const k = t.dataset.ppkSeg; w[k] = (w[k] === t.dataset.v) ? '' : t.dataset.v; }
   else if(t.dataset.ppkMulti){ const k = t.dataset.ppkMulti; const a = Array.isArray(w[k]) ? w[k] : []; w[k] = a.includes(t.dataset.v) ? a.filter(x => x !== t.dataset.v) : [...a, t.dataset.v]; }
   else if(t.dataset.ppkMx){ const k = t.dataset.ppkMx; const m = (w[k] && typeof w[k] === 'object') ? w[k] : {}; m[t.dataset.zelle] = !m[t.dataset.zelle]; w[k] = m; }
@@ -7960,6 +7977,7 @@ document.addEventListener('click', e => {
     const ab = PPK_TEILE.find(x => x.teil === teil).abschnitte.find(x => x.titel === titel);
     ab.felder.forEach(fd => {
       if(fd.t === 'pruef') w[fd.k] = 'i. O.';
+      else if(fd.t === 'entweder'){ const o = ppkEntwederWahl(fd); if(o) w[o.k] = 'i. O.'; else toast(`${fd.l}: bitte zuerst die Maßnahme wählen`); }
       else if(fd.t === 'seg'){ const pos = fd.o.find(([lab]) => lab === 'in Ordnung' || lab === 'ja' || lab === 'vorhanden'); if(pos) w[fd.k] = pos[0]; }
     });
   }
@@ -8073,6 +8091,10 @@ async function ppkErstellen(){
       else if(fd.t === 'seg'){ const o = fd.o.find(([lab]) => lab === v); if(o) haken(o[1]); }
       else if(fd.t === 'multi'){ (Array.isArray(v) ? v : []).forEach(x => { const o = fd.o.find(([lab]) => lab === x); if(o) haken(o[1]); }); }
       else if(fd.t === 'pruef'){ if(v === 'i. O.' || v === 'nicht i. O.'){ haken(fd.an); haken(v === 'i. O.' ? fd.io[0] : fd.io[1]); } }
+      else if(fd.t === 'entweder'){
+        const o = ppkEntwederWahl(fd), e = o ? ppkDaten.w[o.k] : '';
+        if(o){ haken(o.an); if(e === 'i. O.' || e === 'nicht i. O.') haken(e === 'i. O.' ? o.io[0] : o.io[1]); }
+      }
       else if(fd.t === 'matrix'){ const m = ppkDaten.w[fd.k] || {}; fd.zeilen.forEach(([, boxen], zi) => boxen.forEach((b, si) => { if(m[zi + '_' + si]) haken(cbx(b)); })); }
       });
     }));
@@ -9350,4 +9372,12 @@ async function ppkZuweisungZeigen(){
     akt.innerHTML = `<span>${namen.length ? 'Zugewiesen: <strong>' + esc(namen.join(', ')) + '</strong>' : 'Noch niemand zugewiesen – der Elektriker sieht das Projekt erst nach dem Zuweisen.'}</span>
       <button type="button" class="btn btn-ghost ab-mini" onclick="openAssignModal('${proj.id}')">Personen zuweisen</button>`;
   } catch(_){ el.hidden = true; }
+}
+
+// PPK "entweder – oder" (z. B. Nullung oder Fehlerstrom-Schutzschaltung):
+// gewaehlte Option = gemerkte Wahl, sonst die Option mit Ergebnis
+function ppkEntwederWahl(fd){
+  if(!fd || !ppkDaten) return null;
+  const w = ppkDaten.w || {};
+  return fd.o.find(o => o.k === w['_wahl_' + fd.k]) || fd.o.find(o => w[o.k]) || null;
 }

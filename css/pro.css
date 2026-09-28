@@ -1507,3 +1507,128 @@ html body.pp .sich-zeile > div:first-child { display: flex; flex-direction: colu
 html body.pp .sich-zeile small { color: var(--mute); font-size: .78rem; }
 html body.pp .sich-knoepfe { display: flex; gap: 6px; flex-wrap: wrap; }
 html body.pp .sich-projekte { max-height: 50vh; overflow: auto; }
+
+/* ── Einfache Ansicht: Meine Baustellen ─────────────────────────────────── */
+.baustelle-view { display: none; }
+.baustelle-view.active { display: block; }
+.sb-einfach, .einfach-leiste { display: none; }
+body.einfach .sb-einfach { display: block; }
+body.einfach .main-tabs, body.einfach .dashboard, body.einfach #bereich-chip { display: none !important; }
+body.einfach .sidebar > :not(.sidebar-header):not(.user-badge):not(.sb-theme):not(.sb-einfach):not(.sb-ansicht):not(.sb-bleibt) { display: none !important; }
+body.einfach:not(.tab-baustelle) .einfach-leiste { display: flex; }
+html body.pp .sb-ansicht[hidden] { display: none !important; }
+html body.pp .einfach-leiste { align-items: center; gap: 10px; margin: 0 0 12px; padding: 0 0 8px; border-bottom: 1px solid var(--line); }
+html body.pp .einfach-leiste .btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 600; flex: 0 0 auto; }
+html body.pp #einfach-projekt { color: var(--mute); font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+html body.pp .bs-seite { max-width: 720px; margin: 0 auto; padding: 4px 0 40px; }
+html body.pp .bs-hallo h1, html body.pp .bs-kopf h1 { font-size: 1.45rem; font-weight: 700; margin: 4px 0 2px; letter-spacing: -.01em; }
+html body.pp .bs-hallo p { color: var(--mute); margin: 0 0 16px; }
+html body.pp .bs-suche { width: 100%; margin: 0 0 12px; }
+html body.pp .bs-liste { display: flex; flex-direction: column; gap: 10px; }
+html body.pp .bs-karte { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; text-align: left; font: inherit; color: var(--ink); cursor: pointer;
+  background: var(--pa2); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; }
+html body.pp .bs-karte:hover, html body.pp .bs-karte:focus-visible { border-color: var(--brand); }
+html body.pp .bs-karte.bs-dran { border-color: var(--brand-line); box-shadow: inset 4px 0 0 var(--brand); }
+html body.pp .bs-karte[hidden] { display: none; }
+html body.pp .bs-k-name { font-weight: 700; font-size: 1.05rem; }
+html body.pp .bs-k-adr { font-size: .85rem; color: var(--mute); }
+html body.pp .bs-k-naechst { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: .9rem; font-weight: 600; color: var(--brand-text); }
+html body.pp .bs-k-naechst.wartet { color: var(--mute); font-weight: 500; }
+html body.pp .bs-k-naechst.fertig { color: var(--ok); font-weight: 500; }
+html body.pp .bs-erledigt { margin-top: 18px; }
+html body.pp .bs-erledigt summary { cursor: pointer; color: var(--mute); font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+html body.pp .bs-leer { text-align: center; padding: 40px 16px; color: var(--mute); border: 1px dashed var(--line2); border-radius: var(--r); }
+html body.pp .bs-leer .ico { width: 28px; height: 28px; }
+html body.pp .bs-leer h2 { font-size: 1.1rem; color: var(--ink); margin: 8px 0 4px; }
+html body.pp .bs-leer p { margin: 0 auto; max-width: 420px; }
+
+html body.pp .bs-zurueck, html body.pp .nv-zurueck { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; color: var(--ink2);
+  font: inherit; font-weight: 600; padding: 8px 0; min-height: 44px; cursor: pointer; }
+html body.pp .bs-zurueck:hover, html body.pp .nv-zurueck:hover { color: var(--ink); }
+html body.pp .bs-kopf p { margin: 0; color: var(--mute); }
+html body.pp .bs-kopf .bs-notiz { margin-top: 6px; color: var(--ink2); font-style: italic; }
+html body.pp .bs-kontakt { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
+html body.pp .bs-kontakt .btn { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+html body.pp .bs-hinweis { display: flex; align-items: center; gap: 8px; margin: 12px 0 0 !important; padding: 8px 12px; border-radius: var(--r-sm); background: var(--warn-soft); color: var(--ink) !important; font-size: .85rem; }
+html body.pp .bs-schritte { list-style: none; margin: 18px 0 0; padding: 0; border: 1px solid var(--line); border-radius: var(--r); background: var(--pa2); overflow: hidden; }
+html body.pp .bs-schritte li + li { border-top: 1px solid var(--line); }
+html body.pp .bs-schritt { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; font: inherit; color: var(--ink); background: none; border: 0; border-radius: 0;
+  padding: 14px 16px; min-height: 64px; cursor: pointer; }
+html body.pp .bs-schritt:disabled { cursor: default; opacity: 1; }
+html body.pp .bs-schritt:not(:disabled):hover { background: var(--pa3); }
+html body.pp .bs-schritt.jetzt { background: var(--brand-soft); }
+html body.pp .bs-schritt.jetzt .s-nr { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+html body.pp .bs-schritt.s-gesperrt .bs-text b, html body.pp .bs-schritt.fremd .bs-text b { color: var(--ink2); font-weight: 500; }
+html body.pp .bs-schritt.s-fremd .s-nr { border-style: dashed; }
+html body.pp .bs-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+html body.pp .bs-text b { font-size: 1rem; font-weight: 600; }
+html body.pp .bs-text small { color: var(--mute); font-size: .85rem; }
+html body.pp .bs-pfeil { color: var(--mute); display: inline-flex; }
+html body.pp .bs-weiter { margin: 18px 0 0; }
+html body.pp .bs-gross { width: 100%; min-height: 56px; font-size: 1.05rem !important; font-weight: 700 !important; display: flex !important; align-items: center; justify-content: center; gap: 8px; }
+html body.pp .bs-status { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; padding: 14px 16px; border-radius: var(--r);
+  border: 1px solid var(--line); background: var(--pa2); color: var(--ink2); text-align: center; }
+html body.pp .bs-status.fertig { border-color: var(--brand-line); background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
+html body.pp .bs-mehr { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+html body.pp .bs-mehr .btn { min-height: 44px; }
+@media (max-width: 600px) {
+  html body.pp .bs-hallo h1, html body.pp .bs-kopf h1 { font-size: 1.3rem; }
+  html body.pp .bs-kontakt .btn { flex: 1 1 0; justify-content: center; }
+}
+
+/* ── Benutzerverwaltung (einfach) ───────────────────────────────────────── */
+html body.pp #users-modal .modal-card { max-width: 600px; }
+html body.pp .nv-info { font-size: .85rem; color: var(--mute); margin: 0 0 12px; line-height: 1.45; }
+html body.pp .nv-suche { width: 100%; margin: 0 0 12px; }
+html body.pp .nv-gruppe { margin: 0 0 14px; }
+html body.pp .nv-gruppe[hidden] { display: none; }
+html body.pp .nv-titel { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--mute); margin: 0 0 6px; }
+html body.pp .nv-neu .nv-titel { color: var(--warn); }
+html body.pp .nv-zeile { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; font: inherit; color: var(--ink); background: var(--pa2);
+  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; min-height: 56px; cursor: pointer; margin: 0 0 6px; }
+html body.pp .nv-zeile:hover, html body.pp .nv-zeile:focus-visible { border-color: var(--brand); }
+html body.pp .nv-zeile[hidden] { display: none; }
+html body.pp .nv-neu .nv-zeile { border-color: color-mix(in srgb, var(--warn) 55%, var(--line)); }
+html body.pp .nv-av { width: 36px; height: 36px; border-radius: 50%; flex: 0 0 36px; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: .8rem; background: var(--brand-soft); color: var(--brand-text); }
+html body.pp .nv-av.gross { width: 48px; height: 48px; flex-basis: 48px; font-size: 1rem; }
+html body.pp .nv-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+html body.pp .nv-text b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body.pp .nv-text small { color: var(--mute); font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body.pp .nv-rolle { font-size: .75rem; font-weight: 600; color: var(--ink2); white-space: nowrap; }
+html body.pp .nv-pfeil { color: var(--mute); display: inline-flex; }
+html body.pp .nv-kopf { display: flex; align-items: center; gap: 12px; margin: 4px 0 18px; min-width: 0; }
+html body.pp .nv-kopf > div { min-width: 0; }
+html body.pp .nv-kopf h3 { margin: 0; font-size: 1.1rem; }
+html body.pp .nv-kopf small { color: var(--mute); overflow-wrap: anywhere; }
+html body.pp .nv-abschnitt { margin: 0 0 20px; }
+html body.pp .nv-rollen { display: grid; gap: 6px; }
+html body.pp .nv-rolle-karte { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; font: inherit; color: var(--ink);
+  background: var(--pa2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; cursor: pointer; }
+html body.pp .nv-rolle-karte b { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+html body.pp .nv-rolle-karte span { font-size: .8rem; color: var(--mute); line-height: 1.35; }
+html body.pp .nv-rolle-karte:not(:disabled):hover { border-color: var(--brand); }
+html body.pp .nv-rolle-karte.an { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-soft); }
+html body.pp .nv-rolle-karte.an b { color: var(--brand-text); }
+html body.pp .nv-rolle-karte:disabled { cursor: default; }
+html body.pp .nv-rolle-karte:disabled:not(.an) { opacity: .5; }
+html body.pp .nv-projekte { display: flex; flex-direction: column; gap: 6px; margin: 0 0 8px; }
+html body.pp .nv-projekt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border: 1px solid var(--line);
+  border-radius: var(--r-sm); background: var(--pa2); }
+html body.pp .nv-projekt span { display: flex; flex-direction: column; min-width: 0; }
+html body.pp .nv-projekt small { color: var(--mute); font-size: .78rem; }
+html body.pp .nv-zuweisen { display: flex; flex-direction: column; gap: 8px; }
+html body.pp .nv-zuweisen .pa-liste { max-height: 40vh; overflow: auto; }
+html body.pp .nv-zuweisen > .btn { align-self: flex-start; }
+html body.pp .nv-profi .rechte-box summary small { color: var(--mute); font-weight: 400; }
+html body.pp .fk-dialog { max-width: 560px; width: calc(100vw - 24px); }
+html body.pp .fk-dialog .fk-titel { display: none; }
+html body.pp .bs-erledigt summary { list-style: none; gap: 10px; }
+html body.pp .bs-erledigt summary::-webkit-details-marker { display: none; }
+html body.pp .bs-erledigt summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform .15s; }
+html body.pp .bs-erledigt[open] summary::before { transform: rotate(45deg); }
+/* Dialog-Kopf bleibt beim Scrollen oben – dann nicht durchsichtig */
+html body.pp .modal-card > .modal-head { background: var(--pa2) !important; z-index: 2; }
+html body.pp .nv-zuweisen input, html body.pp .bs-suche, html body.pp .nv-suche { text-align: left !important; }
+html body.pp .nv-profi .rechte-box summary small { margin: 0 4px; }

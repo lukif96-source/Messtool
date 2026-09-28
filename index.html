@@ -131,11 +131,6 @@
       <button onclick="closeUsersModal()" class="btn btn-ghost" style="padding:4px 8px;" aria-label="Schließen"><svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="modal-body">
-      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;line-height:1.4;">
-        <b>Admin:</b> alles · <b>Planer:</b> Hardware · <b>Bauleitung:</b> nur Messwerte · <b>Elektriker:</b> PPK und Querschnitt · <b>Büro:</b> alle Projekte seiner Bereiche, nur Anlagendoku.<br><b>Bereiche:</b> legen fest, welche Projekte jemand überhaupt sieht. Admins sehen immer alles.
-      </div>
-      <div id="funktionen-box"></div>
-      <input type="search" id="users-suche" class="sp-inp" placeholder="Suchen nach Name oder E-Mail" oninput="filterUsers(this.value)" autocomplete="off">
       <div id="users-list">Lade Benutzer...</div>
     </div>
   </div>
@@ -372,12 +367,24 @@
 
   <!-- Theme-Umschalter: Baustelle = harter Kontrast fuer Sonne,
        Cockpit = dunkel fuers Buero. Auswahl wird gemerkt. -->
-  <div style="margin: 0 8px 12px;">
+  <div class="sb-theme" style="margin: 0 8px 12px;">
     <div class="theme-switch" role="group" aria-label="Darstellung wählen" style="width:100%;">
       <button type="button" id="theme-btn-sun" class="active" style="flex:1;justify-content:center;" onclick="setTheme('sun')" title="Heller Modus mit starkem Kontrast – gut bei Sonne">Hell</button>
       <button type="button" id="theme-btn-dark" style="flex:1;justify-content:center;" onclick="setTheme('dark')" title="Dunkler Modus – angenehm im Büro">Dunkel</button>
     </div>
   </div>
+
+  <div class="sb-einfach">
+    <button type="button" onclick="baustelleListe();closeSidebar();" class="sidebar-btn">
+      <span class="icon ic-green"><svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/></svg></span><span class="label">Meine Baustellen</span>
+    </button>
+    <button type="button" onclick="switchMainTab('anleitung');closeSidebar();" class="sidebar-btn">
+      <span class="icon ic-teal"><svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span class="label">Anleitung</span>
+    </button>
+  </div>
+  <button type="button" onclick="ansichtWechseln();closeSidebar();" class="sidebar-btn sb-ansicht" id="sb-ansicht" hidden>
+    <span class="icon ic-mute"><svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="label" id="sb-ansicht-text">Einfache Ansicht</span>
+  </button>
 
   <div class="sb-proj-section">
     <div class="sb-proj-section-label">
@@ -442,6 +449,9 @@
   <button onclick="openUsersModal();closeSidebar();" class="sidebar-btn role-gate-admin">
     <span class="icon ic-teal"><svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="label">Benutzerverwaltung</span>
   </button>
+  <button onclick="funktionenOeffnen();closeSidebar();" class="sidebar-btn role-gate-admin" title="Funktionen für alle freigeben oder auf „In Arbeit“ stellen">
+    <span class="icon ic-teal"><svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span><span class="label">Funktionen freigeben</span>
+  </button>
   <button onclick="sicherungenOeffnen();closeSidebar();" class="sidebar-btn role-gate-admin" title="Nächtliche Sicherungen ansehen, herunterladen, Projekte wiederherstellen">
     <span class="icon ic-teal"><svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5z"/><path d="m9 12 2 2 4-4"/></svg></span><span class="label">Datensicherung</span>
   </button>
@@ -457,7 +467,7 @@
       <span class="icon ic-krit"><svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></span><span class="label">Matrix zurücksetzen</span>
     </button>
   </div>
-  <button onclick="doLogout();closeSidebar();" class="sidebar-btn">
+  <button onclick="doLogout();closeSidebar();" class="sidebar-btn sb-bleibt">
     <span class="icon ic-mute"><svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></span><span class="label">Abmelden</span>
   </button>
 </aside>
@@ -465,6 +475,11 @@
 
 <div class="app-layout">
 <div class="main-content">
+
+  <div class="einfach-leiste no-print" id="einfach-leiste">
+    <button type="button" class="btn btn-ghost" onclick="bsZurueck()"><svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg><span id="einfach-zurueck-text">Meine Baustellen</span></button>
+    <span id="einfach-projekt"></span>
+  </div>
 
   <div class="dashboard no-print">
     <div class="kpi-card">
@@ -495,6 +510,8 @@
     <button class="main-tab" onclick="switchMainTab('anleitung')" id="tab-anleitung">Anleitung</button>
     <button class="main-tab role-gate-planner" onclick="switchMainTab('querschnitt')" data-recht="querschnitt" id="tab-querschnitt"><span class="qs-tab-lang">Querschnittberechnung</span><span class="qs-tab-kurz">Querschnitt</span><span class="qs-tab-mini">Querschn.</span></button>
   </div>
+
+  <div class="baustelle-view" id="baustelle-view"></div>
 
   <div class="home-view active" id="home-view">
     <div class="home-hero">
@@ -1061,7 +1078,7 @@
   </div>
 </div>
 
-<script src="js/app.js?v=20260928d"></script>
+<script src="js/app.js?v=20260928e"></script>
 <script src="js/fotos.js?v=20260928c"></script>
 <!-- ══════════════════════════════════════════════════════════════════════
      DARSTELLUNG — jeder richtet sich die Oberflaeche selbst ein.
@@ -1077,7 +1094,7 @@
 
 
 
-<link rel="stylesheet" href="css/pro.css?v=20260928d">
+<link rel="stylesheet" href="css/pro.css?v=20260928e">
 <script src="js/sw-registrierung.js?v=20260923b"></script>
 </body>
 </html>

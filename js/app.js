@@ -163,7 +163,7 @@ function rechteZellenHtml(u){
   const angepasst = RECHTE.filter(r => Object.prototype.hasOwnProperty.call(eig, r.k) && !!eig[r.k] !== r.std.includes(u.role)).length;
   const gruppen = [...new Set(RECHTE.map(r => r.g))];
   return `<details class="rechte-box">
-    <summary>Rechte <span class="rechte-status">${angepasst ? angepasst + ' angepasst' : 'Standard der Rolle'}</span></summary>
+    <summary>Einzelne Rechte anpassen <small>(nur bei Bedarf)</small> <span class="rechte-status">${angepasst ? angepasst + ' angepasst' : 'Standard der Rolle'}</span></summary>
     ${gruppen.map(gr => `<div class="rechte-gruppe"><div class="rechte-titel">${esc(gr)}</div>${RECHTE.filter(r => r.g === gr).map(r => {
         const std = r.std.includes(u.role);
         const an = Object.prototype.hasOwnProperty.call(eig, r.k) ? !!eig[r.k] : std;
@@ -186,6 +186,7 @@ async function rechtSetzen(uid, k, wert, el){
     const { error } = await supabaseClient.from('profiles').update({ rechte: neu }).eq('id', uid);
     if(error) throw error;
     b.rechte = neu;
+    { const nu = nvDaten.nutzer.find(x => x.id === uid); if(nu) nu.rechte = neu; }
     if(el){
       const lbl = el.closest('.recht');
       if(lbl) lbl.classList.toggle('abweichend', wert !== std);
@@ -353,14 +354,14 @@ function switchMainTab(tab){
   // Monteure sehen den Reiter nicht und landen sonst auf der Uebersicht.
   if(!tabErlaubt(tab)) tab = TAB_REIHE.find(tabErlaubt) || 'anleitung';
   document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.matrix-view, .projects-view, .home-view, .anleitung-view, .querschnitt-view, .anlagenbuch-view, .komponenten-view, .ppk-view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.matrix-view, .projects-view, .home-view, .anleitung-view, .querschnitt-view, .anlagenbuch-view, .komponenten-view, .ppk-view, .baustelle-view').forEach(v => v.classList.remove('active'));
   const tabEl = g(`tab-${tab}`);
   if(tabEl) tabEl.classList.add('active');
   // Am Handy ist die Reiterleiste wischbar: aktiven Reiter ins Bild holen
   if(tabEl && tabEl.scrollIntoView) tabEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   const viewEl = g(`${tab}-view`);
   if(viewEl) viewEl.classList.add('active');
-  document.body.classList.remove('tab-home','tab-matrix','tab-projects','tab-anleitung','tab-querschnitt','tab-anlagenbuch','tab-komponenten','tab-ppk');
+  document.body.classList.remove('tab-home','tab-matrix','tab-projects','tab-anleitung','tab-querschnitt','tab-anlagenbuch','tab-komponenten','tab-ppk','tab-baustelle');
   document.body.classList.add('tab-' + tab);
   if(tab === 'projects') renderProjectGrid();
   if(tab === 'home') renderHomeView();
@@ -368,6 +369,8 @@ function switchMainTab(tab){
   if(tab === 'anlagenbuch') anlagenbuchRendern();
   if(tab === 'komponenten') komponentenRendern();
   if(tab === 'ppk') ppkRendern();
+  if(tab === 'baustelle') baustelleZeichnen();
+  bsLeisteZeigen();
   const context = g('scroll-context');
   if(context) context.hidden = tab !== 'matrix';
   if(tab === 'matrix') requestAnimationFrame(updateScrollContext);
@@ -849,6 +852,7 @@ function erlaubteBereiche(){
 }
 
 function zeigeBereichsWahl(){
+  if(istEinfach()) return baustelleListe();   // einfache Ansicht: keine Bereichswahl
   const gate = g('bereich-gate');
   if(!gate) return;
   const logo = g('bg-logo');
@@ -4665,6 +4669,7 @@ async function doLogout(){
   }
 
   if(supabaseClient) await supabaseClient.auth.signOut();
+  document.body.classList.remove('einfach'); bsProjektId = null;
   currentUser = null; currentUserRole = null;
   CURRENT_BEREICH = null; currentUserBereiche = [];
   aktualisiereBereichsAnzeige();
@@ -4729,13 +4734,13 @@ async function onAuthenticated(user){
     aktualisiereNamensAnzeige();
     g('user-badge-role').textContent = ROLLEN[currentUserRole] || '—';
     await initProjects();
-    ppkStatusLaden().then(() => { if(g('project-grid')) renderProjectGrid(); });
+    ppkStatusLaden().then(() => { if(g('project-grid')) renderProjectGrid(); bsAktualisieren(); });
     pflichtfotosLaden().then(() => { if(g('project-grid')) renderProjectGrid(); projektInfoZeigen(); });
     if(typeof fotoWarteschlangeSenden === 'function') fotoWarteschlangeSenden();
     updateLockUI();
     updateRoleHint();
     if(currentUserRole === 'site') toggleHideInactive(true);
-    zeigeBereichsWahl();
+    ansichtAnwenden(true);
   } finally {
     document.body.classList.remove('app-laedt');
   }
@@ -4817,32 +4822,11 @@ async function saveDisplayName(){
 
 function openUsersModal(){
   if(currentUserRole !== 'admin') return toast('Nur für Admins');
+  nvAnsicht = null; nvSuche = ''; nvZuweisenFuer = null;
   g('users-modal').classList.add('show');
   loadAllUsers();
 }
 function closeUsersModal(evt){ if(!evt || evt.target === g('users-modal')) g('users-modal').classList.remove('show'); }
-
-async function loadAllUsers(){
-  const listEl = g('users-list'); listEl.innerHTML = 'Lade...';
-  funktionenBoxZeichnen();
-  try {
-    const { data, error } = await supabaseClient.from('profiles').select('id, email, role, bereiche, display_name, rechte').order('created_at', { ascending: true });
-    if(error){ listEl.innerHTML = `Fehler: ${error.message}`; return; }
-    listEl.innerHTML = data.map(u => `
-      <div class="user-row" data-suche="${esc(((u.display_name || '') + ' ' + (u.email || '')).toLowerCase())}">
-        <span class="email"><span class="user-name">${esc(u.display_name || (u.email || '').split('@')[0])}${u.id === currentUser.id ? ' (du)' : ''}</span><span class="user-mail">${esc(u.email)}</span></span>
-        <select onchange="changeUserRole('${u.id}', this.value)" ${u.id === currentUser.id ? 'disabled' : ''}>
-          <option value="site" ${u.role === 'site' ? 'selected' : ''}>Bauleitung</option>
-          <option value="elektriker" ${u.role === 'elektriker' ? 'selected' : ''}>Elektriker</option>
-          <option value="buero" ${u.role === 'buero' ? 'selected' : ''}>Büro</option>
-          <option value="planner" ${u.role === 'planner' ? 'selected' : ''}>Planer</option>
-          <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
-        </select>
-        ${bereicheZellenHtml(u)}
-        ${rechteZellenHtml(u)}
-      </div>`).join('');
-  } catch(e){ listEl.innerHTML = `Fehler: ${e.message}`; }
-}
 
 async function changeUserRole(userId, newRole){
   try {
@@ -8262,6 +8246,7 @@ function arbeitsbereichKartenHtml(){
       <span class="bg-info">${info}</span><span class="bg-zahl">alle Bereiche</span></button>`).join('');
 }
 async function waehleArbeit(tab){
+  if(istEinfach()) return baustelleListe();
   if(!tabErlaubt(tab)) return;
   if(CURRENT_PROJECT_ID){
     try { await flushPendingProjectEdits(); if(currentProjectLock) await unlockProject(CURRENT_PROJECT_ID); } catch(e){}
@@ -8948,7 +8933,7 @@ function mmFertig(){
     <div class="mm-ende-text"><strong>${alles ? 'Alle Strings gemessen' : 'Ende der Liste'}</strong><span>${fertig} von ${gesamt} Strings vollständig</span></div>
     ${(() => { const pf = pflichtStand(getCurrentProject()); return pf && pf.gesamt && pf.fertig < pf.gesamt ? `<button type="button" class="btn btn-ghost mm-pf" onclick="messmodusBeenden(); pflichtfotosOeffnen();">${ICON.camera2} Pflichtfotos: noch ${pf.gesamt - pf.fertig} offen</button>` : ''; })()}
     <div class="mm-knoepfe">
-      <button type="button" class="btn btn-ghost" onclick="messmodusBeenden()">Zur Matrix</button>
+      <button type="button" class="btn btn-ghost" onclick="messmodusBeenden()">${istEinfach() ? 'Fertig' : 'Zur Matrix'}</button>
       ${alles && darf('export') ? '<button type="button" class="btn btn-primary" onclick="messmodusBeenden(); pruefprotokollDialog();">Prüfprotokoll erstellen</button>'
         : (!alles ? `<button type="button" class="btn btn-primary" onclick="messmodusStarten()">Offene Strings messen</button>` : '')}
     </div></div>`;
@@ -9486,6 +9471,7 @@ function stammKarteHtml(p){
     ${tel ? `<a href="${esc(tel)}" title="Anrufen: ${esc(st.telefon)}" aria-label="Anrufen" onclick="event.stopPropagation()">${ICON.phone}</a>` : ''}</div>`;
 }
 function projektInfoZeigen(){
+  bsAktualisieren();
   const el = g('projekt-info');
   if(!el) return;
   const p = getCurrentProject(), st = p && p.stamm;
@@ -9944,3 +9930,433 @@ async function sicherungProjektBestaetigen(pid){
     toastError('Zurückholen fehlgeschlagen', e);
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+//   EINFACHE ANSICHT ("Meine Baustellen")
+//   Standard fuer Bauleitung, Elektriker und Buero: keine Reiter, keine
+//   Werkzeuge – nur die eigenen Projekte und je Projekt die Schritte mit
+//   einem grossen Knopf fuer den naechsten. Reine Anzeige ueber den
+//   bestehenden Funktionen (Messmodus, Pflichtfotos, Unterschrift, PPK,
+//   Anlagendoku) – gespeichert wird genau wie bisher.
+//   Die Wahl gilt je Person und Geraet und ist jederzeit umschaltbar.
+// ══════════════════════════════════════════════════════════════════════════
+const ANSICHT_SPEICHER = 'pv_ansicht_v1';
+let bsProjektId = null;     // Projekt auf der Schritt-Seite, null = Liste
+let bsSuche = '';
+let bsNeuTimer = null;
+function ansichtStandard(){ return ['site', 'elektriker', 'buero'].includes(currentUserRole) ? 'einfach' : 'voll'; }
+function ansichtGemerkt(){
+  try {
+    const m = JSON.parse(localStorage.getItem(ANSICHT_SPEICHER) || '{}');
+    return (currentUser && m[currentUser.id]) || ansichtStandard();
+  } catch(_){ return ansichtStandard(); }
+}
+function istEinfach(){ return document.body.classList.contains('einfach'); }
+function ansichtAnwenden(start){
+  const einfach = ansichtGemerkt() === 'einfach';
+  document.body.classList.toggle('einfach', einfach);
+  const knopf = g('sb-ansicht'), t = g('sb-ansicht-text');
+  if(knopf) knopf.hidden = false;
+  if(t) t.textContent = einfach ? 'Volle Ansicht (alle Werkzeuge)' : 'Einfache Ansicht (Baustelle)';
+  if(einfach) baustelleListe();
+  else if(start) zeigeBereichsWahl();
+}
+function ansichtWechseln(){
+  const neu = istEinfach() ? 'voll' : 'einfach';
+  try {
+    const m = JSON.parse(localStorage.getItem(ANSICHT_SPEICHER) || '{}');
+    if(currentUser) m[currentUser.id] = neu;
+    localStorage.setItem(ANSICHT_SPEICHER, JSON.stringify(m));
+  } catch(_){}
+  bsProjektId = null;
+  ansichtAnwenden(true);
+  toast(neu === 'einfach' ? 'Einfache Ansicht' : 'Volle Ansicht mit allen Werkzeugen');
+}
+
+async function bsProjektSchliessen(){
+  bsProjektId = null;
+  if(!CURRENT_PROJECT_ID) return;
+  try {
+    await flushPendingProjectEdits();
+    if(currentProjectLock) await unlockProject(CURRENT_PROJECT_ID);
+  } catch(e){}
+  CURRENT_PROJECT_ID = null;
+  APP_STATE = {};
+  renderMatrix();
+  if(typeof updateKPIs === 'function') updateKPIs();
+  renderProjectUI();
+}
+async function baustelleListe(){
+  await bsProjektSchliessen();
+  CURRENT_BEREICH = null;
+  delete document.body.dataset.arbeit;
+  const gate = g('bereich-gate');
+  if(gate) gate.hidden = true;
+  document.body.classList.remove('bereich-offen');
+  aktualisiereBereichsAnzeige();
+  switchMainTab('baustelle');
+  window.scrollTo(0, 0);
+}
+async function bsProjektOeffnen(id){
+  if(!PROJECTS[id]) return;
+  if(id !== CURRENT_PROJECT_ID) await selectProject(id);
+  bsProjektId = id;
+  switchMainTab('baustelle');
+  window.scrollTo(0, 0);
+}
+function bsZurueck(){
+  bsProjektId = CURRENT_PROJECT_ID || null;
+  switchMainTab('baustelle');
+  window.scrollTo(0, 0);
+}
+function bsLeisteZeigen(){
+  const t = g('einfach-zurueck-text'), n = g('einfach-projekt');
+  const p = getCurrentProject();
+  if(t) t.textContent = p ? 'Zurück zu den Schritten' : 'Meine Baustellen';
+  if(n) n.textContent = p ? (p.name || '') : '';
+}
+// Nach Aenderungen (Messwert, Foto, Unterschrift …) die Seite nachziehen
+function bsAktualisieren(){
+  if(!istEinfach() || !document.body.classList.contains('tab-baustelle')) return;
+  clearTimeout(bsNeuTimer);
+  bsNeuTimer = setTimeout(() => {
+    const a = document.activeElement;
+    if(a && a.tagName === 'INPUT' && a.closest && a.closest('#baustelle-view')) return;
+    baustelleZeichnen();
+  }, 60);
+}
+
+// Schritte eines Projekts aus Sicht der angemeldeten Person
+function bsSchritte(p){
+  const [dc, ppk, ab] = projektSchritte(p);
+  const pr = getProjectProgress(p);
+  const alleGemessen = pr.total > 0 && pr.done === pr.total;
+  const sichtbar = k => currentUserRole === 'admin' || funktionFrei(k);
+  // Unterschrieben/gesperrt: Messwerte und Fotos aendert nur noch der Admin
+  const zu = currentUserRole !== 'admin' && !!(p.locked || istGeschuetzt(p));
+  const liste = [{ id: 'dc', name: 'DC-Messung', status: dc.status, info: dc.info, meins: darf('messwerte'), zu: zu && dc.status !== 'fertig', wer: 'die Bauleitung', knopf: 'Messen' }];
+  const pf = pflichtStand(p);
+  if(pf && pf.gesamt) liste.push({ id: 'fotos', name: 'Pflichtfotos', status: pf.fertig === pf.gesamt ? 'fertig' : (pf.fertig ? 'arbeit' : 'offen'),
+    info: pf.fertig === pf.gesamt ? 'alle vorhanden' : (zu ? `${pf.fertig} von ${pf.gesamt} – Protokoll ist abgeschlossen` : `${pf.fertig} von ${pf.gesamt} – es fehlen noch ${pf.gesamt - pf.fertig}`),
+    // Aufgabe der Bauleitung; wer sonst Fotos darf (z. B. Elektriker), kann ergaenzen
+    meins: darf('fotos') && darf('messwerte'), kann: darf('fotos'), zu: zu && pf.fertig < pf.gesamt, wer: 'die Bauleitung', knopf: 'Fotos aufnehmen' });
+  if(darf('unterschreiben')){
+    const fertig = !!(p.signature || p.abnahme || p.locked);
+    liste.push({ id: 'sig', name: 'DC-Protokoll unterschreiben', status: fertig ? 'fertig' : (alleGemessen ? 'offen' : 'gesperrt'),
+      info: fertig ? (p.signature ? `unterschrieben von ${p.signature.name}` : 'abgeschlossen') : (alleGemessen ? 'danach sind keine Änderungen mehr möglich' : 'nach der Messung'),
+      meins: true, knopf: 'Unterschreiben' });
+  }
+  if(sichtbar('ppk')){
+    const bekannt = ppkStatusGeladen || darf('ppk');
+    liste.push({ id: 'ppk', name: 'AC-Prüfprotokoll (PPK)', status: bekannt ? ppk.status : 'fremd', info: bekannt ? ppk.info : '', meins: darf('ppk'), wer: 'der Elektriker', knopf: 'PPK ausfüllen' });
+  }
+  if(sichtbar('anlagenbuch')){
+    const bekannt = ppkStatusGeladen || darf('anlagenbuch');
+    liste.push({ id: 'ab', name: 'Anlagendoku', status: bekannt || ab.status === 'fertig' ? ab.status : 'fremd', info: bekannt || ab.status === 'fertig' ? ab.info : '', meins: darf('anlagenbuch'), wer: 'das Büro', knopf: 'Anlagendoku erstellen' });
+  }
+  return liste;
+}
+function bsNaechster(schritte){ return schritte.find(s => s.meins && !s.zu && s.status !== 'fertig' && s.status !== 'gesperrt' && s.status !== 'fremd') || null; }
+// Welcher Schritt sperrt? PPK und Unterschrift warten auf die Messung, die Doku aufs PPK
+const BS_SPERRE = { ppk: 'dc', sig: 'dc', ab: 'ppk' };
+function bsSperrtVor(schritte, s){ return schritte.find(x => x.id === BS_SPERRE[s.id] && x.status !== 'fertig') || null; }
+function bsLage(p){
+  const s = bsSchritte(p);
+  // Kein Schritt fuer diese Rolle (z. B. Funktion noch "In Arbeit"): nur Stand zeigen
+  if(!s.some(x => x.meins)) return { art: 'ansehen', schritt: s.find(x => x.status !== 'fertig') || null };
+  const n = bsNaechster(s);
+  if(n) return { art: 'dran', schritt: n };
+  const wartet = s.find(x => x.meins && !x.zu && x.status !== 'fertig');
+  if(wartet) return { art: 'wartet', schritt: wartet, vor: bsSperrtVor(s, wartet) };
+  return { art: 'fertig' };
+}
+
+function baustelleZeichnen(){
+  const el = g('baustelle-view');
+  if(!el) return;
+  const p = bsProjektId && bsProjektId === CURRENT_PROJECT_ID ? getCurrentProject() : null;
+  if(bsProjektId && !p) bsProjektId = null;
+  el.innerHTML = p ? bsSeiteHtml(p) : bsListeHtml();
+  bsLeisteZeigen();
+}
+
+function bsKarteHtml(p){
+  const st = p.stamm || {};
+  const lage = bsLage(p);
+  const adr = [st.kunde, stammAdresse(st)].filter(Boolean).join(' · ');
+  const zeile = lage.art === 'dran'
+    ? `<span class="bs-k-naechst">${ICON.arrowR} ${esc(lage.schritt.name)}${lage.schritt.info ? ` · ${esc(lage.schritt.info)}` : ''}</span>`
+    : lage.art === 'wartet'
+      ? `<span class="bs-k-naechst wartet">${ICON.lock} Wartet${lage.vor ? ` auf: ${esc(lage.vor.name)}` : ''}</span>`
+      : lage.art === 'ansehen'
+        ? `<span class="bs-k-naechst wartet">${lage.schritt ? `Stand: ${esc(lage.schritt.name)}${lage.schritt.info ? ` · ${esc(lage.schritt.info)}` : ''}` : `${ICON.check} Alles erledigt`}</span>`
+        : `<span class="bs-k-naechst fertig">${ICON.check} Für dich erledigt</span>`;
+  return `<button type="button" class="bs-karte${lage.art === 'dran' ? ' bs-dran' : ''}" data-suche="${esc(((p.name || '') + ' ' + (st.kunde || '') + ' ' + (st.ort || '') + ' ' + (st.strasse || '') + ' ' + (st.nr || '')).toLowerCase())}" onclick="bsProjektOeffnen('${esc(p.id)}')">
+    <span class="bs-k-name">${esc(p.name || 'Unbenannt')}</span>${adr ? `<span class="bs-k-adr">${esc(adr)}</span>` : ''}${zeile}</button>`;
+}
+function bsListeHtml(){
+  const zeit = p => String(p.updated_at || '');
+  const alle = Object.values(PROJECTS).filter(p => p && !p.archiviert);
+  const rang = { dran: 0, wartet: 1, ansehen: 2, fertig: 3 };
+  const mitLage = alle.map(p => ({ p, art: bsLage(p).art })).sort((a, b) => (rang[a.art] - rang[b.art]) || zeit(b.p).localeCompare(zeit(a.p)));
+  const offen = mitLage.filter(x => x.art !== 'fertig'), fertig = mitLage.filter(x => x.art === 'fertig');
+  const name = anzeigeName();
+  const nurZugewiesen = ['site', 'elektriker'].includes(currentUserRole);
+  const leer = !alle.length ? `<div class="bs-leer">${ICON.home}<h2>Noch keine Baustelle</h2><p>${nurZugewiesen
+      ? 'Dir ist noch kein Projekt zugewiesen. Sobald dich der Admin einem Projekt zuweist, erscheint es hier.'
+      : 'In deinen Bereichen gibt es noch keine Projekte.'}</p></div>` : '';
+  return `<div class="bs-seite">
+    <div class="bs-hallo"><h1>Meine Baustellen</h1><p>${name ? `Hallo ${esc(name)} – ` : ''}${alle.length ? 'tippe auf eine Baustelle.' : ''}</p></div>
+    ${alle.length > 6 ? `<input type="search" class="sp-inp bs-suche" placeholder="Baustelle, Kunde oder Ort suchen" value="${esc(bsSuche)}" oninput="bsFiltern(this.value)" autocomplete="off">` : ''}
+    ${leer}
+    ${offen.length ? `<div class="bs-liste">${offen.map(x => bsKarteHtml(x.p)).join('')}</div>` : (alle.length ? '<div class="bs-status fertig">Alles erledigt – für dich ist gerade nichts offen.</div>' : '')}
+    ${fertig.length ? `<details class="bs-erledigt"${bsSuche ? ' open' : ''}><summary>Erledigt (${fertig.length})</summary><div class="bs-liste">${fertig.map(x => bsKarteHtml(x.p)).join('')}</div></details>` : ''}
+  </div>`;
+}
+function bsFiltern(q){
+  bsSuche = String(q || '');
+  const t = bsSuche.trim().toLowerCase();
+  document.querySelectorAll('#baustelle-view .bs-karte').forEach(b => { b.hidden = !!t && !(b.dataset.suche || '').includes(t); });
+  const d = document.querySelector('#baustelle-view .bs-erledigt');
+  if(d && t) d.open = true;
+}
+
+function bsSeiteHtml(p){
+  const st = p.stamm || {};
+  const schritte = bsSchritte(p);
+  const naechster = bsNaechster(schritte);
+  const karte = stammKartenLink(st), tel = stammTelLink(st.telefon);
+  const adr = [st.kunde, stammAdresse(st)].filter(Boolean).join(' · ');
+  const geschuetzt = currentUserRole !== 'admin' && nurAdminAenderbar();
+  let nr = 0;
+  const zeilen = schritte.map(s => {
+    nr++;
+    const klickbar = (s.meins || s.kann) && !s.zu && s.status !== 'gesperrt' && s.status !== 'fremd' && (s.id !== 'sig' || s.status !== 'fertig' || darf('export'));
+    const symbol = s.status === 'fertig' ? ICON.check : (s.status === 'gesperrt' ? ICON.lock : String(nr));
+    const info = s.meins ? s.info : [s.info, `macht ${s.wer}`].filter(Boolean).join(' · ');
+    return `<li><button type="button" class="bs-schritt s-${s.status}${s === naechster ? ' jetzt' : ''}${s.meins ? '' : ' fremd'}"${klickbar ? ` onclick="bsAktion('${s.id}')"` : ' disabled'}${s === naechster ? ' aria-current="step"' : ''}>
+      <span class="s-nr">${symbol}</span><span class="bs-text"><b>${esc(s.name)}</b>${info ? `<small>${esc(info)}</small>` : ''}</span>${klickbar ? `<span class="bs-pfeil" aria-hidden="true">${ICON.chevR}</span>` : ''}</button></li>`;
+  }).join('');
+  const wartet = !naechster && schritte.find(s => s.meins && !s.zu && s.status !== 'fertig');
+  const vor = wartet && bsSperrtVor(schritte, wartet);
+  const weiter = naechster
+    ? `<button type="button" class="btn btn-primary bs-gross" onclick="bsAktion('${naechster.id}')">${esc(naechster.knopf)} ${ICON.arrowR}</button>`
+    : wartet
+      ? `<div class="bs-status">${ICON.lock} Noch nicht dran – wartet${vor ? ` auf: <b>${esc(vor.name)}</b>${vor.wer ? ` (macht ${esc(vor.wer)})` : ''}` : ''}.</div>`
+      : !schritte.some(s => s.meins)
+        ? '<div class="bs-status">Hier gibt es für dich gerade nichts zu tun.</div>'
+        : `<div class="bs-status fertig">${ICON.check} Für dich ist hier alles erledigt.</div>`;
+  return `<div class="bs-seite">
+    <button type="button" class="bs-zurueck" onclick="baustelleListe()">${ICON.chevL} Meine Baustellen</button>
+    <div class="bs-kopf"><h1>${esc(p.name || 'Unbenannt')}</h1>${adr ? `<p>${esc(adr)}</p>` : ''}
+      ${st.hinweis ? `<p class="bs-notiz">${esc(st.hinweis)}</p>` : ''}
+      ${karte || tel ? `<div class="bs-kontakt">${karte ? `<a class="btn btn-ghost" href="${esc(karte)}" target="_blank" rel="noopener">${ICON.pin} Route</a>` : ''}${tel ? `<a class="btn btn-ghost" href="${esc(tel)}">${ICON.phone} ${esc(st.ansprechpartner || 'Anrufen')}</a>` : ''}</div>` : ''}
+      ${geschuetzt ? `<p class="bs-hinweis">${ICON.lock} Protokoll unterschrieben – Änderungen nur noch durch den Admin.</p>` : ''}
+    </div>
+    <ol class="bs-schritte">${zeilen}</ol>
+    <div class="bs-weiter">${weiter}</div>
+    ${tabErlaubt('matrix') ? `<div class="bs-mehr"><button type="button" class="btn btn-ghost" onclick="switchMainTab('matrix')">Messwerte-Tabelle öffnen</button></div>` : ''}
+  </div>`;
+}
+
+async function bsAktion(id){
+  const p = getCurrentProject();
+  if(!p) return;
+  if(id === 'dc'){
+    if(canEditMeasurement() && mmAktive().length) messmodusStarten();
+    else switchMainTab('matrix');
+  } else if(id === 'fotos'){
+    pflichtfotosOeffnen();
+  } else if(id === 'sig'){
+    if(p.signature || p.abnahme || p.locked) return pruefprotokollDialog();
+    const pf = pflichtStand(p);
+    if(pf && pf.fertig < pf.gesamt && !await appFrage(`Es fehlen noch ${pf.gesamt - pf.fertig} Pflichtfotos.\n\nNach der Unterschrift kannst du keine Fotos und Messwerte mehr ändern. Trotzdem unterschreiben?`)) return;
+    openSignatureModal();
+  } else if(id === 'ppk'){
+    switchMainTab('ppk');
+    window.scrollTo(0, 0);
+  } else if(id === 'ab'){
+    switchMainTab('anlagenbuch');
+    window.scrollTo(0, 0);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//   BENUTZERVERWALTUNG (einfach)
+//   Liste der Personen, nach Rolle gruppiert, neue Registrierungen oben.
+//   Antippen oeffnet eine Seite: 1. Rolle (in Klartext erklaert),
+//   2. Bereiche, 3. zugewiesene Projekte – einzelne Sonderrechte nur
+//   aufgeklappt bei Bedarf.
+// ══════════════════════════════════════════════════════════════════════════
+const ROLLEN_REIHE = ['site', 'elektriker', 'buero', 'planner', 'admin'];
+const ROLLEN_INFO = {
+  site:       'Misst DC, macht die Pflichtfotos und unterschreibt das DC-Protokoll. Sieht nur Projekte, denen du die Person zuweist.',
+  elektriker: 'Füllt das AC-Prüfprotokoll (PPK) aus. Sieht nur Projekte, denen du die Person zuweist.',
+  buero:      'Erstellt die Anlagendoku. Sieht alle Projekte ihrer Bereiche.',
+  planner:    'Legt Projekte an, plant Wechselrichter und Module, weist Personen zu. Sieht alle Projekte ihrer Bereiche.',
+  admin:      'Darf alles und sieht alle Projekte.'
+};
+let nvDaten = { nutzer: [], zuw: [] };
+let nvAnsicht = null;        // null = Liste, sonst die ID der geoeffneten Person
+let nvSuche = '';
+let nvZuweisenFuer = null;   // Person, fuer die gerade ein Projekt gesucht wird
+
+async function loadAllUsers(){
+  const el = g('users-list');
+  if(!el) return;
+  if(!nvDaten.nutzer.length) el.innerHTML = '<p class="ab-klein">Benutzer werden geladen …</p>';
+  try {
+    const [{ data, error }, { data: zuw, error: zErr }] = await Promise.all([
+      supabaseClient.from('profiles').select('id, email, role, bereiche, display_name, rechte, created_at').order('created_at', { ascending: true }),
+      supabaseClient.from('pv_project_members').select('project_id, user_id')
+    ]);
+    if(error) throw error;
+    if(zErr) throw zErr;
+    nvDaten = { nutzer: data || [], zuw: zuw || [] };
+    nvZeichnen();
+  } catch(e){ el.innerHTML = `<p class="ab-klein">Benutzer konnten nicht geladen werden: ${esc(e.message || String(e))}</p>`; }
+}
+function nvName(u){ return u.display_name || String(u.email || '').split('@')[0] || '—'; }
+function nvKuerzel(u){ return nvName(u).split(/[\s._-]+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?'; }
+function nvNeu(u){ return u.role !== 'admin' && !(Array.isArray(u.bereiche) && u.bereiche.length); }
+function nvProjekte(u){ return nvDaten.zuw.filter(z => z.user_id === u.id).map(z => z.project_id); }
+function nvKurzinfo(u){
+  if(u.role === 'admin') return 'sieht alles';
+  const b = (u.bereiche || []).filter(x => BEREICHE[x]).map(x => BEREICHE[x].name);
+  if(!b.length) return 'noch kein Bereich – sieht nichts';
+  if(['site', 'elektriker'].includes(u.role)){ const n = nvProjekte(u).length; return `${b.join(', ')} · ${n === 1 ? '1 Projekt' : n + ' Projekte'}`; }
+  return b.join(', ');
+}
+function nvZeichnen(){
+  const el = g('users-list');
+  if(!el) return;
+  const u = nvAnsicht && nvDaten.nutzer.find(x => x.id === nvAnsicht);
+  if(nvAnsicht && !u) nvAnsicht = null;
+  el.innerHTML = u ? nvDetailHtml(u) : nvListeHtml();
+  const kopf = document.querySelector('#users-modal .modal-head h2');
+  if(kopf) kopf.textContent = u ? 'Person einrichten' : 'Benutzerverwaltung';
+}
+function nvOeffnen(id){
+  nvAnsicht = id; nvZuweisenFuer = null;
+  nvZeichnen();
+  const karte = document.querySelector('#users-modal .modal-card');
+  if(karte) karte.scrollTop = 0;
+}
+function nvZeileHtml(u){
+  return `<button type="button" class="nv-zeile" data-suche="${esc((nvName(u) + ' ' + (u.email || '')).toLowerCase())}" onclick="nvOeffnen('${esc(u.id)}')">
+    <span class="nv-av" aria-hidden="true">${esc(nvKuerzel(u))}</span>
+    <span class="nv-text"><b>${esc(nvName(u))}${u.id === currentUser.id ? ' (du)' : ''}</b><small>${esc(nvKurzinfo(u))}</small></span>
+    <span class="nv-rolle">${esc(ROLLEN[u.role] || u.role)}</span><span class="nv-pfeil" aria-hidden="true">${ICON.chevR}</span></button>`;
+}
+function nvListeHtml(){
+  const neu = nvDaten.nutzer.filter(nvNeu);
+  const rest = nvDaten.nutzer.filter(u => !nvNeu(u));
+  return `<p class="nv-info">Tippe auf eine Person, um festzulegen, was sie macht und welche Projekte sie sieht.
+      Neue Kolleginnen und Kollegen registrieren sich selbst in der App und erscheinen dann hier ganz oben.</p>
+    ${nvDaten.nutzer.length > 6 ? `<input type="search" class="sp-inp nv-suche" placeholder="Name oder E-Mail suchen" value="${esc(nvSuche)}" oninput="nvFiltern(this.value)" autocomplete="off">` : ''}
+    ${neu.length ? `<div class="nv-gruppe nv-neu"><div class="nv-titel">Neu – bitte einrichten (${neu.length})</div>${neu.map(nvZeileHtml).join('')}</div>` : ''}
+    ${ROLLEN_REIHE.map(r => { const l = rest.filter(u => u.role === r); return l.length
+      ? `<div class="nv-gruppe"><div class="nv-titel">${esc(ROLLEN[r])} (${l.length})</div>${l.map(nvZeileHtml).join('')}</div>` : ''; }).join('')}`;
+}
+function nvFiltern(q){
+  nvSuche = String(q || '');
+  const t = nvSuche.trim().toLowerCase();
+  document.querySelectorAll('#users-list .nv-zeile').forEach(z => { z.hidden = !!t && !(z.dataset.suche || '').includes(t); });
+  document.querySelectorAll('#users-list .nv-gruppe').forEach(gr => { gr.hidden = !gr.querySelector('.nv-zeile:not([hidden])'); });
+}
+function nvDetailHtml(u){
+  const ich = u.id === currentUser.id;
+  const mitProjekten = ['site', 'elektriker'].includes(u.role);
+  let nr = 1;
+  const projekte = nvProjekte(u).map(pid => ({ pid, p: PROJECTS[pid] || (typeof PAPIERKORB !== 'undefined' && PAPIERKORB[pid]) || null }))
+    .sort((a, b) => String(a.p ? a.p.name : a.pid).localeCompare(String(b.p ? b.p.name : b.pid)));
+  return `<button type="button" class="nv-zurueck" onclick="nvOeffnen(null)">${ICON.chevL} Alle Personen</button>
+    <div class="nv-kopf"><span class="nv-av gross" aria-hidden="true">${esc(nvKuerzel(u))}</span>
+      <div><h3>${esc(nvName(u))}${ich ? ' (du)' : ''}</h3><small>${esc(u.email || '')}</small></div></div>
+
+    <div class="nv-abschnitt"><div class="nv-titel">${nr++}. Was macht die Person?</div>
+      <div class="nv-rollen" role="radiogroup" aria-label="Rolle">${ROLLEN_REIHE.map(r => `<button type="button" role="radio" aria-checked="${u.role === r}" class="nv-rolle-karte${u.role === r ? ' an' : ''}"${ich ? ' disabled' : ` onclick="nvRolle('${esc(u.id)}', '${r}')"`}>
+        <b>${u.role === r ? ICON.check + ' ' : ''}${esc(ROLLEN[r])}</b><span>${esc(ROLLEN_INFO[r])}</span></button>`).join('')}</div>
+      ${ich ? '<p class="ab-klein">Deine eigene Rolle kannst du nicht ändern.</p>' : ''}</div>
+
+    ${u.role !== 'admin' ? `<div class="nv-abschnitt"><div class="nv-titel">${nr++}. In welchen Bereichen arbeitet sie?</div>
+      <p class="nv-info">${mitProjekten ? 'Wird beim Zuweisen eines Projekts automatisch mit freigeschaltet.' : 'Sie sieht alle Projekte dieser Bereiche.'}</p>
+      ${bereicheZellenHtml(u)}</div>` : ''}
+
+    ${mitProjekten ? `<div class="nv-abschnitt"><div class="nv-titel">${nr++}. Welche Projekte sieht sie?</div>
+      <div class="nv-projekte">${projekte.length ? projekte.map(({ pid, p }) => { const st = (p && p.stamm) || {};
+        return `<div class="nv-projekt"><span><b>${esc(p ? p.name : 'Projekt nicht mehr vorhanden')}</b>${st.ort || st.kunde ? `<small>${esc([st.kunde, st.ort].filter(Boolean).join(' · '))}</small>` : ''}</span>
+          <button type="button" class="btn btn-ghost ab-mini" onclick="nvZuweisung('${esc(u.id)}', '${esc(pid)}', false)">Entfernen</button></div>`; }).join('')
+        : '<p class="ab-klein">Noch kein Projekt zugewiesen – die Person sieht noch nichts.</p>'}</div>
+      ${nvZuweisenFuer === u.id ? nvZuweisenHtml(u) : `<button type="button" class="btn btn-ghost" onclick="nvZuweisenStart('${esc(u.id)}')">+ Projekt zuweisen</button>`}</div>` : ''}
+
+    ${u.role !== 'admin' ? `<div class="nv-abschnitt nv-profi">${rechteZellenHtml(u)}</div>` : ''}`;
+}
+function nvZuweisenStart(uid){ nvZuweisenFuer = uid; nvZeichnen(); const f = document.querySelector('#nv-zuweisen input'); if(f) f.focus(); }
+function nvZuweisenHtml(u){
+  const schon = new Set(nvProjekte(u));
+  const zeit = p => String(p.updated_at || '');
+  const liste = Object.values(PROJECTS).filter(p => p && !schon.has(p.id) && !p.archiviert).sort((a, b) => zeit(b).localeCompare(zeit(a)));
+  return `<div class="nv-zuweisen" id="nv-zuweisen">
+    <input type="search" class="sp-inp" placeholder="Projekt suchen …" oninput="nvZuweisenFiltern(this.value)" autocomplete="off">
+    <div class="pa-liste">${liste.length ? liste.map(p => { const st = p.stamm || {};
+      return `<button type="button" class="pa-projekt" data-suche="${esc(((p.name || '') + ' ' + (st.kunde || '') + ' ' + (st.ort || '') + ' ' + (p.group || '')).toLowerCase())}" onclick="nvZuweisung('${esc(u.id)}', '${esc(p.id)}', true)">
+        <strong>${esc(p.name || 'Unbenannt')}</strong><span>${esc([st.kunde, st.ort, BEREICHE[projektBereich(p)].name].filter(Boolean).join(' · '))}</span></button>`; }).join('')
+      : '<p class="ab-klein">Alle Projekte sind schon zugewiesen.</p>'}</div>
+    <button type="button" class="btn btn-ghost" onclick="nvZuweisenFuer = null; nvZeichnen();">Abbrechen</button></div>`;
+}
+function nvZuweisenFiltern(q){
+  const t = String(q || '').trim().toLowerCase();
+  document.querySelectorAll('#nv-zuweisen .pa-projekt').forEach(b => { b.hidden = !!t && !(b.dataset.suche || '').includes(t); });
+}
+async function nvRolle(uid, rolle){
+  const u = nvDaten.nutzer.find(x => x.id === uid);
+  if(!u || u.role === rolle || uid === currentUser.id) return;
+  if(rolle === 'admin' && !await appFrage(`${nvName(u)} zum Admin machen?\n\nAdmins dürfen alles – auch Benutzer verwalten und unterschriebene Protokolle ändern.`)) return;
+  await changeUserRole(uid, rolle);
+}
+async function nvZuweisung(uid, pid, an){
+  const u = nvDaten.nutzer.find(x => x.id === uid);
+  try {
+    if(an){
+      const { error } = await supabaseClient.from('pv_project_members').insert({ project_id: pid, user_id: uid, assigned_by: currentUser.id });
+      if(error) throw error;
+      // Ohne den Bereich des Projekts wuerde die Person es trotz Zuweisung nicht sehen
+      const b = PROJECTS[pid] ? projektBereich(PROJECTS[pid]) : null;
+      const hat = (u && Array.isArray(u.bereiche)) ? u.bereiche : [];
+      if(u && b && !hat.includes(b)){
+        const neu = BEREICH_REIHE.filter(x => x === b || hat.includes(x));
+        const { error: e2 } = await supabaseClient.from('profiles').update({ bereiche: neu }).eq('id', uid);
+        if(e2) throw e2;
+        toast(`Zugewiesen – Bereich ${BEREICHE[b].name} mit freigeschaltet`);
+      } else toast('Zugewiesen');
+    } else {
+      const { error } = await supabaseClient.from('pv_project_members').delete().eq('project_id', pid).eq('user_id', uid);
+      if(error) throw error;
+      toast('Zuweisung entfernt');
+    }
+  } catch(e){ toastError('Zuweisung konnte nicht geändert werden', e); }
+  nvZuweisenFuer = null;
+  await loadAllUsers();
+  if(typeof ppkZuweisungZeigen === 'function') ppkZuweisungZeigen();
+}
+
+// Funktionen freigeben: eigener kleiner Dialog (vorher in der Benutzerverwaltung)
+function funktionenOeffnen(){
+  if(currentUserRole !== 'admin') return toast('Nur für Admins');
+  let ov = g('funktionen-dialog');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'funktionen-dialog'; ov.className = 'app-dialog-overlay';
+    ov.addEventListener('click', e => { if(e.target === ov) funktionenSchliessen(); });
+    document.body.appendChild(ov);
+    document.addEventListener('keydown', funktionenTaste, true);
+  }
+  ov.innerHTML = `<div class="app-dialog fk-dialog" role="dialog" aria-modal="true" aria-labelledby="fk-dlg-titel">
+    <div class="ein-kopf"><h2 id="fk-dlg-titel">Funktionen freigeben</h2>
+      <button type="button" class="mm-x" onclick="funktionenSchliessen()" aria-label="Schließen">${ICON.x}</button></div>
+    <div id="funktionen-box"></div></div>`;
+  funktionenBoxZeichnen();
+}
+function funktionenTaste(e){ if(e.key === 'Escape' && !document.querySelector('.app-dialog-overlay:not(#funktionen-dialog)')){ e.preventDefault(); funktionenSchliessen(); } }
+function funktionenSchliessen(){ const ov = g('funktionen-dialog'); if(ov) ov.remove(); document.removeEventListener('keydown', funktionenTaste, true); }

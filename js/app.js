@@ -5981,26 +5981,6 @@ const AB_KAPITEL = [
     ['ff.monitoring', 'Fernüberwachung / Monitoring', 'area'],
     ['ff.flaeche', 'Pflege der Fläche (Mahd, Beweidung …)', 'area']
   ]},
-  { id: 'pruefkurz', titel: 'Prüfbestätigung (ÖVE/ÖNORM E 8101)', fuer: ['privat'], felder: [
-    ['pruefung.datum', 'Prüfdatum', 'date'], ['pruefung.pruefer', 'Prüfer'],
-    ['pruefung.besichtigung', 'Besichtigung', 'select', AB_ERGEBNIS],
-    ['pruefung.erprobung', 'Erprobung (Funktion, Schutzeinrichtungen)', 'select', AB_ERGEBNIS],
-    ['pruefung.messung', 'Messungen (leer = automatisch aus der Matrix)', 'select', AB_ERGEBNIS]
-  ]},
-  { id: 'pruefung', titel: 'Prüf- und Messergebnisse (ÖVE/ÖNORM E 8101)', fuer: ['gewerbe', 'freiflaeche'], felder: [
-    ['pruefung.datum', 'Prüfdatum', 'date'], ['pruefung.pruefer', 'Prüfer'],
-    ['@messgeraet', 'Messgerät aus der Liste'],
-    ['pruefung.geraet', 'Messgerät (Hersteller, Typ, Seriennummer)'], ['pruefung.kalibrierung', 'Kalibriert am', 'date'],
-    ['pruefung.wetter', 'Witterung', 'text', 'z. B. sonnig, wolkenlos'],
-    ['pruefung.besichtigung', 'Besichtigung', 'select', AB_ERGEBNIS],
-    ['pruefung.erprobung', 'Erprobung', 'select', AB_ERGEBNIS],
-    ['pruefung.schutzleiter_wert', 'Niederohmigkeit Schutz-/Potentialausgleichsleiter (Ω)', 'num'],
-    ['pruefung.schutzleiter', 'Schutzleiter – Ergebnis', 'select', AB_ERGEBNIS],
-    ['pruefung.riso_ac_wert', 'Isolationswiderstand AC (MΩ)', 'num'],
-    ['pruefung.riso_ac', 'Isolationswiderstand AC – Ergebnis', 'select', AB_ERGEBNIS],
-    ['pruefung.ens', 'Funktionsprüfung Schutzeinrichtungen / Kuppelschalter (ENS)', 'select', AB_ERGEBNIS],
-    ['pruefung.bemerkung', 'Bemerkungen zur Prüfung', 'area']
-  ]},
   { id: 'betrieb', titel: 'Betrieb & Wartung', fuer: AB_ALLE, felder: [
     ['betrieb.notfall', 'Verhalten im Notfall / Abschaltung', 'area'],
     ['betrieb.wartung', 'Wartung und Kontrolle (eine Zeile pro Punkt)', 'area'],
@@ -6099,11 +6079,9 @@ async function anlagenbuchRendern(){
       }
     }
   } catch(_){}
-  if(!abDaten.pruefung) abDaten.pruefung = {};
-  if(!abDaten.pruefung.pruefer) abDaten.pruefung.pruefer = (proj.signature && proj.signature.name) || anzeigeName();
 
   box.innerHTML = '<div class="ab-leer">Lade Anlagenbuch …</div>';
-  try { await Promise.all([abKatalogLaden(), abDokumenteLaden(proj.id), abFirmaLaden()]); }
+  try { await Promise.all([abKatalogLaden(), abDokumenteLaden(proj.id), abFirmaLaden(), abPpkLaden(proj.id)]); }
   catch(e){ console.warn('Anlagenbuch laden:', e); toast('Katalog/Dokumente konnten nicht geladen werden – Netz prüfen'); }
   if(getCurrentProject() !== proj) return;
   if(!proj.anlagenbuch && abFirma && abFirma.normen) abDaten.normen = abFirma.normen;
@@ -6127,14 +6105,9 @@ function abWrVorschlaege(){
   });
   // Modul aus der Matrix uebernehmen, solange im Anlagenbuch keins gewaehlt ist
   const proj = getCurrentProject();
-  // Messgeraet und Pruefdatum aus der DC-Messung des Projekts
-  const ms = proj && proj.messung;
-  if(ms && ms.geraet && !abWert('pruefung.geraet')){
-    abSetzen('pruefung.geraet', messungGeraetText(proj, true));
-    if(ms.geraet.kal && !abWert('pruefung.kalibrierung')) abSetzen('pruefung.kalibrierung', ms.geraet.kal);
-    geaendert = true;
-  }
-  if(ms && ms.datum && !abWert('pruefung.datum')){ abSetzen('pruefung.datum', ms.datum); geaendert = true; }
+  // Angaben aus dem PPK (Elektriker) in leere Felder – vor den Projektdaten
+  const ausPpk = abPpkAuto();
+  if(ausPpk){ geaendert = true; setTimeout(() => toast(`${ausPpk} ${ausPpk === 1 ? 'Angabe' : 'Angaben'} aus dem PPK übernommen`), 400); }
   // Betreiber, Kontakt und Adresse aus den Projektdaten
   const st = proj && proj.stamm;
   if(st){
@@ -6265,10 +6238,12 @@ function abZeichnen(){
     ${schrittLeisteHtml(proj, 'ab')}
     <div class="ab-kopf">
       <div><h1>Anlagenbuch</h1><p>${esc(proj.name)} · ${esc(BEREICHE[abBereich()] ? BEREICHE[abBereich()].name : '')} · Dokumentation nach ÖVE/ÖNORM E 8101</p>
-        <p class="ab-klein">Umfang passend zum Bereich des Projekts – Privatanlagen kompakt, Gewerbe und Freifläche mit allen Prüf- und Messergebnissen.</p></div>
+        <p class="ab-klein">Umfang passend zum Bereich des Projekts – Privatanlagen kompakt, Gewerbe und Freifläche ausführlicher. Die Prüf- und Messergebnisse stehen im angehängten PPK.</p></div>
       <button type="button" class="btn btn-primary ab-erstellen" onclick="anlagenbuchErstellen()">Anlagenbuch erstellen (PDF)</button>
     </div>
     ${gesperrt ? '<div class="ab-info">Du kannst das Anlagenbuch nur ansehen.</div>' : ''}
+    <div class="ab-ppk-leiste"><span>${ICON.check} Prüfbefund: das abgeschlossene PPK wird beim Erstellen hinten angehängt.</span>
+      ${abPpk && !gesperrt ? `<button type="button" class="btn btn-ghost ab-mini" onclick="abPpkDialog()">${ICON.refresh} Angaben aus dem PPK übernehmen</button>` : ''}</div>
     ${schrittGesperrt(proj, 'ab') ? '<div class="ab-info">Das PPK ist noch nicht abgeschlossen – als Admin trotzdem geöffnet.</div>' : ''}
     <div class="ab-status" id="ab-status" hidden></div>
     <div id="ab-archiv"></div>
@@ -6760,6 +6735,10 @@ async function anlagenbuchErstellen(){
   try { await fotoListeLaden(proj.id); pflichtAusListe(proj.id); } catch(_){}
   const fehlen = pflichtOffen(proj);
   if(fehlen.length && !await appFrage(`Es fehlen noch ${fehlen.length} Pflichtfotos:\n${fehlen.slice(0, 8).map(x => '• ' + x.titel).join('\n')}${fehlen.length > 8 ? '\n…' : ''}\n\nAnlagenbuch trotzdem erstellen?`)) return;
+  // Pruefbefund: das zuletzt abgelegte PPK-PDF wird hinten angehaengt
+  let ppkPdf = null;
+  try { ppkPdf = await abPpkPdfLaden(proj.id); } catch(e){ console.warn('PPK-PDF:', e); }
+  if(!ppkPdf && !await appFrage('Im Projekt liegt noch kein abgeschlossenes PPK als PDF.\n\nDer Prüfbefund fehlt dann im Anlagenbuch. Trotzdem erstellen?')) return;
   const knoepfe = [...document.querySelectorAll('#ab-inhalt .ab-erstellen, #ab-inhalt .ab-fuss .btn')];
   knoepfe.forEach(b => b.disabled = true);
   const hinweise = [];
@@ -6947,77 +6926,6 @@ async function anlagenbuchErstellen(){
           ['Erdung und Potentialausgleich', ff.erdung], ['Fernüberwachung', ff.monitoring], ['Pflege der Fläche', ff.flaeche]]);
       }
 
-      else if(k.id === 'pruefkurz'){
-        kap(k.titel);
-        doc.kv([['Prüfdatum', datum(pr.datum)], ['Prüfer', pr.pruefer]]);
-        doc.ueberschrift('Erstprüfung');
-        doc.tabelle([{ t: 'Prüfpunkt', w: 70 }, { t: 'Ergebnis', w: 30 }], [
-          ['Besichtigung', erg(pr.besichtigung)],
-          ['Erprobung (Funktion, Schutzeinrichtungen)', erg(pr.erprobung)],
-          ['Messungen (Isolationswiderstand, Leerlaufspannung, Kurzschlussstrom)', erg(pr.messung || messungAuto)]
-        ]);
-        doc.hinweis('Die einzelnen Messwerte je String sind beim Errichter dokumentiert und können jederzeit angefordert werden.');
-      }
-
-      else if(k.id === 'pruefung'){
-        kap(k.titel);
-        doc.ueberschrift('Prüfbedingungen');
-        doc.kv([['Prüfdatum', datum(pr.datum)], ['Prüfer', pr.pruefer], ['Messgerät', pr.geraet], ['Kalibriert am', datum(pr.kalibrierung)],
-          ['Witterung', pr.wetter]]);
-        doc.ueberschrift('Erstprüfung – Besichtigung, Erprobung, Messung');
-        doc.tabelle([{ t: 'Prüfpunkt', w: 50 }, { t: 'Messwert', w: 25 }, { t: 'Ergebnis', w: 25 }], [
-          ['Besichtigung', '', erg(pr.besichtigung)],
-          ['Erprobung', '', erg(pr.erprobung)],
-          ['Niederohmigkeit Schutz-/Potentialausgleichsleiter', pr.schutzleiter_wert ? `${pr.schutzleiter_wert} Ohm` : '', erg(pr.schutzleiter)],
-          ['Isolationswiderstand DC (kleinster Stringwert)', risoMin !== null ? `${fmt(risoMin, 1)} MOhm` : '', erg(risoMin === null ? '' : (risoMin >= 1 ? 'i. O.' : 'nicht i. O.'))],
-          ['Isolationswiderstand AC', pr.riso_ac_wert ? `${pr.riso_ac_wert} MOhm` : '', erg(pr.riso_ac)],
-          ['Funktionsprüfung Schutzeinrichtungen / ENS', '', erg(pr.ens)],
-          ['Leerlaufspannung Uoc / Kurzschlussstrom Isc', `${fertig} von ${aktive.length} Strings`, erg(messungAuto)]
-        ]);
-        if(pr.bemerkung){ doc.ueberschrift('Bemerkungen'); doc.absatz(pr.bemerkung); }
-        // Kontrollberechnung: Soll-Uoc = Module x Uoc(STC) – ohne Temperaturkorrektur (wird nicht gemessen)
-        const uocM = abZahl(md.uoc);
-        const tFaktor = 1;
-        const mitSoll = uocM !== null;
-        doc.ueberschrift('Messwerte je Wechselrichter');
-        doc.hinweis(mitSoll
-          ? 'Kontrollberechnung: Soll-Uoc = Modulanzahl × Uoc(STC). Abweichungen über 10 % sind markiert.'
-          : 'Für die Kontrollberechnung im Katalog beim Solarmodul Uoc hinterlegen.');
-        wrNrn.forEach(wr => {
-          const ids = aktive.filter(id => id.split('.')[0] === String(wr));
-          if(!ids.length) return;
-          doc.platz(60);
-          doc.text(`WR ${wr} – ${(plan[wr] && plan[wr].name) || ''}`, doc.rl, doc.y - 10, 9.5, fB);
-          doc.y -= 16;
-          const spalten = mitSoll
-            ? [{ t: 'Klemme', w: 10 }, { t: 'Plan-String', w: 12 }, { t: 'Module', w: 8, r: 1 }, { t: 'Uoc V', w: 10, r: 1 }, { t: 'Soll V', w: 10, r: 1 }, { t: 'Abw.', w: 9, r: 1 },
-               { t: 'Isc A', w: 9, r: 1 }, { t: 'Riso MOhm', w: 12, r: 1 }, { t: 'Status', w: 11 }]
-            : [{ t: 'Klemme', w: 12 }, { t: 'Plan-String', w: 16 }, { t: 'Module', w: 9, r: 1 }, { t: 'Uoc V', w: 12, r: 1 },
-               { t: 'Isc A', w: 12, r: 1 }, { t: 'Riso MOhm', w: 14, r: 1 }, { t: 'Status', w: 14 }];
-          doc.tabelle(spalten, ids.map(id => {
-            const it = APP_STATE[id];
-            const ev = evaluateString(id); const st = getStringStatus(id);
-            const krit = ev.level === 'crit' || st === 'ERROR';
-            const status = krit ? { t: 'Auffällig', farbe: '#c8261c', fett: true } : (st === 'COMPLETE' ? { t: 'OK', farbe: '#15803d' } : { t: 'Offen', farbe: '#b45309' });
-            const feld = f => ({ t: it[f] || '—', farbe: ev.fields[f] ? '#c8261c' : '#18181b', fett: !!ev.fields[f] });
-            if(!mitSoll) return [id, it.planName || '—', String(it.mod || ''), feld('uoc'), feld('isc'), feld('riso'), status];
-            const n = Number(it.mod) || 0;
-            const uSoll = n ? n * uocM * tFaktor : null;
-            const u = abZahl(it.uoc);
-            let abw = { t: '' };
-            if(u !== null && uSoll){
-              const p = (u - uSoll) / uSoll * 100;
-              abw = { t: `${p > 0 ? '+' : ''}${fmt(p, 1)} %`, farbe: Math.abs(p) > 10 ? '#b45309' : '#6b6b73', fett: Math.abs(p) > 10 };
-            }
-            return [id, it.planName || '—', String(n || ''), feld('uoc'), uSoll ? fmt(uSoll, 1) : '', abw, feld('isc'), feld('riso'), status];
-          }));
-        });
-        if(auff.length){
-          doc.ueberschrift(`Auffälligkeiten (${auff.length})`);
-          auff.forEach(id => doc.absatz(`${id}: ${(evaluateString(id).msgs || []).join(' · ') || 'Wert außerhalb des gültigen Bereichs'}`, { size: 9, farbe: '#c8261c' }));
-        }
-      }
-
       else if(k.id === 'betrieb'){
         kap(k.titel);
         doc.ueberschrift('Verhalten im Notfall / Abschaltung');
@@ -7055,9 +6963,22 @@ async function anlagenbuchErstellen(){
       }
     }
 
-    // ── Anhang A: Fotos ──
+    let anhNr = 0;
+    const anhang_ = t => `Anhang ${'ABCDEFGH'[anhNr++]}  ${t}`;
+    // ── Anhang: Pruefbefund (abgeschlossenes PPK) ──
+    if(ppkPdf){
+      abStatus('Prüfbefund (PPK) wird angehängt …');
+      try {
+        const src = await L.PDFDocument.load(ppkPdf, { ignoreEncryption: true });
+        const kopien = await pdf.copyPages(src, src.getPageIndices());
+        doc.kapitel.push({ titel: anhang_('Prüfbefund (AC-Prüfprotokoll, ÖVE/ÖNORM E 8101)'), seite: pdf.getPageCount() + 1 });
+        kopien.forEach(p => pdf.addPage(p));
+      } catch(e){ console.warn('PPK anhaengen:', e); hinweise.push('Das PPK konnte nicht angehängt werden – bitte separat beilegen'); }
+    }
+
+    // ── Anhang: Fotos ──
     if(fotos.anlage || fotos.wr.length || fotos.pflicht.length){
-      doc.neuesKapitel('Anhang A  Fotodokumentation');
+      doc.neuesKapitel(anhang_('Fotodokumentation'));
       if(fotos.anlage){
         doc.platz(320);
         const h = doc.bild(fotos.anlage, doc.breite, 300);
@@ -7098,7 +7019,7 @@ async function anlagenbuchErstellen(){
     ].filter(a => a.pfad);
     const eindeutig = anhang.filter((a, i) => anhang.findIndex(b => b.pfad === a.pfad) === i);
     if(eindeutig.length){
-      doc.neuesKapitel('Anhang B  Datenblätter & Dokumente');
+      doc.neuesKapitel(anhang_('Datenblätter & Dokumente'));
       const listeSeite = doc.page, listeY = doc.y;
       const eintraege = [];
       for(let i = 0; i < eindeutig.length; i++){
@@ -7724,7 +7645,11 @@ function ppkAuto(){
     ues_dc_lief: kd(udc).lieferant, ues_dc_db: udc && udc.pfad ? 'ja' : '',
     dc_typ: kb.dc_typ, dc_qs: kb.dc_querschnitt ? `${kb.dc_querschnitt} mm²` : '', dc_verl: kb.dc_verlegung,
     dc_frei: ppkEinzeilig(ab.schalter && ab.schalter.dc),
-    wetter: ab.pruefung && ab.pruefung.wetter, u_pruef: proj && proj.messung && proj.messung.upruef
+    wetter: ab.pruefung && ab.pruefung.wetter, u_pruef: proj && proj.messung && proj.messung.upruef,
+    i_gesamt: (() => {   // Solargenerator-Gesamtstrom: Summe der gemessenen Strangstroeme (Isc)
+      const iscs = aktiv.filter(id => Number(APP_STATE[id].mod) > 0).map(id => abZahl(APP_STATE[id].isc)).filter(v => v !== null);
+      return iscs.length ? iscs.reduce((a, b) => a + b, 0).toFixed(2).replace('.', ',') : '';
+    })()
   };
   // Messgeraete: eigene Auswahl, sonst das erste Geraet der Liste
   [1, 2].forEach(n => {
@@ -7765,7 +7690,7 @@ const PPK_FELD_ZUSATZ = {
   'Ort Freischalteinrichtung In unmittelbarer Nähe der Module empfohlen': ['ort_dc_frei'],
   'Einbauten': ['gak'], 'Schutzart': ['schutzart'], 'Aufstellungsort_2': ['ort_technik'],
   'Lieferant_7': [null, 'ues_dc_lief'], 'Klasse_2': ['ues_klasse'], 'Type_7': [null, 'ues_dc_typ'], 'IIMP_2': ['ues_iimp', 'ues_dc_iimp'],
-  'UPrüf': [null, 'u_pruef'],
+  'UPrüf': [null, 'u_pruef'], 'Betriebsstrom': [null, 'i_gesamt'],
   'IN_2': ['ues_in', 'ues_dc_in'], 'UC_2': ['ues_uc_dc', 'ues_dc_uc'], 'Montageort_2': ['ues_ort'],
   'Hersteller_5': [null, 'mg1_h'], 'Type_8': [null, 'mg1_t'], 'Seriennummer': [null, 'mg1_sn'],
   'Hersteller_6': [null, 'mg2_h'], 'Type_9': [null, 'mg2_t'], 'Seriennummer_2': [null, 'mg2_sn'],
@@ -7941,6 +7866,10 @@ function ppkZeichnen(){
   const auto = ppkAuto();
   let nr = 0;
   const fertig = ppkDaten.fertig;
+  const fs = ppkFortschritt(auto);
+  const alleAbschnitte = PPK_TEILE.flatMap(t => t.abschnitte);
+  const ersteOffen = alleAbschnitte.findIndex(a => !ppkAbschnittErledigt(a, auto));
+  box.classList.toggle('nur-offen', ppkNurOffen() && !fertig);
   box.innerHTML = `
     ${schrittLeisteHtml(proj, 'ppk')}
     <div class="ab-kopf">
@@ -7953,15 +7882,21 @@ function ppkZeichnen(){
     ${fertig ? `<div class="ppk-fertig">${ICON.check}<span>Abgeschlossen am ${esc(new Date(fertig.at).toLocaleDateString('de-AT'))}${fertig.von ? ` von ${esc(fertig.von)}` : ''} – gegen Änderungen gesperrt. Die Anlagendoku ist freigeschaltet.</span>
       ${darf('ppk') ? '<button type="button" class="btn btn-ghost ab-mini" onclick="ppkWiederOeffnen()">Wieder öffnen</button>' : ''}</div>` : ''}
     ${!fertig && schrittGesperrt(proj, 'ppk') ? '<div class="ab-info">Die DC-Messung ist noch nicht fertig – als Admin trotzdem geöffnet.</div>' : ''}
+    ${fertig ? '' : `<div class="ppk-fortschritt">
+      <div class="ppk-fs-text"><b>${fs.erledigt} von ${fs.gesamt}</b> Abschnitten erledigt${fs.erledigt < fs.gesamt ? ` – noch ${fs.gesamt - fs.erledigt} offen` : ' – alles ausgefüllt'}</div>
+      <div class="ppk-fs-balken" aria-hidden="true"><span style="width:${Math.round(fs.erledigt / Math.max(1, fs.gesamt) * 100)}%"></span></div>
+      <label class="ppk-fs-filter"><input type="checkbox"${ppkNurOffen() ? ' checked' : ''} onchange="ppkNurOffenSetzen(this.checked)"> Erledigte ausblenden</label></div>`}
     <div class="ab-status" id="ppk-meldung" hidden></div>
     <div id="ppk-zuweisung" class="ppk-zuweisung" hidden></div>
     <div id="ppk-archiv"></div>
-    ${PPK_TEILE.map(t => `<div class="ppk-teil"><h2><span>${t.teil}</span>${esc(t.titel)}</h2>
-      ${t.abschnitte.map(a => { const i = nr++; const an = ppkAbschnittAn(a, auto); return `<details class="ab-kapitel${an ? '' : ' ppk-aus'}"${hatteZustand ? (offen[i] ? ' open' : '') : (i === 0 ? ' open' : '')}>
-        <summary><span class="ab-nr">${t.teil}${t.abschnitte.indexOf(a) + 1}</span>${esc(a.titel)}${a.optional ? `<span class="ab-sum-info">${an ? 'vorhanden' : 'entfällt'}</span>` : (an ? '' : '<span class="ab-sum-info">nicht benötigt</span>')}</summary>
+    ${PPK_TEILE.map(t => `<div class="ppk-teil${t.abschnitte.every(a => ppkAbschnittErledigt(a, auto)) ? ' ppk-teil-fertig' : ''}"><h2><span>${t.teil}</span>${esc(t.titel)}</h2>
+      ${t.abschnitte.map(a => { const i = nr++; const an = ppkAbschnittAn(a, auto); const ok = an && !!ppkDaten.w['_ok_' + a.schalter]; return `<details class="ab-kapitel${an ? '' : ' ppk-aus'}${ok ? ' ppk-ok' : ''}"${hatteZustand ? (offen[i] ? ' open' : '') : (i === ersteOffen ? ' open' : '')}>
+        <summary><span class="ab-nr">${ok ? ICON.check : t.teil + (t.abschnitte.indexOf(a) + 1)}</span>${esc(a.titel)}${ok ? '<span class="ab-sum-info">erledigt</span>' : (a.optional ? `<span class="ab-sum-info">${an ? 'vorhanden' : 'entfällt'}</span>` : (an ? '' : '<span class="ab-sum-info">nicht benötigt</span>'))}</summary>
         <div class="ab-raster">${a.pflicht ? '' : ppkVorhandenHtml(a, an)}
         ${an ? `${a.komp ? ppkKompHtml(a) : ''}${a.mess ? ppkMessHtml() : ''}${a.schnell && ppkDarfAendern() ? `<div class="ab-breit"><button type="button" class="btn btn-ghost ab-mini" data-ppk-schnell="${esc(t.teil)}|${esc(a.titel)}">Alle Punkte: ja / in Ordnung</button></div>` : ''}
-        ${a.felder.map(fd => ppkFeldHtml(fd, auto)).join('')}` : `<p class="ab-breit ab-klein">${a.optional && a.leer ? 'Abschnitt entfällt – im PDF steht dort „nicht vorhanden“.' : 'Nicht benötigt – der Abschnitt bleibt im PDF leer.'}</p>`}</div></details>`; }).join('')}</div>`).join('')}
+        ${a.felder.map(fd => ppkFeldHtml(fd, auto)).join('')}${ppkDarfAendern() ? `<div class="ab-breit ppk-ok-leiste">${ok
+          ? `<span>${ICON.check} Als erledigt markiert</span><button type="button" class="btn btn-ghost ab-mini" data-ppk-ok="${esc(a.schalter)}" data-v="0">Wieder offen</button>`
+          : `<button type="button" class="btn btn-primary ppk-ok-knopf" data-ppk-ok="${esc(a.schalter)}" data-v="1">${ICON.check} Abschnitt erledigt</button>`}</div>` : ''}` : `<p class="ab-breit ab-klein">${a.optional && a.leer ? 'Abschnitt entfällt – im PDF steht dort „nicht vorhanden“.' : 'Nicht benötigt – der Abschnitt bleibt im PDF leer.'}</p>`}</div></details>`; }).join('')}</div>`).join('')}
     <div class="ab-fuss">${fertig ? '<button type="button" class="btn btn-primary" onclick="ppkErstellen()">PDF erstellen</button>'
       : '<button type="button" class="btn btn-ghost" onclick="ppkErstellen()">PDF-Vorschau</button> <button type="button" class="btn btn-primary" onclick="ppkAbschliessen()">PPK abschließen</button>'}</div>`;
   ppkSigEinrichten();
@@ -8011,10 +7946,22 @@ document.addEventListener('input', e => {
   ppkSpeichernVerzoegert();
 });
 document.addEventListener('click', e => {
-  const t = e.target.closest ? e.target.closest('#ppk-inhalt [data-ppk-seg], #ppk-inhalt [data-ppk-multi], #ppk-inhalt [data-ppk-mx], #ppk-inhalt [data-ppk-mx-alle], #ppk-inhalt [data-ppk-schnell], #ppk-inhalt [data-ppk-an], #ppk-inhalt [data-ppk-wahl]') : null;
+  const t = e.target.closest ? e.target.closest('#ppk-inhalt [data-ppk-seg], #ppk-inhalt [data-ppk-multi], #ppk-inhalt [data-ppk-mx], #ppk-inhalt [data-ppk-mx-alle], #ppk-inhalt [data-ppk-schnell], #ppk-inhalt [data-ppk-an], #ppk-inhalt [data-ppk-wahl], #ppk-inhalt [data-ppk-ok]') : null;
   if(!t || !ppkDaten || !ppkDarfAendern()) return;
   const w = ppkDaten.w;
-  if(t.dataset.ppkAn){ w['_an_' + t.dataset.ppkAn] = t.dataset.v === '1'; }
+  let scrollZu = -1;
+  if(t.dataset.ppkOk){
+    const ja = t.dataset.v === '1';
+    if(ja) w['_ok_' + t.dataset.ppkOk] = true; else delete w['_ok_' + t.dataset.ppkOk];
+    if(ja){   // zuklappen und den naechsten offenen Abschnitt aufmachen
+      const alle = [...document.querySelectorAll('#ppk-inhalt details.ab-kapitel')];
+      const det = t.closest('details.ab-kapitel');
+      if(det) det.open = false;
+      const naechster = alle.slice(alle.indexOf(det) + 1).find(d => !d.classList.contains('ppk-ok') && !d.classList.contains('ppk-aus'));
+      if(naechster){ naechster.open = true; scrollZu = alle.indexOf(naechster); }
+    }
+  }
+  else if(t.dataset.ppkAn){ w['_an_' + t.dataset.ppkAn] = t.dataset.v === '1'; }
   else if(t.dataset.ppkWahl){
     const fd = PPK_TEILE.flatMap(x => x.abschnitte).flatMap(a => a.felder).find(f => f.t === 'entweder' && f.k === t.dataset.ppkWahl);
     const alt = ppkEntwederWahl(fd), neu = fd.o.find(o => o.k === t.dataset.v);
@@ -8038,6 +7985,10 @@ document.addEventListener('click', e => {
   }
   ppkSpeichernVerzoegert();
   ppkZeichnen();
+  if(scrollZu >= 0){
+    const d = document.querySelectorAll('#ppk-inhalt details.ab-kapitel')[scrollZu];
+    if(d) d.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
 });
 function ppkRisoUebernehmen(min){
   const v = String(min).replace('.', ',');
@@ -9591,7 +9542,9 @@ async function ppkAbschliessen(){
   const proj = getCurrentProject();
   if(!proj || !ppkDaten || !darf('ppk')) return;
   if(!ppkDaten.sig) return toast('Bitte zuerst als Prüfer unterschreiben (Abschnitt A5 – Datum & Unterschrift)');
-  if(!await appFrage('PPK abschließen?\n\nDas PDF wird erstellt und im Projekt abgelegt. Danach ist das PPK gegen Änderungen gesperrt und die Anlagendoku wird freigeschaltet.')) return;
+  const fs = ppkFortschritt(ppkAuto());
+  const offenHinweis = fs.erledigt < fs.gesamt ? `\n\nHinweis: ${fs.gesamt - fs.erledigt} ${fs.gesamt - fs.erledigt === 1 ? 'Abschnitt ist' : 'Abschnitte sind'} noch nicht als erledigt markiert.` : '';
+  if(!await appFrage('PPK abschließen?\n\nDas PDF wird erstellt und im Projekt abgelegt. Danach ist das PPK gegen Änderungen gesperrt und die Anlagendoku wird freigeschaltet.' + offenHinweis)) return;
   ppkDaten.fertig = { at: new Date().toISOString(), von: anzeigeName() || (currentUser && currentUser.email) || '' };
   ppkStatusMap[proj.id] = { ...(ppkStatusMap[proj.id] || {}), fertig: ppkDaten.fertig };
   ppkSpeichernVerzoegert();
@@ -10360,3 +10313,155 @@ function funktionenOeffnen(){
 }
 function funktionenTaste(e){ if(e.key === 'Escape' && !document.querySelector('.app-dialog-overlay:not(#funktionen-dialog)')){ e.preventDefault(); funktionenSchliessen(); } }
 function funktionenSchliessen(){ const ov = g('funktionen-dialog'); if(ov) ov.remove(); document.removeEventListener('keydown', funktionenTaste, true); }
+
+// ── PPK: Abschnitte abhaken ───────────────────────────────────────────────
+// "Abschnitt erledigt" merkt sich das PPK (w._ok_<abschnitt>); erledigte und
+// nicht benoetigte Abschnitte sind grau und zugeklappt, auf Wunsch ausgeblendet.
+function ppkAbschnittErledigt(a, auto){ return !ppkAbschnittAn(a, auto) || !!(ppkDaten && ppkDaten.w && ppkDaten.w['_ok_' + a.schalter]); }
+function ppkFortschritt(auto){
+  const alle = PPK_TEILE.flatMap(t => t.abschnitte);
+  return { gesamt: alle.length, erledigt: alle.filter(a => ppkAbschnittErledigt(a, auto)).length };
+}
+function ppkNurOffen(){ try { return localStorage.getItem('pv_ppk_nur_offen') === '1'; } catch(_){ return false; } }
+function ppkNurOffenSetzen(an){
+  try { localStorage.setItem('pv_ppk_nur_offen', an ? '1' : '0'); } catch(_){}
+  const box = g('ppk-inhalt');
+  if(box) box.classList.toggle('nur-offen', !!an);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//   ANLAGENBUCH <- PPK: was der Elektriker im PPK eingetragen hat, uebernehmen
+//   Beim Oeffnen automatisch in leere Felder; per Knopf auch abweichende
+//   Werte (mit Auswahl). Nur eigene PPK-Eingaben – die automatischen
+//   PPK-Werte stammen ohnehin aus dem Anlagenbuch.
+// ══════════════════════════════════════════════════════════════════════════
+let abPpk = null;
+async function abPpkLaden(pid){
+  abPpk = null;
+  if(!supabaseClient || !currentUser) return;
+  try {
+    const { data, error } = await supabaseClient.from('pv_ppk').select('daten').eq('project_id', pid).maybeSingle();
+    if(error) throw error;
+    let d = data && data.daten;
+    try { const e = JSON.parse(localStorage.getItem(PPK_SCHLUESSEL(pid)) || 'null'); if(e && e.daten) d = e.daten; } catch(_){}
+    abPpk = d && d.w ? d : null;
+  } catch(e){ console.warn('PPK fuer das Anlagenbuch:', e); }
+}
+async function abPpkPdfLaden(pid){
+  if(!supabaseClient || !currentUser) return null;
+  const { data, error } = await supabaseClient.storage.from(AB_BUCKET).list(`${pid}/archiv`, { limit: 100, sortBy: { column: 'name', order: 'desc' } });
+  if(error) throw error;
+  const f = (data || []).filter(x => x.name && x.name.endsWith('_PPK.pdf')).sort((a, b) => b.name.localeCompare(a.name))[0];
+  if(!f) return null;
+  const { data: blob, error: e2 } = await supabaseClient.storage.from(AB_BUCKET).download(`${pid}/archiv/${f.name}`);
+  if(e2) throw e2;
+  return new Uint8Array(await blob.arrayBuffer());
+}
+// [PPK-Feld, Anlagenbuch-Pfad]
+const AB_PPK_TEXT = [
+  ['Anlagenbetreiber', 'betreiber.name'], ['TelefonNr', 'betreiber.kontakt'], ['Postadresse', 'betreiber.adresse'],
+  ['Anlagenadresse', 'standort.adresse'], ['Zählpunktnummer', 'zaehlpunkt'],
+  ['Wesentliche Änderungen an der Anlage Jahr', 'aenderungen'],
+  ['Ausrichtung n Himmelsrichtung', 'modul.ausrichtung'], ['Modulneigung', 'modul.neigung'],
+  ['Aufstellungsort', 'speicher.ort'],
+  ['Leitungstype', 'kabel.dc_typ'], ['Querschnitt', 'kabel.dc_querschnitt'], ['Verlegung der Leitung', 'kabel.dc_verlegung'],
+  ['Ort Freischalteinrichtung In unmittelbarer Nähe der Module empfohlen', 'schalter.dc'],
+  ['Ort; Seite4', 'schalter.ac']
+];
+const AB_UES_KLASSE = { 'Typ 1': 'Typ I', 'Typ 2': 'Typ II', 'Typ 1+2': 'Typ I+II', 'Typ 3': 'Typ III' };
+function abPpkWerte(){
+  const w = abPpk && abPpk.w;
+  if(!w) return [];
+  const v = x => (x === undefined || x === null) ? '' : String(x).trim();
+  const an = id => w['_an_' + id] !== false;
+  const komp = id => id && abKomp(id) ? abKompName(abKomp(id)) : '';
+  const raus = [];
+  const dazu = (pfad, wert, anzeige) => { if(wert !== '' && wert !== undefined && wert !== null) raus.push({ pfad, wert, anzeige: anzeige || String(wert) }); };
+  AB_PPK_TEXT.forEach(([f, pfad]) => {
+    if(pfad === 'speicher.ort' && !an('speicher')) return;
+    let x = v(w[f]);
+    if(pfad === 'kabel.dc_querschnitt') x = x.replace(/\s*mm²?\s*$/i, '');
+    dazu(pfad, x);
+  });
+  const art = { 'Netzparallelbetrieb': 'Netzparallelbetrieb', 'Inselbetrieb (DC)': 'Inselbetrieb (DC-gekoppelt)', 'Inselbetrieb (AC)': 'Inselbetrieb (AC-gekoppelt)' }[v(w.anlagenart)];
+  if(art) dazu('betriebsart', art === 'Netzparallelbetrieb' && an('speicher') && komp(w._komp_speicher) ? 'Netzparallelbetrieb mit Speicher' : art);
+  const mo = v(w.montage);
+  if(mo) dazu('montage.text', mo === 'Sonstige' ? v(w['Modulmontage Sonstige']) : mo);
+  if(an('speicher')){
+    const bl = v(w.belueftung);
+    if(bl) dazu('speicher.lueftung', `${bl === 'statisch' ? 'Statische' : 'Mechanische'} Be- und Entlüftung`);
+    if(komp(w._komp_speicher)) dazu('speicher.komponente', w._komp_speicher, komp(w._komp_speicher));
+  }
+  if(komp(w._komp_modul)) dazu('modul.komponente', w._komp_modul, komp(w._komp_modul));
+  const ues = [w._komp_ues_dc, w._komp_ues_ac].find(komp);
+  if(ues) dazu('ueberspannung.komponente', ues, komp(ues));
+  if(komp(w._komp_wr)) Object.keys(getCurrentPlan()).forEach(wr => dazu('wr.' + wr, w._komp_wr, komp(w._komp_wr)));
+  [['ac', 'ues_ac', 'Klasse', 'uess_ac'], ['dc', 'ues_dc', 'Klasse_2', 'uess_dc']].forEach(([seite, abschnitt, klasse, befund]) => {
+    if(!an(abschnitt) || v(w[befund]) === 'nicht vorhanden') return dazu('ueberspannung.' + seite, 'nicht vorhanden');
+    const k = v(w[klasse]);
+    dazu('ueberspannung.' + seite, AB_UES_KLASSE[k] || (AB_USCHUTZ.includes(k) ? k : ''));
+  });
+  if(v(w.hinweis) === 'ja' || v(w.c_hinweis) === 'ja') dazu('r11.kennzeichnung', true, 'ja');
+  if(v(w.plan) === 'ja' || v(w.c_plan) === 'ja') dazu('r11.plan', true, 'ja');
+  if(v(w.abs_ext).startsWith('ja')) dazu('r11.notaus', true, 'ja');
+  return raus;
+}
+function abPpkSichtbar(pfad){
+  const felder = abKapitelFuer(abBereich()).flatMap(k => k.felder.map(f => f[0]));
+  return pfad.startsWith('wr.') ? felder.includes('@wr') : felder.includes(pfad);
+}
+function abPpkLeer(pfad, jetzt){
+  return jetzt === '' || jetzt === undefined || jetzt === null || (pfad === 'betriebsart' && jetzt === 'Netzparallelbetrieb');
+}
+function abPpkAuto(){
+  let n = 0;
+  abPpkWerte().forEach(x => {
+    if(!abPpkSichtbar(x.pfad)) return;
+    const jetzt = abWert(x.pfad);
+    if(jetzt === x.wert || !abPpkLeer(x.pfad, jetzt)) return;
+    abSetzen(x.pfad, x.wert); n++;
+  });
+  return n;
+}
+function abPpkLabel(pfad){
+  if(pfad.startsWith('wr.')){ const nr = pfad.slice(3), p = getCurrentPlan()[nr]; return `Wechselrichter ${(p && p.name) || 'WR ' + nr}`; }
+  const f = AB_KAPITEL.flatMap(k => k.felder).find(x => x[0] === pfad);
+  return f ? f[1] : pfad;
+}
+function abPpkAnzeige(pfad, wert){
+  if(wert === '' || wert === undefined || wert === null) return 'leer';
+  if(wert === true) return 'ja';
+  if(wert === false) return 'nein';
+  if(pfad.endsWith('komponente') || pfad.startsWith('wr.')) return abKomp(wert) ? abKompName(abKomp(wert)) : String(wert);
+  return String(wert);
+}
+function abPpkDialog(){
+  if(!abPpk) return toast('Für dieses Projekt gibt es noch kein PPK');
+  if(!abDarfAendern()) return toast('Keine Berechtigung');
+  const liste = abPpkWerte().filter(x => abPpkSichtbar(x.pfad)).map(x => ({ ...x, jetzt: abWert(x.pfad) })).filter(x => String(x.jetzt) !== String(x.wert));
+  if(!liste.length) return toast('Alles aus dem PPK steht schon im Anlagenbuch');
+  const ov = document.createElement('div');
+  ov.className = 'app-dialog-overlay';
+  ov.innerHTML = `<div class="app-dialog ab-ppk-dialog" role="dialog" aria-modal="true" aria-labelledby="abppk-titel">
+    <h2 id="abppk-titel">Aus dem PPK übernehmen</h2>
+    <p class="app-dialog-text">Diese Angaben stehen im PPK anders oder fehlen im Anlagenbuch. Abgehakte werden übernommen.</p>
+    <div class="ab-ppk-liste">${liste.map((x, i) => `<label class="ab-ppk-zeile"><input type="checkbox" data-i="${i}" checked>
+      <span><b>${esc(abPpkLabel(x.pfad))}</b><small>Anlagenbuch: ${esc(abPpkAnzeige(x.pfad, x.jetzt))}</small><small class="neu">PPK: ${esc(x.anzeige)}</small></span></label>`).join('')}</div>
+    <div class="app-dialog-knoepfe"><button type="button" class="btn btn-ghost" data-a="nein">Abbrechen</button>
+      <button type="button" class="btn btn-primary" data-a="ja">Übernehmen</button></div></div>`;
+  const zu = () => { document.removeEventListener('keydown', taste, true); ov.remove(); };
+  function taste(e){ if(e.key === 'Escape'){ e.preventDefault(); zu(); } }
+  ov.addEventListener('click', e => { if(e.target === ov) zu(); });
+  ov.querySelector('[data-a="nein"]').addEventListener('click', zu);
+  ov.querySelector('[data-a="ja"]').addEventListener('click', () => {
+    const gewaehlt = [...ov.querySelectorAll('input[data-i]:checked')].map(el => liste[Number(el.dataset.i)]);
+    gewaehlt.forEach(x => abSetzen(x.pfad, x.wert));
+    zu();
+    if(!gewaehlt.length) return;
+    abSpeichernVerzoegert();
+    abZeichnenBehalten();
+    toast(`${gewaehlt.length} ${gewaehlt.length === 1 ? 'Angabe' : 'Angaben'} aus dem PPK übernommen`);
+  });
+  document.addEventListener('keydown', taste, true);
+  document.body.appendChild(ov);
+}

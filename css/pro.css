@@ -1632,3 +1632,37 @@ html body.pp .bs-erledigt[open] summary::before { transform: rotate(45deg); }
 html body.pp .modal-card > .modal-head { background: var(--pa2) !important; z-index: 2; }
 html body.pp .nv-zuweisen input, html body.pp .bs-suche, html body.pp .nv-suche { text-align: left !important; }
 html body.pp .nv-profi .rechte-box summary small { margin: 0 4px; }
+
+/* ── PPK: Fortschritt und erledigte Abschnitte ──────────────────────────── */
+html body.pp .ppk-fortschritt { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin: 0 0 14px; padding: 12px 14px;
+  border: 1px solid var(--line); border-radius: var(--r); background: var(--pa2); }
+html body.pp .ppk-fs-text { font-size: .9rem; color: var(--ink2); }
+html body.pp .ppk-fs-text b { color: var(--ink); }
+html body.pp .ppk-fs-balken { flex: 1 1 160px; height: 8px; border-radius: 4px; background: var(--pa3); overflow: hidden; min-width: 120px; }
+html body.pp .ppk-fs-balken span { display: block; height: 100%; background: var(--brand); border-radius: 4px; }
+html body.pp .ppk-fs-filter { display: inline-flex; align-items: center; gap: 8px; font-size: .85rem; color: var(--ink2); cursor: pointer; min-height: 36px; }
+html body.pp .ab-kapitel.ppk-ok > summary { color: var(--mute); }
+html body.pp .ab-kapitel.ppk-ok > summary .ab-nr { background: var(--brand) !important; border-color: var(--brand) !important; color: var(--brand-ink) !important; }
+html body.pp .ab-kapitel.ppk-ok > summary .ab-nr .ico { width: 14px; height: 14px; }
+html body.pp .ab-kapitel.ppk-ok, html body.pp .ab-kapitel.ppk-aus { opacity: .72; }
+html body.pp .ab-kapitel.ppk-ok[open], html body.pp .ab-kapitel.ppk-aus[open] { opacity: 1; }
+html body.pp .ppk-ok-leiste { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; padding-top: 12px; margin-top: 4px; border-top: 1px solid var(--line); }
+html body.pp .ppk-ok-leiste > span { display: inline-flex; align-items: center; gap: 6px; color: var(--brand-text); font-size: .85rem; font-weight: 600; }
+html body.pp .ppk-ok-knopf { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+html body.pp #ppk-inhalt.nur-offen .ab-kapitel.ppk-ok, html body.pp #ppk-inhalt.nur-offen .ab-kapitel.ppk-aus,
+html body.pp #ppk-inhalt.nur-offen .ppk-teil.ppk-teil-fertig { display: none; }
+@media (max-width: 600px) { html body.pp .ppk-ok-knopf { width: 100%; justify-content: center; } }
+
+/* ── Anlagenbuch: Uebernahme aus dem PPK ───────────────────────────────── */
+html body.pp .ab-ppk-leiste { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin: 0 0 12px;
+  padding: 10px 12px; border: 1px solid var(--brand-line); border-radius: var(--r-sm); background: var(--brand-soft); font-size: .85rem; }
+html body.pp .ab-ppk-leiste > span { display: inline-flex; align-items: center; gap: 6px; color: var(--ink2); }
+html body.pp .ab-ppk-leiste .btn { display: inline-flex; align-items: center; gap: 6px; }
+html body.pp .ab-ppk-dialog { max-width: 560px; width: calc(100vw - 24px); max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
+html body.pp .ab-ppk-liste { overflow: auto; border: 1px solid var(--line); border-radius: var(--r-sm); margin: 4px 0 8px; }
+html body.pp .ab-ppk-zeile { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; cursor: pointer; }
+html body.pp .ab-ppk-zeile + .ab-ppk-zeile { border-top: 1px solid var(--line); }
+html body.pp .ab-ppk-zeile input { margin-top: 3px; width: 18px; height: 18px; flex: 0 0 auto; }
+html body.pp .ab-ppk-zeile span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+html body.pp .ab-ppk-zeile small { color: var(--mute); font-size: .8rem; overflow-wrap: anywhere; }
+html body.pp .ab-ppk-zeile small.neu { color: var(--brand-text); font-weight: 600; }

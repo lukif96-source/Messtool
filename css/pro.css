@@ -1428,3 +1428,39 @@ html body.pp .np-plzort { display: grid; grid-template-columns: 110px 1fr; gap: 
   html body.pp .pi-knoepfe { width: 100%; }
   html body.pp .pi-knoepfe .btn { flex: 1; justify-content: center; }
 }
+
+/* ══ Ablauf: Schrittleiste ═════════════════════════════════════════════ */
+html body.pp .schritte { display: flex; align-items: stretch; gap: 4px; margin: 0 0 14px; overflow-x: auto; }
+html body.pp .projekt-info .schritte { width: 100%; margin: 0 0 8px; }
+html body.pp .schritt { flex: 1 1 0; min-width: 150px; display: flex; align-items: center; gap: 10px; text-align: left; font: inherit; cursor: pointer;
+  background: var(--pa2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 12px; color: var(--ink); }
+html body.pp .schritt:disabled { cursor: default; }
+html body.pp .schritt:not(:disabled):hover { border-color: var(--brand); }
+html body.pp .schritt.aktuell { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-soft); }
+html body.pp .s-nr { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  font-weight: 700; font-size: .85rem; background: var(--pa3); color: var(--ink2); border: 1px solid var(--line2); }
+html body.pp .s-nr .ico { width: 15px; height: 15px; }
+html body.pp .s-fertig .s-nr { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+html body.pp .s-arbeit .s-nr { background: color-mix(in srgb, var(--c-amber) 20%, transparent); border-color: var(--c-amber); color: var(--ink); }
+html body.pp .s-gesperrt { opacity: .6; }
+html body.pp .s-text { display: flex; flex-direction: column; min-width: 0; }
+html body.pp .s-text b { font-size: .86rem; font-weight: 600; white-space: nowrap; }
+html body.pp .s-text small { font-size: .74rem; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html body.pp .s-pfeil { display: inline-flex; align-items: center; color: var(--mute); }
+html body.pp .projekt-info { flex-wrap: wrap; }
+html body.pp .st-chip.st-wartet { opacity: .7; }
+html body.pp .st-chip.st-wartet::before { background: transparent; border: 1.5px solid var(--mute); width: 5px; height: 5px; }
+html body.pp .pa-wartet { opacity: .6; }
+html body.pp .pa-wartet em { font-style: normal; color: var(--c-amber); }
+html body.pp .pa-projekt:disabled { cursor: not-allowed; }
+html body.pp .schritt-wartet { text-align: center; }
+html body.pp .schritt-wartet > .ico { width: 34px; height: 34px; color: var(--mute); }
+html body.pp .schritt-knoepfe { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+html body.pp .ppk-fertig { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--brand-soft); border: 1px solid var(--brand-line);
+  border-radius: var(--r-sm); padding: 10px 12px; margin: 0 0 12px; font-size: .88rem; }
+html body.pp .ppk-fertig > .ico { color: var(--brand-text); }
+html body.pp .ppk-fertig span { flex: 1; }
+@media (max-width: 600px) {
+  html body.pp .schritt { min-width: 128px; padding: 6px 8px; gap: 6px; }
+  html body.pp .s-pfeil { display: none; }
+}

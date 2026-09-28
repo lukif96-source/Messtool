@@ -3642,6 +3642,7 @@ function saveData(id, field, val) {
     if(pw) pw.textContent = (isJa && APP_STATE[id].mod>0) ? ((APP_STATE[id].mod * getCurrentWp())/1000).toFixed(2) : '—';
     if(pm) pm.textContent = (isJa && APP_STATE[id].mod>0) ? APP_STATE[id].mod : '—';
     updateKPIs(); // KPIs immer aktualisieren bei Modul- oder Statusänderungen
+    projektInfoZeigen();
     updateWrHeaderLive(id.split('.')[0]); // Nur das eigene WR-Köpfchen aktualisieren — kein Tabellen-Neuaufbau nötig
     // Grenzwerte neu bewerten: ein neuer Messwert verschiebt auch den
     // Projekt-Median, daher wird die ganze Matrix neu geprüft — kein
@@ -6086,9 +6087,14 @@ async function anlagenbuchRendern(){
   if(!darf('anlagenbuch')){ box.innerHTML = '<div class="ab-leer">Für das Anlagenbuch fehlt dir die Berechtigung.</div>'; return; }
   const proj = getCurrentProject();
   if(!proj){
-    box.innerHTML = `<div class="ab-leer"><h2>Anlagenbuch</h2><p>Für welches Projekt?</p>${projektAuswahlHtml()}</div>`;
+    if(!ppkStatusGeladen) await ppkStatusLaden();
+    box.innerHTML = `<div class="ab-leer"><h2>Anlagenbuch</h2><p>Für welches Projekt?</p>${projektAuswahlHtml('ab')}</div>`;
     return;
   }
+  // Ablauf: Anlagendoku erst nach abgeschlossenem PPK (Admin darf trotzdem)
+  if(!ppkStatusGeladen) await ppkStatusLaden();
+  if(getCurrentProject() !== proj) return;
+  if(schrittGesperrt(proj, 'ab') && currentUserRole !== 'admin'){ box.innerHTML = schrittGesperrtHtml(proj, 'ab'); return; }
   // Angaben: eigener, noch nicht hochgeladener Entwurf hat Vorrang
   abDaten = proj.anlagenbuch ? JSON.parse(JSON.stringify(proj.anlagenbuch)) : abNeu();
   if(!abDaten.wr) abDaten.wr = {};
@@ -6268,12 +6274,14 @@ function abZeichnen(){
   setTimeout(() => pdfArchivZeigen('ab-archiv', proj.id, 'Anlagenbuch'), 0);
   const gesperrt = !abDarfAendern();
   box.innerHTML = `
+    ${schrittLeisteHtml(proj, 'ab')}
     <div class="ab-kopf">
       <div><h1>Anlagenbuch</h1><p>${esc(proj.name)} · ${esc(BEREICHE[abBereich()] ? BEREICHE[abBereich()].name : '')} · Dokumentation nach ÖVE/ÖNORM E 8101</p>
         <p class="ab-klein">Umfang passend zum Bereich des Projekts – Privatanlagen kompakt, Gewerbe und Freifläche mit allen Prüf- und Messergebnissen.</p></div>
       <button type="button" class="btn btn-primary ab-erstellen" onclick="anlagenbuchErstellen()">Anlagenbuch erstellen (PDF)</button>
     </div>
     ${gesperrt ? '<div class="ab-info">Du kannst das Anlagenbuch nur ansehen.</div>' : ''}
+    ${schrittGesperrt(proj, 'ab') ? '<div class="ab-info">Das PPK ist noch nicht abgeschlossen – als Admin trotzdem geöffnet.</div>' : ''}
     <div class="ab-status" id="ab-status" hidden></div>
     <div id="ab-archiv"></div>
     ${abKapitelFuer(abBereich()).map((k, i) => `<details class="ab-kapitel"${i === 0 ? ' open' : ''}><summary><span class="ab-nr">${i + 1}</span>${esc(k.titel)}</summary>
@@ -7808,7 +7816,7 @@ function ppkSichtbar(fd){
   const w = ppkDaten && ppkDaten.w ? ppkDaten.w[k] : '';
   return v === '*' ? !!w : w === v;
 }
-function ppkDarfAendern(){ return darf('ppk'); }
+function ppkDarfAendern(){ return darf('ppk') && !(ppkDaten && ppkDaten.fertig); }
 
 // ── Reiter zeichnen ───────────────────────────────────────────────────────
 async function ppkRendern(){
@@ -7817,9 +7825,11 @@ async function ppkRendern(){
   if(!darf('ppk')){ box.innerHTML = '<div class="ab-leer">Für das AC-Prüfprotokoll fehlt dir die Berechtigung.</div>'; return; }
   const proj = getCurrentProject();
   if(!proj){
-    box.innerHTML = `<div class="ab-leer"><h2>PPK – AC-Prüfprotokoll</h2><p>Für welches Projekt?</p>${projektAuswahlHtml()}</div>`;
+    box.innerHTML = `<div class="ab-leer"><h2>PPK – AC-Prüfprotokoll</h2><p>Für welches Projekt?</p>${projektAuswahlHtml('ppk')}</div>`;
     return;
   }
+  // Ablauf: PPK erst nach der DC-Messung (Admin darf trotzdem)
+  if(schrittGesperrt(proj, 'ppk') && currentUserRole !== 'admin'){ box.innerHTML = schrittGesperrtHtml(proj, 'ppk'); return; }
   box.innerHTML = '<div class="ab-leer">Lade PPK …</div>';
   ppkDaten = { w: {} };
   try {
@@ -7915,13 +7925,19 @@ function ppkZeichnen(){
   const hatteZustand = offen.length > 0;
   const auto = ppkAuto();
   let nr = 0;
+  const fertig = ppkDaten.fertig;
   box.innerHTML = `
+    ${schrittLeisteHtml(proj, 'ppk')}
     <div class="ab-kopf">
       <div><h1>PPK – AC-Prüfprotokoll</h1><p>${esc(proj.name)} · Förder-Vorlage „Prüfbefund“ nach ÖVE/ÖNORM E 8101</p>
         <p class="ab-klein">Grau markierte Werte kommen automatisch aus dem Projekt und können überschrieben werden.</p></div>
       <div class="ppk-kopf-rechts"><span class="ppk-status" id="ppk-status"></span>
-        <button type="button" class="btn btn-primary" onclick="ppkErstellen()">PPK erstellen (PDF)</button></div>
+        <button type="button" class="btn btn-ghost" onclick="ppkErstellen()">PDF-Vorschau</button>
+        ${fertig ? '' : '<button type="button" class="btn btn-primary" onclick="ppkAbschliessen()">PPK abschließen</button>'}</div>
     </div>
+    ${fertig ? `<div class="ppk-fertig">${ICON.check}<span>Abgeschlossen am ${esc(new Date(fertig.at).toLocaleDateString('de-AT'))}${fertig.von ? ` von ${esc(fertig.von)}` : ''} – gegen Änderungen gesperrt. Die Anlagendoku ist freigeschaltet.</span>
+      ${darf('ppk') ? '<button type="button" class="btn btn-ghost ab-mini" onclick="ppkWiederOeffnen()">Wieder öffnen</button>' : ''}</div>` : ''}
+    ${!fertig && schrittGesperrt(proj, 'ppk') ? '<div class="ab-info">Die DC-Messung ist noch nicht fertig – als Admin trotzdem geöffnet.</div>' : ''}
     <div class="ab-status" id="ppk-meldung" hidden></div>
     <div id="ppk-zuweisung" class="ppk-zuweisung" hidden></div>
     <div id="ppk-archiv"></div>
@@ -7931,7 +7947,8 @@ function ppkZeichnen(){
         <div class="ab-raster">${a.pflicht ? '' : ppkVorhandenHtml(a, an)}
         ${an ? `${a.komp ? ppkKompHtml(a) : ''}${a.mess ? ppkMessHtml() : ''}${a.schnell && ppkDarfAendern() ? `<div class="ab-breit"><button type="button" class="btn btn-ghost ab-mini" data-ppk-schnell="${esc(t.teil)}|${esc(a.titel)}">Alle Punkte: ja / in Ordnung</button></div>` : ''}
         ${a.felder.map(fd => ppkFeldHtml(fd, auto)).join('')}` : `<p class="ab-breit ab-klein">${a.optional && a.leer ? 'Abschnitt entfällt – im PDF steht dort „nicht vorhanden“.' : 'Nicht benötigt – der Abschnitt bleibt im PDF leer.'}</p>`}</div></details>`; }).join('')}</div>`).join('')}
-    <div class="ab-fuss"><button type="button" class="btn btn-primary" onclick="ppkErstellen()">PPK erstellen (PDF)</button></div>`;
+    <div class="ab-fuss">${fertig ? '<button type="button" class="btn btn-primary" onclick="ppkErstellen()">PDF erstellen</button>'
+      : '<button type="button" class="btn btn-ghost" onclick="ppkErstellen()">PDF-Vorschau</button> <button type="button" class="btn btn-primary" onclick="ppkAbschliessen()">PPK abschließen</button>'}</div>`;
   ppkSigEinrichten();
   ppkStatus();
   pdfArchivZeigen('ppk-archiv', proj.id, 'PPK');
@@ -8176,10 +8193,13 @@ async function ppkErstellen(){
     pdf.setCreator('SOLPRO Messtool');
     const bytes = await pdf.save();
     window.__ppkLetztesPdf = bytes;
-    ppkDaten.erstellt = new Date().toISOString();
-    ppkStatusMap[proj.id] = ppkDaten.erstellt;
-    ppkSpeichernVerzoegert();
-    pdfArchivieren(proj.id, 'PPK', bytes).then(ok => { if(ok) pdfArchivZeigen('ppk-archiv', proj.id, 'PPK', true); });
+    // Nur das abgeschlossene PPK wird im Projekt abgelegt – Vorschauen nicht
+    if(ppkDaten.fertig){
+      ppkDaten.erstellt = new Date().toISOString();
+      ppkStatusMap[proj.id] = { ...(ppkStatusMap[proj.id] || {}), erstellt: ppkDaten.erstellt, fertig: ppkDaten.fertig };
+      ppkSpeichernVerzoegert();
+      pdfArchivieren(proj.id, 'PPK', bytes).then(ok => { if(ok) pdfArchivZeigen('ppk-archiv', proj.id, 'PPK', true); });
+    }
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
     a.download = `PPK_${String(proj.name || 'Projekt').replace(/[^\wäöüÄÖÜß.-]+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -8232,12 +8252,17 @@ async function waehleArbeit(tab){
 }
 
 // Projektauswahl mit Suche (fuer PPK und Anlagenbuch ohne offenes Projekt)
-function projektAuswahlHtml(){
-  const ids = bereichProjektIds().sort((a, b) => String(PROJECTS[b].updated_at || '').localeCompare(String(PROJECTS[a].updated_at || '')));
+function projektAuswahlHtml(schritt){
+  const bereit = p => { if(!schritt) return true; const s = projektSchritte(p).find(x => x.id === schritt); return !s || s.status !== 'gesperrt'; };
+  const zeit = p => String(p.updated_at || '');
+  const ids = bereichProjektIds().sort((a, b) => (bereit(PROJECTS[b]) - bereit(PROJECTS[a])) || zeit(PROJECTS[b]).localeCompare(zeit(PROJECTS[a])));
   if(!ids.length) return '<p class="ab-klein">Keine Projekte sichtbar – ggf. muss dir der Admin Projekte zuweisen.</p>';
+  const admin = currentUserRole === 'admin';
   return `<input type="search" class="sp-inp pa-suche" placeholder="Projekt suchen …" oninput="projektAuswahlFiltern(this.value)" autocomplete="off">
-    <div class="pa-liste">${ids.map(id => { const p = PROJECTS[id]; return `<button type="button" class="pa-projekt" data-suche="${esc(((p.name || '') + ' ' + (p.group || '')).toLowerCase())}" onclick="selectProject('${id}')">
-      <strong>${esc(p.name || 'Unbenannt')}</strong><span>${esc(BEREICHE[projektBereich(p)] ? BEREICHE[projektBereich(p)].name : '')}${p.group ? ' · ' + esc(p.group) : ''}</span>${projektStatusHtml(p)}</button>`; }).join('')}</div>`;
+    <div class="pa-liste">${ids.map(id => { const p = PROJECTS[id]; const ok = bereit(p); const st = p.stamm || {};
+      const grund = ok ? '' : (schritt === 'ppk' ? 'wartet auf die DC-Messung' : 'wartet auf das abgeschlossene PPK');
+      return `<button type="button" class="pa-projekt${ok ? '' : ' pa-wartet'}" data-suche="${esc(((p.name || '') + ' ' + (p.group || '') + ' ' + (st.kunde || '') + ' ' + (st.ort || '')).toLowerCase())}" ${ok || admin ? `onclick="selectProject('${id}')"` : 'disabled'}>
+      <strong>${esc(p.name || 'Unbenannt')}</strong><span>${esc([st.kunde, st.ort, BEREICHE[projektBereich(p)] ? BEREICHE[projektBereich(p)].name : '', p.group].filter(Boolean).join(' · '))}${grund ? ` · <em>${grund}${admin ? ' (als Admin trotzdem öffnen)' : ''}</em>` : ''}</span>${projektStatusHtml(p)}</button>`; }).join('')}</div>`;
 }
 function projektAuswahlFiltern(q){
   const t = String(q || '').trim().toLowerCase();
@@ -8311,31 +8336,24 @@ function modulDialog(proj){
 }
 
 // ── Status je Projekt: DC-Protokoll, PPK, Anlagendoku ─────────────────────
-let ppkStatusMap = {};   // project_id -> Zeitpunkt, an dem das PPK erstellt wurde
+let ppkStatusMap = {};   // project_id -> { erstellt, fertig } – ein Eintrag heisst: PPK begonnen
+let ppkStatusGeladen = false;
 async function ppkStatusLaden(){
-  if(!supabaseClient || !currentUser || !darf('ppk')) return;
+  if(!supabaseClient || !currentUser || !(darf('ppk') || darf('anlagenbuch'))) return;
   try {
-    const { data, error } = await supabaseClient.from('pv_ppk').select('project_id, erstellt:daten->>erstellt');
+    const { data, error } = await supabaseClient.from('pv_ppk').select('project_id, erstellt:daten->>erstellt, fertig:daten->fertig');
     if(error) throw error;
     ppkStatusMap = {};
-    (data || []).forEach(r => { if(r.erstellt) ppkStatusMap[r.project_id] = r.erstellt; });
+    (data || []).forEach(r => { ppkStatusMap[r.project_id] = { erstellt: r.erstellt || null, fertig: r.fertig || null }; });
+    ppkStatusGeladen = true;
   } catch(e){ console.warn('PPK-Status:', e); }
 }
-function projektStatusHtml(p, prog){
-  const chips = [];
-  if(darf('reiter_matrix')){
-    const pr = prog || getProjectProgress(p);
-    if(p.signature || p.abnahme) chips.push(['ok', 'DC unterschrieben']);
-    else if(pr.total && pr.done === pr.total) chips.push(['teil', 'DC gemessen']);
-    else chips.push(['offen', 'DC offen']);
-  }
-  if(darf('ppk')) chips.push(ppkStatusMap[p.id] ? ['ok', 'PPK erstellt'] : ['offen', 'PPK offen']);
-  if(darf('anlagenbuch')){
-    const ab = p.anlagenbuch;
-    chips.push(ab && ab.erstellt_am ? ['ok', 'Doku erstellt'] : (ab ? ['teil', 'Doku begonnen'] : ['offen', 'Doku offen']));
-  }
-  if(!chips.length) return '';
-  return `<span class="st-chips">${chips.map(([art, t]) => `<span class="st-chip st-${art}">${t}</span>`).join('')}</span>`;
+function projektStatusHtml(p){
+  const schritte = projektSchritte(p).filter(s => s.id === 'dc' || darf('ppk') || darf('anlagenbuch'))
+    .filter(s => s.id !== 'ab' || darf('anlagenbuch') || darf('ppk'));
+  if(!schritte.length) return '';
+  const art = { fertig: 'ok', arbeit: 'teil', offen: 'offen', gesperrt: 'wartet' };
+  return `<span class="st-chips">${schritte.map(s => `<span class="st-chip st-${art[s.status]}" title="${esc(s.name + ': ' + s.info)}">${s.kurz}</span>`).join('')}</span>`;
 }
 
 // ── Fertige PDFs im Projekt ablegen (pv-dokumente/<projekt>/archiv/) ──────
@@ -9438,10 +9456,12 @@ function projektInfoZeigen(){
   if(!el) return;
   const p = getCurrentProject(), st = p && p.stamm;
   const darfEdit = p && darf('projekt_verwalten');
-  if(!p || (!st && !darfEdit)){ el.hidden = true; el.innerHTML = ''; return; }
+  if(!p){ el.hidden = true; el.innerHTML = ''; return; }
   const karte = stammKartenLink(st), tel = stammTelLink(st && st.telefon);
   el.hidden = false;
-  el.innerHTML = st ? `<div class="pi-text">
+  const leiste = schrittLeisteHtml(p, 'dc');
+  if(!st && !darfEdit){ el.innerHTML = leiste; return; }
+  el.innerHTML = leiste + (st ? `<div class="pi-text">
       <strong>${esc([st.nr, st.kunde].filter(Boolean).join(' · ') || p.name)}</strong>
       <span>${esc(stammAdresse(st) || 'Keine Adresse hinterlegt')}${st.ansprechpartner ? ` · ${esc(st.ansprechpartner)}` : ''}</span>
       ${st.hinweis ? `<em>${esc(st.hinweis)}</em>` : ''}</div>
@@ -9451,7 +9471,7 @@ function projektInfoZeigen(){
       ${darfEdit ? `<button type="button" class="btn btn-ghost" onclick="projektdatenDialog('${p.id}')">${ICON.pencil} Bearbeiten</button>` : ''}
     </div>`
     : `<div class="pi-text"><span>Für dieses Projekt sind noch keine Adresse und kein Kontakt hinterlegt.</span></div>
-    <div class="pi-knoepfe"><button type="button" class="btn btn-ghost" onclick="projektdatenDialog('${p.id}')">${ICON.pencil} Projektdaten eintragen</button></div>`;
+    <div class="pi-knoepfe"><button type="button" class="btn btn-ghost" onclick="projektdatenDialog('${p.id}')">${ICON.pencil} Projektdaten eintragen</button></div>`);
 }
 async function projektdatenDialog(id, event){
   if(event) event.stopPropagation();
@@ -9493,4 +9513,79 @@ async function projektdatenDialog(id, event){
   document.addEventListener('keydown', taste, true);
   document.body.appendChild(ov);
   setTimeout(() => { const f = ov.querySelector('[data-pd="kunde"]'); if(f) f.focus(); }, 30);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//   ABLAUF JE PROJEKT: 1 DC-Messung → 2 AC-Pruefprotokoll → 3 Anlagendoku
+//   PPK erst nach fertiger Messung, Anlagendoku erst nach abgeschlossenem PPK.
+//   Der Admin darf jeden Schritt trotzdem oeffnen (mit Hinweis).
+// ══════════════════════════════════════════════════════════════════════════
+function dcFertig(p){
+  if(!p) return false;
+  if(p.signature || p.abnahme) return true;
+  const pr = getProjectProgress(p);
+  return pr.total > 0 && pr.done === pr.total;
+}
+function projektSchritte(p){
+  const pr = getProjectProgress(p);
+  const dc = dcFertig(p);
+  const ps = ppkStatusMap[p.id] || null;
+  const ppkF = !!(ps && ps.fertig);
+  const abF = !!(p.anlagenbuch && p.anlagenbuch.erstellt_am);
+  return [
+    { id: 'dc', tab: 'matrix', name: 'DC-Messung', status: dc ? 'fertig' : (pr.done ? 'arbeit' : 'offen'),
+      info: dc ? (p.signature || p.abnahme ? 'unterschrieben' : 'alle Strings gemessen') : `${pr.done} von ${pr.total} Strings`,
+      kurz: dc ? 'DC fertig' : `DC ${pr.done}/${pr.total}` },
+    { id: 'ppk', tab: 'ppk', name: 'AC-Prüfprotokoll', status: ppkF ? 'fertig' : (!dc ? 'gesperrt' : (ps ? 'arbeit' : 'offen')),
+      info: ppkF ? 'abgeschlossen' : (!dc ? 'nach der DC-Messung' : (ps ? 'in Arbeit' : 'bereit')),
+      kurz: ppkF ? 'PPK fertig' : (!dc ? 'PPK wartet' : (ps ? 'PPK in Arbeit' : 'PPK bereit')) },
+    { id: 'ab', tab: 'anlagenbuch', name: 'Anlagendoku', status: abF ? 'fertig' : (!ppkF ? 'gesperrt' : (p.anlagenbuch ? 'arbeit' : 'offen')),
+      info: abF ? 'erstellt' : (!ppkF ? 'nach dem PPK' : (p.anlagenbuch ? 'begonnen' : 'bereit')),
+      kurz: abF ? 'Doku fertig' : (!ppkF ? 'Doku wartet' : (p.anlagenbuch ? 'Doku begonnen' : 'Doku bereit')) }
+  ];
+}
+function schrittGesperrt(p, id){ const s = projektSchritte(p).find(x => x.id === id); return !!(s && s.status === 'gesperrt'); }
+function schrittLeisteHtml(p, aktuell){
+  if(!p) return '';
+  const schritte = projektSchritte(p);
+  return `<nav class="schritte" aria-label="Ablauf des Projekts">${schritte.map((s, i) => {
+    const klickbar = tabErlaubt(s.tab) && s.id !== aktuell && (s.status !== 'gesperrt' || currentUserRole === 'admin');
+    const symbol = s.status === 'fertig' ? ICON.check : (s.status === 'gesperrt' ? ICON.lock : String(i + 1));
+    return `${i ? `<span class="s-pfeil" aria-hidden="true">${ICON.chevR}</span>` : ''}<button type="button" class="schritt s-${s.status}${s.id === aktuell ? ' aktuell' : ''}"${klickbar ? ` onclick="switchMainTab('${s.tab}')"` : ' disabled'}${s.id === aktuell ? ' aria-current="step"' : ''}>
+      <span class="s-nr">${symbol}</span><span class="s-text"><b>${s.name}</b><small>${esc(s.info)}</small></span></button>`;
+  }).join('')}</nav>`;
+}
+function schrittGesperrtHtml(p, id){
+  const pr = getProjectProgress(p);
+  const text = id === 'ppk'
+    ? `Das AC-Prüfprotokoll wird freigeschaltet, sobald die DC-Messung fertig ist – derzeit ${pr.done} von ${pr.total} Strings gemessen.`
+    : 'Die Anlagendoku wird freigeschaltet, sobald das AC-Prüfprotokoll abgeschlossen ist.';
+  const weiter = id === 'ppk'
+    ? (tabErlaubt('matrix') ? `<button type="button" class="btn btn-primary" onclick="switchMainTab('matrix')">Zur DC-Messung</button>` : '')
+    : (tabErlaubt('ppk') ? `<button type="button" class="btn btn-primary" onclick="switchMainTab('ppk')">Zum PPK</button>` : '');
+  return `${schrittLeisteHtml(p, id)}<div class="ab-leer schritt-wartet">${ICON.lock}<h2>Noch nicht bereit</h2><p>${text}</p>
+    <div class="schritt-knoepfe">${weiter}<button type="button" class="btn btn-ghost" onclick="waehleArbeit('${id === 'ppk' ? 'ppk' : 'anlagenbuch'}')">Anderes Projekt</button></div></div>`;
+}
+async function ppkAbschliessen(){
+  const proj = getCurrentProject();
+  if(!proj || !ppkDaten || !darf('ppk')) return;
+  if(!ppkDaten.sig) return toast('Bitte zuerst als Prüfer unterschreiben (Abschnitt A5 – Datum & Unterschrift)');
+  if(!await appFrage('PPK abschließen?\n\nDas PDF wird erstellt und im Projekt abgelegt. Danach ist das PPK gegen Änderungen gesperrt und die Anlagendoku wird freigeschaltet.')) return;
+  ppkDaten.fertig = { at: new Date().toISOString(), von: anzeigeName() || (currentUser && currentUser.email) || '' };
+  ppkStatusMap[proj.id] = { ...(ppkStatusMap[proj.id] || {}), fertig: ppkDaten.fertig };
+  ppkSpeichernVerzoegert();
+  ppkZeichnen();
+  await ppkErstellen();
+  if(g('project-grid')) renderProjectGrid();
+  toast('PPK abgeschlossen – Anlagendoku ist freigeschaltet');
+}
+async function ppkWiederOeffnen(){
+  const proj = getCurrentProject();
+  if(!proj || !ppkDaten || !darf('ppk')) return;
+  if(!await appFrage('PPK wieder öffnen?\n\nEs kann dann wieder bearbeitet werden; bis zum erneuten Abschließen gilt es als „in Arbeit“.')) return;
+  delete ppkDaten.fertig;
+  ppkStatusMap[proj.id] = { ...(ppkStatusMap[proj.id] || {}), fertig: null };
+  ppkSpeichernVerzoegert();
+  ppkZeichnen();
+  if(g('project-grid')) renderProjectGrid();
 }

@@ -1496,3 +1496,14 @@ html body.pp .pf-einst-zeile em { font-style: normal; color: var(--mute); font-s
 html body.pp .pf-neu { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
 html body.pp .pf-neu .sp-inp { flex: 1 1 240px; text-align: left !important; }
 html body.pp .pf-neu-wr { display: inline-flex; gap: 6px; align-items: center; font-size: .86rem; color: var(--ink2); }
+
+/* Datensicherung */
+html body.pp .sich-dialog { max-width: 680px; width: calc(100vw - 24px); max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
+html body.pp .sich-oben { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+html body.pp .sich-liste { overflow: auto; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 0 12px; }
+html body.pp .sich-zeile { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--line); }
+html body.pp .sich-zeile:last-child { border-bottom: 0; }
+html body.pp .sich-zeile > div:first-child { display: flex; flex-direction: column; }
+html body.pp .sich-zeile small { color: var(--mute); font-size: .78rem; }
+html body.pp .sich-knoepfe { display: flex; gap: 6px; flex-wrap: wrap; }
+html body.pp .sich-projekte { max-height: 50vh; overflow: auto; }

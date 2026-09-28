@@ -9829,3 +9829,118 @@ async function pflichtPunktEntfernen(i){
   liste.splice(i, 1);
   pflichtEinstellungenSpeichern(liste);
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+//   DATENSICHERUNGEN (Admin): jede Nacht automatisch in pv_sicherung,
+//   30 Tage aufbewahrt. Hier: ansehen, herunterladen, von Hand sichern,
+//   einzelnes Projekt (und sein PPK) aus einer Sicherung zurueckholen.
+// ══════════════════════════════════════════════════════════════════════════
+function sicherungDialog(inhalt){
+  let ov = g('sicherung-dialog');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'sicherung-dialog'; ov.className = 'app-dialog-overlay';
+    ov.addEventListener('click', e => { if(e.target === ov) sicherungSchliessen(); });
+    document.body.appendChild(ov);
+    document.addEventListener('keydown', sicherungTaste, true);
+  }
+  ov.innerHTML = `<div class="app-dialog sich-dialog" role="dialog" aria-modal="true" aria-labelledby="sich-titel">
+    <div class="ein-kopf"><h2 id="sich-titel">Datensicherung</h2>
+      <button type="button" class="mm-x" onclick="sicherungSchliessen()" aria-label="Schließen">${ICON.x}</button></div>${inhalt}</div>`;
+  return ov;
+}
+function sicherungTaste(e){ if(e.key === 'Escape' && !document.querySelector('.app-dialog-overlay:not(#sicherung-dialog)')){ e.preventDefault(); sicherungSchliessen(); } }
+function sicherungSchliessen(){ const ov = g('sicherung-dialog'); if(ov) ov.remove(); document.removeEventListener('keydown', sicherungTaste, true); }
+const sicherungZeit = iso => new Date(iso).toLocaleString('de-AT', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+async function sicherungenOeffnen(){
+  if(currentUserRole !== 'admin') return toast('Nur für Admins');
+  if(!supabaseClient || !currentUser) return toast('Keine Verbindung');
+  sicherungDialog('<p class="app-dialog-text">Sicherungen werden geladen …</p>');
+  try {
+    const { data, error } = await supabaseClient.from('pv_sicherung').select('id, erstellt, art, groesse').order('erstellt', { ascending: false }).limit(60);
+    if(error) throw error;
+    const liste = data || [];
+    sicherungDialog(`<p class="app-dialog-text">Jede Nacht wird automatisch alles gesichert: Projekte mit Messwerten, PPKs, Anlagenbücher, Einstellungen, Katalog und Zuweisungen. Aufbewahrt werden 30 Tage.
+      Fotos und Datenblätter liegen als Dateien im Speicher und sind hier nicht enthalten.</p>
+      <div class="sich-oben"><button type="button" class="btn btn-ghost" onclick="sicherungJetzt()">Jetzt sichern</button>
+        <button type="button" class="btn btn-ghost" onclick="datensicherungExport()">Aktuellen Stand herunterladen</button></div>
+      <div class="sich-liste">${liste.length ? liste.map(s => `<div class="sich-zeile">
+        <div><b>${esc(sicherungZeit(s.erstellt))}</b><small>${s.art === 'nacht' ? 'nächtlich' : 'von Hand'} · ${Math.round((s.groesse || 0) / 1024)} KB</small></div>
+        <div class="sich-knoepfe"><button type="button" class="btn btn-ghost ab-mini" onclick="sicherungHerunterladen(${s.id})">Herunterladen</button>
+          <button type="button" class="btn btn-ghost ab-mini" onclick="sicherungWiederherstellen(${s.id})">Projekt zurückholen</button></div></div>`).join('')
+        : '<p class="ab-klein">Noch keine Sicherung vorhanden – die erste entsteht heute Nacht.</p>'}</div>`);
+  } catch(e){
+    sicherungDialog(`<p class="app-dialog-text">Sicherungen konnten nicht geladen werden: ${esc(e.message || String(e))}</p>`);
+  }
+}
+async function sicherungJetzt(){
+  try {
+    const { error } = await supabaseClient.rpc('pv_sicherung_erstellen', { p_art: 'manuell' });
+    if(error) throw error;
+    toast('Sicherung angelegt');
+    sicherungenOeffnen();
+  } catch(e){ toastError('Sicherung fehlgeschlagen', e); }
+}
+async function sicherungLaden(id){
+  const { data, error } = await supabaseClient.from('pv_sicherung').select('erstellt, daten').eq('id', id).single();
+  if(error) throw error;
+  return data;
+}
+async function sicherungHerunterladen(id){
+  try {
+    const s = await sicherungLaden(id);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(s.daten, null, 1)], { type: 'application/json' }));
+    a.download = `SOLPRO-Messtool-Sicherung_${String(s.erstellt).slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  } catch(e){ toastError('Herunterladen fehlgeschlagen', e); }
+}
+async function sicherungWiederherstellen(id){
+  let s;
+  try { s = await sicherungLaden(id); } catch(e){ return toastError('Sicherung konnte nicht geladen werden', e); }
+  const projekte = (s.daten.pv_projects || []).slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  window.__sicherungAktiv = s;
+  sicherungDialog(`<p class="app-dialog-text">Sicherung vom <b>${esc(sicherungZeit(s.erstellt))}</b>. Welches Projekt soll auf diesen Stand zurück?
+    Der jetzige Stand wird vorher automatisch in den Versionen des Projekts abgelegt – das Zurückholen lässt sich also wieder rückgängig machen.</p>
+    <input type="search" class="sp-inp pa-suche" placeholder="Projekt suchen …" oninput="projektAuswahlFiltern(this.value)" autocomplete="off">
+    <div class="pa-liste sich-projekte">${projekte.map(p => {
+      const live = PROJECTS[p.id] || (typeof PAPIERKORB !== 'undefined' && PAPIERKORB[p.id]);
+      const ppk = (s.daten.pv_ppk || []).some(x => x.project_id === p.id);
+      return `<button type="button" class="pa-projekt" data-suche="${esc(String(p.name || '').toLowerCase())}" onclick="sicherungProjektBestaetigen('${esc(p.id)}')">
+        <strong>${esc(p.name || p.id)}</strong><span>Stand ${esc(p.updated_at ? new Date(p.updated_at).toLocaleString('de-AT', { dateStyle: 'short', timeStyle: 'short' }) : '—')}${live ? '' : ' · <em>existiert nicht mehr – wird neu angelegt</em>'}${ppk ? ' · mit PPK' : ''}</span></button>`; }).join('')}</div>
+    <div class="app-dialog-knoepfe"><button type="button" class="btn btn-ghost" onclick="sicherungenOeffnen()">Zurück</button></div>`);
+}
+async function sicherungProjektBestaetigen(pid){
+  const s = window.__sicherungAktiv;
+  const zeile = s && (s.daten.pv_projects || []).find(p => p.id === pid);
+  if(!zeile) return;
+  if(pid === CURRENT_PROJECT_ID) return toast('Dieses Projekt ist gerade geöffnet – bitte zuerst ein anderes öffnen oder zur Übersicht wechseln');
+  if(await projektFremdGeoeffnet(pid)) return;
+  const ppk = (s.daten.pv_ppk || []).find(x => x.project_id === pid);
+  const text = `„${zeile.name}“ auf den Stand vom ${sicherungZeit(s.erstellt)} zurücksetzen?\n\nMesswerte, Hardware, Projektdaten und Anlagenbuch werden ersetzt${ppk ? ', das PPK ebenfalls' : ''}. Der jetzige Stand bleibt in den Versionen erhalten.`;
+  if(!await appDialog({ titel: 'Projekt zurückholen?', text, ok: 'Zurückholen', gefahr: true })) return;
+  try {
+    const felder = { name: zeile.name, data: zeile.data, config: zeile.config, bereich: zeile.bereich, modul_wp: zeile.modul_wp };
+    const vorhanden = PROJECTS[pid] || (typeof PAPIERKORB !== 'undefined' && PAPIERKORB[pid]);
+    if(vorhanden){
+      const { data, error } = await supabaseClient.from('pv_projects').update(felder).eq('id', pid).select('id');
+      if(error) throw error;
+      if(!data || !data.length) throw new Error('Projekt nicht gefunden');
+    } else {
+      const { error } = await supabaseClient.from('pv_projects').insert({ id: pid, ...felder, user_id: zeile.user_id || currentUser.id, pruefer: zeile.pruefer || currentUser.email });
+      if(error) throw error;
+    }
+    if(ppk){
+      const { error } = await supabaseClient.from('pv_ppk').upsert({ project_id: pid, daten: ppk.daten });
+      if(error) throw error;
+    }
+    await fetchProjectsFromCloud();
+    if(typeof ppkStatusLaden === 'function') await ppkStatusLaden();
+    if(g('project-grid')) renderProjectGrid();
+    sicherungSchliessen();
+    toast(`„${zeile.name}“ zurückgeholt`);
+  } catch(e){
+    toastError('Zurückholen fehlgeschlagen', e);
+  }
+}

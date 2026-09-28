@@ -1401,3 +1401,30 @@ html body.pp .ppk-zuweisung { display: flex; align-items: center; justify-conten
 html body.pp .ppk-zuweisung[hidden] { display: none; }
 /* Zuweisen-Dialog: Rolle */
 html body.pp .ub-rolle { font-size: .72rem; color: var(--mute); background: var(--pa3); border-radius: 999px; padding: 1px 8px; margin-left: 4px; }
+
+/* ══ Projektdaten ══════════════════════════════════════════════════════ */
+html body.pp .pc-stamm { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: .82rem; color: var(--ink2); }
+html body.pp .pc-stamm span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body.pp .pc-stamm a { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--r-sm);
+  color: var(--brand-text); border: 1px solid var(--line); background: var(--pa2); flex: 0 0 auto; }
+html body.pp .pc-stamm a:hover { border-color: var(--brand); }
+html body.pp .projekt-info { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  background: var(--pa2); border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: var(--r); padding: 10px 14px; margin: 0 0 12px; }
+html body.pp .projekt-info[hidden] { display: none; }
+html body.pp .pi-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: .88rem; }
+html body.pp .pi-text span { color: var(--ink2); }
+html body.pp .pi-text em { font-style: normal; color: var(--mute); font-size: .82rem; }
+html body.pp .pi-knoepfe { display: flex; gap: 6px; flex-wrap: wrap; }
+html body.pp .pi-knoepfe .btn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; text-decoration: none; }
+html body.pp .pd-dialog { max-width: 620px; width: calc(100vw - 24px); }
+html body.pp .pd-raster { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; margin: 8px 0 4px; text-align: left; }
+html body.pp .pd-raster .ab-feld { display: flex; flex-direction: column; gap: 4px; }
+html body.pp .pd-raster .ab-feld span { font-size: .8rem; color: var(--mute); }
+html body.pp .pd-kunde, html body.pp .pd-strasse, html body.pp .pd-hinweis { grid-column: 1 / -1; }
+html body.pp .pd-raster input, html body.pp .pd-raster textarea { text-align: left !important; }
+html body.pp .np-plzort { display: grid; grid-template-columns: 110px 1fr; gap: 8px; margin-top: 6px; }
+@media (max-width: 600px) {
+  html body.pp .pd-raster { grid-template-columns: 1fr; }
+  html body.pp .pi-knoepfe { width: 100%; }
+  html body.pp .pi-knoepfe .btn { flex: 1; justify-content: center; }
+}

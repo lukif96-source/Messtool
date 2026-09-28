@@ -41,6 +41,8 @@ const ICON = (() => {
     chevL:   svg('<path d="m15 6-6 6 6 6"/>'),
     arrowR:  svg('<path d="M5 12h14M13 6l6 6-6 6"/>'),
     check:   svg('<path d="M20 6 9 17l-5-5"/>'),
+    pin:     svg('<path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>'),
+    phone:   svg('<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.8 2z"/>'),
     sun:     svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>')
   };
 })();
@@ -647,7 +649,8 @@ function renderProjectGrid(){
     const p = PROJECTS[id];
     // Suchbegriff schlaegt den Gruppenfilter: wer sucht, will alles durchsuchen
     if(projectSearchTerm){
-      const hay = `${p.name || ''} ${p.group || ''}`.toLowerCase();
+      const st = p.stamm || {};
+      const hay = `${p.name || ''} ${p.group || ''} ${st.nr || ''} ${st.kunde || ''} ${st.strasse || ''} ${st.plz || ''} ${st.ort || ''}`.toLowerCase();
       return hay.includes(projectSearchTerm);
     }
     if(currentProjectGroupFilter === '__archiv__') return istArchiviert(p);
@@ -687,6 +690,7 @@ function renderProjectGrid(){
             <div class="pc-menu-wrap">
               <button class="pc-menu-btn" title="Projekt-Aktionen" aria-label="Projekt-Aktionen" aria-haspopup="true" onclick="toggleProjectMenu('${id}', event)">${ICON.more}</button>
               <div class="pc-menu" id="pc-menu-${id}" onclick="event.stopPropagation()">
+                <button onclick="projektdatenDialog('${id}', event); closeProjectMenus();">Projektdaten (Adresse, Kontakt)</button>
                 <button onclick="renameProject('${id}', event); closeProjectMenus();">Umbenennen</button>
                 <button onclick="setProjectGroup('${id}', event); closeProjectMenus();">Gruppe zuweisen</button>
                 <button onclick="openBereichModal('${id}', event); closeProjectMenus();">Bereich ändern</button>
@@ -703,6 +707,7 @@ function renderProjectGrid(){
         <div class="project-card-meta">
           ${proj.group ? `<span style="color:var(--accent); font-weight:700;">${esc(proj.group)}</span> &middot; ` : ''}${wrCount} Wechselrichter &middot; ${wp} Wp${proj.locked ? ' &middot; <span style="color:#ef4444;font-weight:700;">gesperrt</span>' : ''}
         </div>
+        ${stammKarteHtml(proj)}
         ${projektStatusHtml(proj, prog)}
         <div class="pc-prog">
           <div class="pc-prog-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Messfortschritt">
@@ -732,7 +737,7 @@ function istGeschuetzt(p){ return !!(p && (p.geschuetzt || p.locked || p.signatu
 // Diese Schluessel gehoeren nicht zum Anlagenplan, sondern sind Metadaten
 // im selben config-Feld. Sie stehen an EINER Stelle, damit beim Speichern
 // nie wieder einer vergessen wird.
-const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt', '_beschreibung', '_anlagenbuch', '_modul', '_archiviert', '_papierkorb', '_messung'];
+const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt', '_beschreibung', '_anlagenbuch', '_modul', '_archiviert', '_papierkorb', '_messung', '_stamm'];
 
 function buildProjectConfig(proj, fallbackEmail){
   const cfg = {};
@@ -747,6 +752,7 @@ function buildProjectConfig(proj, fallbackEmail){
   if(proj.archiviert) cfg._archiviert = proj.archiviert;
   if(proj.papierkorb) cfg._papierkorb = proj.papierkorb;
   if(proj.messung) cfg._messung = proj.messung;
+  if(proj.stamm) cfg._stamm = proj.stamm;
   // Unterschriften werden NIE weggeschrieben, auch nicht im entsperrten
   // Zustand. Das war die Stelle, an der beim Entsperren alles verschwand.
   if(proj.signature) cfg._signature = proj.signature;
@@ -2038,6 +2044,7 @@ function renderMatrixDebounced(remoteOverride = null, delay = 100){
 }
 
 function renderMatrix(remoteOverride = null){
+  projektInfoZeigen();
   const wp = getCurrentWp();
   const plan = getCurrentPlan();
   const canHardware = canEditHardware();
@@ -4026,6 +4033,7 @@ async function selectProject(id){
 function openNewProjectModal(){
   if(!darf('projekt_anlegen')) return toast('Keine Berechtigung');
   g('np-name').value = '';
+  ['np-kunde', 'np-strasse', 'np-plz', 'np-ort'].forEach(f => { if(g(f)) g(f).value = ''; });
   g('np-group').value = currentProjectGroupFilter && currentProjectGroupFilter !== '__all__' && currentProjectGroupFilter !== '__none__' ? currentProjectGroupFilter : '';
   const groupList = g('np-group-suggestions');
   if(groupList){
@@ -4101,6 +4109,9 @@ async function doCreateNewProject(){
     }
   }
    PROJECTS[id] = { id, name, group: group || null, bereich: CURRENT_BEREICH || 'gewerbe', model_wp: wp, locked: false, plan, updated_at: new Date().toISOString() };
+  const npStamm = { kunde: (g('np-kunde') || {}).value || '', strasse: (g('np-strasse') || {}).value || '', plz: (g('np-plz') || {}).value || '', ort: (g('np-ort') || {}).value || '' };
+  Object.keys(npStamm).forEach(k => { npStamm[k] = npStamm[k].trim(); if(!npStamm[k]) delete npStamm[k]; });
+  if(Object.keys(npStamm).length) PROJECTS[id].stamm = npStamm;
   saveProjectsLocal();
   CURRENT_PROJECT_ID = id;
   closeNewProjectModal();
@@ -4454,6 +4465,7 @@ async function fetchProjectsFromCloud(){
           archiviert: cloudConfig._archiviert || null,
           papierkorb: cloudConfig._papierkorb || null,
           messung: cloudConfig._messung || null,
+          stamm: cloudConfig._stamm || null,
           model_wp: cloudProj.modul_wp || 465, 
           plan: planOnly, 
           locked: !!lockMeta.locked,
@@ -6129,6 +6141,15 @@ function abWrVorschlaege(){
     geaendert = true;
   }
   if(ms && ms.datum && !abWert('pruefung.datum')){ abSetzen('pruefung.datum', ms.datum); geaendert = true; }
+  // Betreiber, Kontakt und Adresse aus den Projektdaten
+  const st = proj && proj.stamm;
+  if(st){
+    const setzeLeer = (pfad, wert) => { if(wert && !abWert(pfad)){ abSetzen(pfad, wert); geaendert = true; } };
+    setzeLeer('betreiber.name', st.kunde);
+    setzeLeer('betreiber.kontakt', [st.ansprechpartner, st.telefon, st.email].filter(Boolean).join(', '));
+    setzeLeer('standort.adresse', stammAdresse(st, '\n'));
+    setzeLeer('betreiber.adresse', stammAdresse(st, '\n'));
+  }
   if(proj && proj.modul_komp && abKomp(proj.modul_komp) && !(abDaten.modul && abDaten.modul.komponente)){
     abSetzen('modul.komponente', proj.modul_komp); geaendert = true;
   }
@@ -7653,8 +7674,10 @@ function ppkAuto(){
   const us = ab.ueberspannung || {};
   const heute = new Date().toISOString().slice(0, 10);
   const o = {
-    betreiber: ab.betreiber && ab.betreiber.name, telefon: ab.betreiber && ab.betreiber.kontakt,
-    adresse: ppkEinzeilig(ab.standort && ab.standort.adresse), postadresse: ppkEinzeilig(ab.betreiber && ab.betreiber.adresse),
+    betreiber: (ab.betreiber && ab.betreiber.name) || (proj && proj.stamm && proj.stamm.kunde),
+    telefon: (ab.betreiber && ab.betreiber.kontakt) || (proj && proj.stamm && proj.stamm.telefon),
+    adresse: ppkEinzeilig(ab.standort && ab.standort.adresse) || stammAdresse(proj && proj.stamm, ', '),
+    postadresse: ppkEinzeilig(ab.betreiber && ab.betreiber.adresse) || stammAdresse(proj && proj.stamm, ', '),
     art: 'Erstprüfung', norm_teil: 'ÖVE/ÖNORM E 8101', norm: 'ÖVE/ÖNORM E 8101', heute,
     pruefer: anzeigeName(), ort: f.ort,
     jahr: ab.inbetriebnahme ? String(ab.inbetriebnahme).slice(0, 4) : String(new Date().getFullYear()),
@@ -9380,4 +9403,94 @@ function ppkEntwederWahl(fd){
   if(!fd || !ppkDaten) return null;
   const w = ppkDaten.w || {};
   return fd.o.find(o => o.k === w['_wahl_' + fd.k]) || fd.o.find(o => w[o.k]) || null;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//   PROJEKTDATEN: Kunde, Adresse, Kontakt (config._stamm)
+// ══════════════════════════════════════════════════════════════════════════
+const STAMM_FELDER = [
+  ['nr', 'Projektnummer', 'z. B. P260188'], ['kunde', 'Kunde / Anlagenbetreiber', ''],
+  ['strasse', 'Straße und Hausnummer', ''], ['plz', 'PLZ', ''], ['ort', 'Ort', ''],
+  ['ansprechpartner', 'Ansprechpartner vor Ort', ''], ['telefon', 'Telefon', ''], ['email', 'E-Mail', ''],
+  ['hinweis', 'Hinweise', 'z. B. Zufahrt, Schlüssel, Zählerkasten im Keller']
+];
+function stammAdresse(st, trenner = ', '){
+  if(!st) return '';
+  return [st.strasse, [st.plz, st.ort].filter(Boolean).join(' ')].filter(Boolean).join(trenner);
+}
+function stammKartenLink(st){
+  const a = stammAdresse(st);
+  return a ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(a) : '';
+}
+function stammTelLink(t){ const n = String(t || '').replace(/[^\d+]/g, ''); return n ? 'tel:' + n : ''; }
+function stammKarteHtml(p){
+  const st = p && p.stamm;
+  if(!st) return '';
+  const zeile = [st.kunde, [st.plz, st.ort].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
+  const karte = stammKartenLink(st), tel = stammTelLink(st.telefon);
+  if(!zeile && !karte && !tel) return '';
+  return `<div class="pc-stamm"><span>${st.nr ? `<b>${esc(st.nr)}</b> · ` : ''}${esc(zeile)}</span>
+    ${karte ? `<a href="${esc(karte)}" target="_blank" rel="noopener" title="Navigation starten" aria-label="Navigation" onclick="event.stopPropagation()">${ICON.pin}</a>` : ''}
+    ${tel ? `<a href="${esc(tel)}" title="Anrufen: ${esc(st.telefon)}" aria-label="Anrufen" onclick="event.stopPropagation()">${ICON.phone}</a>` : ''}</div>`;
+}
+function projektInfoZeigen(){
+  const el = g('projekt-info');
+  if(!el) return;
+  const p = getCurrentProject(), st = p && p.stamm;
+  const darfEdit = p && darf('projekt_verwalten');
+  if(!p || (!st && !darfEdit)){ el.hidden = true; el.innerHTML = ''; return; }
+  const karte = stammKartenLink(st), tel = stammTelLink(st && st.telefon);
+  el.hidden = false;
+  el.innerHTML = st ? `<div class="pi-text">
+      <strong>${esc([st.nr, st.kunde].filter(Boolean).join(' · ') || p.name)}</strong>
+      <span>${esc(stammAdresse(st) || 'Keine Adresse hinterlegt')}${st.ansprechpartner ? ` · ${esc(st.ansprechpartner)}` : ''}</span>
+      ${st.hinweis ? `<em>${esc(st.hinweis)}</em>` : ''}</div>
+    <div class="pi-knoepfe">
+      ${karte ? `<a class="btn btn-ghost" href="${esc(karte)}" target="_blank" rel="noopener">${ICON.pin} Navigation</a>` : ''}
+      ${tel ? `<a class="btn btn-ghost" href="${esc(tel)}">${ICON.phone} Anrufen</a>` : ''}
+      ${darfEdit ? `<button type="button" class="btn btn-ghost" onclick="projektdatenDialog('${p.id}')">${ICON.pencil} Bearbeiten</button>` : ''}
+    </div>`
+    : `<div class="pi-text"><span>Für dieses Projekt sind noch keine Adresse und kein Kontakt hinterlegt.</span></div>
+    <div class="pi-knoepfe"><button type="button" class="btn btn-ghost" onclick="projektdatenDialog('${p.id}')">${ICON.pencil} Projektdaten eintragen</button></div>`;
+}
+async function projektdatenDialog(id, event){
+  if(event) event.stopPropagation();
+  const proj = PROJECTS[id];
+  if(!proj) return;
+  if(!darf('projekt_verwalten')) return toast('Keine Berechtigung');
+  if(istGeschuetzt(proj) && currentUserRole !== 'admin') return toast('Unterschriebenes Protokoll – Projektdaten kann nur der Admin ändern');
+  const st = proj.stamm || {};
+  const ov = document.createElement('div');
+  ov.className = 'app-dialog-overlay';
+  ov.innerHTML = `<div class="app-dialog pd-dialog" role="dialog" aria-modal="true" aria-labelledby="pd-titel">
+    <h2 id="pd-titel">Projektdaten</h2>
+    <p class="app-dialog-text">${esc(proj.name)}</p>
+    <div class="pd-raster">${STAMM_FELDER.map(([k, l, ph]) => `<label class="ab-feld pd-${k}"><span>${esc(l)}</span>${k === 'hinweis'
+      ? `<textarea class="sp-inp" rows="2" data-pd="${k}" placeholder="${esc(ph)}">${esc(st[k] || '')}</textarea>`
+      : `<input class="sp-inp" data-pd="${k}" value="${esc(st[k] || '')}" placeholder="${esc(ph)}" autocomplete="off"${k === 'plz' ? ' inputmode="numeric"' : (k === 'telefon' ? ' inputmode="tel"' : (k === 'email' ? ' inputmode="email"' : ''))}>`}</label>`).join('')}</div>
+    <div class="app-dialog-knoepfe"><button type="button" class="btn btn-ghost" data-a="nein">Abbrechen</button>
+      <button type="button" class="btn btn-primary" data-a="ja">Speichern</button></div></div>`;
+  const schliessen = () => { document.removeEventListener('keydown', taste, true); ov.remove(); };
+  function taste(e){ if(e.key === 'Escape'){ e.preventDefault(); schliessen(); } }
+  ov.addEventListener('click', e => { if(e.target === ov) schliessen(); });
+  ov.querySelector('[data-a="nein"]').addEventListener('click', schliessen);
+  ov.querySelector('[data-a="ja"]').addEventListener('click', async () => {
+    const neu = {};
+    ov.querySelectorAll('[data-pd]').forEach(el => { const v = el.value.trim(); if(v) neu[el.dataset.pd] = v; });
+    const wert = Object.keys(neu).length ? neu : null;
+    if(supabaseClient && currentUser){
+      if(id !== CURRENT_PROJECT_ID && await projektFremdGeoeffnet(id)) return;
+      try { await projektMetaSetzen(id, '_stamm', wert); }
+      catch(e){ return toastError('Projektdaten konnten nicht gespeichert werden', e); }
+    }
+    if(wert) proj.stamm = wert; else delete proj.stamm;
+    saveProjectsLocal();
+    schliessen();
+    if(g('project-grid')) renderProjectGrid();
+    projektInfoZeigen();
+    toast('Projektdaten gespeichert');
+  });
+  document.addEventListener('keydown', taste, true);
+  document.body.appendChild(ov);
+  setTimeout(() => { const f = ov.querySelector('[data-pd="kunde"]'); if(f) f.focus(); }, 30);
 }

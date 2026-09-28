@@ -652,6 +652,7 @@
       <span id="actions-toggle-text">Aktionen anzeigen</span>
     </button>
 
+    <div class="projekt-info no-print" id="projekt-info" hidden></div>
     <div class="matrix-statuszeile no-print" id="matrix-statuszeile">
       <div class="sync-status sync-ok" id="sync-status" role="status" hidden>
         <span class="sync-punkt" aria-hidden="true"></span><span id="sync-status-text">Alles gespeichert</span>
@@ -995,6 +996,15 @@
         <datalist id="np-group-suggestions"></datalist>
         <div style="font-size:0.7rem; color:var(--muted); margin-top:4px;">Projekte mit gleicher Gruppe (z.B. verschiedene Dächer eines Kunden) lassen sich später zusammen filtern.</div>
       </div>
+      <div class="field">
+        <label>Kunde / Anlagenbetreiber (optional)</label>
+        <input type="text" id="np-kunde" placeholder="z. B. Tischlerei Seidl GmbH" class="sp-inp" autocomplete="off">
+      </div>
+      <div class="field np-adresse">
+        <label>Adresse der Anlage (optional)</label>
+        <input type="text" id="np-strasse" placeholder="Straße und Hausnummer" class="sp-inp" autocomplete="off">
+        <div class="np-plzort"><input type="text" id="np-plz" placeholder="PLZ" class="sp-inp" inputmode="numeric" autocomplete="off"><input type="text" id="np-ort" placeholder="Ort" class="sp-inp" autocomplete="off"></div>
+      </div>
       <div style="display:flex;gap:12px;margin-bottom:16px;">
         <div style="flex:1;">
           <label style="display:block;font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:4px;">Wp pro Modul</label>
@@ -1051,7 +1061,7 @@
   </div>
 </div>
 
-<script src="js/app.js?v=20260925j"></script>
+<script src="js/app.js?v=20260928a"></script>
 <script src="js/fotos.js?v=20260925b"></script>
 <!-- ══════════════════════════════════════════════════════════════════════
      DARSTELLUNG — jeder richtet sich die Oberflaeche selbst ein.
@@ -1067,7 +1077,7 @@
 
 
 
-<link rel="stylesheet" href="css/pro.css?v=20260925i">
+<link rel="stylesheet" href="css/pro.css?v=20260928a">
 <script src="js/sw-registrierung.js?v=20260923b"></script>
 </body>
 </html>

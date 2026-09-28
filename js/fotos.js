@@ -98,6 +98,7 @@ async function fotoHinzufuegen(pid, wr, datei){
   fotoAnzeigen(pid);
   const ok = await fotoSenden(eintrag);
   toast(ok ? 'Foto gespeichert' : 'Foto gemerkt – wird hochgeladen, sobald wieder Netz da ist');
+  if(typeof pflichtFotoGeaendert === 'function') pflichtFotoGeaendert(pid);
 }
 
 /* Ein Eintrag der Warteschlange hochladen. true = fertig (oder endgueltig verworfen). */
@@ -251,7 +252,7 @@ function fotoViewerZeigen(){
   fotoViewer.index = Math.min(fotoViewer.index, liste.length - 1);
   const f = liste[fotoViewer.index];
   const plan = getCurrentPlan();
-  const wrName = (plan[fotoViewer.wr] && plan[fotoViewer.wr].name) || ('WR ' + fotoViewer.wr);
+  const wrName = (plan[fotoViewer.wr] && plan[fotoViewer.wr].name) || (typeof fotoZielTitel === 'function' && fotoZielTitel(fotoViewer.wr)) || ('WR ' + fotoViewer.wr);
   g('fv-img').src = f.url || '';
   g('fv-titel').textContent = `${wrName} · Foto ${fotoViewer.index + 1} von ${liste.length}`;
   const zeit = f.erstellt_am ? new Date(f.erstellt_am).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }) : '';
@@ -286,6 +287,7 @@ async function fotoLoeschen(){
   toast('Foto gelöscht');
   fotoViewerZeigen();
   fotoAnzeigen(pid);
+  if(typeof pflichtFotoGeaendert === 'function') pflichtFotoGeaendert(pid);
 }
 
 fotoWartendLaden();

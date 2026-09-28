@@ -1464,3 +1464,35 @@ html body.pp .ppk-fertig span { flex: 1; }
   html body.pp .schritt { min-width: 128px; padding: 6px 8px; gap: 6px; }
   html body.pp .s-pfeil { display: none; }
 }
+
+/* ══ Pflichtfotos ══════════════════════════════════════════════════════ */
+html body.pp .foto-viewer { z-index: 9500; }
+html body.pp .pf-knopf { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; }
+html body.pp .pf-knopf .ico { color: var(--c-amber); }
+html body.pp .pf-knopf.pf-komplett .ico { color: var(--brand-text); }
+html body.pp .pf-liste { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; }
+html body.pp .pf-zeile { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+html body.pp .pf-status { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  border: 1.5px solid var(--line2); color: var(--mute); font-weight: 700; }
+html body.pp .pf-status .ico { width: 14px; height: 14px; }
+html body.pp .pf-ok .pf-status { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+html body.pp .pf-ent { opacity: .6; }
+html body.pp .pf-mitte { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+html body.pp .pf-mitte b { font-size: .92rem; font-weight: 600; }
+html body.pp .pf-mitte small { color: var(--mute); font-size: .78rem; }
+html body.pp .pf-zeile:not(.pf-ok):not(.pf-ent) .pf-mitte small { color: var(--c-amber); font-weight: 600; }
+html body.pp .pf-bilder { display: flex; gap: 4px; align-items: center; }
+html body.pp .pf-mehr { font-size: .78rem; color: var(--mute); }
+html body.pp .pf-aktionen { display: flex; gap: 6px; flex: 0 0 auto; }
+html body.pp .pf-foto { min-width: 48px; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; }
+html body.pp .pf-foto .ico { width: 22px; height: 22px; }
+html body.pp .pf-ent-knopf { min-height: 48px; font-size: .8rem; }
+html body.pp .pf-fuss { grid-template-columns: 1fr; }
+html body.pp .mm-pf { width: 100%; justify-content: center; display: inline-flex; gap: 6px; align-items: center; margin-top: 8px; min-height: 48px; }
+html body.pp .pf-einst { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+html body.pp .pf-einst-zeile { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: .9rem; }
+html body.pp .pf-einst-zeile span { flex: 1; }
+html body.pp .pf-einst-zeile em { font-style: normal; color: var(--mute); font-size: .78rem; }
+html body.pp .pf-neu { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+html body.pp .pf-neu .sp-inp { flex: 1 1 240px; text-align: left !important; }
+html body.pp .pf-neu-wr { display: inline-flex; gap: 6px; align-items: center; font-size: .86rem; color: var(--ink2); }

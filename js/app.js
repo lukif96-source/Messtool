@@ -41,6 +41,7 @@ const ICON = (() => {
     chevL:   svg('<path d="m15 6-6 6 6 6"/>'),
     arrowR:  svg('<path d="M5 12h14M13 6l6 6-6 6"/>'),
     check:   svg('<path d="M20 6 9 17l-5-5"/>'),
+    camera2: svg('<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'),
     pin:     svg('<path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>'),
     phone:   svg('<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.8 2z"/>'),
     sun:     svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>')
@@ -737,7 +738,7 @@ function istGeschuetzt(p){ return !!(p && (p.geschuetzt || p.locked || p.signatu
 // Diese Schluessel gehoeren nicht zum Anlagenplan, sondern sind Metadaten
 // im selben config-Feld. Sie stehen an EINER Stelle, damit beim Speichern
 // nie wieder einer vergessen wird.
-const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt', '_beschreibung', '_anlagenbuch', '_modul', '_archiviert', '_papierkorb', '_messung', '_stamm'];
+const CONFIG_META_KEYS = ['_lock', '_group', '_signature', '_abnahme', '_freigabe', '_geschuetzt', '_beschreibung', '_anlagenbuch', '_modul', '_archiviert', '_papierkorb', '_messung', '_stamm', '_fotos_entfaellt'];
 
 function buildProjectConfig(proj, fallbackEmail){
   const cfg = {};
@@ -753,6 +754,7 @@ function buildProjectConfig(proj, fallbackEmail){
   if(proj.papierkorb) cfg._papierkorb = proj.papierkorb;
   if(proj.messung) cfg._messung = proj.messung;
   if(proj.stamm) cfg._stamm = proj.stamm;
+  if(proj.fotosEntfaellt && proj.fotosEntfaellt.length) cfg._fotos_entfaellt = proj.fotosEntfaellt;
   // Unterschriften werden NIE weggeschrieben, auch nicht im entsperrten
   // Zustand. Das war die Stelle, an der beim Entsperren alles verschwand.
   if(proj.signature) cfg._signature = proj.signature;
@@ -4467,6 +4469,7 @@ async function fetchProjectsFromCloud(){
           papierkorb: cloudConfig._papierkorb || null,
           messung: cloudConfig._messung || null,
           stamm: cloudConfig._stamm || null,
+          fotosEntfaellt: cloudConfig._fotos_entfaellt || [],
           model_wp: cloudProj.modul_wp || 465, 
           plan: planOnly, 
           locked: !!lockMeta.locked,
@@ -4727,6 +4730,7 @@ async function onAuthenticated(user){
     g('user-badge-role').textContent = ROLLEN[currentUserRole] || '—';
     await initProjects();
     ppkStatusLaden().then(() => { if(g('project-grid')) renderProjectGrid(); });
+    pflichtfotosLaden().then(() => { if(g('project-grid')) renderProjectGrid(); projektInfoZeigen(); });
     if(typeof fotoWarteschlangeSenden === 'function') fotoWarteschlangeSenden();
     updateLockUI();
     updateRoleHint();
@@ -6769,6 +6773,9 @@ async function anlagenbuchErstellen(){
   if(!darf('anlagenbuch')) return toast('Keine Berechtigung');
   const proj = getCurrentProject();
   if(!proj || !abDaten) return toast('Bitte zuerst ein Projekt öffnen');
+  try { await fotoListeLaden(proj.id); pflichtAusListe(proj.id); } catch(_){}
+  const fehlen = pflichtOffen(proj);
+  if(fehlen.length && !await appFrage(`Es fehlen noch ${fehlen.length} Pflichtfotos:\n${fehlen.slice(0, 8).map(x => '• ' + x.titel).join('\n')}${fehlen.length > 8 ? '\n…' : ''}\n\nAnlagenbuch trotzdem erstellen?`)) return;
   const knoepfe = [...document.querySelectorAll('#ab-inhalt .ab-erstellen, #ab-inhalt .ab-fuss .btn')];
   knoepfe.forEach(b => b.disabled = true);
   const hinweise = [];
@@ -6799,7 +6806,7 @@ async function anlagenbuchErstellen(){
     try { if(abFirma && abFirma.logo) logo = await abBildEinbetten(pdf, await abBytes(await abDateiLink(abFirma.logo))); } catch(_){ hinweise.push('Firmenlogo konnte nicht geladen werden'); }
     try { if(!logo && logoEl) logo = await pdf.embedPng(logoEl.getAttribute('src')); } catch(_){}
     doc.logo = logo;
-    const fotos = { anlage: null, wr: [] };
+    const fotos = { anlage: null, wr: [], pflicht: [] };
     if(typeof fotoListeLaden === 'function'){
       try {
         await fotoListeLaden(proj.id);
@@ -6811,6 +6818,15 @@ async function anlagenbuchErstellen(){
         for(const wr of wrNrn){
           for(const f of fotoFuerWr(proj.id, wr).filter(f => f.url)){
             try { fotos.wr.push({ wr, img: await abBildEinbetten(pdf, await abBytes(f.url)) }); } catch(_){ hinweise.push(`Ein Foto von WR ${wr} konnte nicht geladen werden`); }
+          }
+        }
+        // Pflichtfotos (ohne Anlagenfoto und WR-Fotos – die stehen schon oben)
+        const pfPunkte = pflichtPunkte(proj).filter(x => x.ziel.startsWith('pf_'));
+        const pfPfade = pfPunkte.flatMap(x => fotoFuerWr(proj.id, x.ziel)).filter(f => !f.wartet).map(f => f.pfad);
+        if(pfPfade.length) await fotoUrlsHolen(pfPfade);
+        for(const x of pfPunkte){
+          for(const f of fotoFuerWr(proj.id, x.ziel).filter(f => f.url)){
+            try { fotos.pflicht.push({ titel: x.titel, img: await abBildEinbetten(pdf, await abBytes(f.url)) }); } catch(_){ hinweise.push(`Foto „${x.titel}“ konnte nicht geladen werden`); }
           }
         }
       } catch(e){ hinweise.push('Fotos konnten nicht vollständig geladen werden'); }
@@ -7056,7 +7072,7 @@ async function anlagenbuchErstellen(){
     }
 
     // ── Anhang A: Fotos ──
-    if(fotos.anlage || fotos.wr.length){
+    if(fotos.anlage || fotos.wr.length || fotos.pflicht.length){
       doc.neuesKapitel('Anhang A  Fotodokumentation');
       if(fotos.anlage){
         doc.platz(320);
@@ -7073,6 +7089,18 @@ async function anlagenbuchErstellen(){
           const h = doc.bild(f.img, spW, spH, x);
           hMax = Math.max(hMax, h);
           doc.text(`WR ${f.wr} – ${(plan[f.wr] && plan[f.wr].name) || ''}`, x, doc.y - h - 12, 8, fR, '#6b6b73');
+        });
+        doc.y -= hMax + 24;
+      }
+      for(let i = 0; i < fotos.pflicht.length; i += 2){
+        doc.platz(spH + 26);
+        let hMax = 0;
+        [fotos.pflicht[i], fotos.pflicht[i + 1]].forEach((f, j) => {
+          if(!f) return;
+          const x = doc.rl + j * (spW + 16);
+          const h = doc.bild(f.img, spW, spH, x);
+          hMax = Math.max(hMax, h);
+          doc.text(f.titel, x, doc.y - h - 12, 8, fR, '#6b6b73');
         });
         doc.y -= hMax + 24;
       }
@@ -7246,6 +7274,9 @@ function komponentenZeichnen(){
           <div><button type="button" class="btn btn-ghost ab-mini" onclick="messgeraetNeu()">Messgerät hinzufügen</button></div></div>
         <div class="ab-breit ab-klein" id="firma-status"></div>
       </div>
+    </details>
+    <details class="ab-kapitel"><summary><span class="ab-nr">P</span>Pflichtfotos<span class="ab-sum-info">Checkliste für jedes Projekt</span></summary>
+      <div class="ab-block" id="pf-einstellungen">${pflichtEinstellungenHtml()}</div>
     </details>
     <details class="ab-kapitel" open><summary><span class="ab-nr">K</span>Komponenten-Katalog<span class="ab-sum-info">Module, Wechselrichter, Speicher …</span></summary>
       <div class="ab-block">${abKatalogHtml()}</div>
@@ -8353,7 +8384,9 @@ function projektStatusHtml(p){
     .filter(s => s.id !== 'ab' || darf('anlagenbuch') || darf('ppk'));
   if(!schritte.length) return '';
   const art = { fertig: 'ok', arbeit: 'teil', offen: 'offen', gesperrt: 'wartet' };
-  return `<span class="st-chips">${schritte.map(s => `<span class="st-chip st-${art[s.status]}" title="${esc(s.name + ': ' + s.info)}">${s.kurz}</span>`).join('')}</span>`;
+  const pf = pflichtStand(p);
+  const fotoChip = pf && pf.gesamt ? `<span class="st-chip st-${pf.fertig === pf.gesamt ? 'ok' : (pf.fertig ? 'teil' : 'offen')}" title="Pflichtfotos">Fotos ${pf.fertig}/${pf.gesamt}</span>` : '';
+  return `<span class="st-chips">${schritte.map(s => `<span class="st-chip st-${art[s.status]}" title="${esc(s.name + ': ' + s.info)}">${s.kurz}</span>`).join('')}${fotoChip}</span>`;
 }
 
 // ── Fertige PDFs im Projekt ablegen (pv-dokumente/<projekt>/archiv/) ──────
@@ -8913,6 +8946,7 @@ function mmFertig(){
     <div class="mm-kopf"><div><div class="mm-projekt">${esc(getCurrentProject().name)}</div></div>
       <button type="button" class="mm-x" onclick="messmodusBeenden()" aria-label="Messmodus beenden">${ICON.x}</button></div>
     <div class="mm-ende-text"><strong>${alles ? 'Alle Strings gemessen' : 'Ende der Liste'}</strong><span>${fertig} von ${gesamt} Strings vollständig</span></div>
+    ${(() => { const pf = pflichtStand(getCurrentProject()); return pf && pf.gesamt && pf.fertig < pf.gesamt ? `<button type="button" class="btn btn-ghost mm-pf" onclick="messmodusBeenden(); pflichtfotosOeffnen();">${ICON.camera2} Pflichtfotos: noch ${pf.gesamt - pf.fertig} offen</button>` : ''; })()}
     <div class="mm-knoepfe">
       <button type="button" class="btn btn-ghost" onclick="messmodusBeenden()">Zur Matrix</button>
       ${alles && darf('export') ? '<button type="button" class="btn btn-primary" onclick="messmodusBeenden(); pruefprotokollDialog();">Prüfprotokoll erstellen</button>'
@@ -9459,7 +9493,8 @@ function projektInfoZeigen(){
   if(!p){ el.hidden = true; el.innerHTML = ''; return; }
   const karte = stammKartenLink(st), tel = stammTelLink(st && st.telefon);
   el.hidden = false;
-  const leiste = schrittLeisteHtml(p, 'dc');
+  const pfS = pflichtStand(p);
+  const leiste = schrittLeisteHtml(p, 'dc') + (pfS && pfS.gesamt ? `<button type="button" class="btn btn-ghost pf-knopf${pfS.fertig === pfS.gesamt ? ' pf-komplett' : ''}" onclick="pflichtfotosOeffnen()">${ICON.camera2} Pflichtfotos ${pfS.fertig}/${pfS.gesamt}</button>` : '');
   if(!st && !darfEdit){ el.innerHTML = leiste; return; }
   el.innerHTML = leiste + (st ? `<div class="pi-text">
       <strong>${esc([st.nr, st.kunde].filter(Boolean).join(' · ') || p.name)}</strong>
@@ -9588,4 +9623,209 @@ async function ppkWiederOeffnen(){
   ppkSpeichernVerzoegert();
   ppkZeichnen();
   if(g('project-grid')) renderProjectGrid();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//   PFLICHTFOTOS: feste Checkliste je Projekt
+//   Fotos liegen wie alle anderen in pv_photos (Ziel "wr:<schluessel>"):
+//   Anlagenfoto = "anlage", WR-Foto = WR-Nummer, sonst "pf_<punkt>[_<wr>]".
+// ══════════════════════════════════════════════════════════════════════════
+const PFLICHTFOTOS_STD = [
+  { key: 'anlage', titel: 'Anlagenfoto (Gesamtansicht)' },
+  { key: 'wr', titel: 'Wechselrichter montiert', jeWr: true },
+  { key: 'wrtyp', titel: 'Typenschild Wechselrichter', jeWr: true },
+  { key: 'zaehler', titel: 'Zählerkasten / Zählerverteiler' },
+  { key: 'acschutz', titel: 'AC-Absicherung (Leitungsschutz, FI)' },
+  { key: 'dcfrei', titel: 'DC-Freischalter / Feuerwehrschalter' },
+  { key: 'ues', titel: 'Überspannungsschutz' },
+  { key: 'schild', titel: 'Hinweisschild PV-Anlage' },
+  { key: 'pa', titel: 'Potentialausgleich / Erdung' },
+  { key: 'kabel', titel: 'Kabelführung / Dachdurchführung' },
+  { key: 'gak', titel: 'Generatoranschlusskasten (GAK)' },
+  { key: 'speicher', titel: 'Stromspeicher' }
+];
+let pflichtListe = null;          // aktive Punkte (aus pv_einstellungen oder Standard)
+let pflichtFotoZiele = {};        // project_id -> Set der Foto-Ziele mit mind. einem Foto
+async function pflichtfotosLaden(){
+  try {
+    const roh = JSON.parse(localStorage.getItem('pv_pflichtfotos') || 'null');
+    if(roh && Array.isArray(roh.liste)) pflichtListe = roh.liste;
+  } catch(_){}
+  if(!supabaseClient || !currentUser) return;
+  try {
+    const { data } = await supabaseClient.from('pv_einstellungen').select('wert').eq('schluessel', 'pflichtfotos').maybeSingle();
+    if(data && data.wert && Array.isArray(data.wert.liste)){ pflichtListe = data.wert.liste; try { localStorage.setItem('pv_pflichtfotos', JSON.stringify(data.wert)); } catch(_){} }
+  } catch(_){}
+  try {
+    const { data } = await supabaseClient.from('pv_photos').select('project_id, ziel').limit(20000);
+    pflichtFotoZiele = {};
+    (data || []).forEach(r => { (pflichtFotoZiele[r.project_id] = pflichtFotoZiele[r.project_id] || new Set()).add(String(r.ziel || '').replace(/^wr:/, '')); });
+  } catch(_){}
+}
+function pflichtAktiv(){ return (pflichtListe || PFLICHTFOTOS_STD.map(x => ({ ...x, aktiv: true }))).filter(x => x.aktiv !== false); }
+// Punkte eines Projekts (je-WR-Punkte fuer jeden Wechselrichter)
+function pflichtPunkte(p){
+  if(!p) return [];
+  const wrs = Object.keys(p.plan || {}).filter(k => !isNaN(parseInt(k, 10))).map(Number).sort((a, b) => a - b);
+  const name = wr => (p.plan[wr] && p.plan[wr].name) || `WR ${wr}`;
+  const zielFuer = (x, wr) => x.key === 'anlage' ? ANLAGENFOTO : (x.key === 'wr' ? String(wr) : `pf_${x.key}${wr !== undefined ? '_' + wr : ''}`);
+  return pflichtAktiv().flatMap(x => x.jeWr
+    ? wrs.map(wr => ({ key: x.key, ziel: zielFuer(x, wr), titel: `${x.titel} – ${name(wr)}` }))
+    : [{ key: x.key, ziel: zielFuer(x), titel: x.titel }]);
+}
+function pflichtHatFoto(p, ziel){
+  const s = pflichtFotoZiele[p.id];
+  if(s && s.has(ziel)) return true;
+  return typeof fotoFuerWr === 'function' && p.id === CURRENT_PROJECT_ID && fotoFuerWr(p.id, ziel).length > 0;
+}
+function pflichtEntfaellt(p, ziel){ return (p.fotosEntfaellt || []).includes(ziel); }
+function pflichtOffen(p){ return pflichtPunkte(p).filter(x => !pflichtHatFoto(p, x.ziel) && !pflichtEntfaellt(p, x.ziel)); }
+function pflichtStand(p){
+  if(!p) return null;
+  const punkte = pflichtPunkte(p);
+  if(!punkte.length) return null;
+  return { gesamt: punkte.length, fertig: punkte.length - pflichtOffen(p).length };
+}
+function pflichtAusListe(pid){
+  if(typeof fotoListe === 'undefined' || !fotoListe[pid]) return;
+  pflichtFotoZiele[pid] = new Set(fotoListe[pid].map(f => String(f.ziel || '').replace(/^wr:/, '')));
+}
+function fotoZielTitel(ziel){
+  const p = getCurrentProject();
+  const x = p && pflichtPunkte(p).find(y => y.ziel === String(ziel));
+  return x ? x.titel : (String(ziel) === ANLAGENFOTO ? 'Anlagenfoto' : '');
+}
+function pflichtFotoGeaendert(pid){
+  pflichtAusListe(pid);
+  if(g('pflichtfotos-dialog')) pflichtZeichnen();
+  projektInfoZeigen();
+}
+
+// ── Checkliste (Dialog) ───────────────────────────────────────────────────
+async function pflichtfotosOeffnen(){
+  const p = getCurrentProject();
+  if(!p) return toast('Bitte zuerst ein Projekt öffnen');
+  let ov = g('pflichtfotos-dialog');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'pflichtfotos-dialog'; ov.className = 'mm-overlay';
+    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Pflichtfotos');
+    ov.addEventListener('click', e => { if(e.target === ov) pflichtSchliessen(); });
+    document.body.appendChild(ov);
+    document.addEventListener('keydown', pflichtTaste, true);
+  }
+  ov.innerHTML = '<div class="mm-karte"><p class="ab-klein">Fotos werden geladen …</p></div>';
+  try { await fotoListeLaden(p.id); pflichtAusListe(p.id); } catch(_){}
+  const pfade = pflichtPunkte(p).flatMap(x => fotoFuerWr(p.id, x.ziel)).filter(f => !f.wartet).map(f => f.pfad);
+  try { if(pfade.length) await fotoUrlsHolen(pfade); } catch(_){}
+  pflichtZeichnen();
+}
+function pflichtTaste(e){ if(e.key === 'Escape' && !(g('foto-viewer') && g('foto-viewer').classList.contains('show'))){ e.preventDefault(); pflichtSchliessen(); } }
+function pflichtSchliessen(){
+  const ov = g('pflichtfotos-dialog');
+  if(ov) ov.remove();
+  document.removeEventListener('keydown', pflichtTaste, true);
+  projektInfoZeigen();
+  if(g('project-grid')) renderProjectGrid();
+}
+function pflichtDarfEntfaellt(p){ return darf('messwerte') || darf('projekt_verwalten') || currentUserRole === 'admin'; }
+function pflichtZeichnen(){
+  const ov = g('pflichtfotos-dialog'), p = getCurrentProject();
+  if(!ov || !p) return;
+  const punkte = pflichtPunkte(p), st = pflichtStand(p) || { gesamt: 0, fertig: 0 };
+  const darfFoto = fotoDarfAendern(), darfEnt = pflichtDarfEntfaellt(p) && (currentUserRole === 'admin' || !istGeschuetzt(p));
+  ov.innerHTML = `<div class="mm-karte pf-karte">
+    <div class="mm-kopf"><div><div class="mm-projekt">Pflichtfotos</div><div class="mm-wr">${esc(p.name)}</div></div>
+      <button type="button" class="mm-x" onclick="pflichtSchliessen()" aria-label="Schließen">${ICON.x}</button></div>
+    <div class="mm-fortschritt"><div class="mm-balken"><span style="width:${st.gesamt ? Math.round(st.fertig / st.gesamt * 100) : 0}%"></span></div><span>${st.fertig} von ${st.gesamt} erledigt</span></div>
+    <div class="pf-liste">${punkte.map(x => {
+      const fotos = fotoFuerWr(p.id, x.ziel), hat = fotos.length > 0, ent = pflichtEntfaellt(p, x.ziel);
+      return `<div class="pf-zeile${hat ? ' pf-ok' : (ent ? ' pf-ent' : '')}">
+        <span class="pf-status" aria-hidden="true">${hat ? ICON.check : (ent ? '–' : '')}</span>
+        <div class="pf-mitte"><b>${esc(x.titel)}</b>
+          ${hat ? `<div class="pf-bilder">${fotos.slice(-3).map((f, i) => `<button type="button" class="wr-foto-mini${f.wartet ? ' wartet' : ''}" onclick="fotoOeffnen('${esc(x.ziel)}', ${fotos.length - Math.min(3, fotos.length) + i})">${f.url ? `<img src="${esc(f.url)}" alt="" loading="lazy">` : ''}</button>`).join('')}${fotos.length > 3 ? `<span class="pf-mehr">+${fotos.length - 3}</span>` : ''}</div>`
+            : (ent ? '<small>entfällt bei diesem Projekt</small>' : '<small>fehlt</small>')}</div>
+        <div class="pf-aktionen">
+          ${darfFoto && !ent ? `<button type="button" class="btn btn-ghost pf-foto" onclick="pflichtFotoAufnehmen('${esc(x.ziel)}')" aria-label="Foto aufnehmen: ${esc(x.titel)}">${ICON.camera2}</button>` : ''}
+          ${darfEnt && !hat ? `<button type="button" class="btn btn-ghost pf-ent-knopf" onclick="pflichtEntfaelltUmschalten('${esc(x.ziel)}')">${ent ? 'doch nötig' : 'entfällt'}</button>` : ''}
+        </div></div>`; }).join('')}</div>
+    <div class="mm-knoepfe pf-fuss"><button type="button" class="btn btn-primary" onclick="pflichtSchliessen()">Fertig</button></div>
+  </div>`;
+}
+function pflichtFotoAufnehmen(ziel){
+  const p = getCurrentProject();
+  if(!p || !fotoDarfAendern()) return toast('Keine Berechtigung');
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.setAttribute('capture', 'environment'); inp.style.display = 'none';
+  inp.onchange = async () => {
+    const d = inp.files && inp.files[0];
+    inp.remove();
+    if(!d) return;
+    await fotoHinzufuegen(p.id, ziel, d);
+    (pflichtFotoZiele[p.id] = pflichtFotoZiele[p.id] || new Set()).add(ziel);
+    try { await fotoListeLaden(p.id); const pf = fotoFuerWr(p.id, ziel).filter(f => !f.wartet).map(f => f.pfad); if(pf.length) await fotoUrlsHolen(pf); } catch(_){}
+    pflichtFotoGeaendert(p.id);
+  };
+  document.body.appendChild(inp);
+  inp.click();
+}
+async function pflichtEntfaelltUmschalten(ziel){
+  const p = getCurrentProject();
+  if(!p) return;
+  const liste = new Set(p.fotosEntfaellt || []);
+  if(liste.has(ziel)) liste.delete(ziel); else liste.add(ziel);
+  const neu = [...liste];
+  if(supabaseClient && currentUser){
+    try { await projektMetaSetzen(p.id, '_fotos_entfaellt', neu.length ? neu : null); }
+    catch(e){ return toastError('Konnte nicht gespeichert werden', e); }
+  }
+  p.fotosEntfaellt = neu;
+  saveProjectsLocal();
+  pflichtZeichnen();
+}
+
+// ── Einstellungen (Reiter Komponenten) ───────────────────────────────────
+function pflichtEinstellungenHtml(){
+  const liste = pflichtListe || PFLICHTFOTOS_STD.map(x => ({ ...x, aktiv: true }));
+  const darfEdit = darf('katalog');
+  return `<p class="ab-klein">Diese Fotos gehören zu jedem Projekt. Punkte „je Wechselrichter“ erscheinen für jeden WR einzeln. Auf der Baustelle kann ein Punkt als „entfällt“ markiert werden.</p>
+    <div class="pf-einst">${liste.map((x, i) => `<label class="pf-einst-zeile"><input type="checkbox" data-pf-aktiv="${i}"${x.aktiv !== false ? ' checked' : ''}${darfEdit ? '' : ' disabled'}>
+      <span>${esc(x.titel)}${x.jeWr ? ' <em>je Wechselrichter</em>' : ''}</span>
+      ${darfEdit && x.eigen ? `<button type="button" class="btn btn-ghost ab-mini ab-gefahr" onclick="pflichtPunktEntfernen(${i})">Entfernen</button>` : ''}</label>`).join('')}</div>
+    ${darfEdit ? `<div class="pf-neu"><input class="sp-inp" id="pf-neu-titel" placeholder="Neuer Punkt, z. B. Dachhaken im Detail" autocomplete="off">
+      <label class="pf-neu-wr"><input type="checkbox" id="pf-neu-jewr"> je Wechselrichter</label>
+      <button type="button" class="btn btn-ghost" onclick="pflichtPunktNeu()">Hinzufügen</button></div>
+      <div class="ab-klein" id="pf-status"></div>` : ''}`;
+}
+async function pflichtEinstellungenSpeichern(liste){
+  pflichtListe = liste;
+  try { localStorage.setItem('pv_pflichtfotos', JSON.stringify({ liste })); } catch(_){}
+  const box = g('pf-einstellungen'); if(box) box.innerHTML = pflichtEinstellungenHtml();
+  const st = g('pf-status');
+  try {
+    const { error } = await supabaseClient.from('pv_einstellungen').upsert({ schluessel: 'pflichtfotos', wert: { liste }, geaendert_am: new Date().toISOString() });
+    if(error) throw error;
+    if(st) st.textContent = 'Gespeichert';
+  } catch(e){ toastError('Pflichtfoto-Liste konnte nicht gespeichert werden', e); }
+}
+document.addEventListener('change', e => {
+  const el = e.target;
+  if(!el || !el.dataset || el.dataset.pfAktiv === undefined || !darf('katalog')) return;
+  const liste = (pflichtListe || PFLICHTFOTOS_STD.map(x => ({ ...x, aktiv: true }))).map(x => ({ ...x }));
+  liste[+el.dataset.pfAktiv].aktiv = el.checked;
+  pflichtEinstellungenSpeichern(liste);
+});
+function pflichtPunktNeu(){
+  if(!darf('katalog')) return;
+  const titel = (g('pf-neu-titel').value || '').trim();
+  if(!titel) return toast('Bitte eine Bezeichnung eingeben');
+  const liste = (pflichtListe || PFLICHTFOTOS_STD.map(x => ({ ...x, aktiv: true }))).map(x => ({ ...x }));
+  liste.push({ key: 'e' + Date.now().toString(36), titel, jeWr: g('pf-neu-jewr').checked, aktiv: true, eigen: true });
+  pflichtEinstellungenSpeichern(liste);
+}
+async function pflichtPunktEntfernen(i){
+  const liste = (pflichtListe || []).map(x => ({ ...x }));
+  if(!liste[i] || !await appFrage(`Punkt „${liste[i].titel}“ aus der Liste entfernen? Bereits aufgenommene Fotos bleiben erhalten.`)) return;
+  liste.splice(i, 1);
+  pflichtEinstellungenSpeichern(liste);
 }

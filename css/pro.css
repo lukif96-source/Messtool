@@ -1666,3 +1666,8 @@ html body.pp .ab-ppk-zeile input { margin-top: 3px; width: 18px; height: 18px; f
 html body.pp .ab-ppk-zeile span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 html body.pp .ab-ppk-zeile small { color: var(--mute); font-size: .8rem; overflow-wrap: anywhere; }
 html body.pp .ab-ppk-zeile small.neu { color: var(--brand-text); font-weight: 600; }
+
+/* Anlagenbuch: Unterschrift der rechtlichen Bestaetigung */
+html body.pp .ab-sig { margin-top: 8px; }
+html body.pp .ab-sig-name { max-width: 600px; margin: 8px 0 0; }
+html body.pp .ab-sig .ppk-sig-knoepfe .ab-klein { display: inline-flex; align-items: center; gap: 6px; }

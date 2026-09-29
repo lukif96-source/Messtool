@@ -5986,7 +5986,7 @@ const AB_KAPITEL = [
     ['betrieb.wartung', 'Wartung und Kontrolle (eine Zeile pro Punkt)', 'area'],
     ['betrieb.service', 'Service-Kontakt (leer = aus den Firmendaten)', 'area']
   ]},
-  { id: 'bestaetigung', titel: 'Rechtliche Bestätigung', fuer: AB_ALLE, felder: [['@firma', 'Firmendaten']] }
+  { id: 'bestaetigung', titel: 'Rechtliche Bestätigung', fuer: AB_ALLE, felder: [['@firma', 'Firmendaten'], ['@unterschrift', 'Unterschrift']] }
 ];
 function abKapitelFuer(bereich){ return AB_KAPITEL.filter(k => k.fuer.includes(bereich || 'gewerbe')); }
 function abBereich(){ return projektBereich(getCurrentProject()); }
@@ -6135,6 +6135,7 @@ function abFeldHtml([pfad, label, typ, opt]){
       + liste.map(m => `<option value="${esc(m.id)}">${esc(messgeraetName(m))}</option>`).join('') + '</select></label>';
   }
   if(pfad === '@firma') return abFirmaUebersichtHtml();
+  if(pfad === '@unterschrift') return abUnterschriftHtml();
   // Aufstellungsort/Lueftung nur, wenn ein Speicher gewaehlt ist
   if(/^speicher\.(ort|lueftung)$/.test(pfad) && !abWert('speicher.komponente')) return '';
   if(typ === 'vs'){
@@ -6252,6 +6253,7 @@ function abZeichnen(){
     <details class="ab-kapitel"><summary><span class="ab-nr">A</span>Datenblätter & Dokumente</summary><div class="ab-block">${abDokumenteHtml()}</div></details>
     <div class="ab-fuss"><button type="button" class="btn btn-primary" onclick="anlagenbuchErstellen()">Anlagenbuch erstellen (PDF)</button></div>`;
   abFotoWahlZeichnen();
+  abSigEinrichten();
 }
 
 // Eingaben speichern (ein Listener fuer alles)
@@ -6735,6 +6737,8 @@ async function anlagenbuchErstellen(){
   try { await fotoListeLaden(proj.id); pflichtAusListe(proj.id); } catch(_){}
   const fehlen = pflichtOffen(proj);
   if(fehlen.length && !await appFrage(`Es fehlen noch ${fehlen.length} Pflichtfotos:\n${fehlen.slice(0, 8).map(x => '• ' + x.titel).join('\n')}${fehlen.length > 8 ? '\n…' : ''}\n\nAnlagenbuch trotzdem erstellen?`)) return;
+  if(!(abDaten.unterschrift && abDaten.unterschrift.dataUrl)
+    && !await appFrage('Die rechtliche Bestätigung ist noch nicht unterschrieben.\n\nTrotzdem erstellen? Das Unterschriftsfeld bleibt dann für eine handschriftliche Unterschrift frei.')) return;
   // Pruefbefund: das zuletzt abgelegte PPK-PDF wird hinten angehaengt
   let ppkPdf = null;
   try { ppkPdf = await abPpkPdfLaden(proj.id); } catch(e){ console.warn('PPK-PDF:', e); }
@@ -6797,8 +6801,10 @@ async function anlagenbuchErstellen(){
     const stempelK = abKatalog.find(k => k.kategorie === 'stempel' && k.pfad && /image/.test(k.mime || ''));
     let stempel = null;
     if(stempelK){ try { stempel = await abBildEinbetten(pdf, await abBytes(await abDateiLink(stempelK.pfad))); } catch(_){ hinweise.push('Firmenstempel konnte nicht geladen werden'); } }
+    // Rechtliche Bestaetigung: im Anlagenbuch geleistete Unterschrift der verantwortlichen Person
+    const abSig = d.unterschrift || {};
     let unterschrift = null;
-    if(proj.signature && proj.signature.dataUrl){ try { unterschrift = await pdf.embedPng(proj.signature.dataUrl); } catch(_){} }
+    if(abSig.dataUrl){ try { unterschrift = await pdf.embedPng(abSig.dataUrl); } catch(_){ hinweise.push('Unterschrift konnte nicht eingefügt werden'); } }
 
     // ── Deckblatt ──
     abStatus('Seiten werden erstellt …');
@@ -6952,8 +6958,8 @@ async function anlagenbuchErstellen(){
           const s = Math.min((boxW - 20) / unterschrift.width, 60 / unterschrift.height);
           p6.drawImage(unterschrift, { x: doc.rl + 10, y: boxY - 74, width: unterschrift.width * s, height: unterschrift.height * s });
         }
-        doc.text(`${er.ort || ''}${er.ort ? ', ' : ''}${datum(proj.signature && proj.signature.at) || heute}`, doc.rl + 10, boxY - boxH + 24, 8.5, fR, '#3f3f46');
-        doc.text(`Unterschrift ${er.verantwortlich || (proj.signature && proj.signature.name) || ''}`, doc.rl + 10, boxY - boxH + 10, 8, fR, '#6b6b73');
+        doc.text(`${er.ort || ''}${er.ort ? ', ' : ''}${unterschrift ? (datum(abSig.at) || heute) : ''}`, doc.rl + 10, boxY - boxH + 24, 8.5, fR, '#3f3f46');
+        doc.text(`Unterschrift ${abSig.name || er.verantwortlich || ''}`, doc.rl + 10, boxY - boxH + 10, 8, fR, '#6b6b73');
         if(stempel){
           const s = Math.min((boxW - 20) / stempel.width, (boxH - 30) / stempel.height);
           p6.drawImage(stempel, { x: doc.rl + boxW + 34, y: boxY - boxH + 22, width: stempel.width * s, height: stempel.height * s });
@@ -10465,3 +10471,57 @@ function abPpkDialog(){
   document.addEventListener('keydown', taste, true);
   document.body.appendChild(ov);
 }
+
+// ── Anlagenbuch: rechtliche Bestaetigung online unterschreiben ────────────
+// Gespeichert im Anlagenbuch (abDaten.unterschrift = { dataUrl, name, at }).
+function abUnterschriftHtml(){
+  const sig = (abDaten && abDaten.unterschrift) || {};
+  const er = abErrichter(abDaten);
+  const dis = abDarfAendern() ? '' : ' disabled';
+  const name = sig.name || er.verantwortlich || anzeigeName() || '';
+  return `<div class="ab-breit ppk-sig ab-sig">
+    <span class="ab-feld-titel">Unterschrift der verantwortlichen Person</span>
+    <label class="ab-feld ab-sig-name"><span>Name</span><input type="text" class="sp-inp" data-ab-sig-name value="${esc(name)}" autocomplete="name"${dis}></label>
+    <canvas data-ab-sig width="600" height="160" aria-label="Unterschriftsfeld"></canvas>
+    <div class="ppk-sig-knoepfe"><span class="ab-klein">${sig.dataUrl
+      ? `${ICON.check} Unterschrieben${sig.at ? ` am ${esc(new Date(sig.at).toLocaleDateString('de-AT'))}` : ''} – steht so im Anlagenbuch.`
+      : 'Mit Finger oder Maus unterschreiben – kommt ins Feld „Unterschrift“ neben die Stampiglie.'}</span>
+      <button type="button" class="btn btn-ghost ab-mini" onclick="abSigLoeschen()"${dis}>Löschen</button></div></div>`;
+}
+function abSigEinrichten(){
+  const c = document.querySelector('#ab-inhalt canvas[data-ab-sig]');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.strokeStyle = '#1e3a8a';
+  const sig = abDaten && abDaten.unterschrift;
+  if(sig && sig.dataUrl){ const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, c.width, c.height); img.src = sig.dataUrl; }
+  if(!abDarfAendern()) return;
+  let zieht = false;
+  const pos = e => { const r = c.getBoundingClientRect(); const p = e.touches ? e.touches[0] : e; return [(p.clientX - r.left) * c.width / r.width, (p.clientY - r.top) * c.height / r.height]; };
+  const start = e => { zieht = true; const [x, y] = pos(e); ctx.beginPath(); ctx.moveTo(x, y); e.preventDefault(); };
+  const zug = e => { if(!zieht) return; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); e.preventDefault(); };
+  const ende = () => {
+    if(!zieht) return;
+    zieht = false;
+    const feld = document.querySelector('#ab-inhalt [data-ab-sig-name]');
+    abDaten.unterschrift = { dataUrl: c.toDataURL('image/png'), name: (feld && feld.value.trim()) || abErrichter(abDaten).verantwortlich || anzeigeName() || '', at: new Date().toISOString() };
+    abSpeichernVerzoegert();
+    const info = c.parentElement.querySelector('.ppk-sig-knoepfe .ab-klein');
+    if(info) info.innerHTML = `${ICON.check} Unterschrieben am ${esc(new Date().toLocaleDateString('de-AT'))} – steht so im Anlagenbuch.`;
+  };
+  c.addEventListener('mousedown', start); c.addEventListener('mousemove', zug); c.addEventListener('mouseup', ende); c.addEventListener('mouseleave', ende);
+  c.addEventListener('touchstart', start, { passive: false }); c.addEventListener('touchmove', zug, { passive: false }); c.addEventListener('touchend', ende);
+}
+function abSigLoeschen(){
+  if(!abDaten || !abDarfAendern()) return;
+  const c = document.querySelector('#ab-inhalt canvas[data-ab-sig]');
+  if(c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  delete abDaten.unterschrift;
+  abSpeichernVerzoegert();
+  abZeichnenBehalten();
+}
+document.addEventListener('input', e => {
+  const el = e.target;
+  if(!el || !el.matches || !el.matches('#ab-inhalt [data-ab-sig-name]') || !abDaten || !abDarfAendern()) return;
+  if(abDaten.unterschrift){ abDaten.unterschrift.name = el.value.trim(); abSpeichernVerzoegert(); }
+});

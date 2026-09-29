@@ -6243,6 +6243,8 @@ function abZeichnen(){
       <button type="button" class="btn btn-primary ab-erstellen" onclick="anlagenbuchErstellen()">Anlagenbuch erstellen (PDF)</button>
     </div>
     ${gesperrt ? '<div class="ab-info">Du kannst das Anlagenbuch nur ansehen.</div>' : ''}
+    ${!(abDaten.unterschrift && abDaten.unterschrift.dataUrl) && !gesperrt ? `<div class="ab-sig-offen"><span>${ICON.pencil} Die rechtliche Bestätigung ist noch nicht unterschrieben.</span>
+      <button type="button" class="btn btn-primary ab-mini" onclick="abZurUnterschrift()">Jetzt unterschreiben</button></div>` : ''}
     <div class="ab-ppk-leiste"><span>${ICON.check} Prüfbefund: das abgeschlossene PPK wird beim Erstellen hinten angehängt.</span>
       ${abPpk && !gesperrt ? `<button type="button" class="btn btn-ghost ab-mini" onclick="abPpkDialog()">${ICON.refresh} Angaben aus dem PPK übernehmen</button>` : ''}</div>
     ${schrittGesperrt(proj, 'ab') ? '<div class="ab-info">Das PPK ist noch nicht abgeschlossen – als Admin trotzdem geöffnet.</div>' : ''}
@@ -10482,7 +10484,8 @@ function abUnterschriftHtml(){
   return `<div class="ab-breit ppk-sig ab-sig">
     <span class="ab-feld-titel">Unterschrift der verantwortlichen Person</span>
     <label class="ab-feld ab-sig-name"><span>Name</span><input type="text" class="sp-inp" data-ab-sig-name value="${esc(name)}" autocomplete="name"${dis}></label>
-    <canvas data-ab-sig width="600" height="160" aria-label="Unterschriftsfeld"></canvas>
+    <div class="ab-sig-flaeche${sig.dataUrl ? ' hat-sig' : ''}"><canvas data-ab-sig width="600" height="160" aria-label="Unterschriftsfeld"></canvas>
+      <span class="ab-sig-platzhalter" aria-hidden="true">${ICON.pencil} Hier unterschreiben</span></div>
     <div class="ppk-sig-knoepfe"><span class="ab-klein">${sig.dataUrl
       ? `${ICON.check} Unterschrieben${sig.at ? ` am ${esc(new Date(sig.at).toLocaleDateString('de-AT'))}` : ''} – steht so im Anlagenbuch.`
       : 'Mit Finger oder Maus unterschreiben – kommt ins Feld „Unterschrift“ neben die Stampiglie.'}</span>
@@ -10498,7 +10501,7 @@ function abSigEinrichten(){
   if(!abDarfAendern()) return;
   let zieht = false;
   const pos = e => { const r = c.getBoundingClientRect(); const p = e.touches ? e.touches[0] : e; return [(p.clientX - r.left) * c.width / r.width, (p.clientY - r.top) * c.height / r.height]; };
-  const start = e => { zieht = true; const [x, y] = pos(e); ctx.beginPath(); ctx.moveTo(x, y); e.preventDefault(); };
+  const start = e => { zieht = true; c.parentElement.classList.add('hat-sig'); const [x, y] = pos(e); ctx.beginPath(); ctx.moveTo(x, y); e.preventDefault(); };
   const zug = e => { if(!zieht) return; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); e.preventDefault(); };
   const ende = () => {
     if(!zieht) return;
@@ -10506,7 +10509,9 @@ function abSigEinrichten(){
     const feld = document.querySelector('#ab-inhalt [data-ab-sig-name]');
     abDaten.unterschrift = { dataUrl: c.toDataURL('image/png'), name: (feld && feld.value.trim()) || abErrichter(abDaten).verantwortlich || anzeigeName() || '', at: new Date().toISOString() };
     abSpeichernVerzoegert();
-    const info = c.parentElement.querySelector('.ppk-sig-knoepfe .ab-klein');
+    const info = c.closest('.ab-sig').querySelector('.ppk-sig-knoepfe .ab-klein');
+    const hinweis = document.querySelector('#ab-inhalt .ab-sig-offen');
+    if(hinweis) hinweis.remove();
     if(info) info.innerHTML = `${ICON.check} Unterschrieben am ${esc(new Date().toLocaleDateString('de-AT'))} – steht so im Anlagenbuch.`;
   };
   c.addEventListener('mousedown', start); c.addEventListener('mousemove', zug); c.addEventListener('mouseup', ende); c.addEventListener('mouseleave', ende);
@@ -10525,3 +10530,11 @@ document.addEventListener('input', e => {
   if(!el || !el.matches || !el.matches('#ab-inhalt [data-ab-sig-name]') || !abDaten || !abDarfAendern()) return;
   if(abDaten.unterschrift){ abDaten.unterschrift.name = el.value.trim(); abSpeichernVerzoegert(); }
 });
+// Sprung zum Unterschriftsfeld (Kapitel "Rechtliche Bestaetigung")
+function abZurUnterschrift(){
+  const c = document.querySelector('#ab-inhalt canvas[data-ab-sig]');
+  if(!c) return;
+  const d = c.closest('details');
+  if(d) d.open = true;
+  c.closest('.ab-sig').scrollIntoView({ block: 'center', behavior: 'smooth' });
+}

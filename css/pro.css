@@ -1671,3 +1671,20 @@ html body.pp .ab-ppk-zeile small.neu { color: var(--brand-text); font-weight: 60
 html body.pp .ab-sig { margin-top: 8px; }
 html body.pp .ab-sig-name { max-width: 600px; margin: 8px 0 0; }
 html body.pp .ab-sig .ppk-sig-knoepfe .ab-klein { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Unterschriftsfeld deutlich erkennbar */
+html body.pp .ab-sig-flaeche { position: relative; max-width: 600px; }
+html body.pp .ab-sig-flaeche canvas { border: 2px dashed var(--brand) !important; }
+html body.pp .ab-sig-platzhalter { position: absolute; inset: 6px 0 0 0; display: flex; align-items: center; justify-content: center; gap: 8px;
+  color: #71717a; font-size: 1rem; font-weight: 600; pointer-events: none; }
+html body.pp .ab-sig-platzhalter .ico { width: 18px; height: 18px; }
+html body.pp .ab-sig-flaeche.hat-sig .ab-sig-platzhalter { display: none; }
+html body.pp .ab-sig-offen { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin: 0 0 12px;
+  padding: 10px 12px; border: 1px solid var(--warn); border-radius: var(--r-sm); background: var(--warn-soft); font-size: .88rem; color: var(--ink); }
+html body.pp .ab-sig-offen > span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Hinweis: neue App-Version */
+html body.pp .neue-version { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 9000; display: flex; align-items: center; gap: 12px;
+  width: max-content; max-width: calc(100vw - 24px); padding: 10px 12px 10px 16px; border-radius: var(--r); border: 1px solid var(--line2);
+  background: var(--pa2); color: var(--ink); box-shadow: var(--sh-lg); font-size: .9rem; }
+html body.pp .neue-version .btn { min-height: 40px; }

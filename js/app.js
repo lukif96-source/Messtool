@@ -213,39 +213,6 @@ async function rechteZuruecksetzen(uid){
   } catch(e){ toastError('Zurücksetzen fehlgeschlagen', e); }
 }
 
-function esc(value){
-  return String(value ?? '').replace(/[&<>'"]/g, char => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-  })[char]);
-}
-
-function normaliseNumber(field, value){
-  const raw = String(value ?? '').trim();
-  if(raw === '') return '';
-  const normalized = raw.replace(',', '.');
-  const rules = {
-    mod:  { min: 0, max: 100, integer: true, label: 'Module' },
-    uoc:  { min: 0, max: 2000, label: 'Uoc' },
-    isc:  { min: 0, max: 100, label: 'Isc' },
-    riso: { min: 0, max: 10000, label: 'Riso' }
-  };
-  const rule = rules[field];
-  if(!rule || !/^\d+(\.\d+)?$/.test(normalized)) return null;
-  const number = Number(normalized);
-  if(!Number.isFinite(number) || number < rule.min || number > rule.max || (rule.integer && !Number.isInteger(number))) return null;
-  return rule.integer ? String(number) : normalized.replace('.', ',');
-}
-
-function validationMessage(field){
-  const messages = {
-    mod: 'Module: ganze Zahl von 0 bis 100 eingeben.',
-    uoc: 'Uoc: Wert von 0 bis 2.000 V eingeben.',
-    isc: 'Isc: Wert von 0 bis 100 A eingeben.',
-    riso: 'Riso: Wert von 0 bis 10.000 MΩ eingeben.'
-  };
-  return messages[field] || 'Ungültiger Wert.';
-}
-
 let toast_t = null;
 function toast(msg, ms=3000){
   const t = g('toast'); t.textContent = msg; t.classList.add('show');
@@ -384,17 +351,6 @@ function switchMainTab(tab){
    ins Projekt und nichts in die Cloud, merkt sich nur die letzten Eingaben
    (getrennt fuer DC und AC) auf diesem Geraet.
    ══════════════════════════════════════════════════════════════════════════ */
-const QS_KAPPA = { cu: 56, al: 35 };   // Leitfaehigkeit in m/(Ohm*mm2)
-const QS_NORM = {
-  cu: [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300],
-  al: [16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300]     // Alu erst ab 16 mm2 ueblich
-};
-// AC: Spannung wird ausgewaehlt; 230 V einphasig, 400/800 V dreiphasig (Leiter-Leiter)
-const QS_AC = {
-  '230': { k: 2,            leiter: 2, name: 'AC 230 V',  hint: 'Einphasig, Leiter gegen Neutralleiter' },
-  '400': { k: Math.sqrt(3), leiter: 3, name: 'AC 400 V', hint: 'Dreiphasig, Leiter gegen Leiter' },
-  '800': { k: Math.sqrt(3), leiter: 3, name: 'AC 800 V', hint: 'Dreiphasig, Leiter gegen Leiter – große Wechselrichter' }
-};
 const QS_HINT_I = {
   dc: 'Betriebsstrom, z. B. Impp des Strangs oder Summe am GAK',
   ac: 'Nennleistung (Scheinleistung) des Wechselrichters laut Datenblatt'
@@ -508,43 +464,19 @@ function qsBerechnen(){
   if(!out) return;
   qsWerte[qsArt] = qsFelderLesen();
   qsSpeichern();
-  const w = qsWerte[qsArt];
-  const istAc = qsArt === 'ac';
+  // Die Rechnung selbst steht in js/logik.js (querschnittRechnen), hier nur die Anzeige
+  const r = querschnittRechnen({ art: qsArt, mat: qsMat, uac: qsUac, ...qsWerte[qsArt] });
+  if(r.fehlt){
+    out.innerHTML = `<p class="qs-leer">${r.fehlt.join(', ').replace(/, ([^,]*)$/, ' und $1')} eingeben – das Ergebnis erscheint sofort.</p>`;
+    return;
+  }
+  if(r.fehler){
+    out.innerHTML = `<p class="qs-leer">${r.fehler}</p>`;
+    return;
+  }
+
+  const { istAc, I, S, U, L, du, cos, kappa, duV, aMin, reihe, iEmpf, anderes, iAnders, spannungsfall, verlust } = r;
   const ac = QS_AC[qsUac];
-  const L = toNum(w.laenge), du = toNum(w.du);
-  const U = istAc ? Number(qsUac) : toNum(w.spannung);
-  const cos = istAc ? toNum(w.cosphi) : 1;
-  // AC: Strom je Aussenleiter aus der Scheinleistung – einphasig I = S ÷ U, dreiphasig I = S ÷ (√3 · U)
-  const S = istAc ? toNum(w.strom) : 0;
-  const I = istAc ? (S > 0 ? S * 1000 / ((qsUac === '230' ? 1 : Math.sqrt(3)) * U) : NaN) : toNum(w.strom);
-
-  const fehlt = [];
-  if(!(I > 0)) fehlt.push(istAc ? 'Leistung' : 'Strom');
-  if(!(U > 0)) fehlt.push('Spannung');
-  if(!(L > 0)) fehlt.push('Länge');
-  if(fehlt.length){
-    out.innerHTML = `<p class="qs-leer">${fehlt.join(', ').replace(/, ([^,]*)$/, ' und $1')} eingeben – das Ergebnis erscheint sofort.</p>`;
-    return;
-  }
-  if(!(du > 0 && du <= 20)){
-    out.innerHTML = '<p class="qs-leer">Zulässigen Spannungsfall zwischen 0 und 20 % eingeben.</p>';
-    return;
-  }
-  if(!(cos > 0 && cos <= 1)){
-    out.innerHTML = '<p class="qs-leer">cos φ zwischen 0 und 1 eingeben.</p>';
-    return;
-  }
-
-  const kappa = QS_KAPPA[qsMat];
-  const k = istAc ? ac.k : 2;
-  const leiter = istAc ? ac.leiter : 2;
-  const faktor = k * cos;                      // DC: 2 · AC 230 V: 2·cos φ · AC 400/800 V: √3·cos φ
-  const duV = U * du / 100;                    // zulaessiger Spannungsfall in V
-  const aMin = faktor * L * I / (kappa * duV);
-  const reihe = QS_NORM[qsMat];
-  const iEmpf = reihe.findIndex(a => a >= aMin - 1e-9);
-  const spannungsfall = a => faktor * L * I / (kappa * a);
-  const verlust = a => leiter * I * I * L / (kappa * a);
   const matName = qsMat === 'cu' ? 'Kupfer' : 'Aluminium';
   const artName = istAc ? ac.name : 'DC';
   const kTxt = !istAc ? '2' : `${qsUac === '230' ? '2' : '√3'} · ${qsZahl(cos, 2)}`;
@@ -561,11 +493,8 @@ function qsBerechnen(){
   }
 
   const aEmpf = reihe[iEmpf];
-  const anderes = qsMat === 'cu' ? 'al' : 'cu';
   const andersName = anderes === 'cu' ? 'Kupfer' : 'Aluminium';
   const reiheAnders = QS_NORM[anderes];
-  const aMinAnders = faktor * L * I / (QS_KAPPA[anderes] * duV);
-  const iAnders = reiheAnders.findIndex(a => a >= aMinAnders - 1e-9);
   const andersTxt = iAnders < 0 ? `mehr als ${qsQuer(reiheAnders[reiheAnders.length - 1])} mm²` : `${qsQuer(reiheAnders[iAnders])} mm²`;
   // Ein Querschnitt darunter (zu klein) und bis zu fuenf darueber – jeweils mit
   // dem Spannungsfall, damit man sieht, was ein groesserer Querschnitt bringt.
@@ -1803,7 +1732,7 @@ function updateLockUI(){
     if(locked){
       const lockedBy = p.locked_by || 'Admin';
       const lockedAt = p.locked_at ? new Date(p.locked_at).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
-      const thumb = sig => sig && sig.dataUrl ? `<img src="${sig.dataUrl}" alt="Unterschrift" style="height:28px;vertical-align:middle;margin-left:8px;background:#fff;border-radius:4px;padding:2px 6px;">` : '';
+      const thumb = sig => sig && sig.dataUrl ? `<img src="${esc(sig.dataUrl)}" alt="Unterschrift" style="height:28px;vertical-align:middle;margin-left:8px;background:#fff;border-radius:4px;padding:2px 6px;">` : '';
       const teile = [];
       if(p.signature) teile.push(`Prüfer <strong>${esc(p.signature.name)}</strong>${thumb(p.signature)}`);
       if(p.abnahme)   teile.push(`Abnahme <strong>${esc(p.abnahme.name)}</strong>${thumb(p.abnahme)}`);
@@ -1855,7 +1784,7 @@ function updateLockUI(){
   if(printStamp){
     const feld = (sig, rolle) => sig
       ? `<div style="display:inline-block;margin:0 18px;text-align:center;vertical-align:top;">`
-        + (sig.dataUrl ? `<img src="${sig.dataUrl}" alt="Unterschrift" style="height:36px;background:#fff;border-radius:4px;padding:2px 8px;display:block;margin:0 auto 4px;">` : '')
+        + (sig.dataUrl ? `<img src="${esc(sig.dataUrl)}" alt="Unterschrift" style="height:36px;background:#fff;border-radius:4px;padding:2px 8px;display:block;margin:0 auto 4px;">` : '')
         + `<div><strong>${esc(sig.name)}</strong> &middot; ${esc(rolle)}<br>`
         + `digital unterschrieben am ${esc(new Date(sig.at).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }))}</div></div>`
       : '';
@@ -2373,73 +2302,8 @@ function getStringStatus(id){
   return 'COMPLETE';
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   GROBPRÜFUNG (Review 09/2026, überarbeitet)
-
-   Absichtlich sparsam: Es wird nur angeschlagen, wenn ein Wert gar nicht
-   sein KANN — nicht, wenn er vom Durchschnitt abweicht. Eine Prüfung, die
-   ständig bei gesunden Strings blinkt, wird nach zwei Tagen ignoriert.
-
-   1) RISO — echter Normgrenzwert.
-      IEC 62446-1 verlangt bei Strings über 120 V mindestens 1,0 MΩ.
-      Darunter ist es ein Isolationsfehler. Darüber ist alles in Ordnung,
-      egal ob 5 oder 500 MΩ — hier wird nichts mehr gemeldet.
-
-   2) UOC — reine Plausibilität gegen die Modulanzahl.
-      Ein Modul liefert je nach Typ und Temperatur grob 25 bis 60 V
-      Leerlaufspannung. Aus der Modulanzahl ergibt sich damit ein weiter,
-      aber endlicher Rahmen. Der Sinn ist NICHT, knappe Abweichungen zu
-      finden, sondern grobe Fehler: 800 V bei 7 Modulen sind rechnerisch
-      114 V je Modul — das gibt es nicht, da stimmt die Modulanzahl oder
-      der abgelesene Wert nicht.
-
-   3) ISC — wird bewusst NICHT geprüft.
-      Der Kurzschlussstrom hängt direkt von der Einstrahlung ab. Eine
-      Wolke halbiert ihn. Jede Grenze wäre entweder wirkungslos oder
-      würde bei jedem Wetterwechsel Fehlalarm schlagen.
-   ══════════════════════════════════════════════════════════════════════════ */
-const LIMIT_RISO_MIN = 1.0;       // MΩ — IEC 62446-1, harte Untergrenze
-const UOC_PRO_MODUL_MIN = 25;     // V — großzügig untere Plausibilitätsgrenze
-const UOC_PRO_MODUL_MAX = 60;     // V — großzügig obere Plausibilitätsgrenze
-
-function toNum(v){
-  const n = parseFloat(String(v ?? '').replace(',', '.'));
-  return Number.isFinite(n) ? n : null;
-}
-
-// Bewertet einen String. Rueckgabe: { level:'ok'|'crit', fields:{}, msgs:[] }
-function evaluateString(id){
-  const res = { level: 'ok', fields: {}, msgs: [] };
-  const it = APP_STATE[id];
-  if(!it || it.stat !== 'JA') return res;
-
-  const melde = (feld, text) => {
-    res.fields[feld] = 'crit';
-    res.msgs.push(text);
-    res.level = 'crit';
-  };
-
-  // 1) Isolationswiderstand gegen die Normgrenze
-  // 0 gilt — wie überall im Tool — als "noch nicht gemessen".
-  const riso = toNum(it.riso);
-  if(riso !== null && riso > 0 && riso < LIMIT_RISO_MIN){
-    melde('riso', `Riso ${it.riso} MΩ liegt unter 1 MΩ — Isolationsfehler nach IEC 62446-1. Nicht freigeben.`);
-  }
-
-  // 2) Uoc nur grob gegen die Modulanzahl
-  const mods = Number(it.mod) || 0;
-  const u = toNum(it.uoc);
-  if(u !== null && u > 0 && mods > 0){
-    const jeModul = u / mods;
-    if(jeModul < UOC_PRO_MODUL_MIN || jeModul > UOC_PRO_MODUL_MAX){
-      melde('uoc', `${it.uoc} V bei ${mods} Modulen sind ${jeModul.toFixed(0)} V je Modul. `
-        + `Plausibel sind rund ${UOC_PRO_MODUL_MIN}–${UOC_PRO_MODUL_MAX} V je Modul — `
-        + `Modulanzahl oder abgelesener Wert prüfen.`);
-    }
-  }
-
-  return res;
-}
+// Bewertet einen String der Matrix – die Regeln stehen in js/logik.js (stringBewerten)
+function evaluateString(id){ return stringBewerten(APP_STATE[id]); }
 
 // Faerbt Zellen, setzt Badges, aktualisiert Auffaelligkeiten-Leiste.
 let _flaggedIds = [];
@@ -4389,7 +4253,7 @@ function printBlankMeasurementSheet(){
   // bleiben auf dem Ausdruck stehen, auch wenn spaeter noch einmal
   // entsperrt und nachbearbeitet wurde.
   const sigBox = (sig, beschriftung) => (sig && sig.dataUrl)
-    ? `<div class="sig-box"><img src="${sig.dataUrl}" alt="Unterschrift" style="height:46px;max-width:100%;display:block;margin:0 auto 6px;"><div>${esc(sig.name)}<br>${esc(beschriftung)} &middot; digital unterschrieben &middot; ${esc(new Date(sig.at).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }))}</div></div>`
+    ? `<div class="sig-box"><img src="${esc(sig.dataUrl)}" alt="Unterschrift" style="height:46px;max-width:100%;display:block;margin:0 auto 6px;"><div>${esc(sig.name)}<br>${esc(beschriftung)} &middot; digital unterschrieben &middot; ${esc(new Date(sig.at).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }))}</div></div>`
     : `<div class="sig-box"><div class="sig-line"></div><div>Ort, Datum, Unterschrift ${esc(beschriftung)}</div></div>`;
   const pruferSigBoxHtml  = sigBox(proj.signature, 'Prüfer');
   const abnahmeSigBoxHtml = sigBox(proj.abnahme, 'Abnahme');
@@ -5494,7 +5358,7 @@ function druckePruefprotokoll(optionen = {}){
   const bereich = BEREICHE[projektBereich(proj)] ? BEREICHE[projektBereich(proj)].name : '—';
   const pruefer = (proj.signature && proj.signature.name) || anzeigeName() || '—';
   const unterschrift = (sig, rolle) => (sig && sig.dataUrl)
-    ? `<div class="sig"><img src="${sig.dataUrl}" alt="Unterschrift ${rolle}"><div class="sig-l"></div><div><strong>${esc(sig.name || '')}</strong> · ${rolle}</div><div class="klein">digital unterschrieben am ${zeit(sig.at)}</div></div>`
+    ? `<div class="sig"><img src="${esc(sig.dataUrl)}" alt="Unterschrift ${rolle}"><div class="sig-l"></div><div><strong>${esc(sig.name || '')}</strong> · ${rolle}</div><div class="klein">digital unterschrieben am ${zeit(sig.at)}</div></div>`
     : `<div class="sig"><div class="sig-leer"></div><div class="sig-l"></div><div>${rolle}</div><div class="klein">Ort, Datum, Unterschrift</div></div>`;
   const heuteKurz = new Date().toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' });
   // Jeder Wechselrichter auf einer eigenen Seite – mit eigener Kopfzeile und
@@ -7613,13 +7477,9 @@ function ppkAuto(){
   const wd = kd(wrK[0]);
   const sp = ppkKomp('speicher');
   const uac = ppkKomp('ues_ac'), udc = ppkKomp('ues_dc');
-  const aktiv = ppkStraenge();
-  const mods = aktiv.map(id => Number(APP_STATE[id].mod) || 0).filter(Boolean);
-  const zaehl = {}; mods.forEach(m => { zaehl[m] = (zaehl[m] || 0) + 1; });
-  const haeufig = Object.keys(zaehl).sort((a, b) => zaehl[b] - zaehl[a])[0] || '';
   const wp = abZahl(md.wp) || getCurrentWp();
-  const summe = mods.reduce((a, b) => a + b, 0);
-  const uocs = aktiv.map(id => abZahl(APP_STATE[id].uoc)).filter(v => v !== null);
+  // Modulanzahl, Systemspannung, kWp und Gesamtstrom aus der DC-Messung (js/logik.js)
+  const kz = ppkKennzahlen(ppkStraenge().map(id => APP_STATE[id]), wp);
   const eindeutig = arr => [...new Set(arr.filter(Boolean))].join(' / ');
   const ba = String(ab.betriebsart || '');
   const kb = ab.kabel || {};
@@ -7637,8 +7497,8 @@ function ppkAuto(){
     anlagenart: /DC-gekoppelt/.test(ba) ? 'Inselbetrieb (DC)' : (/AC-gekoppelt/.test(ba) ? 'Inselbetrieb (AC)' : 'Netzparallelbetrieb'),
     m_hersteller: mod && mod.hersteller, m_typ: mod && mod.typ, m_wp: md.wp || (wp ? String(wp) : ''), m_uoc: md.uoc, m_isc: md.isc,
     m_impp: md.impp, m_umax: md.u_max, m_lief: md.lieferant,
-    mod_strang: haeufig, u_system: uocs.length ? String(Math.round(Math.max(...uocs))) : '',
-    kwp: summe ? (summe * wp / 1000).toFixed(2).replace('.', ',') : '',
+    mod_strang: kz.mod_strang, u_system: kz.u_system,
+    kwp: kz.kwp,
     ausrichtung: ab.modul && ab.modul.ausrichtung, neigung: ab.modul && ab.modul.neigung,
     hat_speicher: !!sp || /Speicher/.test(ba),
     s_hersteller: sp && sp.hersteller, s_typ: sp && sp.typ, s_spannung: kd(sp).spannung, s_bauart: kd(sp).bauart, s_lief: kd(sp).lieferant,
@@ -7654,10 +7514,7 @@ function ppkAuto(){
     dc_typ: kb.dc_typ, dc_qs: kb.dc_querschnitt ? `${kb.dc_querschnitt} mm²` : '', dc_verl: kb.dc_verlegung,
     dc_frei: ppkEinzeilig(ab.schalter && ab.schalter.dc),
     wetter: ab.pruefung && ab.pruefung.wetter, u_pruef: proj && proj.messung && proj.messung.upruef,
-    i_gesamt: (() => {   // Solargenerator-Gesamtstrom: Summe der gemessenen Strangstroeme (Isc)
-      const iscs = aktiv.filter(id => Number(APP_STATE[id].mod) > 0).map(id => abZahl(APP_STATE[id].isc)).filter(v => v !== null);
-      return iscs.length ? iscs.reduce((a, b) => a + b, 0).toFixed(2).replace('.', ',') : '';
-    })()
+    i_gesamt: kz.i_gesamt
   };
   // Messgeraete: eigene Auswahl, sonst das erste Geraet der Liste
   [1, 2].forEach(n => {

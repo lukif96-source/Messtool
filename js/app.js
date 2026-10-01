@@ -8961,6 +8961,9 @@ async function einteilungOeffnen(){
   if(!eintWoche){ const h2 = new Date(); eintWoche = tagIso(montagVon(h2.getDay() === 6 || h2.getDay() === 0 ? new Date(h2.getTime() + 2 * 864e5) : h2)); }
   eintZeigen();
 }
+// Ansicht im Dialog: 'busse' (Spalten = Busse) oder 'monteure' (je Monteur und Tag den Bus waehlen)
+let eintAnsicht = (() => { try { return localStorage.getItem('pv_eint_ansicht') || 'busse'; } catch(_){ return 'busse'; } })();
+function eintAnsichtSetzen(a){ eintAnsicht = a; try { localStorage.setItem('pv_eint_ansicht', a); } catch(_){} eintZeigen(); }
 function eintZeigen(){
   let ov = g('einteilung-dialog');
   if(!ov){
@@ -8974,46 +8977,75 @@ function eintZeigen(){
   const tage = wochenTage(eintWoche, w.wochenende);
   const kw = kalenderwoche(isoDatum(eintWoche));
   const kurz = iso => isoDatum(iso).toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit' });
-  const wt = iso => isoDatum(iso).toLocaleDateString('de-AT', { weekday: 'short' });
   const teilbar = !!(navigator.canShare && navigator.share);
   const kopierbar = !!(navigator.clipboard && window.ClipboardItem);
+  const monteure = eintMonteure(w);
+  const istM = eintAnsicht === 'monteure';
+  const scrollVorher = ov.querySelector('.eint-scroll') ? [ov.querySelector('.eint-scroll').scrollLeft, ov.querySelector('.eint-scroll').scrollTop] : null;
   ov.innerHTML = `<div class="app-dialog ein-dialog" role="dialog" aria-modal="true" aria-labelledby="ein-titel">
     <div class="ein-kopf"><h2 id="ein-titel">Wochenübersicht</h2>
       <button type="button" class="mm-x" onclick="einteilungSchliessen()" aria-label="Schließen">${ICON.x}</button></div>
     <div class="eint-nav">
       <button type="button" class="btn btn-ghost" onclick="eintWocheWechseln(-7)" aria-label="Vorige Woche">${ICON.chevL}</button>
-      <strong>KW ${kw} · ${esc(kurz(tage[0]))} – ${esc(kurz(tage[tage.length - 1]))}.${isoDatum(eintWoche).getFullYear()}</strong>
+      <strong>KW ${kw} · ${esc(kurz(tage[0]))} – ${esc(kurz(tage[tage.length - 1]))}${isoDatum(tage[tage.length - 1]).getFullYear()}</strong>
       <button type="button" class="btn btn-ghost" onclick="eintWocheWechseln(7)" aria-label="Nächste Woche">${ICON.chevR}</button>
       <label class="eint-we"><input type="checkbox" id="eint-we"${w.wochenende ? ' checked' : ''}> Sa/So</label>
     </div>
-    <p class="app-dialog-text">Je Zelle die BVHs untereinander eintragen. „Urlaub: Name“ wird farbig markiert. Wird automatisch gespeichert.</p>
-    <div class="eint-scroll"><table class="eint-tab">
-      <thead><tr><th class="eint-tagspalte"></th>${w.busse.map((b, bi) => `<th>
-        <div class="eint-bus"><input class="sp-inp eint-busname" data-eint-bus="${bi}" data-feld="name" value="${esc(b.name)}" aria-label="Bus">
-          <button type="button" class="eint-weg" data-eint-weg="${bi}" aria-label="Bus entfernen" title="Bus entfernen">${ICON.x}</button></div>
-        <input class="sp-inp eint-leute" data-eint-bus="${bi}" data-feld="leute" value="${esc(b.leute || '')}" placeholder="Mannschaft">
-      </th>`).join('')}<th class="eint-plus"><button type="button" class="btn btn-ghost" onclick="eintBusDazu()">+ Bus</button></th></tr></thead>
-      <tbody>${tage.map(t => `<tr><th class="eint-tagspalte"><span>${esc(wt(t))}</span>${esc(kurz(t))}</th>
-        ${w.busse.map((b, bi) => `<td><textarea class="sp-inp" rows="3" data-eint-bus="${bi}" data-eint-tag="${t}" placeholder="BVH">${esc((b.tage || {})[t] || '')}</textarea></td>`).join('')}<td></td></tr>`).join('')}
-      </tbody></table></div>
+    <div class="ppk-seg eint-ansicht" role="group" aria-label="Ansicht">
+      <button type="button" class="${istM ? '' : 'an'}" onclick="eintAnsichtSetzen('busse')">Nach Bussen</button>
+      <button type="button" class="${istM ? 'an' : ''}" onclick="eintAnsichtSetzen('monteure')">Nach Monteuren${monteure.length ? ` (${monteure.length})` : ''}</button>
+    </div>
+    ${istM ? eintMonteurHtml(w, tage, monteure) : eintBusHtml(w, tage, monteure)}
     <div class="ein-klein" id="eint-status"></div>
     <div class="app-dialog-knoepfe ein-knoepfe">
-      <button type="button" class="btn btn-ghost" onclick="eintTaifun()">Aus Taifun vorausfüllen</button>
+      ${istM ? '' : '<button type="button" class="btn btn-ghost" onclick="eintTaifun()">Aus Taifun vorausfüllen</button>'}
       <button type="button" class="btn btn-ghost" onclick="einteilungPdf()">PDF</button>
       ${kopierbar ? '<button type="button" class="btn btn-ghost" onclick="einteilungKopieren()">Bild kopieren</button>' : ''}
       <button type="button" class="btn btn-primary" onclick="einteilungTeilen()">${teilbar ? 'Teilen (WhatsApp)' : 'Bild speichern'}</button>
     </div></div>`;
   ov.querySelector('#eint-we').addEventListener('change', e => { w.wochenende = e.target.checked; eintGeaendert(w); eintZeigen(); });
+  if(istM) eintMonteurEvents(ov, w, tage, monteure); else eintBusEvents(ov, w);
+  const sc = ov.querySelector('.eint-scroll');
+  if(sc && scrollVorher){ sc.scrollLeft = scrollVorher[0]; sc.scrollTop = scrollVorher[1]; }
+}
+
+// ── Ansicht "Nach Bussen": Spalten = Busse, Zeilen = Tage ────────────────
+function eintBusHtml(w, tage, monteure){
+  const kurz = iso => isoDatum(iso).toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit' });
+  const wt = iso => isoDatum(iso).toLocaleDateString('de-AT', { weekday: 'short' });
+  return `<p class="app-dialog-text">Je Zelle die BVHs untereinander eintragen. Oben je Bus die Stamm-Mannschaft (Namen mit Komma).
+      Wer an einem Tag in einem anderen Bus fährt, stellst du unter „Nach Monteuren“ um. Wird automatisch gespeichert.</p>
+    <div class="eint-scroll"><table class="eint-tab">
+      <thead><tr><th class="eint-tagspalte"></th>${w.busse.map((b, bi) => `<th>
+        <div class="eint-bus"><input class="sp-inp eint-busname" data-eint-bus="${bi}" data-feld="name" value="${esc(b.name)}" aria-label="Bus">
+          <button type="button" class="eint-weg" data-eint-weg="${bi}" aria-label="Bus entfernen" title="Bus entfernen">${ICON.x}</button></div>
+        <input class="sp-inp eint-leute" data-eint-bus="${bi}" data-feld="leute" value="${esc(b.leute || '')}" placeholder="Stamm-Mannschaft">
+      </th>`).join('')}<th class="eint-plus"><button type="button" class="btn btn-ghost" onclick="eintBusDazu()">+ Bus</button></th></tr></thead>
+      <tbody>${tage.map(t => `<tr><th class="eint-tagspalte"><span>${esc(wt(t))}</span>${esc(kurz(t))}</th>
+        ${w.busse.map((b, bi) => {
+          const crew = eintCrew(w, b, t), anders = eintCrewAnders(b, crew);
+          return `<td><textarea class="sp-inp" rows="3" data-eint-bus="${bi}" data-eint-tag="${t}" placeholder="BVH">${esc((b.tage || {})[t] || '')}</textarea>${monteure.length
+            ? `<div class="eint-crew${anders ? ' anders' : ''}" title="${anders ? 'Abweichend von der Stamm-Mannschaft' : 'Stamm-Mannschaft'}">${esc(crew.join(', ') || 'niemand eingeteilt')}</div>` : ''}</td>`;
+        }).join('')}<td></td></tr>`).join('')}
+      </tbody></table></div>`;
+}
+function eintBusEvents(ov, w){
   ov.querySelectorAll('textarea[data-eint-tag]').forEach(ta => ta.addEventListener('input', () => {
     const b = w.busse[+ta.dataset.eintBus];
     b.tage = b.tage || {};
     if(ta.value.trim()) b.tage[ta.dataset.eintTag] = ta.value; else delete b.tage[ta.dataset.eintTag];
     eintGeaendert(w);
   }));
-  ov.querySelectorAll('input[data-eint-bus]').forEach(inp => inp.addEventListener('input', () => {
-    w.busse[+inp.dataset.eintBus][inp.dataset.feld] = inp.value;
-    eintGeaendert(w, true);
-  }));
+  ov.querySelectorAll('input[data-eint-bus]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const b = w.busse[+inp.dataset.eintBus];
+      if(inp.dataset.feld === 'name') eintBusUmbenennen(w, b.name, inp.value);
+      b[inp.dataset.feld] = inp.value;
+      eintGeaendert(w, true);
+    });
+    // Mannschaft geaendert: Tages-Besetzung neu anzeigen
+    if(inp.dataset.feld === 'leute') inp.addEventListener('change', () => eintZeigen());
+  });
   ov.querySelectorAll('[data-eint-weg]').forEach(b => b.addEventListener('click', async () => {
     const bus = w.busse[+b.dataset.eintWeg];
     const voll = Object.values(bus.tage || {}).some(v => String(v).trim());
@@ -9022,6 +9054,113 @@ function eintZeigen(){
     eintGeaendert(w, true);
     eintZeigen();
   }));
+}
+
+// ── Ansicht "Nach Monteuren": je Monteur und Tag den Bus waehlen ─────────
+function eintOptionen(w, gewaehlt, stamm){
+  const g2 = gewaehlt || EINT_KEINER;
+  return `<option value="${EINT_KEINER}"${g2 === EINT_KEINER ? ' selected' : ''}>nicht eingeteilt</option>
+    ${w.busse.map(b => `<option value="${esc(b.name)}"${b.name === g2 ? ' selected' : ''}>${esc(b.name)}${b.name === stamm ? ' (Stamm)' : ''}</option>`).join('')}
+    <optgroup label="Nicht im Bus">${EINT_ABWESEND.map(x => `<option value="${x}"${x === g2 ? ' selected' : ''}>${x}</option>`).join('')}</optgroup>`;
+}
+function eintMonteurHtml(w, tage, monteure){
+  const kurz = iso => isoDatum(iso).toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit' });
+  const wt = iso => isoDatum(iso).toLocaleDateString('de-AT', { weekday: 'short' });
+  const tabelle = monteure.length ? `<div class="eint-scroll"><table class="eint-tab eint-mtab">
+      <thead><tr><th class="eint-mname">Monteur</th><th class="eint-mwoche">Ganze Woche</th>${tage.map(t => `<th><span class="eint-wt">${esc(wt(t))}</span> ${esc(kurz(t))}</th>`).join('')}</tr></thead>
+      <tbody>${monteure.map((m, mi) => `<tr>
+        <th class="eint-mname"><div class="eint-mkopf"><span><b>${esc(m.name)}</b><small>${m.stamm ? 'Stamm: ' + esc(m.stamm) : 'ohne festen Bus'}</small></span>
+          <button type="button" class="eint-weg" data-eint-mweg="${mi}" aria-label="${esc(m.name)} entfernen" title="Entfernen">${ICON.x}</button></div></th>
+        <td class="eint-mwoche"><select class="sp-inp" data-eint-woche="${mi}" aria-label="Ganze Woche für ${esc(m.name)}">
+          <option value="">alle Tage …</option>${w.busse.map(b => `<option value="${esc(b.name)}">${esc(b.name)}</option>`).join('')}
+          <optgroup label="Nicht im Bus">${EINT_ABWESEND.map(x => `<option value="${x}">${x}</option>`).join('')}</optgroup>
+          ${m.stamm ? '<option value="__stamm">zurück auf Stamm</option>' : ''}</select></td>
+        ${tage.map(t => { const e = eintEinsatz(w, m, t); const anders = eintUmgestellt(m, e);
+          return `<td class="${anders ? 'anders' : ''}${EINT_ABWESEND.includes(e) ? ' abw' : ''}"><select class="sp-inp" data-eint-m="${mi}" data-eint-tag="${t}" aria-label="${esc(m.name)} am ${esc(wt(t))}">${eintOptionen(w, e, m.stamm)}</select></td>`; }).join('')}
+      </tr>`).join('')}</tbody></table></div>`
+    : '<p class="ab-klein eint-leer">Noch keine Monteure. Unter „Nach Bussen“ je Bus die Stamm-Mannschaft eintragen (Namen mit Komma) oder hier jemanden hinzufügen.</p>';
+  return `<p class="app-dialog-text">Je Monteur und Tag den Bus wählen – ohne Änderung fährt er mit seinem Stammbus.
+      Umgestellte Tage sind grün, Urlaub/Krank orange markiert. Gilt nur für diese Woche.</p>
+    ${tabelle}
+    <div class="eint-mdazu"><input class="sp-inp" id="eint-mneu" placeholder="Name des Monteurs" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();eintMonteurDazu();}">
+      <select class="sp-inp" id="eint-mneu-bus" aria-label="Stammbus"><option value="">ohne festen Bus</option>${w.busse.map(b => `<option value="${esc(b.name)}">${esc(b.name)}</option>`).join('')}</select>
+      <button type="button" class="btn btn-ghost" onclick="eintMonteurDazu()">+ Monteur</button></div>`;
+}
+function eintMonteurEvents(ov, w, tage, monteure){
+  ov.querySelectorAll('select[data-eint-m]').forEach(sel => sel.addEventListener('change', () => {
+    const m = monteure[+sel.dataset.eintM];
+    eintSetzen(w, m, sel.dataset.eintTag, sel.value);
+    eintGeaendert(w);
+    eintZeigen();
+  }));
+  ov.querySelectorAll('select[data-eint-woche]').forEach(sel => sel.addEventListener('change', () => {
+    if(!sel.value) return;
+    const m = monteure[+sel.dataset.eintWoche];
+    tage.forEach(t => eintSetzen(w, m, t, sel.value === '__stamm' ? (m.stamm || EINT_KEINER) : sel.value));
+    eintGeaendert(w);
+    eintZeigen();
+  }));
+  ov.querySelectorAll('[data-eint-mweg]').forEach(btn => btn.addEventListener('click', async () => {
+    const m = monteure[+btn.dataset.eintMweg];
+    if(m.stamm){
+      if(!await appFrage(`${m.name} aus der Stamm-Mannschaft von ${m.stamm} entfernen?`)) return;
+      const b = w.busse.find(x => x.name === m.stamm);
+      if(b) b.leute = eintLeute(b).filter(n => n !== m.name).join(', ');
+      if(w.einsatz) delete w.einsatz[m.name];
+      eintGeaendert(w, true);
+    } else {
+      w.zusatz = (w.zusatz || []).filter(n => n !== m.name);
+      if(w.einsatz) delete w.einsatz[m.name];
+      eintGeaendert(w);
+    }
+    eintZeigen();
+  }));
+}
+function eintMonteurDazu(){
+  const w = eintWocheHolen(eintWoche);
+  const name = String((g('eint-mneu') || {}).value || '').replace(/\s+/g, ' ').replace(/[,;]/g, '').trim();
+  const bus = (g('eint-mneu-bus') || {}).value || '';
+  if(!name) return toast('Bitte einen Namen eingeben');
+  if(eintMonteure(w).some(m => m.name.toLowerCase() === name.toLowerCase())) return toast(`${name} steht schon in der Liste`);
+  const b = bus && w.busse.find(x => x.name === bus);
+  if(b){ b.leute = [...eintLeute(b), name].join(', '); eintGeaendert(w, true); }
+  else { w.zusatz = [...(w.zusatz || []), name]; eintGeaendert(w); }
+  eintZeigen();
+  setTimeout(() => { const f = g('eint-mneu'); if(f) f.focus(); }, 30);
+}
+
+// ── Monteure: Daten-Helfer ────────────────────────────────────────────────
+// Stamm-Mannschaft = b.leute (Namen mit Komma); Abweichungen je Woche in
+// w.einsatz[Name][Tag] = Busname | 'Urlaub' … | 'nicht eingeteilt'; Leute ohne
+// festen Bus in w.zusatz.
+const EINT_ABWESEND = ['Urlaub', 'Krank', 'Schule', 'Frei'];
+const EINT_KEINER = 'nicht eingeteilt';
+function eintLeute(b){ return String((b && b.leute) || '').split(/[,;\n]+/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean); }
+function eintMonteure(w){
+  const liste = [];
+  w.busse.forEach(b => eintLeute(b).forEach(n => { if(!liste.some(m => m.name === n)) liste.push({ name: n, stamm: b.name }); }));
+  (w.zusatz || []).forEach(n => { if(!liste.some(m => m.name === n)) liste.push({ name: n, stamm: '' }); });
+  return liste;
+}
+function eintEinsatz(w, m, t){
+  const o = w.einsatz && w.einsatz[m.name] && w.einsatz[m.name][t];
+  const gueltig = o && (o === EINT_KEINER || EINT_ABWESEND.includes(o) || w.busse.some(b => b.name === o));
+  return gueltig ? o : (m.stamm || '');
+}
+function eintSetzen(w, m, t, wert){
+  w.einsatz = w.einsatz || {};
+  const p = w.einsatz[m.name] = w.einsatz[m.name] || {};
+  if((wert || EINT_KEINER) === (m.stamm || EINT_KEINER)) delete p[t]; else p[t] = wert;
+  if(!Object.keys(p).length) delete w.einsatz[m.name];
+}
+// Markierung "umgestellt": nur wer einen Stammbus hat und an dem Tag in einem anderen Bus faehrt
+function eintUmgestellt(m, e){ return !!m.stamm && !EINT_ABWESEND.includes(e) && (e || EINT_KEINER) !== m.stamm; }
+function eintCrew(w, bus, t){ return eintMonteure(w).filter(m => eintEinsatz(w, m, t) === bus.name).map(m => m.name); }
+function eintCrewAnders(bus, crew){ const s = eintLeute(bus); return s.length !== crew.length || s.some(n => !crew.includes(n)); }
+function eintRotation(w, tage){ return eintMonteure(w).some(m => tage.some(t => (eintEinsatz(w, m, t) || EINT_KEINER) !== (m.stamm || EINT_KEINER))); }
+function eintAbwesend(w, t){ return eintMonteure(w).map(m => [m.name, eintEinsatz(w, m, t)]).filter(([, e]) => EINT_ABWESEND.includes(e)); }
+function eintBusUmbenennen(w, alt, neu){
+  Object.values(w.einsatz || {}).forEach(p => Object.keys(p).forEach(t => { if(p[t] === alt) p[t] = neu; }));
 }
 function eintWocheWechseln(tage){ const m = isoDatum(eintWoche); eintWoche = tagIso(new Date(m.getFullYear(), m.getMonth(), m.getDate() + tage)); eintZeigen(); }
 function eintBusDazu(){ const w = eintWocheHolen(eintWoche); w.busse.push({ name: 'SOL ', leute: '', tage: {} }); eintGeaendert(w, true); eintZeigen(); }
@@ -9099,7 +9238,10 @@ async function einteilungBild(){
   if(document.fonts && document.fonts.ready){ try { await document.fonts.ready; } catch(_){} }
   const W = 2200, P = 48, TAG = 190, schrift = '"Inter", "Segoe UI", system-ui, sans-serif';
   const F = { ink: '#18181b', grau: '#52525b', hell: '#71717a', linie: '#d4d4d8', brand: '#93BD14', brandDunkel: '#4d6b00', zebra: '#f7f9f1', urlaub: '#b45309', kopf: '#eef4dc' };
-  const SW = (W - 2 * P - TAG) / Math.max(busse.length, 1);
+  const rot = eintRotation(w, tage);                      // jemand faehrt an einem Tag woanders
+  const abwSpalte = tage.some(t => eintAbwesend(w, t).length);
+  const spaltenN = busse.length + (abwSpalte ? 1 : 0);
+  const SW = (W - 2 * P - TAG) / Math.max(spaltenN, 1);
   const c = document.createElement('canvas');
   c.width = W; c.height = 9000;
   const x = c.getContext('2d');
@@ -9127,7 +9269,8 @@ async function einteilungBild(){
   x.fillText(`KW ${kalenderwoche(m0)} · ${m0.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit' })} – ${m1.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' })}`, P, y + 92);
   y += 124;
   // Kopfzeile: Busse mit Mannschaft
-  const kopfZeilen = busse.map(b => { setz(21, 400); return umbrechen(b.leute || '', SW - 28); });
+  // Bei Rotation steht die Mannschaft je Tag in der Zelle statt in der Kopfzeile
+  const kopfZeilen = busse.map(b => { setz(21, 400); return rot ? [] : umbrechen(b.leute || '', SW - 28); });
   const kopfH = 64 + Math.max(0, ...kopfZeilen.map(z => z.length)) * 28 + 14;
   x.fillStyle = F.kopf; x.fillRect(P, y, W - 2 * P, kopfH);
   busse.forEach((b, i) => {
@@ -9135,6 +9278,7 @@ async function einteilungBild(){
     setz(32, 700); x.fillStyle = F.ink; x.fillText(b.name || '', bx + 14, y + 44);
     setz(21, 400); x.fillStyle = F.grau; kopfZeilen[i].forEach((z, k) => x.fillText(z, bx + 14, y + 78 + k * 28));
   });
+  if(abwSpalte){ setz(28, 700); x.fillStyle = F.grau; x.fillText('Abwesend', P + TAG + busse.length * SW + 14, y + 44); }
   x.fillStyle = F.brand; x.fillRect(P, y + kopfH - 5, W - 2 * P, 5);
   const tabOben = y;
   y += kopfH;
@@ -9151,6 +9295,11 @@ async function einteilungBild(){
       setz(21, 400); const zusatz = rest ? umbrechen(rest, SW - 30) : [];
       return { urlaub, zeilen, zusatz };
     }));
+    if(rot) busse.forEach((b, i) => {
+      const crew = eintCrew(w, b, t);
+      if(crew.length){ setz(21, 400); zellen[i].push({ urlaub: false, team: true, zeilen: [], zusatz: umbrechen(crew.join(', '), SW - 30) }); }
+    });
+    if(abwSpalte){ setz(22, 500); zellen.push(eintAbwesend(w, t).map(([n, a]) => ({ urlaub: true, zeilen: umbrechen(`${a}: ${n}`, SW - 30), zusatz: [] }))); }
     const hZelle = z => z.reduce((s, e) => s + e.zeilen.length * (e.urlaub ? 30 : 34) + e.zusatz.length * 27 + 12, 0);
     const rowH = Math.max(96, ...zellen.map(z => 26 + hZelle(z)));
     if(ti % 2) { x.fillStyle = F.zebra; x.fillRect(P, y, W - 2 * P, rowH); }
@@ -9164,7 +9313,7 @@ async function einteilungBild(){
       z.forEach(e => {
         setz(e.urlaub ? 22 : 26, e.urlaub ? 500 : 700); x.fillStyle = e.urlaub ? F.urlaub : F.ink;
         e.zeilen.forEach(s => { x.fillText(s, bx + 14, yy); yy += e.urlaub ? 30 : 34; });
-        setz(21, 400); x.fillStyle = F.grau;
+        setz(21, e.team ? 600 : 400); x.fillStyle = e.team ? F.brandDunkel : F.grau;
         e.zusatz.forEach(s => { x.fillText(s, bx + 14, yy - 4); yy += 27; });
         yy += 12;
       });
@@ -9174,7 +9323,7 @@ async function einteilungBild(){
   });
   // senkrechte Linien
   x.fillStyle = F.linie;
-  for(let i = 0; i <= busse.length; i++) x.fillRect(P + TAG + i * SW - 1, tabOben, 2, y - tabOben);
+  for(let i = 0; i <= spaltenN; i++) x.fillRect(P + TAG + i * SW - 1, tabOben, 2, y - tabOben);
   x.fillRect(P, tabOben, 2, y - tabOben); x.fillRect(W - P - 2, tabOben, 2, y - tabOben);
   y += 34;
   setz(20, 400); x.fillStyle = F.hell;
@@ -9185,8 +9334,8 @@ async function einteilungBild(){
   aus.getContext('2d').drawImage(c, 0, 0);
   return aus;
 }
-const einteilungDateiname = art => `Wochenuebersicht_KW${kalenderwoche(isoDatum(eintWoche))}_${isoDatum(eintWoche).getFullYear()}.${art}`;
-async function einteilungBlob(){ const c = await einteilungBild(); return new Promise(ok => c.toBlob(ok, 'image/png')); }
+const einteilungDateiname = art => `${eintAnsicht === 'monteure' && art === 'png' ? 'Einteilung_Monteure' : 'Wochenuebersicht'}_KW${kalenderwoche(isoDatum(eintWoche))}_${isoDatum(eintWoche).getFullYear()}.${art}`;
+async function einteilungBlob(){ const c = eintAnsicht === 'monteure' ? await einteilungBildMonteure() : await einteilungBild(); return new Promise(ok => c.toBlob(ok, 'image/png')); }
 async function einteilungTeilen(){
   try {
     const blob = await einteilungBlob();
@@ -9211,12 +9360,17 @@ async function einteilungKopieren(){
 }
 async function einteilungPdf(){
   try {
-    const c = await einteilungBild();
+    // Seite 1: nach Bussen, Seite 2: nach Monteuren (wenn Monteure eingetragen sind)
+    const bilder = [await einteilungBild()];
+    if(eintMonteure(eintWocheHolen(eintWoche)).length) bilder.push(await einteilungBildMonteure());
+    if(eintAnsicht === 'monteure') bilder.reverse();
     const L = await abPdfLibLaden();
     const pdf = await L.PDFDocument.create();
-    const png = await pdf.embedPng(await (await new Promise(ok => c.toBlob(ok, 'image/png'))).arrayBuffer());
-    const wS = 841.89, hS = wS * c.height / c.width;
-    pdf.addPage([wS, hS]).drawImage(png, { x: 0, y: 0, width: wS, height: hS });
+    for(const c of bilder){
+      const png = await pdf.embedPng(await (await new Promise(ok => c.toBlob(ok, 'image/png'))).arrayBuffer());
+      const wS = 841.89, hS = wS * c.height / c.width;
+      pdf.addPage([wS, hS]).drawImage(png, { x: 0, y: 0, width: wS, height: hS });
+    }
     pdf.setTitle(`Wochenübersicht KW ${kalenderwoche(isoDatum(eintWoche))}`); pdf.setCreator('SOLPRO Messtool');
     const bytes = await pdf.save();
     window.__einteilungPdf = bytes;
@@ -10412,4 +10566,95 @@ function abZurUnterschrift(){
   const d = c.closest('details');
   if(d) d.open = true;
   c.closest('.ab-sig').scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+// ── Bild: Zeilen = Monteure, Spalten = Tage (jeder findet sich selbst) ───
+async function einteilungBildMonteure(){
+  const w = eintWocheHolen(eintWoche);
+  const tage = wochenTage(eintWoche, w.wochenende);
+  const monteure = eintMonteure(w).slice().sort((a, b) => truppSort(a.stamm || '~', b.stamm || '~') || a.name.localeCompare(b.name));
+  if(document.fonts && document.fonts.ready){ try { await document.fonts.ready; } catch(_){} }
+  const W = 2200, P = 48, NAME = 320, schrift = '"Inter", "Segoe UI", system-ui, sans-serif';
+  const F = { ink: '#18181b', grau: '#52525b', hell: '#71717a', linie: '#d4d4d8', brand: '#93BD14', brandDunkel: '#4d6b00', zebra: '#f7f9f1', urlaub: '#b45309', kopf: '#eef4dc', anders: '#eaf4cf' };
+  const SW = (W - 2 * P - NAME) / Math.max(tage.length, 1);
+  const c = document.createElement('canvas');
+  c.width = W; c.height = 14000;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, c.height);
+  const setz = (gr, gew = 400) => { x.font = `${gew} ${gr}px ${schrift}`; };
+  const umbrechen = (t, maxW) => {
+    const out = []; let z = '';
+    String(t).split(/\s+/).forEach(wd => { const probe = z ? z + ' ' + wd : wd; if(x.measureText(probe).width > maxW && z){ out.push(z); z = wd; } else z = probe; });
+    if(z) out.push(z);
+    return out;
+  };
+  let y = P;
+  try {
+    const src = (abFirma && abFirma.logo) ? await abDateiLink(abFirma.logo) : (document.querySelector('#auth-gate .brand-logo--light') || {}).src;
+    if(src){
+      const url = URL.createObjectURL(await (await fetch(src)).blob());
+      const img = await new Promise((ok, err) => { const i = new Image(); i.onload = () => ok(i); i.onerror = err; i.src = url; });
+      const hL = 70, wL = img.width * hL / img.height;
+      x.drawImage(img, W - P - wL, y - 4, wL, hL);
+    }
+  } catch(_){}
+  const m0 = isoDatum(tage[0]), m1 = isoDatum(tage[tage.length - 1]);
+  setz(48, 700); x.fillStyle = F.ink; x.fillText('Einteilung Monteure', P, y + 44);
+  setz(32, 600); x.fillStyle = F.brandDunkel;
+  x.fillText(`KW ${kalenderwoche(m0)} · ${m0.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit' })} – ${m1.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' })}`, P, y + 92);
+  y += 124;
+  // Kopfzeile: Tage
+  const kopfH = 92;
+  x.fillStyle = F.kopf; x.fillRect(P, y, W - 2 * P, kopfH);
+  setz(28, 700); x.fillStyle = F.ink; x.fillText('Monteur', P + 14, y + 52);
+  tage.forEach((t, i) => {
+    const d = isoDatum(t), bx = P + NAME + i * SW;
+    setz(28, 700); x.fillStyle = F.ink; x.fillText(d.toLocaleDateString('de-AT', { weekday: 'long' }), bx + 14, y + 42);
+    setz(22, 400); x.fillStyle = F.hell; x.fillText(d.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit' }), bx + 14, y + 74);
+  });
+  x.fillStyle = F.brand; x.fillRect(P, y + kopfH - 5, W - 2 * P, 5);
+  const tabOben = y;
+  y += kopfH;
+  // BVH-Name aus einer Zellenzeile ("Name · Ort (Leute)" -> "Name")
+  const bvhKurz = z => { const m = String(z).match(/^(.*?)(?:\s+·\s+[^(]*?)?\s*(?:\([^)]*\))?\s*$/); return ((m && m[1]) || z).trim(); };
+  monteure.forEach((m, mi) => {
+    const zellen = tage.map(t => {
+      const e = eintEinsatz(w, m, t);
+      const anders = eintUmgestellt(m, e);
+      if(EINT_ABWESEND.includes(e)){ setz(24, 600); return { anders, teile: [{ t: umbrechen(e, SW - 30), gr: 24, gew: 600, farbe: F.urlaub, zh: 32 }] }; }
+      const bus = e && e !== EINT_KEINER ? w.busse.find(b => b.name === e) : null;
+      if(!bus) return { anders, teile: [] };
+      const bvh = String((bus.tage || {})[t] || '').split('\n').map(s => s.trim()).filter(s => s && !/^urlaub/i.test(s)).map(bvhKurz).slice(0, 3);
+      setz(26, 700); const kopf = umbrechen(bus.name, SW - 30);
+      setz(21, 400); const unter = bvh.flatMap(b => umbrechen(b, SW - 30));
+      return { anders, teile: [{ t: kopf, gr: 26, gew: 700, farbe: anders ? F.brandDunkel : F.ink, zh: 34 }, { t: unter, gr: 21, gew: 400, farbe: F.grau, zh: 27 }] };
+    });
+    setz(26, 700); const nameZ = umbrechen(m.name, NAME - 28);
+    const hZelle = z => z.teile.reduce((s, p) => s + p.t.length * p.zh, 0);
+    const rowH = Math.max(84, 30 + nameZ.length * 34 + 28, ...zellen.map(z => 26 + hZelle(z)));
+    if(mi % 2){ x.fillStyle = F.zebra; x.fillRect(P, y, W - 2 * P, rowH); }
+    zellen.forEach((z, i) => { if(z.anders){ x.fillStyle = F.anders; x.fillRect(P + NAME + i * SW, y, SW, rowH); } });
+    let ny = y + 42;
+    setz(26, 700); x.fillStyle = F.ink; nameZ.forEach(s => { x.fillText(s, P + 14, ny); ny += 34; });
+    setz(20, 400); x.fillStyle = F.hell; x.fillText(m.stamm ? `Stamm: ${m.stamm}` : 'ohne festen Bus', P + 14, ny - 4);
+    zellen.forEach((z, i) => {
+      const bx = P + NAME + i * SW;
+      let yy = y + 42;
+      if(!z.teile.length){ setz(24, 400); x.fillStyle = '#c4c4c9'; x.fillText('–', bx + 14, yy); return; }
+      z.teile.forEach(p => { setz(p.gr, p.gew); x.fillStyle = p.farbe; p.t.forEach(s => { x.fillText(s, bx + 14, yy); yy += p.zh; }); });
+    });
+    y += rowH;
+    x.fillStyle = F.linie; x.fillRect(P, y - 1, W - 2 * P, 2);
+  });
+  x.fillStyle = F.linie;
+  for(let i = 0; i <= tage.length; i++) x.fillRect(P + NAME + i * SW - 1, tabOben, 2, y - tabOben);
+  x.fillRect(P, tabOben, 2, y - tabOben); x.fillRect(W - P - 2, tabOben, 2, y - tabOben);
+  y += 34;
+  setz(20, 400); x.fillStyle = F.hell;
+  x.fillText(`Grün hinterlegt = anderer Bus als sonst · Stand ${new Date().toLocaleString('de-AT', { dateStyle: 'short', timeStyle: 'short' })} · SOLPRO Messtool`, P, y);
+  y += P;
+  const aus = document.createElement('canvas');
+  aus.width = W; aus.height = Math.min(y, c.height);
+  aus.getContext('2d').drawImage(c, 0, 0);
+  return aus;
 }

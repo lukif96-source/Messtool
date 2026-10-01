@@ -10643,7 +10643,7 @@ function abZurUnterschrift(){
 async function einteilungBildMonteure(){
   const w = eintWocheHolen(eintWoche);
   const tage = wochenTage(eintWoche, w.wochenende);
-  const monteure = eintMonteure(w).slice().sort((a, b) => truppSort(a.stamm || '~', b.stamm || '~') || a.name.localeCompare(b.name));
+  const monteure = eintMonteure(w).slice().sort((a, b) => a.name.localeCompare(b.name, 'de'));   // nach dem Alphabet: jeder findet sich schnell
   if(document.fonts && document.fonts.ready){ try { await document.fonts.ready; } catch(_){} }
   const W = 2200, P = 48, NAME = 320, schrift = '"Inter", "Segoe UI", system-ui, sans-serif';
   const F = { ink: '#18181b', grau: '#52525b', hell: '#71717a', linie: '#d4d4d8', brand: '#93BD14', brandDunkel: '#4d6b00', zebra: '#f7f9f1', urlaub: '#b45309', kopf: '#eef4dc', anders: '#eaf4cf' };

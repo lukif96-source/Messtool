@@ -8921,7 +8921,7 @@ async function eintLaden(){
       const w = data && data.wert;
       if(w && w.wochen){
         Object.entries(w.wochen).forEach(([k, v]) => { const l = eint.wochen[k]; if(!l || String(v.geaendert || '') > String(l.geaendert || '')) eint.wochen[k] = v; });
-        if(w.vorlage && String(w.vorlageGeaendert || '') >= String(eint.vorlageGeaendert || '')){ eint.vorlage = w.vorlage; eint.vorlageGeaendert = w.vorlageGeaendert || ''; }
+        if(w.vorlage && String(w.vorlageGeaendert || '') >= String(eint.vorlageGeaendert || '')){ eint.vorlage = w.vorlage; eint.vorlageZusatz = w.vorlageZusatz || []; eint.vorlageGeaendert = w.vorlageGeaendert || ''; }
       }
     } catch(_){}
   }
@@ -8943,12 +8943,12 @@ function eintSpeichern(){
   }, 900);
 }
 function eintWocheHolen(montag){
-  if(!eint.wochen[montag]) eint.wochen[montag] = { busse: eint.vorlage.map(b => ({ name: b.name, leute: b.leute, tage: {} })), wochenende: false, geaendert: '' };
+  if(!eint.wochen[montag]) eint.wochen[montag] = { busse: eint.vorlage.map(b => ({ name: b.name, leute: b.leute, tage: {} })), zusatz: [...(eint.vorlageZusatz || [])], wochenende: false, geaendert: '' };
   return eint.wochen[montag];
 }
 function eintGeaendert(w, vorlageAuch){
   w.geaendert = new Date().toISOString();
-  if(vorlageAuch){ eint.vorlage = w.busse.map(b => ({ name: b.name, leute: b.leute })); eint.vorlageGeaendert = w.geaendert; }
+  if(vorlageAuch){ eint.vorlage = w.busse.map(b => ({ name: b.name, leute: b.leute })); eint.vorlageZusatz = [...(w.zusatz || [])]; eint.vorlageGeaendert = w.geaendert; }
   eintSpeichern();
 }
 
@@ -9049,8 +9049,13 @@ function eintBusEvents(ov, w){
   ov.querySelectorAll('[data-eint-weg]').forEach(b => b.addEventListener('click', async () => {
     const bus = w.busse[+b.dataset.eintWeg];
     const voll = Object.values(bus.tage || {}).some(v => String(v).trim());
-    if(voll && !await appFrage(`Bus „${bus.name}“ mit seinen Einträgen aus dieser Woche entfernen?`)) return;
+    const leute = eintLeute(bus);
+    if((voll || leute.length) && !await appFrage(`Bus „${bus.name}“ entfernen?${voll ? '\n\nSeine BVH-Einträge dieser Woche gehen dabei verloren.' : ''}${leute.length
+      ? `\n\n${leute.join(', ')} ${leute.length === 1 ? 'bleibt' : 'bleiben'} in der Monteurliste (ohne festen Bus) – unter „Nach Monteuren“ einem anderen Bus zuteilen.` : ''}`)) return;
     w.busse.splice(+b.dataset.eintWeg, 1);
+    // Die Leute des Busses nicht verlieren: als Monteure ohne festen Bus behalten
+    const noch = new Set(eintMonteure(w).map(m => m.name));
+    w.zusatz = [...(w.zusatz || []), ...leute.filter(n => !noch.has(n))];
     eintGeaendert(w, true);
     eintZeigen();
   }));
@@ -9132,10 +9137,11 @@ function eintMonteurEvents(ov, w, tage, monteure){
       if(w.bvh) delete w.bvh[m.name];
       eintGeaendert(w, true);
     } else {
+      if(!await appFrage(`${m.name} aus der Monteurliste entfernen?`)) return;
       w.zusatz = (w.zusatz || []).filter(n => n !== m.name);
       if(w.einsatz) delete w.einsatz[m.name];
       if(w.bvh) delete w.bvh[m.name];
-      eintGeaendert(w);
+      eintGeaendert(w, true);
     }
     eintZeigen();
   }));
@@ -9148,7 +9154,7 @@ function eintMonteurDazu(){
   if(eintMonteure(w).some(m => m.name.toLowerCase() === name.toLowerCase())) return toast(`${name} steht schon in der Liste`);
   const b = bus && w.busse.find(x => x.name === bus);
   if(b){ b.leute = [...eintLeute(b), name].join(', '); eintGeaendert(w, true); }
-  else { w.zusatz = [...(w.zusatz || []), name]; eintGeaendert(w); }
+  else { w.zusatz = [...(w.zusatz || []), name]; eintGeaendert(w, true); }
   eintZeigen();
   setTimeout(() => { const f = g('eint-mneu'); if(f) f.focus(); }, 30);
 }

@@ -69,6 +69,7 @@ const RECHTE = [
   { k: 'hardware',          g: 'Matrix',            l: 'Wechselrichter, MPPTs und Module bearbeiten',       std: ['admin', 'planner'] },
   { k: 'wr_loeschen',       g: 'Matrix',            l: 'Wechselrichter löschen',                            std: ['admin'] },
   { k: 'fotos',             g: 'Matrix',            l: 'Fotos aufnehmen und löschen',                       std: ['admin', 'planner', 'site', 'elektriker'] },
+  { k: 'pflichtfotos',      g: 'Matrix',            l: 'Pflichtfotos (Checkliste) sehen und abarbeiten',    std: ['admin'] },
   { k: 'matrix_reset',      g: 'Matrix',            l: 'Matrix zurücksetzen',                               std: ['admin', 'planner'] },
   { k: 'unterschreiben',    g: 'Protokoll',         l: 'DC-Protokoll unterschreiben',                       std: ['admin', 'planner', 'site'] },
   { k: 'sperren',           g: 'Protokoll',         l: 'Protokoll sperren und entsperren',                  std: ['admin'] },
@@ -562,7 +563,7 @@ function renderProjectGrid(){
       }
       const offeneAnzahl = ids.length - archiviert;
       let chips = `<button class="wr-tab ${currentProjectGroupFilter==='__all__'?'active':''}" onclick="selectProjectGroupFilter('__all__')">Alle <span style="opacity:0.6;">(${offeneAnzahl})</span></button>`;
-      chips += groupNames.map(gr => `<button class="wr-tab ${currentProjectGroupFilter===gr?'active':''}" onclick="selectProjectGroupFilter('${esc(gr).replace(/'/g,"\\'")}')">${esc(gr)} <span style="opacity:0.6;">(${groupCounts[gr]})</span></button>`).join('');
+      chips += groupNames.map(gr => `<button class="wr-tab ${currentProjectGroupFilter===gr?'active':''}" data-gruppe="${esc(gr)}" onclick="selectProjectGroupFilter(this.dataset.gruppe)">${esc(gr)} <span style="opacity:0.6;">(${groupCounts[gr]})</span></button>`).join('');
       if(ungrouped > 0){
         chips += `<button class="wr-tab ${currentProjectGroupFilter==='__none__'?'active':''}" onclick="selectProjectGroupFilter('__none__')">Ohne Gruppe <span style="opacity:0.6;">(${ungrouped})</span></button>`;
       }
@@ -9497,8 +9498,11 @@ function pflichtHatFoto(p, ziel){
 }
 function pflichtEntfaellt(p, ziel){ return (p.fotosEntfaellt || []).includes(ziel); }
 function pflichtOffen(p){ return pflichtPunkte(p).filter(x => !pflichtHatFoto(p, x.ziel) && !pflichtEntfaellt(p, x.ziel)); }
+// Pflichtfotos sind Sache des Admins (Recht 'pflichtfotos'). Ohne das Recht
+// gibt es keinen Stand – damit auch keinen Schritt, Chip, Knopf und keine
+// Rueckfrage beim Unterschreiben.
 function pflichtStand(p){
-  if(!p) return null;
+  if(!p || !darf('pflichtfotos')) return null;
   const punkte = pflichtPunkte(p);
   if(!punkte.length) return null;
   return { gesamt: punkte.length, fertig: punkte.length - pflichtOffen(p).length };
@@ -9522,6 +9526,7 @@ function pflichtFotoGeaendert(pid){
 async function pflichtfotosOeffnen(){
   const p = getCurrentProject();
   if(!p) return toast('Bitte zuerst ein Projekt öffnen');
+  if(!darf('pflichtfotos')) return toast('Keine Berechtigung');
   let ov = g('pflichtfotos-dialog');
   if(!ov){
     ov = document.createElement('div');
@@ -10021,7 +10026,7 @@ async function bsAktion(id){
 // ══════════════════════════════════════════════════════════════════════════
 const ROLLEN_REIHE = ['site', 'elektriker', 'buero', 'planner', 'admin'];
 const ROLLEN_INFO = {
-  site:       'Misst DC, macht die Pflichtfotos und unterschreibt das DC-Protokoll. Sieht nur Projekte, denen du die Person zuweist.',
+  site:       'Misst DC und unterschreibt das DC-Protokoll. Sieht nur Projekte, denen du die Person zuweist.',
   elektriker: 'Füllt das AC-Prüfprotokoll (PPK) aus. Sieht nur Projekte, denen du die Person zuweist.',
   buero:      'Erstellt die Anlagendoku. Sieht alle Projekte ihrer Bereiche.',
   planner:    'Legt Projekte an, plant Wechselrichter und Module, weist Personen zu. Sieht alle Projekte ihrer Bereiche.',

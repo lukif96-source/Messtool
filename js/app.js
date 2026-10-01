@@ -8181,8 +8181,7 @@ async function ppkStatusLaden(){
   } catch(e){ console.warn('PPK-Status:', e); }
 }
 function projektStatusHtml(p){
-  const schritte = projektSchritte(p).filter(s => s.id === 'dc' || darf('ppk') || darf('anlagenbuch'))
-    .filter(s => s.id !== 'ab' || darf('anlagenbuch') || darf('ppk'));
+  const schritte = schritteFuerRolle(projektSchritte(p).filter(s => s.id === 'dc' || darf('ppk') || darf('anlagenbuch')));
   if(!schritte.length) return '';
   const art = { fertig: 'ok', arbeit: 'teil', offen: 'offen', gesperrt: 'wartet' };
   const pf = pflichtStand(p);
@@ -9382,9 +9381,23 @@ function projektSchritte(p){
   ];
 }
 function schrittGesperrt(p, id){ const s = projektSchritte(p).find(x => x.id === id); return !!(s && s.status === 'gesperrt'); }
+// Klare Rollen: Bauleitung und Elektriker sehen im Ablauf nur ihre eigenen
+// Schritte und was davor fertig sein muss – nicht, was danach andere
+// erledigen (die Bauleitung also kein PPK und keine Anlagendoku).
+// Planer und Buero behalten den ganzen Ablauf im Blick. Schritte einer
+// Funktion, die noch "In Arbeit" ist, sieht nur der Admin.
+const SCHRITT_RECHT = { dc: 'messwerte', ppk: 'ppk', ab: 'anlagenbuch' };
+function schritteFuerRolle(schritte, meins = s => darf(SCHRITT_RECHT[s.id])){
+  if(currentUserRole === 'admin') return schritte;
+  const frei = schritte.filter(s => funktionFrei(SCHRITT_RECHT[s.id] || s.id));
+  if(!['site', 'elektriker'].includes(currentUserRole)) return frei;
+  let letzter = -1;
+  frei.forEach((s, i) => { if(meins(s)) letzter = i; });
+  return frei.slice(0, Math.max(letzter, 0) + 1);
+}
 function schrittLeisteHtml(p, aktuell){
   if(!p) return '';
-  const schritte = projektSchritte(p);
+  const schritte = schritteFuerRolle(projektSchritte(p));
   return `<nav class="schritte" aria-label="Ablauf des Projekts">${schritte.map((s, i) => {
     const klickbar = tabErlaubt(s.tab) && s.id !== aktuell && (s.status !== 'gesperrt' || currentUserRole === 'admin');
     const symbol = s.status === 'fertig' ? ICON.check : (s.status === 'gesperrt' ? ICON.lock : String(i + 1));
@@ -9872,7 +9885,7 @@ function bsSchritte(p){
     const bekannt = ppkStatusGeladen || darf('anlagenbuch');
     liste.push({ id: 'ab', name: 'Anlagendoku', status: bekannt || ab.status === 'fertig' ? ab.status : 'fremd', info: bekannt || ab.status === 'fertig' ? ab.info : '', meins: darf('anlagenbuch'), wer: 'das Büro', knopf: 'Anlagendoku erstellen' });
   }
-  return liste;
+  return schritteFuerRolle(liste, s => s.meins || s.kann);
 }
 function bsNaechster(schritte){ return schritte.find(s => s.meins && !s.zu && s.status !== 'fertig' && s.status !== 'gesperrt' && s.status !== 'fremd') || null; }
 // Welcher Schritt sperrt? PPK und Unterschrift warten auf die Messung, die Doku aufs PPK

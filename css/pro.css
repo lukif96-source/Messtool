@@ -1713,3 +1713,7 @@ html body.pp .eint-mdazu input { flex: 1 1 180px; min-width: 0; text-align: left
 html body.pp .eint-mdazu select { flex: 0 1 180px; }
 html body.pp .eint-mdazu .btn { min-height: 40px; }
 html body.pp .eint-leer { padding: 12px 0; }
+
+html body.pp .eint-mtab .eint-mbvh { width: 100%; margin-top: 4px; min-height: 38px; font-size: .86rem; text-align: left !important; }
+html body.pp .eint-mtab .eint-mbvh::placeholder { color: var(--dim); font-style: italic; }
+html body.pp .eint-mtab td { min-width: 150px; }

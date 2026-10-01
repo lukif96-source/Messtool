@@ -9025,7 +9025,7 @@ function eintBusHtml(w, tage, monteure){
         ${w.busse.map((b, bi) => {
           const crew = eintCrew(w, b, t), anders = eintCrewAnders(b, crew);
           return `<td><textarea class="sp-inp" rows="3" data-eint-bus="${bi}" data-eint-tag="${t}" placeholder="BVH">${esc((b.tage || {})[t] || '')}</textarea>${monteure.length
-            ? `<div class="eint-crew${anders ? ' anders' : ''}" title="${anders ? 'Abweichend von der Stamm-Mannschaft' : 'Stamm-Mannschaft'}">${esc(crew.join(', ') || 'niemand eingeteilt')}</div>` : ''}</td>`;
+            ? `<div class="eint-crew${anders ? ' anders' : ''}" title="${anders ? 'Abweichend von der Stamm-Mannschaft' : 'Stamm-Mannschaft'}">${esc(eintCrewText(w, b, t).join(', ') || 'niemand eingeteilt')}</div>` : ''}</td>`;
         }).join('')}<td></td></tr>`).join('')}
       </tbody></table></div>`;
 }
@@ -9074,13 +9074,18 @@ function eintMonteurHtml(w, tage, monteure){
         <td class="eint-mwoche"><select class="sp-inp" data-eint-woche="${mi}" aria-label="Ganze Woche für ${esc(m.name)}">
           <option value="">alle Tage …</option>${w.busse.map(b => `<option value="${esc(b.name)}">${esc(b.name)}</option>`).join('')}
           <optgroup label="Nicht im Bus">${EINT_ABWESEND.map(x => `<option value="${x}">${x}</option>`).join('')}</optgroup>
-          ${m.stamm ? '<option value="__stamm">zurück auf Stamm</option>' : ''}</select></td>
-        ${tage.map(t => { const e = eintEinsatz(w, m, t); const anders = eintUmgestellt(m, e);
-          return `<td class="${anders ? 'anders' : ''}${EINT_ABWESEND.includes(e) ? ' abw' : ''}"><select class="sp-inp" data-eint-m="${mi}" data-eint-tag="${t}" aria-label="${esc(m.name)} am ${esc(wt(t))}">${eintOptionen(w, e, m.stamm)}</select></td>`; }).join('')}
-      </tr>`).join('')}</tbody></table></div>`
+          ${m.stamm ? '<option value="__stamm">zurück auf Stamm</option>' : ''}</select>
+          <input class="sp-inp eint-mbvh" data-eint-wbvh="${mi}" list="eint-bvh-liste" placeholder="BVH alle Tage" aria-label="BVH für die ganze Woche: ${esc(m.name)}" autocomplete="off"></td>
+        ${tage.map(t => { const e = eintEinsatz(w, m, t); const anders = eintUmgestellt(m, e), abw = EINT_ABWESEND.includes(e);
+          const bus = w.busse.find(b => b.name === e);
+          const vorschlag = bus ? eintBusBvh(bus, t).map(eintBvhKurz).join(' / ') : '';
+          return `<td class="${anders ? 'anders' : ''}${abw ? ' abw' : ''}"><select class="sp-inp" data-eint-m="${mi}" data-eint-tag="${t}" aria-label="Bus: ${esc(m.name)} am ${esc(wt(t))}">${eintOptionen(w, e, m.stamm)}</select>
+            ${abw ? '' : `<input class="sp-inp eint-mbvh" data-eint-mbvh="${mi}" data-eint-tag="${t}" list="eint-bvh-liste" value="${esc(eintEigeneBvh(w, m, t))}" placeholder="${esc(vorschlag || 'BVH')}" aria-label="BVH: ${esc(m.name)} am ${esc(wt(t))}" autocomplete="off">`}</td>`; }).join('')}
+      </tr>`).join('')}</tbody></table></div>
+      <datalist id="eint-bvh-liste">${eintBvhVorschlaege().map(v => `<option value="${esc(v)}"></option>`).join('')}</datalist>`
     : '<p class="ab-klein eint-leer">Noch keine Monteure. Unter „Nach Bussen“ je Bus die Stamm-Mannschaft eintragen (Namen mit Komma) oder hier jemanden hinzufügen.</p>';
-  return `<p class="app-dialog-text">Je Monteur und Tag den Bus wählen – ohne Änderung fährt er mit seinem Stammbus.
-      Umgestellte Tage sind grün, Urlaub/Krank orange markiert. Gilt nur für diese Woche.</p>
+  return `<p class="app-dialog-text">Je Monteur und Tag den <b>Bus</b> wählen und darunter die <b>BVH</b> eintragen.
+      Ohne Eintrag gilt die BVH des Busses (grau vorgeschlagen) und der Stammbus. Umgestellte Tage sind grün, Urlaub/Krank orange. Gilt nur für diese Woche.</p>
     ${tabelle}
     <div class="eint-mdazu"><input class="sp-inp" id="eint-mneu" placeholder="Name des Monteurs" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();eintMonteurDazu();}">
       <select class="sp-inp" id="eint-mneu-bus" aria-label="Stammbus"><option value="">ohne festen Bus</option>${w.busse.map(b => `<option value="${esc(b.name)}">${esc(b.name)}</option>`).join('')}</select>
@@ -9100,6 +9105,23 @@ function eintMonteurEvents(ov, w, tage, monteure){
     eintGeaendert(w);
     eintZeigen();
   }));
+  // BVH je Monteur und Tag: speichern ohne neu zu zeichnen (Fokus bleibt im Feld)
+  ov.querySelectorAll('input[data-eint-mbvh]').forEach(inp => inp.addEventListener('input', () => {
+    eintBvhSetzen(w, monteure[+inp.dataset.eintMbvh], inp.dataset.eintTag, inp.value);
+    eintGeaendert(w);
+  }));
+  ov.querySelectorAll('input[data-eint-wbvh]').forEach(inp => {
+    const alle = () => {
+      const v = inp.value.trim();
+      if(!v) return;
+      const m = monteure[+inp.dataset.eintWbvh];
+      tage.filter(t => !EINT_ABWESEND.includes(eintEinsatz(w, m, t))).forEach(t => eintBvhSetzen(w, m, t, v));
+      eintGeaendert(w);
+      eintZeigen();
+    };
+    inp.addEventListener('change', alle);
+    inp.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); inp.blur(); } });
+  });
   ov.querySelectorAll('[data-eint-mweg]').forEach(btn => btn.addEventListener('click', async () => {
     const m = monteure[+btn.dataset.eintMweg];
     if(m.stamm){
@@ -9107,10 +9129,12 @@ function eintMonteurEvents(ov, w, tage, monteure){
       const b = w.busse.find(x => x.name === m.stamm);
       if(b) b.leute = eintLeute(b).filter(n => n !== m.name).join(', ');
       if(w.einsatz) delete w.einsatz[m.name];
+      if(w.bvh) delete w.bvh[m.name];
       eintGeaendert(w, true);
     } else {
       w.zusatz = (w.zusatz || []).filter(n => n !== m.name);
       if(w.einsatz) delete w.einsatz[m.name];
+      if(w.bvh) delete w.bvh[m.name];
       eintGeaendert(w);
     }
     eintZeigen();
@@ -9152,6 +9176,44 @@ function eintSetzen(w, m, t, wert){
   const p = w.einsatz[m.name] = w.einsatz[m.name] || {};
   if((wert || EINT_KEINER) === (m.stamm || EINT_KEINER)) delete p[t]; else p[t] = wert;
   if(!Object.keys(p).length) delete w.einsatz[m.name];
+}
+// BVH je Monteur und Tag (w.bvh[Name][Tag]); leer = BVH(s) des Busses
+function eintEigeneBvh(w, m, t){ return String((w.bvh && w.bvh[m.name] && w.bvh[m.name][t]) || '').trim(); }
+function eintBvhSetzen(w, m, t, text){
+  w.bvh = w.bvh || {};
+  const p = w.bvh[m.name] = w.bvh[m.name] || {};
+  const v = String(text || '').replace(/\s+/g, ' ').trim();
+  if(v) p[t] = v; else delete p[t];
+  if(!Object.keys(p).length) delete w.bvh[m.name];
+}
+function eintBusBvh(bus, t){ return String(((bus && bus.tage) || {})[t] || '').split('\n').map(s => s.trim()).filter(s => s && !/^urlaub/i.test(s)); }
+// "BVH Name · Ort (Leute)" -> "BVH Name"
+function eintBvhKurz(z){ const m = String(z).match(/^(.*?)(?:\s+·\s+[^(]*?)?\s*(?:\([^)]*\))?\s*$/); return ((m && m[1]) || String(z)).trim(); }
+// Zellenzeilen eines Busses inkl. der BVHs, die bei seinen Leuten eingetragen sind
+function eintBusZeilen(w, b, t){
+  const zeilen = String((b.tage || {})[t] || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const da = new Set(zeilen.map(z => eintBvhKurz(z).toLowerCase()));
+  eintMonteure(w).filter(m => eintEinsatz(w, m, t) === b.name).forEach(m => {
+    const e = eintEigeneBvh(w, m, t);
+    if(e && !da.has(e.toLowerCase())){ zeilen.push(e); da.add(e.toLowerCase()); }
+  });
+  return zeilen;
+}
+// Mannschaft eines Busses an einem Tag; bei mehreren BVHs mit "(BVH)" je Person
+function eintCrewText(w, b, t){
+  const mehrere = eintBusZeilen(w, b, t).filter(z => !/^urlaub/i.test(z)).length > 1;
+  return eintMonteure(w).filter(m => eintEinsatz(w, m, t) === b.name).map(m => {
+    const e = eintEigeneBvh(w, m, t);
+    return e && mehrere ? `${m.name} (${e})` : m.name;
+  });
+}
+function eintBvhVorschlaege(){
+  const s = new Set();
+  Object.values((eint && eint.wochen) || {}).forEach(wo => (wo.busse || []).forEach(b => Object.values(b.tage || {}).forEach(v =>
+    String(v).split('\n').map(z => z.trim()).filter(z => z && !/^urlaub/i.test(z)).forEach(z => s.add(eintBvhKurz(z))))));
+  Object.values((eint && eint.wochen) || {}).forEach(wo => Object.values(wo.bvh || {}).forEach(p => Object.values(p).forEach(v => s.add(v))));
+  Object.values(PROJECTS || {}).forEach(p => { if(p && p.name) s.add(p.name); });
+  return [...s].filter(Boolean).sort((a, b) => a.localeCompare(b)).slice(0, 300);
 }
 // Markierung "umgestellt": nur wer einen Stammbus hat und an dem Tag in einem anderen Bus faehrt
 function eintUmgestellt(m, e){ return !!m.stamm && !EINT_ABWESEND.includes(e) && (e || EINT_KEINER) !== m.stamm; }
@@ -9285,7 +9347,7 @@ async function einteilungBild(){
   // Tageszeilen
   tage.forEach((t, ti) => {
     // Je Zeile: BVH-Name fett, "· Ort" und "(Mitarbeiter)" klein und grau darunter
-    const zellen = busse.map(b => String((b.tage || {})[t] || '').split('\n').map(s => s.trim()).filter(Boolean).map(z => {
+    const zellen = busse.map(b => eintBusZeilen(w, b, t).map(z => {
       const urlaub = /^urlaub/i.test(z);
       if(urlaub){ setz(22, 500); return { urlaub, zeilen: umbrechen(z, SW - 30), zusatz: [] }; }
       const m = z.match(/^(.*?)(?:\s+·\s+([^(]*?))?\s*(?:\(([^)]*)\))?\s*$/);
@@ -9296,8 +9358,8 @@ async function einteilungBild(){
       return { urlaub, zeilen, zusatz };
     }));
     if(rot) busse.forEach((b, i) => {
-      const crew = eintCrew(w, b, t);
-      if(crew.length){ setz(21, 400); zellen[i].push({ urlaub: false, team: true, zeilen: [], zusatz: umbrechen(crew.join(', '), SW - 30) }); }
+      const crew = eintCrewText(w, b, t);
+      if(crew.length){ setz(21, 600); zellen[i].push({ urlaub: false, team: true, zeilen: [], zusatz: umbrechen(crew.join(', '), SW - 30) }); }
     });
     if(abwSpalte){ setz(22, 500); zellen.push(eintAbwesend(w, t).map(([n, a]) => ({ urlaub: true, zeilen: umbrechen(`${a}: ${n}`, SW - 30), zusatz: [] }))); }
     const hZelle = z => z.reduce((s, e) => s + e.zeilen.length * (e.urlaub ? 30 : 34) + e.zusatz.length * 27 + 12, 0);
@@ -10615,19 +10677,19 @@ async function einteilungBildMonteure(){
   x.fillStyle = F.brand; x.fillRect(P, y + kopfH - 5, W - 2 * P, 5);
   const tabOben = y;
   y += kopfH;
-  // BVH-Name aus einer Zellenzeile ("Name · Ort (Leute)" -> "Name")
-  const bvhKurz = z => { const m = String(z).match(/^(.*?)(?:\s+·\s+[^(]*?)?\s*(?:\([^)]*\))?\s*$/); return ((m && m[1]) || z).trim(); };
   monteure.forEach((m, mi) => {
     const zellen = tage.map(t => {
       const e = eintEinsatz(w, m, t);
       const anders = eintUmgestellt(m, e);
       if(EINT_ABWESEND.includes(e)){ setz(24, 600); return { anders, teile: [{ t: umbrechen(e, SW - 30), gr: 24, gew: 600, farbe: F.urlaub, zh: 32 }] }; }
       const bus = e && e !== EINT_KEINER ? w.busse.find(b => b.name === e) : null;
-      if(!bus) return { anders, teile: [] };
-      const bvh = String((bus.tage || {})[t] || '').split('\n').map(s => s.trim()).filter(s => s && !/^urlaub/i.test(s)).map(bvhKurz).slice(0, 3);
-      setz(26, 700); const kopf = umbrechen(bus.name, SW - 30);
-      setz(21, 400); const unter = bvh.flatMap(b => umbrechen(b, SW - 30));
-      return { anders, teile: [{ t: kopf, gr: 26, gew: 700, farbe: anders ? F.brandDunkel : F.ink, zh: 34 }, { t: unter, gr: 21, gew: 400, farbe: F.grau, zh: 27 }] };
+      const eigene = eintEigeneBvh(w, m, t);
+      const bvh = eigene ? [eigene] : (bus ? eintBusBvh(bus, t).map(eintBvhKurz).slice(0, 3) : []);
+      if(!bus && !bvh.length) return { anders, teile: [] };
+      // BVH fett (das Wichtigste), darunter der Bus
+      setz(26, 700); const kopf = bvh.length ? bvh.flatMap(b => umbrechen(b, SW - 30)) : umbrechen(bus.name, SW - 30);
+      setz(21, 600); const unter = bvh.length && bus ? umbrechen(bus.name, SW - 30) : [];
+      return { anders, teile: [{ t: kopf, gr: 26, gew: 700, farbe: F.ink, zh: 34 }, { t: unter, gr: 21, gew: 600, farbe: anders ? F.brandDunkel : F.grau, zh: 27 }] };
     });
     setz(26, 700); const nameZ = umbrechen(m.name, NAME - 28);
     const hZelle = z => z.teile.reduce((s, p) => s + p.t.length * p.zh, 0);
@@ -10651,7 +10713,7 @@ async function einteilungBildMonteure(){
   x.fillRect(P, tabOben, 2, y - tabOben); x.fillRect(W - P - 2, tabOben, 2, y - tabOben);
   y += 34;
   setz(20, 400); x.fillStyle = F.hell;
-  x.fillText(`Grün hinterlegt = anderer Bus als sonst · Stand ${new Date().toLocaleString('de-AT', { dateStyle: 'short', timeStyle: 'short' })} · SOLPRO Messtool`, P, y);
+  x.fillText(`Fett = BVH, darunter der Bus · grün hinterlegt = anderer Bus als sonst · Stand ${new Date().toLocaleString('de-AT', { dateStyle: 'short', timeStyle: 'short' })} · SOLPRO Messtool`, P, y);
   y += P;
   const aus = document.createElement('canvas');
   aus.width = W; aus.height = Math.min(y, c.height);

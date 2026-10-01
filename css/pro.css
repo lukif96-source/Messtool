@@ -1717,3 +1717,6 @@ html body.pp .eint-leer { padding: 12px 0; }
 html body.pp .eint-mtab .eint-mbvh { width: 100%; margin-top: 4px; min-height: 38px; font-size: .86rem; text-align: left !important; }
 html body.pp .eint-mtab .eint-mbvh::placeholder { color: var(--dim); font-style: italic; }
 html body.pp .eint-mtab td { min-width: 150px; }
+/* Einteilung: WhatsApp-Text */
+html body.pp .eint-text-dialog { max-width: 560px; width: calc(100vw - 24px); max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
+html body.pp .eint-text { width: 100%; flex: 1 1 auto; min-height: 260px; font-family: ui-monospace, Consolas, monospace; font-size: .86rem; line-height: 1.45; text-align: left !important; white-space: pre-wrap; resize: vertical; }

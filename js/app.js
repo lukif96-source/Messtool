@@ -9001,7 +9001,10 @@ function eintZeigen(){
       ${istM ? '' : '<button type="button" class="btn btn-ghost" onclick="eintTaifun()">Aus Taifun vorausfüllen</button>'}
       <button type="button" class="btn btn-ghost" onclick="einteilungPdf()">PDF</button>
       ${kopierbar ? '<button type="button" class="btn btn-ghost" onclick="einteilungKopieren()">Bild kopieren</button>' : ''}
-      <button type="button" class="btn btn-primary" onclick="einteilungTeilen()">${teilbar ? 'Teilen (WhatsApp)' : 'Bild speichern'}</button>
+      ${istM
+        ? `<button type="button" class="btn btn-ghost" onclick="einteilungTeilen()">${teilbar ? 'Bild teilen' : 'Bild speichern'}</button>
+           <button type="button" class="btn btn-primary" onclick="einteilungTextZeigen()">WhatsApp-Text (Liste nach Namen)</button>`
+        : `<button type="button" class="btn btn-primary" onclick="einteilungTeilen()">${teilbar ? 'Teilen (WhatsApp)' : 'Bild speichern'}</button>`}
     </div></div>`;
   ov.querySelector('#eint-we').addEventListener('change', e => { w.wochenende = e.target.checked; eintGeaendert(w); eintZeigen(); });
   if(istM) eintMonteurEvents(ov, w, tage, monteure); else eintBusEvents(ov, w);
@@ -10725,4 +10728,71 @@ async function einteilungBildMonteure(){
   aus.width = W; aus.height = Math.min(y, c.height);
   aus.getContext('2d').drawImage(c, 0, 0);
   return aus;
+}
+
+// ── WhatsApp-Text: Liste nach Namen (am Handy ohne Zoomen lesbar) ─────────
+// Je Monteur seine Tage untereinander, gleiche Tage hintereinander
+// zusammengefasst ("Mo–Mi: BVH Seidl – Bus SOL 2"). *fett* = WhatsApp-Fettschrift.
+function einteilungText(){
+  const w = eintWocheHolen(eintWoche);
+  const tage = wochenTage(eintWoche, w.wochenende);
+  const TAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+  const kurz = iso => isoDatum(iso).toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit' });
+  const monteure = eintMonteure(w).slice().sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  const zeile = (m, t) => {
+    const e = eintEinsatz(w, m, t);
+    if(EINT_ABWESEND.includes(e)) return e;
+    const bus = e && e !== EINT_KEINER ? w.busse.find(b => b.name === e) : null;
+    const bvh = eintEigeneBvh(w, m, t) || (bus ? eintBusBvh(bus, t).map(eintBvhKurz).join(' / ') : '');
+    const teile = [bvh, bus ? `Bus ${bus.name}` : ''].filter(Boolean);
+    if(!teile.length) return 'nicht eingeteilt';
+    return teile.join(' – ') + (eintUmgestellt(m, e) ? ' (anderer Bus!)' : '');
+  };
+  const bloecke = monteure.map(m => {
+    const z = tage.map(t => zeile(m, t));
+    const out = [];
+    for(let i = 0; i < z.length;){
+      let j = i;
+      while(j + 1 < z.length && z[j + 1] === z[i]) j++;
+      const von = TAG[isoDatum(tage[i]).getDay()], bis = TAG[isoDatum(tage[j]).getDay()];
+      out.push(i === 0 && j === z.length - 1 ? `ganze Woche: ${z[i]}` : `${i === j ? von : von + '–' + bis}: ${z[i]}`);
+      i = j + 1;
+    }
+    return `*${m.name}*\n${out.join('\n')}`;
+  });
+  return `*Einteilung KW ${kalenderwoche(isoDatum(eintWoche))}* (${kurz(tage[0])} – ${kurz(tage[tage.length - 1])})\n\n`
+    + `${bloecke.join('\n\n')}\n\nStand ${new Date().toLocaleString('de-AT', { dateStyle: 'short', timeStyle: 'short' })}`;
+}
+// Vorschau mit "Teilen" (Handy) und "Kopieren" (PC)
+function einteilungTextZeigen(){
+  const w = eintWocheHolen(eintWoche);
+  if(!eintMonteure(w).length) return toast('Noch keine Monteure eingetragen');
+  const text = einteilungText();
+  const teilbar = !!navigator.share;
+  const ov = document.createElement('div');
+  ov.id = 'eint-text-dialog'; ov.className = 'app-dialog-overlay';
+  ov.innerHTML = `<div class="app-dialog eint-text-dialog" role="dialog" aria-modal="true" aria-labelledby="eint-text-titel">
+    <div class="ein-kopf"><h2 id="eint-text-titel">WhatsApp-Text</h2>
+      <button type="button" class="mm-x" data-a="zu" aria-label="Schließen">${ICON.x}</button></div>
+    <p class="app-dialog-text">So kommt die Nachricht in der Gruppe an – jeder sucht nur seinen Namen. Sternchen werden in WhatsApp zu Fettschrift.</p>
+    <textarea class="sp-inp eint-text" readonly rows="16">${esc(text)}</textarea>
+    <div class="app-dialog-knoepfe">
+      <button type="button" class="btn ${teilbar ? 'btn-ghost' : 'btn-primary'}" data-a="kopieren">Text kopieren</button>
+      ${teilbar ? '<button type="button" class="btn btn-primary" data-a="teilen">Teilen (WhatsApp)</button>' : ''}
+    </div></div>`;
+  const zu = () => { document.removeEventListener('keydown', taste, true); ov.remove(); };
+  function taste(e){ if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); zu(); } }
+  ov.addEventListener('click', e => { if(e.target === ov) zu(); });
+  ov.querySelector('[data-a="zu"]').addEventListener('click', zu);
+  ov.querySelector('[data-a="kopieren"]').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(text); toast('Text kopiert – in WhatsApp einfügen und senden'); }
+    catch(_){ const ta = ov.querySelector('textarea'); ta.focus(); ta.select(); toast('Text markiert – mit Strg+C kopieren'); }
+  });
+  const t = ov.querySelector('[data-a="teilen"]');
+  if(t) t.addEventListener('click', async () => {
+    try { await navigator.share({ text }); }
+    catch(e){ if(!(e && e.name === 'AbortError')){ try { await navigator.clipboard.writeText(text); toast('Teilen nicht möglich – Text kopiert'); } catch(_){} } }
+  });
+  document.addEventListener('keydown', taste, true);
+  document.body.appendChild(ov);
 }

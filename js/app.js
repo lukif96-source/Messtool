@@ -9193,7 +9193,7 @@ function eintSetzen(w, m, t, wert){
   if(!Object.keys(p).length) delete w.einsatz[m.name];
 }
 // BVH je Monteur und Tag (w.bvh[Name][Tag]); leer = BVH(s) des Busses
-function eintEigeneBvh(w, m, t){ return String((w.bvh && w.bvh[m.name] && w.bvh[m.name][t]) || '').trim(); }
+function eintEigeneBvh(w, m, t){ return eintZeileSauber((w.bvh && w.bvh[m.name] && w.bvh[m.name][t]) || ''); }
 function eintBvhSetzen(w, m, t, text){
   w.bvh = w.bvh || {};
   const p = w.bvh[m.name] = w.bvh[m.name] || {};
@@ -9201,7 +9201,26 @@ function eintBvhSetzen(w, m, t, text){
   if(v) p[t] = v; else delete p[t];
   if(!Object.keys(p).length) delete w.bvh[m.name];
 }
-function eintBusBvh(bus, t){ return String(((bus && bus.tage) || {})[t] || '').split('\n').map(s => s.trim()).filter(s => s && !/^urlaub/i.test(s)); }
+// Zeile fuer die Ausgabe saeubern: Klammern ohne Gegenstueck (z. B. eine
+// beim Umbenennen uebrig gebliebene ")") und leere "()" weg; Zeilen ohne
+// Buchstaben/Ziffern fallen ganz weg
+function eintZeileSauber(z){
+  let tiefe = 0, out = '';
+  for(const ch of String(z || '')){
+    if(ch === '('){ tiefe++; out += ch; }
+    else if(ch === ')'){ if(tiefe > 0){ tiefe--; out += ch; } }
+    else out += ch;
+  }
+  while(tiefe-- > 0){ const i = out.lastIndexOf('('); out = out.slice(0, i) + out.slice(i + 1); }
+  out = out.replace(/\(\s*\)/g, '').replace(/\s+/g, ' ').trim();
+  return /[\p{L}\p{N}]/u.test(out) ? out : '';
+}
+function eintZellZeilen(text){
+  // In die naechste Zeile gerutschte ")" wieder anfuegen: "BVH (Name" + ")" -> "BVH (Name)"
+  const t = String(text || '').replace(/\(([^()\n]*)\n\s*\)/g, '($1)');
+  return t.split('\n').map(eintZeileSauber).filter(Boolean);
+}
+function eintBusBvh(bus, t){ return eintZellZeilen(((bus && bus.tage) || {})[t]).filter(s => !/^urlaub/i.test(s)); }
 // "BVH Name · Ort (Leute)" -> "BVH Name"
 function eintBvhKurz(z){ const m = String(z).match(/^(.*?)(?:\s+·\s+[^(]*?)?\s*(?:\([^)]*\))?\s*$/); return ((m && m[1]) || String(z)).trim(); }
 // Vergleich von BVH-Namen ohne Gross/Klein, Leerzeichen und Satzzeichen
@@ -9230,7 +9249,7 @@ function eintBvhVomBus(bus, t, name){
 // zusammengefuehrt), dazu BVHs, die nur bei seinen Leuten eingetragen sind
 function eintBusZeilen(w, b, t){
   const zeilen = [], idx = new Map();
-  String((b.tage || {})[t] || '').split('\n').map(s => s.trim()).filter(Boolean).forEach(z => {
+  eintZellZeilen((b.tage || {})[t]).forEach(z => {
     if(/^urlaub/i.test(z)){ zeilen.push(z); return; }
     const k = eintBvhNorm(z);
     if(!idx.has(k)){ idx.set(k, zeilen.length); zeilen.push(z); return; }

@@ -9458,11 +9458,32 @@ async function einteilungTeilen(){
   } catch(e){ toastError('Bild konnte nicht erstellt werden', e); }
 }
 async function einteilungKopieren(){
+  // Die Zwischenablage gleich beim Klick belegen und das Bild nachreichen –
+  // wartet man erst auf das fertige Bild, lehnt der Browser das Kopieren ab
+  // und in der Zwischenablage bleibt das alte Bild (z. B. der Vorwoche).
+  const kw = kalenderwoche(isoDatum(eintWoche));
+  const was = eintAnsicht === 'monteure' ? 'nach Monteuren' : 'nach Bussen';
+  const bild = einteilungBlob();
   try {
-    const blob = await einteilungBlob();
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': bild })]);
+    toast(`Bild KW ${kw} (${was}) kopiert – in WhatsApp mit Strg+V einfügen`);
+    return;
+  } catch(e){ console.warn('Kopieren mit nachgereichtem Bild:', e); }
+  try {
+    const blob = await bild;
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-    toast('Bild kopiert – in WhatsApp mit Strg+V einfügen');
-  } catch(e){ toastError('Kopieren nicht möglich – bitte „Bild speichern“ verwenden', e); }
+    toast(`Bild KW ${kw} (${was}) kopiert – in WhatsApp mit Strg+V einfügen`);
+  } catch(e){
+    // Nicht kopiert: lieber speichern, als das alte Bild in der Zwischenablage zu lassen
+    toastError(`Kopieren hat nicht geklappt – das Bild KW ${kw} wird stattdessen gespeichert`, e);
+    try {
+      const blob = await bild;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = einteilungDateiname('png');
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    } catch(_){}
+  }
 }
 async function einteilungPdf(){
   try {

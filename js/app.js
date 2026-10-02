@@ -9433,7 +9433,7 @@ async function einteilungBild(){
   x.fillRect(P, tabOben, 2, y - tabOben); x.fillRect(W - P - 2, tabOben, 2, y - tabOben);
   y += 34;
   setz(20, 400); x.fillStyle = F.hell;
-  x.fillText(`Stand ${new Date().toLocaleString('de-AT', { dateStyle: 'short', timeStyle: 'short' })} · SOLPRO Messtool`, P, y);
+  x.fillText(`Stand ${new Date().toLocaleString('de-AT', { dateStyle: 'short', timeStyle: 'short' })} · SOLPRO Messtool · Version ${APP_VERSION}`, P, y);
   y += P;
   const aus = document.createElement('canvas');
   aus.width = W; aus.height = Math.min(y, c.height);
@@ -10757,7 +10757,7 @@ async function einteilungBildMonteure(){
   x.fillRect(P, tabOben, 2, y - tabOben); x.fillRect(W - P - 2, tabOben, 2, y - tabOben);
   y += 34;
   setz(20, 400); x.fillStyle = F.hell;
-  x.fillText(`Fett = BVH, darunter der Bus · grün hinterlegt = anderer Bus als sonst · Stand ${new Date().toLocaleString('de-AT', { dateStyle: 'short', timeStyle: 'short' })} · SOLPRO Messtool`, P, y);
+  x.fillText(`Fett = BVH, darunter der Bus · grün hinterlegt = anderer Bus als sonst · Stand ${new Date().toLocaleString('de-AT', { dateStyle: 'short', timeStyle: 'short' })} · SOLPRO Messtool · Version ${APP_VERSION}`, P, y);
   y += P;
   const aus = document.createElement('canvas');
   aus.width = W; aus.height = Math.min(y, c.height);
@@ -10831,3 +10831,8 @@ function einteilungTextZeigen(){
   document.addEventListener('keydown', taste, true);
   document.body.appendChild(ov);
 }
+
+// App-Version (aus dem Skript-Link app.js?v=…) – steht im Menue und unten auf
+// den Bildern, damit man sieht, welcher Stand ein Bild erzeugt hat.
+const APP_VERSION = (() => { const el = document.querySelector('script[src*="js/app.js"]'); const m = el && el.src.match(/[?&]v=([\w-]+)/); return m ? m[1] : '–'; })();
+(() => { const el = document.querySelector('.sidebar-subtitle .tool-by'); if(el) el.textContent = `designed by Lukas · Version ${APP_VERSION}`; })();

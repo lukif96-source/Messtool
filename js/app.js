@@ -9086,9 +9086,11 @@ function eintMonteurHtml(w, tage, monteure){
           <input class="sp-inp eint-mbvh" data-eint-wbvh="${mi}" list="eint-bvh-liste" placeholder="BVH alle Tage" aria-label="BVH für die ganze Woche: ${esc(m.name)}" autocomplete="off"></td>
         ${tage.map(t => { const e = eintEinsatz(w, m, t); const anders = eintUmgestellt(m, e), abw = EINT_ABWESEND.includes(e);
           const bus = w.busse.find(b => b.name === e);
-          const vorschlag = bus ? eintBusBvh(bus, t).map(eintBvhKurz).join(' / ') : '';
+          // BVH des Busses gleich im Feld (nicht nur grau angedeutet); geaendert = eigene BVH
+          const vomBus = bus ? eintBvhVomBus(bus, t, m.name).join(' / ') : '';
+          const eigene0 = eintEigeneBvh(w, m, t), eigene = eigene0 && eintBvhNorm(eigene0) !== eintBvhNorm(vomBus) ? eigene0 : '';
           return `<td class="${anders ? 'anders' : ''}${abw ? ' abw' : ''}"><select class="sp-inp" data-eint-m="${mi}" data-eint-tag="${t}" aria-label="Bus: ${esc(m.name)} am ${esc(wt(t))}">${eintOptionen(w, e, m.stamm)}</select>
-            ${abw ? '' : `<input class="sp-inp eint-mbvh" data-eint-mbvh="${mi}" data-eint-tag="${t}" list="eint-bvh-liste" value="${esc(eintEigeneBvh(w, m, t))}" placeholder="${esc(vorschlag || 'BVH')}" aria-label="BVH: ${esc(m.name)} am ${esc(wt(t))}" autocomplete="off">`}</td>`; }).join('')}
+            ${abw ? '' : `<input class="sp-inp eint-mbvh${eigene ? ' eigen' : ''}" data-eint-mbvh="${mi}" data-eint-tag="${t}" data-erbe="${esc(vomBus)}" list="eint-bvh-liste" value="${esc(eigene || vomBus)}" placeholder="BVH" aria-label="BVH: ${esc(m.name)} am ${esc(wt(t))}" autocomplete="off">`}</td>`; }).join('')}
       </tr>`).join('')}</tbody></table></div>
       <datalist id="eint-bvh-liste">${eintBvhVorschlaege().map(v => `<option value="${esc(v)}"></option>`).join('')}</datalist>`
     : '<p class="ab-klein eint-leer">Noch keine Monteure. Unter „Nach Bussen“ je Bus die Stamm-Mannschaft eintragen (Namen mit Komma) oder hier jemanden hinzufügen.</p>';
@@ -9115,7 +9117,11 @@ function eintMonteurEvents(ov, w, tage, monteure){
   }));
   // BVH je Monteur und Tag: speichern ohne neu zu zeichnen (Fokus bleibt im Feld)
   ov.querySelectorAll('input[data-eint-mbvh]').forEach(inp => inp.addEventListener('input', () => {
-    eintBvhSetzen(w, monteure[+inp.dataset.eintMbvh], inp.dataset.eintTag, inp.value);
+    // Gleich wie beim Bus (oder leer) = nichts Eigenes speichern, die BVH kommt vom Bus
+    const v = inp.value.trim(), erbe = inp.dataset.erbe || '';
+    const eigen = v && eintBvhNorm(v) !== eintBvhNorm(erbe);
+    eintBvhSetzen(w, monteure[+inp.dataset.eintMbvh], inp.dataset.eintTag, eigen ? v : '');
+    inp.classList.toggle('eigen', !!eigen);
     eintGeaendert(w);
   }));
   ov.querySelectorAll('input[data-eint-wbvh]').forEach(inp => {
@@ -9198,23 +9204,52 @@ function eintBvhSetzen(w, m, t, text){
 function eintBusBvh(bus, t){ return String(((bus && bus.tage) || {})[t] || '').split('\n').map(s => s.trim()).filter(s => s && !/^urlaub/i.test(s)); }
 // "BVH Name · Ort (Leute)" -> "BVH Name"
 function eintBvhKurz(z){ const m = String(z).match(/^(.*?)(?:\s+·\s+[^(]*?)?\s*(?:\([^)]*\))?\s*$/); return ((m && m[1]) || String(z)).trim(); }
-// Zellenzeilen eines Busses inkl. der BVHs, die bei seinen Leuten eingetragen sind
+// Vergleich von BVH-Namen ohne Gross/Klein, Leerzeichen und Satzzeichen
+// ("FFA EREMA" = "FFA Erema" = "FFA-EREMA · Ansfelden (Slavo)")
+function eintBvhNorm(s){ return eintBvhKurz(s).toLowerCase().replace(/[^a-z0-9äöüß]+/g, ''); }
+// BVHs eines Busses an einem Tag – jede nur einmal
+function eintBvhListe(bus, t){
+  const s = new Map();
+  eintBusBvh(bus, t).forEach(z => { const k = eintBvhNorm(z); if(k && !s.has(k)) s.set(k, eintBvhKurz(z)); });
+  return [...s.values()];
+}
+// BVH(s) des Busses fuer eine Person: steht hinter einer BVH "(Name, …)",
+// gilt sie nur fuer diese Leute – sonst fuer alle im Bus
+function eintBvhVomBus(bus, t, name){
+  const zeilen = eintBusBvh(bus, t);
+  const voll = String(name || '').toLowerCase().trim(), vor = voll.split(' ')[0];
+  const fuer = z => { const k = (z.match(/\(([^)]*)\)\s*$/) || [])[1]; return k ? k.split(',').map(n => n.trim().toLowerCase()).filter(Boolean) : null; };
+  const meine = zeilen.filter(z => { const n = fuer(z); return n && n.some(x => x === voll || x === vor || voll.startsWith(x + ' ')); });
+  const allgemein = zeilen.filter(z => !fuer(z));
+  const wahl = meine.length ? meine : (allgemein.length ? allgemein : zeilen);
+  const s = new Map();
+  wahl.forEach(z => { const k = eintBvhNorm(z); if(k && !s.has(k)) s.set(k, eintBvhKurz(z)); });
+  return [...s.values()];
+}
+// Zellenzeilen eines Busses: gleiche BVH nur einmal (Namen in Klammern
+// zusammengefuehrt), dazu BVHs, die nur bei seinen Leuten eingetragen sind
 function eintBusZeilen(w, b, t){
-  const zeilen = String((b.tage || {})[t] || '').split('\n').map(s => s.trim()).filter(Boolean);
-  const da = new Set(zeilen.map(z => eintBvhKurz(z).toLowerCase()));
+  const zeilen = [], idx = new Map();
+  String((b.tage || {})[t] || '').split('\n').map(s => s.trim()).filter(Boolean).forEach(z => {
+    if(/^urlaub/i.test(z)){ zeilen.push(z); return; }
+    const k = eintBvhNorm(z);
+    if(!idx.has(k)){ idx.set(k, zeilen.length); zeilen.push(z); return; }
+    // doppelt: Namen aus "(…)" an die erste Zeile haengen
+    const namen = (z.match(/\(([^)]*)\)\s*$/) || [])[1];
+    if(!namen) return;
+    const i = idx.get(k), alt = zeilen[i].match(/^(.*?)\s*(?:\(([^)]*)\))?\s*$/);
+    const alle = [...new Set([...(alt[2] || '').split(','), ...namen.split(',')].map(n => n.trim()).filter(Boolean))];
+    zeilen[i] = `${alt[1]} (${alle.join(', ')})`;
+  });
   eintMonteure(w).filter(m => eintEinsatz(w, m, t) === b.name).forEach(m => {
-    const e = eintEigeneBvh(w, m, t);
-    if(e && !da.has(e.toLowerCase())){ zeilen.push(e); da.add(e.toLowerCase()); }
+    const e = eintEigeneBvh(w, m, t), k = eintBvhNorm(e);
+    if(e && !idx.has(k)){ idx.set(k, zeilen.length); zeilen.push(e); }
   });
   return zeilen;
 }
-// Mannschaft eines Busses an einem Tag; bei mehreren BVHs mit "(BVH)" je Person
+// Mannschaft eines Busses an einem Tag (nur Namen – die BVHs stehen darueber)
 function eintCrewText(w, b, t){
-  const mehrere = eintBusZeilen(w, b, t).filter(z => !/^urlaub/i.test(z)).length > 1;
-  return eintMonteure(w).filter(m => eintEinsatz(w, m, t) === b.name).map(m => {
-    const e = eintEigeneBvh(w, m, t);
-    return e && mehrere ? `${m.name} (${e})` : m.name;
-  });
+  return eintMonteure(w).filter(m => eintEinsatz(w, m, t) === b.name).map(m => m.name);
 }
 function eintBvhVorschlaege(){
   const s = new Set();
@@ -10693,7 +10728,7 @@ async function einteilungBildMonteure(){
       if(EINT_ABWESEND.includes(e)){ setz(24, 600); return { anders, teile: [{ t: umbrechen(e, SW - 30), gr: 24, gew: 600, farbe: F.urlaub, zh: 32 }] }; }
       const bus = e && e !== EINT_KEINER ? w.busse.find(b => b.name === e) : null;
       const eigene = eintEigeneBvh(w, m, t);
-      const bvh = eigene ? [eigene] : (bus ? eintBusBvh(bus, t).map(eintBvhKurz).slice(0, 3) : []);
+      const bvh = eigene ? [eigene] : (bus ? eintBvhVomBus(bus, t, m.name).slice(0, 3) : []);
       if(!bus && !bvh.length) return { anders, teile: [] };
       // BVH fett (das Wichtigste), darunter der Bus
       setz(26, 700); const kopf = bvh.length ? bvh.flatMap(b => umbrechen(b, SW - 30)) : umbrechen(bus.name, SW - 30);
@@ -10743,7 +10778,7 @@ function einteilungText(){
     const e = eintEinsatz(w, m, t);
     if(EINT_ABWESEND.includes(e)) return e;
     const bus = e && e !== EINT_KEINER ? w.busse.find(b => b.name === e) : null;
-    const bvh = eintEigeneBvh(w, m, t) || (bus ? eintBusBvh(bus, t).map(eintBvhKurz).join(' / ') : '');
+    const bvh = eintEigeneBvh(w, m, t) || (bus ? eintBvhVomBus(bus, t, m.name).join(' / ') : '');
     const teile = [bvh, bus ? `Bus ${bus.name}` : ''].filter(Boolean);
     if(!teile.length) return 'nicht eingeteilt';
     return teile.join(' – ') + (eintUmgestellt(m, e) ? ' (anderer Bus!)' : '');

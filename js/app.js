@@ -3689,6 +3689,9 @@ function parsePVSOLData(json){
   // handaufbereiteten Importe nutzen das; ein echter PVSOL-Export enthaelt nie
   // "@GAK", faellt also unveraendert auf "GAK {WR}" zurueck wie bisher.
   const RE_GAK_TAG = /@GAK\s*(.+)$/i;
+  // Optional die Stringnummer aus dem Stringplan, z.B. "1x22 @STR 3.10.1 · Achse 01/02/03"
+  // – landet als Plan-String in der Matrix (ebenfalls nur handaufbereitete Importe).
+  const RE_STR_TAG = /@STR\s*(.+?)\s*(?=@GAK|$)/i;
 
   if(config?.ModuleAreas){
     config.ModuleAreas.forEach(area => {
@@ -3745,16 +3748,19 @@ function parsePVSOLData(json){
           entry.strings[mppt] ||= {};
           const stringDefinitions = [];
           segments.forEach(seg => {
-            const gakM = seg.match(RE_GAK_TAG);
+            const strM = seg.match(RE_STR_TAG);
+            const strLabel = strM ? strM[1].trim() : null;
+            const ohneStr = strM ? seg.replace(RE_STR_TAG, ' ').trim() : seg;
+            const gakM = ohneStr.match(RE_GAK_TAG);
             const gakLabel = gakM ? gakM[1].trim() : null;
-            const cleanSeg = gakM ? seg.replace(RE_GAK_TAG, '').trim() : seg;
+            const cleanSeg = gakM ? ohneStr.replace(RE_GAK_TAG, '').trim() : ohneStr;
             const sm = cleanSeg.match(RE_STRING);
             if(!sm) return;
             const parallelStrings = Number(sm[1]);
             const modulesPerString = Number(sm[2]);
             if(!Number.isInteger(parallelStrings) || parallelStrings <= 0) return;
             if(!Number.isInteger(modulesPerString) || modulesPerString <= 0) return;
-            stringDefinitions.push({ parallelStrings, modulesPerString, gakLabel });
+            stringDefinitions.push({ parallelStrings, modulesPerString, gakLabel, strLabel });
           });
 
           const physicalStringCount = stringDefinitions.reduce((total, def) => total + def.parallelStrings, 0);
@@ -3762,10 +3768,10 @@ function parsePVSOLData(json){
           entry.inputs = Math.max(entry.inputs, physicalStringCount);
 
           let stringNum = Object.keys(entry.strings[mppt]).length + 1;
-          stringDefinitions.forEach(({ parallelStrings, modulesPerString, gakLabel }) => {
+          stringDefinitions.forEach(({ parallelStrings, modulesPerString, gakLabel, strLabel }) => {
             for(let parallel = 0; parallel < parallelStrings; parallel++){
               entry.strings[mppt][stringNum] = {
-                planName: `PVSOL WR ${wrNum} · MPP ${mppt} · String ${stringNum}`,
+                planName: strLabel ? `STR ${strLabel}` : `PVSOL WR ${wrNum} · MPP ${mppt} · String ${stringNum}`,
                 gak: gakLabel ? `GAK ${gakLabel}` : `GAK ${wrNum}`,
                 mod: modulesPerString,
                 note: ''

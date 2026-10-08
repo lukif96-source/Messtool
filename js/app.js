@@ -1508,9 +1508,19 @@ async function initProjects(){
   CURRENT_PROJECT_ID = null;
   APP_STATE = {};
   cloudFetchSucceeded = false;
-  
+
   // Templates laden
   loadTemplatesFromStorage();
+
+  // Lokale Projekte laden (als Fallback, wenn Cloud nicht verfuegbar)
+  try {
+    const localProjects = localStorage.getItem('pv_projects_v3');
+    if(localProjects && !supabaseClient){
+      PROJECTS = JSON.parse(localProjects) || {};
+    }
+  } catch(e){
+    console.warn('Lokale Projekte konnten nicht geladen werden:', e);
+  }
 
   if(supabaseClient && currentUser){
     try { await fetchProjectsFromCloud(); } catch(e){ console.warn('Cloud-Fetch fehlgeschlagen', e); }
@@ -1527,7 +1537,13 @@ async function initProjects(){
   renderProjectUI();
 }
 
-function saveProjectsLocal(){ }
+function saveProjectsLocal(){
+  try {
+    localStorage.setItem('pv_projects_v3', JSON.stringify(PROJECTS));
+  } catch(e){
+    console.warn('Projekte konnten nicht lokal gespeichert werden:', e);
+  }
+}
 function clearLegacyBrowserCache(){
   try {
     ['solpro_projects_v2', 'solpro_data_v2', 'solpro_curr_v2', 'solpro_sun_mode']
@@ -5662,7 +5678,7 @@ async function pruefprotokollDialog(){
         speichern = true;
       }
     }
-    if(speichern){ proj.updated_at = new Date().toISOString(); saveProjectsLocal(); saveProjectToCloud(pid, true); }
+    if(speichern){ proj.updated_at = new Date().toISOString(); saveProjectsLocal(); await saveProjectToCloud(pid, true); }
     const foto = fotos.find(f => f.pfad === gewaehlt);
     schliessen();
     (async () => {

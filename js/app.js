@@ -5324,7 +5324,7 @@ function springeZuNaechstemOffenen(){
 }
 
 // ── Pruefprotokoll als PDF (Druckansicht -> "Als PDF speichern") ──────────
-// optionen: { win, beschreibung, fotoUrl } – win wird vom Dialog schon im
+// optionen: { win, beschreibung, fotoUrl, messgeraet } – win wird vom Dialog schon im
 // Klick geoeffnet, damit der Popup-Blocker nicht zuschlaegt.
 function druckePruefprotokoll(optionen = {}){
   const proj = getCurrentProject();
@@ -5335,6 +5335,8 @@ function druckePruefprotokoll(optionen = {}){
   const beschreibung = String(optionen.beschreibung ?? proj.beschreibung ?? '').trim();
   const fotoUrl = optionen.fotoUrl || '';
   const wrFotos = optionen.wrFotos || [];
+  // Messgerät aus den Optionen verwenden (falls übergeben), sonst aus dem Projekt
+  const messgeraet = optionen.messgeraet || (proj.messung && proj.messung.geraet) || {};
   const plan = getCurrentPlan();
   const wp = getCurrentWp();
   const zeit = iso => iso ? new Date(iso).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
@@ -5477,7 +5479,7 @@ function druckePruefprotokoll(optionen = {}){
     <div><span>Anlagenleistung aktiv</span><strong>${kwp} kWp</strong></div>
     <div><span>Prüfer</span><strong>${esc(pruefer)}</strong></div>
     <div><span>Erstellt am</span><strong>${heute}</strong></div>
-    <div class="breit"><span>Messgerät</span><strong>${esc(messungGeraetText(proj) || '—')}</strong></div>
+    <div class="breit"><span>Messgerät</span><strong>${esc(messungGeraetText({ messung: { geraet: messgeraet } }) || '—')}</strong></div>
     ${proj.messung && proj.messung.upruef ? `<div><span>Prüfspannung Riso</span><strong>${esc(proj.messung.upruef)} V</strong></div>` : ''}
   </div>
   ${(beschreibung || fotoUrl) ? `<div class="projekt${fotoUrl ? ' mit-foto' : ''}">
@@ -5592,13 +5594,22 @@ async function pruefprotokollDialog(){
     </div>`;
   const ta = ov.querySelector('#ppd-text');
   const mgWahl = ov.querySelector('#ppd-mg');
-  if(mgWahl) mgWahl.addEventListener('change', () => {
+  if(mgWahl) mgWahl.addEventListener('change', async () => {
     const m = mgListe.find(x => x.id === mgWahl.value);
     if(!m) return;
     ov.querySelector('#ppd-mg-h').value = m.hersteller || '';
     ov.querySelector('#ppd-mg-t').value = m.typ || '';
     ov.querySelector('#ppd-mg-sn').value = m.sn || '';
     ov.querySelector('#ppd-mg-kal').value = m.kal || '';
+    // Messgerät direkt im Projekt speichern
+    if(darfMessung && m){
+      const neu = { hersteller: m.hersteller, typ: m.typ, sn: m.sn, kal: m.kal };
+      proj.messung = { ...(proj.messung || {}), geraet: neu };
+      proj.updated_at = new Date().toISOString();
+      saveProjectsLocal();
+      await saveProjectToCloud(pid, true);
+      toast('Messgerät im Projekt gespeichert');
+    }
   });
   const liste = ov.querySelector('.ppd-fotos');
   const neuBtn = ov.querySelector('.ppd-neu');
@@ -5660,9 +5671,11 @@ async function pruefprotokollDialog(){
       proj.beschreibung = text;
       speichern = true;
     }
+    // Messgerät für das PDF direkt auslesen (ohne Speichern)
+    const v = id => ov.querySelector(id).value.trim();
+    const messgeraet = { hersteller: v('#ppd-mg-h'), typ: v('#ppd-mg-t'), sn: v('#ppd-mg-sn'), kal: v('#ppd-mg-kal') };
     if(darfMessung){
-      const v = id => ov.querySelector(id).value.trim();
-      const neu = { hersteller: v('#ppd-mg-h'), typ: v('#ppd-mg-t'), sn: v('#ppd-mg-sn'), kal: v('#ppd-mg-kal') };
+      const neu = messgeraet;
       if(JSON.stringify(neu) !== JSON.stringify({ hersteller: mgAkt.hersteller || '', typ: mgAkt.typ || '', sn: mgAkt.sn || '', kal: mgAkt.kal || '' })){
         proj.messung = { ...(proj.messung || {}), geraet: (neu.hersteller || neu.typ || neu.sn) ? neu : null };
         speichern = true;
@@ -5674,7 +5687,7 @@ async function pruefprotokollDialog(){
     (async () => {
       let wrFotos = [];
       try { wrFotos = await wrFotosSammeln(pid); } catch(_){}
-      druckePruefprotokoll({ win, beschreibung: text, fotoUrl: foto ? foto.url : '', wrFotos });
+      druckePruefprotokoll({ win, beschreibung: text, fotoUrl: foto ? foto.url : '', wrFotos, messgeraet });
     })();
   });
 

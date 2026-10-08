@@ -293,6 +293,52 @@ function toggleHideInactive(forceState = null){
   if(forceState === null) toast(hideInactive ? 'Inaktive Strings ausgeblendet' : 'Alle Strings eingeblendet');
 }
 
+async function messgeraetAuswaehlen(){
+  const proj = getCurrentProject();
+  if(!proj) return toast('Bitte zuerst ein Projekt öffnen');
+  if(!darf('messwerte')) return toast('Keine Berechtigung');
+  if(!abFirma && (darf('ppk') || darf('anlagenbuch') || darf('katalog'))){ try { await abFirmaLaden(); } catch(_){} }
+  const mgListe = messgeraeteListe();
+  const mgAkt = (proj.messung && proj.messung.geraet) || {};
+
+  const ov = document.createElement('div');
+  ov.className = 'app-dialog-overlay';
+  ov.innerHTML = `<div class="app-dialog" role="dialog" aria-modal="true" aria-labelledby="mg-titel">
+    <h2 id="mg-titel">Messgerät auswählen</h2>
+    <p class="app-dialog-text">Das gewählte Messgerät wird im Projekt gespeichert und erscheint im PDF-Protokoll.</p>
+    ${mgListe.length ? `<label class="ab-feld"><span>Messgerät aus der Liste</span>
+      <select id="mg-wahl" class="sp-inp"><option value="">– keines ausgewählt –</option>
+        ${mgListe.map(m => `<option value="${esc(m.id)}"${mgAkt && mgAkt.id === m.id ? ' selected' : ''}>${esc(messgeraetName(m))}</option>`).join('')}</select></label>` : '<p class="app-dialog-text">Keine Messgeräte in den Firmendaten hinterlegt. Bitte zuerst im Reiter "Komponenten" unter "Firmendaten" Messgeräte hinzufügen.</p>'}
+    <div class="app-dialog-knoepfe">
+      <button type="button" class="btn btn-ghost" data-a="nein">Abbrechen</button>
+      <button type="button" class="btn btn-primary" data-a="ja" ${!mgListe.length ? ' disabled' : ''}>Speichern</button>
+    </div>
+  </div>`;
+
+  const schliessen = () => { document.removeEventListener('keydown', taste, true); ov.remove(); };
+  function taste(e){ if(e.key === 'Escape'){ e.preventDefault(); schliessen(); } }
+  ov.addEventListener('click', e => { if(e.target === ov) schliessen(); });
+  ov.querySelector('[data-a="nein"]').addEventListener('click', schliessen);
+  ov.querySelector('[data-a="ja"]').addEventListener('click', async () => {
+    const wahl = ov.querySelector('#mg-wahl');
+    if(!wahl || !wahl.value){
+      proj.messung = { ...(proj.messung || {}), geraet: null };
+    } else {
+      const m = mgListe.find(x => x.id === wahl.value);
+      if(m){
+        proj.messung = { ...(proj.messung || {}), geraet: { hersteller: m.hersteller, typ: m.typ, sn: m.sn, kal: m.kal } };
+      }
+    }
+    proj.updated_at = new Date().toISOString();
+    saveProjectsLocal();
+    await saveProjectToCloud(proj.id, true);
+    schliessen();
+    toast('Messgerät gespeichert');
+  });
+  document.addEventListener('keydown', taste, true);
+  document.body.appendChild(ov);
+}
+
 function filterInverter(n, btn){
   document.querySelectorAll('.wr-tab').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');

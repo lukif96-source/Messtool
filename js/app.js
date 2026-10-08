@@ -5649,7 +5649,7 @@ async function pruefprotokollDialog(){
   function taste(e){ if(e.key === 'Escape'){ e.preventDefault(); schliessen(); } }
   ov.addEventListener('click', e => { if(e.target === ov) schliessen(); });
   ov.querySelector('[data-a="nein"]').addEventListener('click', schliessen);
-  ov.querySelector('[data-a="ja"]').addEventListener('click', () => {
+  ov.querySelector('[data-a="ja"]').addEventListener('click', async () => {
     // Fenster sofort im Klick oeffnen – sonst blockiert der Browser das Popup
     const win = window.open('', '_blank');
     if(!win) return toast('Popup wurde blockiert – bitte Popups für diese Seite erlauben');

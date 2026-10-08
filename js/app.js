@@ -1512,16 +1512,6 @@ async function initProjects(){
   // Templates laden
   loadTemplatesFromStorage();
 
-  // Lokale Projekte laden (als Fallback, wenn Cloud nicht verfuegbar)
-  try {
-    const localProjects = localStorage.getItem('pv_projects_v3');
-    if(localProjects && !supabaseClient){
-      PROJECTS = JSON.parse(localProjects) || {};
-    }
-  } catch(e){
-    console.warn('Lokale Projekte konnten nicht geladen werden:', e);
-  }
-
   if(supabaseClient && currentUser){
     try { await fetchProjectsFromCloud(); } catch(e){ console.warn('Cloud-Fetch fehlgeschlagen', e); }
   }
